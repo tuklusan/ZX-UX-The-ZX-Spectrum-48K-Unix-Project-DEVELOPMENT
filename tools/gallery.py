@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Screenshot gallery of the C48 corpus: on runix, in rvm, in the C48 SDK
+"""Screenshot gallery of the C48 corpus: on ZX-UX, in rvm, in the C48 SDK
 reference VM.  Reads build/shots (tests/ssxrun.py) and build/shots-vm
 (sdk/tests/oracle.py --png); writes build/gallery.html (images inline).
 
@@ -62,12 +62,12 @@ def main(argv):
         ok_v = 'PASS' in ov.get(n, 'PASS')
         cards.append('''<article class="prog" id="%s">
 <header><h3>%s</h3><span class="grp">%s</span>
-<span class="pill %s">runix %s</span><span class="pill %s">VM %s</span></header>
+<span class="pill %s">ZX-UX %s</span><span class="pill %s">VM %s</span></header>
 <p class="cmd"><code># %s</code>%s</p>
 <p class="meta">%s</p>
 <div class="shots">
-<figure>%s<figcaption>runix on the Spectrum, loaded from tape</figcaption></figure>
-<figure>%s<figcaption>rvm, the runix SDK's VM</figcaption></figure>
+<figure>%s<figcaption>ZX-UX on the Spectrum, loaded from tape</figcaption></figure>
+<figure>%s<figcaption>rvm, the ZX-UX SDK's VM</figcaption></figure>
 <figure>%s<figcaption>C48 SDK reference VM</figcaption></figure>
 </div></article>''' % (
             html.escape(f), html.escape(n), html.escape(r['dir']),
@@ -75,7 +75,7 @@ def main(argv):
             'ok' if ok_v else 'bad', 'identical' if ok_v else 'differs',
             html.escape(cmd), (' <span class="keys">keys: <code>%s</code></span>' % html.escape(keys)) if keys else '',
             html.escape(mode),
-            img(os.path.join(SHOTS, f + '.runix.png'), n + ' on runix'),
+            img(os.path.join(SHOTS, f + '.ZX-UX.png'), n + ' on ZX-UX'),
             img(os.path.join(VM, f + '.png'), n + ' in rvm'),
             img(os.path.join(VM, f + '.sdk.png'), n + ' in the C48 SDK')))
     nr = sum(1 for n in names if 'PASS' in rx.get(n, 'PASS'))
@@ -88,7 +88,7 @@ def main(argv):
     print(out, len(page))
 
 
-PAGE = '''<title>runix C48 Gallery</title>
+PAGE = '''<title>ZX-UX C48 Gallery</title>
 <style>
 /* layout: a header strip like the Spectrum's border, then one card per program
    with three screens side by side (stacking on phones) */
@@ -135,11 +135,11 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&family=Silkscreen&display=swap">
 <div class="stripes" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 <div class="wrap">
-<h1>runix C48 Gallery</h1>
-<p class="lede">The C48 SDK corpus, compiled by the runix SDK (rcc). Each program was loaded from cassette and run on runix 2.x on an emulated 48K Spectrum,
-and run in the runix VM; the right-hand screen is the C48 SDK's own compiler and reference VM, given the same arguments, keys and ticks().
-Four games are seeded from ticks(), which on runix is the real clock, so their runix screens show a different game.</p>
-<p class="tally"><span><b>@NP@</b> programs, <b>@N@</b> sessions</span><span>runix: <b>@NR@/@N@</b> ran from tape</span><span>VM: <b>@NV@/@N@</b> screens identical to the SDK</span></p>
+<h1>ZX-UX C48 Gallery</h1>
+<p class="lede">The C48 SDK corpus, compiled by the ZX-UX SDK (rcc). Each program was loaded from cassette and run on ZX-UX 2.x on an emulated 48K Spectrum,
+and run in the ZX-UX VM; the right-hand screen is the C48 SDK's own compiler and reference VM, given the same arguments, keys and ticks().
+Four games are seeded from ticks(), which on ZX-UX is the real clock, so their ZX-UX screens show a different game.</p>
+<p class="tally"><span><b>@NP@</b> programs, <b>@N@</b> sessions</span><span>ZX-UX: <b>@NR@/@N@</b> ran from tape</span><span>VM: <b>@NV@/@N@</b> screens identical to the SDK</span></p>
 @CARDS@
 </div>
 '''

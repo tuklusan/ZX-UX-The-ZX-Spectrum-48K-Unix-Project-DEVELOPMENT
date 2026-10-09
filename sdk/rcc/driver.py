@@ -31,10 +31,10 @@ def compile_to_asm(path, opts=None):
     return text, prog, g
 
 
-# memory a program loaded from cassette can have on runix 2.0 (from a fresh
+# memory a program loaded from cassette can have on ZX-UX 2.0 (from a fresh
 # login: the arena less init's and sh's images, plus the lent window); a
 # program whose native code needs more is built in bytecode (SSB1)
-RUNIX_MAX = 14000
+ZXUX_MAX = 14000
 
 
 def stack_estimate(g):
@@ -97,7 +97,7 @@ def main(argv):
     udgs = None
     heap = 1024
     mode = None
-    limit = RUNIX_MAX
+    limit = ZXUX_MAX
     files = []
     i = 0
     while i < len(argv):

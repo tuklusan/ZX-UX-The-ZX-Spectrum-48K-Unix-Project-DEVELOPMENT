@@ -1,57 +1,78 @@
-# runix SDK
+# ZX-UX C48 tools
 
-The C compiler, toolchain and virtual machine for runix 2.x programs. The C programs run from cassette on a 48K ZX Spectrum running runix. Everything runs on the host in Python 3 with SkoolKit (for the Z80 core and the 48K ROM). The design is in `../docs/SPEC-SDK-R2.md`.
+These tools build and run small C48 programs for the ZX Spectrum 48K.
+The compiler runs on your host computer, not inside ZX-UX.
+The output is an SSX1 program that can run in the VM or load from tape.
 
-The source language is **C48** (C48 Language Specification Rev 0.11, ZX-UX project). The ZX-UX C48 SDK is the behaviour reference: every program of its corpus gives the same screens here as in its reference VM.
+## Make a program
 
-## Quick start
+First build the C48 runtime:
 
+```sh
+python3 sdk/lib/build.py
 ```
-python3 sdk/lib/build.py                       # build the runtime archive lib/libc48.ssa
-sdk/bin/rcc hello.c -o hello.ssx               # compile and link (native, or bytecode if big)
-sdk/bin/rvm hello.ssx --png hello.png --text   # run it on the host
-sdk/bin/rtap -o hello.tzx hello.ssx            # its cassette record
+
+Then compile a C file and make a cassette record:
+
+```sh
+sdk/bin/rcc hello.c -o hello.ssx
+sdk/bin/rtap -o hello.tzx hello.ssx
 ```
 
-To run it on runix:
-1. Boot `build/runixz80.tzx` and log in.
-2. Play `hello.tzx` and type `/dev/cassette/hello`.
+Load `build/ZX-UX.tzx` and log in.
+Type `/dev/cassette/hello` in ZX-UX, then play `hello.tzx`.
 
-Arguments follow the name as usual. The kernel finds the program on the tape (passing over anything else) and loads, relocates and starts it. While it runs it owns the screen; when it ends, the shell carries on below its picture.
+You can also test the same program on your host:
 
-## Tools
+```sh
+sdk/bin/rvm hello.ssx --png hello.png --text
+```
 
-| Tool | Does |
+The compiler uses SkoolKit's Spectrum ROM support.
+The host VM and screenshot tools need SkoolKit 10.1 and Pillow.
+
+## Included tools
+
+| Tool | Use |
 |---|---|
-| `bin/rcc` | C48 → SSX1. `-S` assembly, `-c` object, `--bytecode` / `--native`, `--max BYTES` (default 14000: above it, bytecode), `--stack N`, `--udgs N` (a UDG bank of N slots instead of 32) |
-| `bin/ras` | Z80 assembler → SSO1 objects |
-| `bin/rld` | linker: SSO1 objects and SSA1 archives → SSX1; `--archive` builds an archive |
-| `bin/rtap` | SSX1 → cassette records (`.tzx`/`.tap`); `--after runix.tzx` appends them to a copy of the system tape |
-| `bin/rvm` | runs an SSX1 program: `--keys`, `--frames`, `--ticks`, `--root DIR` (files), `--png`, `--scr`, `--text` |
+| `rcc` | Compile C48 source into SSX1 code |
+| `ras` | Assemble Z80 source into SSO1 files |
+| `rld` | Link objects and SSA1 libraries |
+| `rtap` | Write programs to `.tap` or `.tzx` cassette files |
+| `rvm` | Run compiled programs in the host VM |
 
-## Library
+C48 covers small integer types, five-byte Spectrum floats,
+functions, pointers, arrays, recursion, and a set of library calls.
+The runtime has a 64-column console, simple graphics,
+keyboard and timing calls, strings, and a small heap.
+See `include/c48.h` for the available functions.
 
-`#include <c48.h>` (`include/c48.h`) declares what the runtime provides:
-- **console:** 64 × 24 text in the 4 × 8 font, colours, `plot`/`point`/`draw`/`circle`, 21 UDGs;
-- **keyboard:** `getchar` gives raw keys;
-- **time:** `ticks`/`yield`/`sleep`;
-- **strings and memory**, and `malloc`/`free`;
-- **five-byte floats** and `sin` … `pow`, computed by the Spectrum ROM, bit-exact;
-- **sound:** `beep`;
-- **files:** `open`/`close`/`read`/`seek`;
-- **process:** `exit`, `getpid`.
+## Run the examples
 
-## Tests
+The separate C48 source repository holds the program collection.
+Set `C48SDK` to its local folder and run:
 
-```
-python3 sdk/tests/oracle.py [--bytecode] [--only a,b] [--png DIR]   # rcc + rvm against the C48 SDK reference VM
-python3 sdk/tests/test_ras.py                                       # ras against sjasmplus
-python3 tests/ssxrun.py [--only a,b]                                # every program on runix, from tape
-python3 tools/mktapes.py                                            # corpus tapes in build/
+```sh
+python3 tools/mktapes.py
 ```
 
-The oracle reads the C48 SDK from `../tuklusan/zx-ux-c48-sdk` (or `$C48SDK`).
+The script writes compiled programs and tapes into `build/c48/`.
+It also writes group tapes in `build/`.
+Two programs can share the screen with `build/c48-multitask.tzx`.
 
-## Licence of the corpus
+The test settings are in `sdk/tests/runs.json`.
+The collection has 56 named programs and 17 extra test cases.
+Use `sdk/tests/oracle.py` to compare VM results.
+Use `tests/ssxrun.py` to run programs from tape in ZX-UX.
 
-The C48 corpus programs and the 4 × 8 font come from the ZX-UX C48 SDK, © SANYALnet Labs, under the SANYALnet Labs Non-Commercial License. The compiled programs and tapes built from them carry that licence.
+## Program formats
+
+`SSO1` holds a relocatable object.
+`SSA1` holds a set of objects.
+`SSX1` holds a linked program and its relocation data.
+`SSB1` is the compact bytecode used for large programs.
+For the byte layouts, read `docs/SPEC-SDK-R2.md` and
+`docs/SPEC-ELASTIC-R2.md`.
+
+The C48 source collection has its own license.
+Check its license before sharing its programs.

@@ -1,4 +1,4 @@
-/* runix suite: two cassette programs share the screen and the processor
+/* ZX-UX suite: two cassette programs share the screen and the processor
  * (mtleft draws in columns 0-31, mtright in 32-63) */
 #include <c48.h>
 

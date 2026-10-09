@@ -1,4 +1,4 @@
-/* runix suite: a program bigger than the free arena - the kernel lends it
+/* ZX-UX suite: a program bigger than the free arena - the kernel lends it
  * the window while it runs */
 #include <c48.h>
 

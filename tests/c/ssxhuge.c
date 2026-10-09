@@ -1,4 +1,4 @@
-/* runix suite: a program that cannot fit at all */
+/* ZX-UX suite: a program that cannot fit at all */
 #include <c48.h>
 
 char huge[20000];

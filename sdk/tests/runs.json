@@ -250,7 +250,7 @@
  },
  "secloop": {
   "dir": "security",
-  "note": "runs until stopped (BREAK on runix, frame budget in rvm)",
+  "note": "runs until stopped (BREAK on ZX-UX, frame budget in rvm)",
   "frames": 200
  },
  "secoob": {
@@ -273,7 +273,7 @@
  },
  "tune": {
   "dir": "sound",
-  "note": "the SDK host had no audio backend (beep -> 14); runix beeps and prints BEEP COMPLETE",
+  "note": "the SDK host had no audio backend (beep -> 14); ZX-UX beeps and prints BEEP COMPLETE",
   "expect_text": "BEEP COMPLETE",
   "nosdk": true
  },
@@ -300,8 +300,8 @@
   "ticks": 44257,
   "expect_status": 0,
   "expect_text": "You solved it. Press q.",
-  "runix_text": "Last: ",
-  "runix_note": "ticks() seeds the game: on runix it is the real clock, so the scripted keys play a different game"
+  "zxux_text": "Last: ",
+  "zxux_note": "ticks() seeds the game: on ZX-UX it is the real clock, so the scripted keys play a different game"
  },
  "quiz:play": {
   "dir": "games",
@@ -326,8 +326,8 @@
   "ticks": 44257,
   "expect_status": 0,
   "expect_text": "Mission complete. Press q.",
-  "runix_text": "accepted",
-  "runix_note": "ticks() seeds the game: on runix it is the real clock, so the scripted keys play a different game"
+  "zxux_text": "accepted",
+  "zxux_note": "ticks() seeds the game: on ZX-UX it is the real clock, so the scripted keys play a different game"
  },
  "rogue:play": {
   "dir": "games",
@@ -344,8 +344,8 @@
   "ticks": 44257,
   "expect_status": 0,
   "expect_text": "Score: 1",
-  "runix_text": "accepted",
-  "runix_note": "ticks() seeds the game: on runix it is the real clock, so the scripted keys play a different game"
+  "zxux_text": "accepted",
+  "zxux_note": "ticks() seeds the game: on ZX-UX it is the real clock, so the scripted keys play a different game"
  },
  "chess:play": {
   "dir": "games",
@@ -391,8 +391,8 @@
   "ticks": 44257,
   "expect_status": 0,
   "expect_text": "Score: 1",
-  "runix_text": "of 1",
-  "runix_note": "ticks() seeds the game: on runix it is the real clock, so the scripted keys play a different game"
+  "zxux_text": "of 1",
+  "zxux_note": "ticks() seeds the game: on ZX-UX it is the real clock, so the scripted keys play a different game"
  },
  "chess:play2": {
   "dir": "games",

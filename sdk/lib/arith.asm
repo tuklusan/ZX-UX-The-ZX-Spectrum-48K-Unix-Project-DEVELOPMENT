@@ -1,4 +1,4 @@
-; rcc runtime: 16-bit integer helpers                       (runix SDK)
+; rcc runtime: 16-bit integer helpers                       (ZX-UX SDK)
         section text
         global @mul,@divu,@modu,@divs,@mods,@shl,@shr,@sra,@shlb,@shrb
         global @and,@or,@xor,@neg,@com,@not,@notb,@scmp,@preincw,@postincw

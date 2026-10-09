@@ -1,4 +1,4 @@
-; rcc runtime: program start-up and exit                    (runix SDK)
+; rcc runtime: program start-up and exit                    (ZX-UX SDK)
 ;
 ; The kernel starts a program with SP -> argc, argv[0..argc-1], 0, strings.
 ; @main is defined by the compiled program: it adapts main(void) or

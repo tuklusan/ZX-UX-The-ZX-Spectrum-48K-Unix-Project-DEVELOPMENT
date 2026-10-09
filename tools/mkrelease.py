@@ -1,64 +1,61 @@
 #!/usr/bin/env python3
-"""Write the release assets into release/ from what build/ holds.
+"""Copy finished ZX-UX files to release/ without wrapping them in archives.
 
-  python3 tools/mkrelease.py [LOGDIR]
-
-Run after: tools/build.py, tools/t.sh (build/test.z80), tools/mktapes.py,
-tools/mtsnap.py, tests/ssxrun.py --png build/shots, sdk/tests/oracle.py
---png build/shots-vm, tools/gallery.py.  LOGDIR holds the test logs
-(suite.txt, oracle.txt, oracle-bytecode.txt, ssxrun.txt, ras.txt) and any
-extra screenshots (*.png) for test-results.zip.
+Run the build and tests first. You may pass a folder containing test logs.
 """
-import glob
-import os
+from pathlib import Path
+import shutil
 import sys
-import zipfile
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-B = os.path.join(ROOT, 'build')
-R = os.path.join(ROOT, 'release')
-FIXED = (2026, 1, 1, 0, 0, 0)
+ROOT = Path(__file__).resolve().parent.parent
+BUILD = ROOT / 'build'
+RELEASE = ROOT / 'release'
 
 
-def write(zname, items):
-    """items: (path on disk, name in the archive)"""
-    p = os.path.join(R, zname)
-    with zipfile.ZipFile(p, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-        for src, name in items:
-            info = zipfile.ZipInfo(name, FIXED)
-            info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = 0o755 << 16 if os.access(src, os.X_OK) and src.endswith('sjasmplus') else 0o644 << 16
-            z.writestr(info, open(src, 'rb').read())
-    print('%-32s %8d bytes, %d files' % (zname, os.path.getsize(p), len(items)))
+def deliver(source: Path, name: str, required: bool = True) -> bool:
+    if not source.is_file():
+        if required:
+            raise SystemExit(f'Missing build file: {source}')
+        return False
+    target = RELEASE / name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source, target)
+    print(f'{target.relative_to(ROOT)}  {target.stat().st_size} bytes')
+    return True
 
 
-def main(argv):
-    logs = argv[0] if argv else None
-    os.makedirs(R, exist_ok=True)
-    b = lambda n: (os.path.join(B, n), n)
-    write('runixz80-tzx.zip', [b('runixz80.tzx')])
-    write('runixz80-tap.zip', [b('runixz80.tap')])
-    write('runixz80-z80.zip', [(os.path.join(B, 'test.z80'), 'runixz80.z80')])
-    write('runixz80-multitask-z80.zip', [b('runixz80-multitask.z80')])
-    write('runixz80-c48-tzx.zip', [b('runixz80-c48.tzx')])
-    tapes = [b(n) for n in ('c48-apps.tzx', 'c48-demos.tzx', 'c48-examples.tzx', 'c48-games.tzx',
-                            'c48-multitask.tzx')]
-    tapes += [(f, 'c48/' + os.path.basename(f)) for f in sorted(glob.glob(os.path.join(B, 'c48', '*.ta[p]')))]
-    tapes += [(f, 'c48/' + os.path.basename(f)) for f in sorted(glob.glob(os.path.join(B, 'c48', '*.ssx')))]
-    write('c48-tapes.zip', tapes)
-    shots = [b('gallery.html')]
-    shots += [(f, 'runix/' + os.path.basename(f)) for f in sorted(glob.glob(os.path.join(B, 'shots', '*.png')))]
-    shots += [(f, 'vm/' + os.path.basename(f)) for f in sorted(glob.glob(os.path.join(B, 'shots-vm', '*.png')))]
-    write('c48-screenshots.zip', shots)
-    if logs:
-        res = [(f, os.path.basename(f)) for f in sorted(glob.glob(os.path.join(logs, '*.txt')))]
-        res += [(f, 'screens/' + os.path.basename(f)) for f in sorted(glob.glob(os.path.join(logs, '*.png')))]
-        res.append(b('sizes.json'))
-        write('test-results.zip', res)
-    sj = os.path.join(ROOT, 'tools', 'bin', 'sjasmplus')
-    lic = os.path.join(ROOT, '..', 'sjasm-src', 'LICENSE.md')
-    if os.path.exists(sj) and os.path.exists(lic):
-        write('build-tools-linux-x64.zip', [(sj, 'sjasmplus'), (lic, 'sjasmplus-LICENSE.md')])
+def copy_matching(directory: Path, pattern: str, destination: str) -> int:
+    count = 0
+    for item in sorted(directory.glob(pattern)):
+        if item.is_file():
+            deliver(item, f'{destination}/{item.name}')
+            count += 1
+    return count
+
+
+def main(arguments: list[str]) -> None:
+    RELEASE.mkdir(parents=True, exist_ok=True)
+    for name in ('ZX-UX.tzx', 'ZX-UX.tap', 'ZX-UX-c48.tzx',
+                 'ZX-UX-multitask.z80', 'ZX-UX-multitask.png'):
+        deliver(BUILD / name, name)
+    deliver(BUILD / 'test.z80', 'ZX-UX.z80')
+    for name in ('c48-apps.tzx', 'c48-demos.tzx', 'c48-examples.tzx',
+                 'c48-games.tzx', 'c48-multitask.tzx'):
+        deliver(BUILD / name, name)
+    if not copy_matching(BUILD / 'c48', '*.tap', 'c48'):
+        raise SystemExit('Missing program tapes')
+    if not copy_matching(BUILD / 'c48', '*.ssx', 'c48'):
+        raise SystemExit('Missing compiled programs')
+    deliver(BUILD / 'gallery.html', 'gallery.html')
+    deliver(BUILD / 'sizes.json', 'sizes.json', required=False)
+    copy_matching(BUILD / 'shots', '*.png', 'screens/system')
+    copy_matching(BUILD / 'shots-vm', '*.png', 'screens/vm')
+    if arguments:
+        logs = Path(arguments[0])
+        if not logs.is_dir():
+            raise SystemExit(f'Log folder missing: {logs}')
+        copy_matching(logs, '*.txt', 'logs')
+        copy_matching(logs, '*.png', 'screens/tests')
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-; rcc runtime: <string> functions                           (runix SDK)
+; rcc runtime: <string> functions                           (ZX-UX SDK)
         section text
         global _strlen,_strcmp,_strcpy,_strncpy,_memcpy,_memmove,_memchr,_memset
 ; unsigned strlen(char *s)

@@ -1,4 +1,4 @@
-/* runix suite: two cassette programs share the screen and the processor
+/* ZX-UX suite: two cassette programs share the screen and the processor
  * (the right half) */
 #include <c48.h>
 

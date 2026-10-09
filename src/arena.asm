@@ -1,5 +1,5 @@
 ; =====================================================================
-;  arena - the elastic memory of runix 2.x
+;  arena - the elastic memory of ZX-UX 2.x
 ;
 ;  One region (AR0 .. a_top) holds every file, directory, process save
 ;  image and loaded program.  A block is

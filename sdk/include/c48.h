@@ -1,4 +1,4 @@
-/* runix SDK: the C48 library as runix provides it (SPEC-SDK-R2 section 4).
+/* ZX-UX SDK: the C48 library as ZX-UX provides it (SPEC-SDK-R2 section 4).
  * #include <c48.h> gives these prototypes; a program may also declare the
  * ones it uses itself, with exactly these types. */
 int getchar(void);

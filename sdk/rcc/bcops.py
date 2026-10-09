@@ -1,4 +1,4 @@
-"""SSB1: the runix SDK bytecode instruction set (SPEC-SDK-R2 section 6).
+"""SSB1: the ZX-UX SDK bytecode instruction set (SPEC-SDK-R2 section 6).
 
 One byte opcodes.  The virtual machine (sdk/lib/vm.asm) keeps the top of
 the expression stack in HL, the rest on the Z80 stack, the instruction

@@ -1,6 +1,6 @@
 ; rcc runtime: the C48 screen - 64 x 24 text in the 4 x 8 font, colours,
 ; PLOT/POINT and user-defined graphics, written straight into the display
-; file (semantics of the C48 SDK reference screen).              (runix SDK)
+; file (semantics of the C48 SDK reference screen).              (ZX-UX SDK)
 SYS     equ 6003h
 TTOP    equ 5BE4h               ; kernel: the console's first row while it
                                 ; shares the screen (0: it does not)

@@ -1,5 +1,5 @@
 ; rcc runtime: five-byte floats, computed by the 48K ROM's calculator
-;                                                           (runix SDK)
+;                                                           (ZX-UX SDK)
 ; The program calls the ROM itself.  Interrupts are off meanwhile, the
 ; calculator's stack (STKBOT/STKEND) and memory (MEM) are in this
 ; program's bss, and ERR_SP points at a trap here, so a ROM error report

@@ -1,6 +1,6 @@
 """rcc: size-optimising native Z80 back end.
 
-Runix C ABI ("rcc ABI", see sdk/doc/ABI.md):
+ZX-UX C ABI ("rcc ABI", see sdk/doc/ABI.md):
   * arguments are evaluated left to right; arguments 1..n-1 are pushed in that
     order, argument n is passed in HL; the callee removes the pushed words
   * int/char/pointer results in HL (char: H = 0); float results in @fac

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""rtap - runix SDK tape writer: SSX1 programs -> SST1 cassette records.
+"""rtap - ZX-UX SDK tape writer: SSX1 programs -> SST1 cassette records.
 
-  rtap.py [-o out.tzx|out.tap] [--after runix.tzx] [--title T] prog.ssx[=NAME] ...
+  rtap.py [-o out.tzx|out.tap] [--after ZX-UX.tzx] [--title T] prog.ssx[=NAME] ...
 
 Each program becomes one standard Spectrum CODE pair (header + data block)
-that runix's loader recognises (SPEC-SDK-R2 section 9):
+that ZX-UX's loader recognises (SPEC-SDK-R2 section 9):
 
   header   type 3, name = the program name (1..10 characters, the name
            typed as /dev/cassette/NAME), length = SSX1 file size,
@@ -12,8 +12,8 @@ that runix's loader recognises (SPEC-SDK-R2 section 9):
            heap and stack; at least the file size), parameter 2 = 'SS'
   data     the SSX1 file, flag FFh
 
---after appends the records to a copy of an existing tape (e.g. the runix
-boot tape), so that one tape boots runix and then holds the programs.
+--after appends the records to a copy of an existing tape (e.g. the ZX-UX
+boot tape), so that one tape boots ZX-UX and then holds the programs.
 """
 import os
 import struct

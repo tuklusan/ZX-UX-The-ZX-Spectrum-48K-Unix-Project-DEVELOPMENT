@@ -21,7 +21,7 @@ for n, r in R.items():
     rows.append(dict(name=n, dir=r['dir'], src=os.path.getsize(src),
                      native_image=len(rld.parse_ssx(d1)['image']), native_need=need1,
                      bc_image=len(rld.parse_ssx(d2)['image']), bc_need=need2,
-                     mode='bytecode' if need1 > driver.RUNIX_MAX else 'native'))
+                     mode='bytecode' if need1 > driver.ZXUX_MAX else 'native'))
 json.dump(rows, open(os.path.join(ROOT, 'build', 'sizes.json'), 'w'), indent=1)
 order = ['games', 'apps', 'demos', 'examples', 'sound', 'security']
 for x in sorted(rows, key=lambda x: (order.index(x['dir']), x['name'])):

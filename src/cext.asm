@@ -1,5 +1,5 @@
 ; =====================================================================
-;  C support calls (runix 2.x, for programs from the runix SDK)
+;  C support calls (ZX-UX 2.x, for programs from the ZX-UX SDK)
 ;   38 ticks    HL = 50 Hz frame counter
 ;   39 screen   HL = 1: the caller owns the screen (no status line, no
 ;               cursor) -> HL = the 4x8 font; HL = 0: give it back

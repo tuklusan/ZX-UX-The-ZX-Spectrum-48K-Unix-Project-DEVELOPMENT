@@ -1,4 +1,4 @@
-; rcc runtime: files, through the runix file system calls   (runix SDK)
+; rcc runtime: files, through the ZX-UX file system calls   (ZX-UX SDK)
 ;   int open(char *path, int mode)    mode 0 read, 1 write, 2 both
 ;   int close(int h)
 ;   int read(int h, void *p, unsigned int n)

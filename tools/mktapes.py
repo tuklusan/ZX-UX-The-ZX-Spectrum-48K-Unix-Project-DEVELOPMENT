@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile the C48 SDK corpus with the runix SDK and write cassette tapes.
+"""Compile the C48 SDK corpus with the ZX-UX SDK and write cassette tapes.
 
   python3 tools/mktapes.py [--sdk DIR]
 
@@ -9,8 +9,8 @@ would not fit), then rtap writes
   build/c48/NAME.tap              one program
   build/c48-<group>.tzx           the programs of a group (apps, demos, ...)
   build/c48-multitask.tzx         hanoi and queens8, to run together
-  build/runixz80-c48.tzx          runix itself followed by every program
-Boot runix, log in, play a tape and type /dev/cassette/NAME [args].
+  build/ZX-UX-c48.tzx          ZX-UX itself followed by every program
+Boot ZX-UX, log in, play a tape and type /dev/cassette/NAME [args].
 """
 import json
 import os
@@ -49,7 +49,7 @@ def main(argv):
     head = b'ZXTape!\x1a\x01\x14'
     for g, dirs in GROUPS:
         blocks = []
-        t = ('runix C48 programs: %s' % g).encode()
+        t = ('ZX-UX C48 programs: %s' % g).encode()
         for d, name, hdr, dat, n, need in progs:
             if d in dirs:
                 blocks += [(1000, hdr), (2000, dat)]
@@ -66,12 +66,12 @@ def main(argv):
             raise SystemExit('rcc failed: %s' % name)
         hdr, dat = rtap.records(open(ssx, 'rb').read(), name)
         blocks += [(1000, hdr), (0 if name == 'hanoi' else 2000, dat)]   # pause 0: the tape stops
-    t = b'runix C48 programs: hanoi and queens8 together'
+    t = b'ZX-UX C48 programs: hanoi and queens8 together'
     rtap.write(os.path.join(ROOT, 'build', 'c48-multitask.tzx'), head + bytes([0x30, len(t)]) + t, blocks)
-    h, blocks = rtap.tzx_blocks(open(os.path.join(ROOT, 'build', 'runixz80.tzx'), 'rb').read())
+    h, blocks = rtap.tzx_blocks(open(os.path.join(ROOT, 'build', 'ZX-UX.tzx'), 'rb').read())
     for d, name, hdr, dat, n, need in progs:
         blocks += [(1000, hdr), (2000, dat)]
-    rtap.write(os.path.join(ROOT, 'build', 'runixz80-c48.tzx'), h, blocks)
+    rtap.write(os.path.join(ROOT, 'build', 'ZX-UX-c48.tzx'), h, blocks)
     for d, name, hdr, dat, n, need in progs:
         print('%-9s %-11s %5d bytes, needs %5d' % (d, name, n, need))
     print('%d programs' % len(progs))
