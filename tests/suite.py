@@ -251,7 +251,7 @@ def tar_roundtrip(s):
     s.sh('echo two two > /tmp/t/two')
     s.expect('tar cvf /dev/cassette/demo /tmp/t /usr/doc/zxpack',
              'd    40 /tmp/t', '-     4 /tmp/t/one', '-     8 /tmp/t/two',
-             'z  1473 /usr/doc/zxpack', frames=60000)
+             'z  1293 /usr/doc/zxpack', frames=60000)
     s.zx.saved = zxrun.decode_mic(s.zx.tr.mic)
     if len(s.zx.saved) < 10:
         raise Fail('only %d tape blocks' % len(s.zx.saved))
@@ -266,21 +266,21 @@ def tar_roundtrip(s):
     s.expect('tar xvf /dev/cassette/demo', '/tmp/t/one', '/usr/doc/zxpack: replaced',
              frames=200000, after_typing=play)
     s.expect('cat /tmp/t/one /tmp/t/two', 'one', 'two two')
-    s.expect('ls -l /usr/doc/zxpack', 'z-rwr- 1  1473')
-    s.expect('wc /usr/doc/zxpack', re.compile(r'1473 /usr/doc/zxpack'), frames=20000)
+    s.expect('ls -l /usr/doc/zxpack', 'z-rwr- 1  1293')
+    s.expect('wc /usr/doc/zxpack', re.compile(r'1293 /usr/doc/zxpack'), frames=20000)
 
 
 @test
 def zxpack_cmd(s):
     s.login()
     s.expect('zxpack', 'files packed', 'free')
-    s.expect('ls -l /usr/doc', re.compile(r'z.rwr- 1 +1473 .*zxpack'))
-    s.expect('wc /usr/doc/zxpack', re.compile(r'1473 /usr/doc/zxpack'), frames=20000)
-    s.expect('ls -l /usr/doc', re.compile(r's.rwr- 1 +1473 .*zxpack'))
-    s.expect('zxpack /usr/doc/zxpack', '1473 -> 701 bytes', frames=60000)
+    s.expect('ls -l /usr/doc', re.compile(r'z.rwr- 1 +1293 .*zxpack'))
+    s.expect('wc /usr/doc/zxpack', re.compile(r'1293 /usr/doc/zxpack'), frames=20000)
+    s.expect('ls -l /usr/doc', re.compile(r's.rwr- 1 +1293 .*zxpack'))
+    s.expect('zxpack /usr/doc/zxpack', '1293 -> 584 bytes', frames=60000)
     s.sh('echo x > /tmp/s')
     s.expect('zxpack /tmp/s', 'would not be smaller')
-    s.expect('zxpack /etc/motd', '153 -> 118 bytes', frames=60000)
+    s.expect('zxpack /etc/motd', '136 -> 109 bytes', frames=60000)
 
 
 @test
@@ -289,9 +289,9 @@ def idle_pack(s):
     s.login()
     s.sh('cp /usr/doc/zxpack /tmp/i')          # a raw copy (unpacks the doc)
     want = s.sh('sum /tmp/i', frames=20000)
-    s.expect('ls -l /tmp/i', re.compile(r's.rw.. 1 +1473 '))
+    s.expect('ls -l /tmp/i', re.compile(r's.rw.. 1 +1293 '))
     s.wait(50 * 60)                            # a minute of idling
-    s.expect('ls -l /tmp/i', re.compile(r'z.rw.. 1 +1473 '))
+    s.expect('ls -l /tmp/i', re.compile(r'z.rw.. 1 +1293 '))
     s.expect('sum /tmp/i', *want, frames=20000)     # unpacks on reading
 
 
@@ -299,23 +299,23 @@ def idle_pack(s):
 def pack_under_pressure(s):
     """an unpack that runs out of blocks packs other files meanwhile"""
     s.login()
-    s.sh('cp /usr/doc/zxpack /tmp/a')          # raw 12 blocks, packable
-    s.expect('zxpack /usr/doc/zxpack', '1473 -> 701 bytes', frames=60000)
+    s.sh('cp /usr/doc/zxpack /tmp/a')          # raw 11 blocks, packable
+    s.expect('zxpack /usr/doc/zxpack', '1293 -> 584 bytes', frames=60000)
     sum_a = s.sh('sum /tmp/a', frames=20000)
     def free():
         out = s.sh('df')
         return int(re.search(r'(\d+) bytes free', '\n'.join(out)).group(1))
-    # fill the arena until the 1473 raw bytes of the doc no longer fit
+    # fill the arena until the 1293 raw bytes of the doc no longer fit
     n = 0
-    while free() > 1480 and n < 5:
+    while free() > 1300 and n < 5:
         s.sh('cp /tmp/a /tmp/f%d' % n, frames=20000)
         n += 1
-    if free() > 1480:
+    if free() > 1300:
         s.sh('cp /usr/doc/tar /tmp/g', frames=20000)
-    s.expect('wc /usr/doc/zxpack', re.compile(r'44 +240 +1473 /usr/doc/zxpack'),
+    s.expect('wc /usr/doc/zxpack', re.compile(r'38 +213 +1293 /usr/doc/zxpack'),
              frames=200000)
     s.sh('rm /tmp/g')
-    s.expect('ls -l /usr/doc/zxpack', re.compile(r's.rw.. 1 +1473 '))
+    s.expect('ls -l /usr/doc/zxpack', re.compile(r's.rw.. 1 +1293 '))
     # the blocks came from packing closed files during the unpack
     s.expect('ls -l /tmp', re.compile(r'^z', re.M))
     s.expect('sum /tmp/a', *sum_a, frames=60000)

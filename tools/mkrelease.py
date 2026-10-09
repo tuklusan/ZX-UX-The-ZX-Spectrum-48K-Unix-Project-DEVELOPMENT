@@ -39,6 +39,8 @@ def main(arguments: list[str]) -> None:
                  'ZX-UX-multitask.z80', 'ZX-UX-multitask.png'):
         deliver(BUILD / name, name)
     deliver(BUILD / 'test.z80', 'ZX-UX.z80')
+    deliver(BUILD / 'README.txt', 'README.txt')
+    deliver(ROOT / 'src/font4x8.LICENSE', 'font4x8.LICENSE')
     for name in ('c48-apps.tzx', 'c48-demos.tzx', 'c48-examples.tzx',
                  'c48-games.tzx', 'c48-multitask.tzx'):
         deliver(BUILD / name, name)
@@ -48,8 +50,8 @@ def main(arguments: list[str]) -> None:
         raise SystemExit('Missing compiled programs')
     deliver(BUILD / 'gallery.html', 'gallery.html')
     deliver(BUILD / 'sizes.json', 'sizes.json', required=False)
-    copy_matching(BUILD / 'shots', '*.png', 'screens/system')
-    copy_matching(BUILD / 'shots-vm', '*.png', 'screens/vm')
+    copy_matching(BUILD / 'shots', '*.png', 'shots')
+    copy_matching(BUILD / 'shots-vm', '*.png', 'shots-vm')
     if arguments:
         logs = Path(arguments[0])
         if not logs.is_dir():
