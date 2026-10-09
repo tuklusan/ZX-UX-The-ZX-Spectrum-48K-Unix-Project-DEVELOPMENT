@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Screenshot gallery of the C48 corpus: on ZX-UX, in rvm, in the C48 SDK
-reference VM.  Reads build/shots (tests/ssxrun.py) and build/shots-vm
-(sdk/tests/oracle.py --png); writes build/gallery.html (images inline).
+"""Screenshot gallery for C48 programs running on ZX-UX and other VMs.
+Reads PNG files from build/shots and build/shots-vm, then writes
+build/gallery.html with links to those images.
 
   python3 tools/gallery.py [results-ssxrun.txt] [results-oracle.txt]
 """
-import base64
 import html
 import json
 import os
@@ -23,8 +22,8 @@ ORDER = ['games', 'apps', 'demos', 'examples', 'sound', 'security']
 def img(path, alt):
     if not os.path.exists(path):
         return '<div class="none">not compared</div>'
-    b = base64.b64encode(open(path, 'rb').read()).decode()
-    return '<img src="data:image/png;base64,%s" alt="%s" width="288" height="224" loading="lazy">' % (b, html.escape(alt))
+    rel = os.path.relpath(path, os.path.join(ROOT, 'build')).replace(os.sep, '/')
+    return '<img src="%s" alt="%s" width="288" height="224" loading="lazy">' % (html.escape(rel, quote=True), html.escape(alt))
 
 
 def results(path, pat):
@@ -58,8 +57,9 @@ def main(argv):
         if s:
             mode = '%s · needs %s bytes' % ('SSB1 bytecode' if s['mode'] == 'bytecode' else 'native Z80',
                                            format(s['bc_need'] if s['mode'] == 'bytecode' else s['native_need'], ','))
-        ok_r = 'PASS' in rx.get(n, 'PASS')
-        ok_v = 'PASS' in ov.get(n, 'PASS')
+        ok_r = 'PASS' in rx.get(n, '')
+        has_vm = os.path.isfile(os.path.join(VM, f + '.png')) and os.path.isfile(os.path.join(VM, f + '.sdk.png'))
+        ok_v = has_vm and 'PASS' in ov.get(n, '')
         cards.append('''<article class="prog" id="%s">
 <header><h3>%s</h3><span class="grp">%s</span>
 <span class="pill %s">ZX-UX %s</span><span class="pill %s">VM %s</span></header>
@@ -72,14 +72,15 @@ def main(argv):
 </div></article>''' % (
             html.escape(f), html.escape(n), html.escape(r['dir']),
             'ok' if ok_r else 'bad', 'ran' if ok_r else 'failed',
-            'ok' if ok_v else 'bad', 'identical' if ok_v else 'differs',
+            'ok' if ok_v else ('bad' if has_vm else 'unknown'),
+            ('identical' if ok_v else 'differs') if has_vm else 'not tested',
             html.escape(cmd), (' <span class="keys">keys: <code>%s</code></span>' % html.escape(keys)) if keys else '',
             html.escape(mode),
             img(os.path.join(SHOTS, f + '.ZX-UX.png'), n + ' on ZX-UX'),
             img(os.path.join(VM, f + '.png'), n + ' in rvm'),
             img(os.path.join(VM, f + '.sdk.png'), n + ' in the C48 SDK')))
-    nr = sum(1 for n in names if 'PASS' in rx.get(n, 'PASS'))
-    nv = sum(1 for n in names if 'PASS' in ov.get(n, 'PASS'))
+    nr = sum(1 for n in names if 'PASS' in rx.get(n, ''))
+    nv = sum(1 for n in names if 'PASS' in ov.get(n, ''))
     page = PAGE.replace('@CARDS@', '\n'.join(cards)).replace('@N@', str(len(names))) \
         .replace('@NR@', str(nr)).replace('@NV@', str(nv)) \
         .replace('@NP@', str(len({n.split(':')[0] for n in names})))
