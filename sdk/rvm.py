@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""rvm - the runix virtual machine: run an SSX1 C48 program on the host.
+"""rvm - the ZX-UX virtual machine: run an SSX1 C48 program on the host.
 
-The program runs on an emulated Z80 with the real 48K ROM; the runix kernel's
+The program runs on an emulated Z80 with the real 48K ROM; the ZX-UX kernel's
 system-call interface (call 6003h) is emulated in Python, including the C
 support calls (ticks, screen).  Floats and BEEP are the program's own calls
 into the ROM, run here as on the Spectrum.  What runs is the same SSX1 file
@@ -78,13 +78,13 @@ class VM:
         mem[load:load + len(img)] = list(img)
         end = load + len(img) + hdr['bss'] + hdr['heap']
         argv0 = [b'prog'] + [a.encode() for a in args]
-        # as runix's loader: image, bss, heap, stack, then the arguments
+        # as ZX-UX's loader: image, bss, heap, stack, then the arguments
         top = load + max(len(img) + hdr['bss'] + hdr['heap'] + hdr['stack'], len(ssx)) \
             + sum(len(a) + 1 for a in argv0) + 2 * len(argv0) + 6
         if top > 0x10000:
             raise SystemExit('rvm: program does not fit (needs %d bytes)' % (top - load))
         top = min(top, 0x10000)
-        # arguments (runix exec layout): SP -> argc, argv..., 0, strings
+        # arguments (ZX-UX exec layout): SP -> argc, argv..., 0, strings
         argv = [b'prog'] + [a.encode() for a in args]
         strs = b''.join(a + b'\0' for a in argv)
         sp = (top - len(strs)) & 0xFFFE

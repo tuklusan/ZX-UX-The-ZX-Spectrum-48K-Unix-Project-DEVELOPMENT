@@ -3,7 +3,7 @@
 
   build.py SJASMPLUS_PATH
 
-Outputs (in ../build):  unix.bin  rd0.img  runixz80.tzx  runixz80.tap
+Outputs (in ../build): unix.bin, fs.img, ZX-UX.tzx, ZX-UX.tap
 """
 import os, re, struct, subprocess, sys
 
@@ -37,7 +37,7 @@ EXTRA = os.path.join(SRC, 'programs.txt')   # more programs, one per line
 ADDFILES = []
 
 MOTD = ("\n"
-        "  Welcome to RETRO UNIX Z80 v1, UNIX v1 for the ZX Spectrum 48K,\n"
+        "  Welcome to ZX-UX 2.2 for the ZX Spectrum 48K,\n"
         "  after Retro UNIX 8086 v1 by Erdogan Tan.\n"
         "  Read /usr/doc/zxpack about packed files.\n"
         "\n")
@@ -45,7 +45,7 @@ MOTD = ("\n"
 # ---------------------------------------------------------------- assembler
 def assemble(sjasm):
     r = subprocess.run([sjasm, '--nologo', '--msg=war', '--sym=unix.sym',
-                        '--lst=unix.lst', 'unix.asm'], cwd=SRC,
+                        'unix.asm'], cwd=SRC,
                        capture_output=True, text=True)
     sys.stdout.write(r.stdout + r.stderr)
     if r.returncode:
@@ -58,7 +58,7 @@ def assemble(sjasm):
     return open(os.path.join(SRC, 'unix.bin'), 'rb').read(), syms
 
 # ---------------------------------------------------------------- mkfs
-# runix 2.x: an i-node table (ITAB) and the arena, built as the kernel
+# ZX-UX 2.x: an i-node table (ITAB) and the arena, built as the kernel
 # keeps them; the tape loads them right after the resident text.
 NINODE = 24
 TXINO = 128
@@ -208,10 +208,10 @@ def tzx(blocks, title):
     # 0x30 text description, 0x32 archive info
     t = title.encode()
     out += bytes([0x30, len(t)]) + t
-    info = [(0x00, 'RETRO UNIX Z80 v1'),
-            (0x02, 'Z80 port of the Retro UNIX 8086 v1 design by Erdogan Tan'),
+    info = [(0x00, 'ZX-UX 2.2'),
+            (0x02, 'UNIX v1-inspired system for the 48K ZX Spectrum'),
             (0x03, '2026'), (0x04, 'English'), (0x05, 'Operating system'),
-            (0x08, 'UNIX v1 (1971, PDP-11) -> Retro UNIX 8086 v1 -> ZX Spectrum 48K'),
+            (0x08, 'ZX-UX 2.2, 48K ZX Spectrum'),
             (0xFF, 'Log in with any name of up to 8 characters; no passwords.')]
     body = bytes([len(info)])
     for k, s in info:
@@ -247,16 +247,16 @@ def main():
     open(os.path.join(OUT, 'fs.img'), 'wb').write(rd0)
     bas = basic_loader()
     blocks = [
-        (header(0, 'runixz80', len(bas), 10, len(bas)), 1000),
+        (header(0, 'ZX-UX', len(bas), 10, len(bas)), 1000),
         (tap_block(0xFF, bas), 1000),
         (header(3, 'unix', len(kern), KBASE, 32768), 1000),
         (tap_block(0xFF, kern), 1000),
         (header(3, 'fs', len(rd0), RD0, 32768), 1000),
         (tap_block(0xFF, rd0), 2000),
     ]
-    open(os.path.join(OUT, 'runixz80.tzx'), 'wb').write(
-        tzx(blocks, 'RETRO UNIX Z80 v1 - ZX Spectrum 48K'))
-    open(os.path.join(OUT, 'runixz80.tap'), 'wb').write(tap(blocks))
+    open(os.path.join(OUT, 'ZX-UX.tzx'), 'wb').write(
+        tzx(blocks, 'ZX-UX 2.2 - ZX Spectrum 48K'))
+    open(os.path.join(OUT, 'ZX-UX.tap'), 'wb').write(tap(blocks))
     print('kernel %d bytes (6000-%04X), user text to %04X, image %d bytes'
           % (syms['kend'] - KBASE, syms['kend'] - 1, syms['utext_end'] - 1, len(kern)))
     print('boot code / zxpack model %04X-%04X, i-nodes %04X-%04X, arena %04X-%04X (%d bytes), '

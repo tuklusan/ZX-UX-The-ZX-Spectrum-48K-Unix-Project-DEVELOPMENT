@@ -1,7 +1,7 @@
 """Five-byte Spectrum floating point computed by the real 48K ROM.
 
 The ROM calculator runs on an emulated Z80 (SkoolKit CSimulator), so the
-compiler's constant folding gives exactly the bytes the runix kernel's float
+compiler's constant folding gives exactly the bytes the ZX-UX kernel's float
 service (which runs the same ROM code) gives at run time.
 """
 from skoolkit import CSimulator, ROM48, read_bin_file

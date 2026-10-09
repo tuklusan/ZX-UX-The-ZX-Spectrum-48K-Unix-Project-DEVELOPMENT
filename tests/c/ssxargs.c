@@ -1,4 +1,4 @@
-/* runix suite: an SSX1 program from tape gets its arguments, prints
+/* ZX-UX suite: an SSX1 program from tape gets its arguments, prints
  * through the console and ends with a status */
 #include <c48.h>
 

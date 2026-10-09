@@ -1967,7 +1967,7 @@ boot:
         jp kinit                ; exec /etc/init
 
 msg_boot:
-        db 10,"RETRO UNIX Z80 v1 (runix 2.2) kernel ",0
+        db 10,"ZX-UX 2.2 kernel ",0
 msg_ok: db "ok",10,0
 msg_nofs: db "no root fs",0
 

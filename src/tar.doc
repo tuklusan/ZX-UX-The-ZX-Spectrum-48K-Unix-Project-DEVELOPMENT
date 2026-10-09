@@ -1,48 +1,44 @@
-TAR(1)                                       RETRO UNIX Z80
+TAR(1)                                              ZX-UX
 
 NAME
-     tar, tap - file archives on the cassette
+    tar, tap - save and restore files with cassette tape
 
-SYNOPSIS
-     tar cvf /dev/cassette/name file ...
-     tar tvf /dev/cassette/name [file ...]
-     tar xvf /dev/cassette/name [file ...]
-     tap r file ...    tap t    tap x [file ...]
+USE
+    tar cvf /dev/cassette/name file ...
+    tar tvf /dev/cassette/name [file ...]
+    tar xvf /dev/cassette/name [file ...]
+    tap r file ...
+    tap t
+    tap x [file ...]
 
-DESCRIPTION
-     tar writes files to the cassette as one archive and reads
-     them back. A directory is archived with everything below
-     it. Each file keeps its full path name, mode, size and
-     modification time; packed files go to tape packed and come
-     back packed.
+WHAT IT DOES
+    tar saves files to tape. It can also list and restore them.
+    A saved directory includes the files below it.
+    Each file keeps its path, size, mode, and change time.
+    Packed files remain packed on tape.
 
-     c    create an archive (start the recorder first)
-     t    list an archive
-     x    extract an archive, or only the files named, and the
-          files below a directory named
-     v    verbose: kind (- file, d directory, z packed), size
-          and path of every file
-     f    the archive: /dev/cassette/name. The name, up to 10
-          characters, labels the archive on the tape, so one
-          tape can hold several; t and x wind on to the archive
-          with that name. /dev/cassette alone means the next
-          archive.
+OPTIONS
+    c   Write a new tape set. Start recording first.
+    t   Show what the tape holds.
+    x   Restore all files, or only the named files and folders.
+    v   Print each file's kind, size, and path.
+    f   Select the cassette name. Use at most ten characters.
 
-     Extracting replaces existing files without asking (it says
-     "replaced") and makes the directories a path needs. A file
-     that does not fit on the disk is removed again.
+    Use /dev/cassette without a name to read the next tape set.
+    Restoring a file replaces an older file of the same name.
+    tar also makes any missing parent folders.
+    If a file will not fit in memory, tar removes the partial file.
 
-     tap is UNIX v1's name for the same archiver: tap r, t and
-     x are tar c, t and x on the next archive, verbose.
+    tap uses the same code. Its r, t, and x commands match
+    tar's c, t, and x commands.
 
-THE TAPE
-     Standard Spectrum blocks: a header named after the
-     archive, then for every file a header named after it and
-     its data in blocks of up to 512 bytes, then an empty
-     header. Tape browsers show the names. Devices and the
-     resident programs in /bin are not archived.
+TAPE LAYOUT
+    Each tape set starts with a Spectrum header.
+    Each file has a header and data blocks of up to 512 bytes.
+    An empty header marks the end.
+    Device files and resident /bin programs are not saved.
 
 EXAMPLES
-     tar cvf /dev/cassette/clive /usr/clive
-     tar tvf /dev/cassette/clive
-     tar xvf /dev/cassette/clive /usr/clive/notes
+    tar cvf /dev/cassette/home /usr/home
+    tar tvf /dev/cassette/home
+    tar xvf /dev/cassette/home /usr/home/notes

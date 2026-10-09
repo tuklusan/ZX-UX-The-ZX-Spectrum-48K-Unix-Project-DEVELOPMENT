@@ -1,21 +1,13 @@
-# runix — Elastic Memory Architecture and SS File Formats
+# ZX-UX: Memory and File Formats, R1
 
-**Revision 1 — design specification for the 2.x rewrite**
+This file describes the first memory design. It is kept so the changes are
+clear. Some ideas in R1 were not built. Read `SPEC-ELASTIC-R2.md` for the
+later system, and check the source for the current behavior.
 
-This document is the contract for two pieces of work: the rewrite of the runix kernel around one elastic memory arena, and the offline toolchain (assembler, linker, C compiler) that produces programs for it. It defines:
-- the memory model
-- the elastic v1 file system
-- the process model
-- the byte formats SSX1, SSO1, SSA1, SST1 and SSZ1
+R1 describes how processes and files can share one area of RAM. It also
+defines the SSX1 program, SSO1 object, SSA1 library, and tape formats.
 
-The design takes its direction from ZX-UX (memory shared elastically between files and programs, programs loaded from cassette) but is an independent design and implementation. Where runix differs it does so deliberately:
-- **Real v1 directories:** i-numbers, links, `mkdir`, `..`.
-- **Preemptive scheduling:** driven by the 50 Hz interrupt.
-- **Real `fork`:** v1 semantics are kept.
-
-The format prefix **SS** stands for Supratim Sanyal.
-
-## 1. Decisions
+## 1. Design choices
 
 | # | Decision | Consequence |
 |---|---|---|
@@ -28,9 +20,13 @@ The format prefix **SS** stands for Supratim Sanyal.
 
 ## 2. Goal and success measure
 
-The goal is to run the **biggest possible user program** produced by the offline C compiler, without giving up a recognisable v1 UNIX.
+The goal is to run the **biggest possible user program** produced by the offline C compiler, without
+giving up a recognisable v1 UNIX.
 
-Success measure: the largest SSX1 program that loads from cassette and runs beside `init` and an interactive `sh` with `/tmp` empty. The estimate for this design is about 14 KB (§3.5). In release 1.4 the corresponding limit was about 4 KB of core, and the 8 KB RAM disk could hold only about 3 KB of binary.
+Success measure: the largest SSX1 program that loads from cassette and runs beside `init` and an
+interactive `sh` with `/tmp` empty. The estimate for this design is about 14 KB (§3.5). In release
+1.4 the corresponding limit was about 4 KB of core, and the 8 KB RAM disk could hold only about 3 KB
+of binary.
 
 ## 3. Memory model
 
@@ -48,9 +44,13 @@ Success measure: the largest SSX1 program that loads from cassette and runs besi
     F000-FFF3  WINDOW          core window for resident-text processes
     FFF4-FFFF  IM 2 trampoline
 
-`A0` is the first byte after the resident text and is computed at build time. `A1` = `WINDOW` − 256. With today's code sizes the arena would be about 16.5 KB (AE74h–EEFFh); the kernel changes in this rewrite will move it by a few hundred bytes.
+`A0` is the first byte after the resident text and is computed at build time. `A1` = `WINDOW` − 256.
+With today's code sizes the arena would be about 16.5 KB (AE74h–EEFFh). the kernel changes in this
+rewrite will move it by a few hundred bytes.
 
-`WINDOW` is a build constant (default F000h, 4084 bytes). It can be made smaller later if the resident commands' data needs allow it; each byte removed from the window is a byte more in the arena.
+`WINDOW` is a build constant (default F000h, 4084 bytes). It can be made smaller later if the
+resident commands' data needs allow it. each byte removed from the window is a byte more in the
+arena.
 
 ### 3.2 Arena allocator
 
@@ -78,7 +78,8 @@ The arena is one region managed by one allocator. Every allocation is a **block*
 
 ### 3.3 The core window
 
-Resident commands are linked with their library data and BSS at fixed addresses in `WINDOW` (`UDATA` and up), so only one process at a time can have its data there.
+Resident commands are linked with their library data and BSS at fixed addresses in `WINDOW` (`UDATA`
+and up), so only one process at a time can have its data there.
 
 - A process whose program is resident text (or an SSX1 image built with the WINDOW flag, §6.2) is a **window process**. Its image is:
   - the u-area and data up to its break, at `WINDOW`
@@ -94,7 +95,8 @@ Resident commands are linked with their library data and BSS at fixed addresses 
 
 ### 3.4 SSX1 processes
 
-An SSX1 program loaded from cassette (or from a file) gets one **IMAGE** block holding everything it uses:
+An SSX1 program loaded from cassette (or from a file) gets one **IMAGE** block holding everything it
+uses:
 
     IMAGE block payload:
       image (text + data)  relocated to the block's address
@@ -110,11 +112,13 @@ An SSX1 program loaded from cassette (or from a file) gets one **IMAGE** block h
 
 ### 3.5 Biggest program estimate
 
-Arena ≈ 16,524 bytes (today's boundaries). The two resident window processes that are always present have actual images of about:
+Arena ≈ 16,524 bytes (today's boundaries). The two resident window processes that are always present
+have actual images of about:
 - `init`: u-area + 222-byte library arena + small stack ≈ 0.35 KB
 - `sh`: ≈ 1.3 KB
 
-These are actual extents, not 1.x's worst-case `STKRES` accounting. Directories `/`, `/bin` (350 bytes), `/dev`, `/etc`, `/tmp` and `/usr` take about 0.6 KB.
+These are actual extents, not 1.x's worst-case `STKRES` accounting. Directories `/`, `/bin` (350
+bytes), `/dev`, `/etc`, `/tmp` and `/usr` take about 0.6 KB.
 
 **Largest SSX1 program ≈ 16.5 − 0.35 − 1.3 − 0.6 − 0.6 (`/etc/motd`, i-node table if placed in the arena, slack) ≈ 13.5–14 KB**, counting image + bss + heap + stack. A 2 KB window instead of 4 KB would add about 2 KB.
 
@@ -132,7 +136,9 @@ These are actual extents, not 1.x's worst-case `STKRES` accounting. Directories 
 
 ### 3.7 Fixed kernel allocations
 
-KERN blocks hold kernel data that has no fixed home: the i-node table (§4.2), if it doesn't fit in low memory, and transient loader buffers. They are allocated from the top and freed as soon as possible.
+KERN blocks hold kernel data that has no fixed home: the i-node table (§4.2), if it doesn't fit in
+low memory, and transient loader buffers. They are allocated from the top and freed as soon as
+possible.
 
 ## 4. Elastic v1 file system
 
@@ -142,7 +148,9 @@ v1 semantics are kept:
 - i-numbers, link counts, directories that are files of 10-byte entries (2-byte i-number + 8-character name), `.` and `..`, mode bits, mtime and ctime
 - devices as i-numbers below 41
 
-Storage is elastic: each file or directory is one FILE or DIR block whose payload is the file's bytes, exactly as long as the file plus allocation rounding. There are no data blocks, indirect blocks, free-block bitmaps or superblock.
+Storage is elastic: each file or directory is one FILE or DIR block whose payload is the file's
+bytes, exactly as long as the file plus allocation rounding. There are no data blocks, indirect
+blocks, free-block bitmaps or superblock.
 
 ### 4.2 I-node table
 
@@ -180,7 +188,8 @@ A fixed kernel table of **NINODE = 32** records of 16 bytes (512 bytes):
 
 ### 4.4 What replaces the boot RAM disk image
 
-At boot the kernel builds the root directory tree from a small **boot file set** carried in the kernel tape blocks:
+At boot the kernel builds the root directory tree from a small **boot file set** carried in the
+kernel tape blocks:
 - `/`, `/bin` (with the resident program entries), `/dev`, `/etc`, `/etc/motd`, `/tmp`, `/usr`, `/usr/doc`
 
 The two manual pages become optional SST1 files on the system tape, loaded on demand.
@@ -195,7 +204,8 @@ The two manual pages become optional SST1 files on the system tape, loaded on de
 | Memory held when not running | SAVE block (image size) | IMAGE block + 59-byte SAVE |
 | `fork` child | window process with its own SAVE | twin (§3.6) |
 
-Scheduling, quantum, sleep and wakeup, signals and the status line are unchanged from 1.x. `NPROC` stays 4.
+Scheduling, quantum, sleep and wakeup, signals and the status line are unchanged from 1.x. `NPROC`
+stays 4.
 
 ## 6. SSX1 — executable
 
@@ -225,13 +235,16 @@ All fields are little-endian. **Flags:**
 - **bit 1 `PACKED`:** the image and relocation stream that follow are one SSZ1 stream (§10); the header itself is never packed.
 - **bits 2–7:** must be 0 in revision 1.
 
-A loader rejects a header whose magic, header size, flags or checksum is wrong, and any size combination that overflows 16 bits.
+A loader rejects a header whose magic, header size, flags or checksum is wrong, and any size
+combination that overflows 16 bits.
 
 ### 6.3 Relocation stream
 
-Relocations mark 16-bit little-endian words in the image that hold addresses relative to image start (link address 0). The loader adds the load address to each.
+Relocations mark 16-bit little-endian words in the image that hold addresses relative to image start
+(link address 0). The loader adds the load address to each.
 
-The stream encodes positions as increasing offsets, so the loader can patch while the image streams in from tape:
+The stream encodes positions as increasing offsets, so the loader can patch while the image streams
+in from tape:
 
 | Byte(s) | Meaning |
 |---|---|
@@ -251,13 +264,17 @@ The stream encodes positions as increasing offsets, so the loader can patch whil
 5. Only now discard the caller's old image (its SAVE block or IMAGE block), zero the bss, and build the arguments at the top of the block in the v1 layout (`SP` → argc, argv[0..n−1], 0, strings).
 6. Jump to the entry point with interrupts enabled.
 
-Because the old and new images coexist until step 5, the biggest program is loaded from a small caller (normally a child of `sh`, whose window image is small); the figure in §3.5 already assumes that.
+Because the old and new images coexist until step 5, the biggest program is loaded from a small
+caller (normally a child of `sh`, whose window image is small). the figure in §3.5 already assumes
+that.
 
-The system call interface is unchanged (`ld a,n` / `call 6003h`). The C calling convention is defined by the compiler documents, not here.
+The system call interface is unchanged (`ld a,n` / `call 6003h`). The C calling convention is
+defined by the compiler documents, not here.
 
 ## 7. SSO1 — relocatable object (host side)
 
-The compiler, assembler and linker run offline, so SSO1 is designed for the host and is never read on the Spectrum in revision 1. It is defined here so all host tools share one format.
+The compiler, assembler and linker run offline, so SSO1 is designed for the host and is never read
+on the Spectrum in revision 1. It is defined here so all host tools share one format.
 
     header:   'S' 'S' 'O' '1', u8 version = 1, u8 flags = 0,
               u16 section count, u16 symbol count, u32 string table size
@@ -284,11 +301,14 @@ The compiler, assembler and linker run offline, so SSO1 is designed for the host
     index:   for each member: u32 offset, u32 size, NUL-terminated name
     members: SSO1 objects
 
-The linker scans an archive's members for unresolved symbols, as `ld` does with libraries. Revision 1 keeps the index unsorted.
+The linker scans an archive's members for unresolved symbols, as `ld` does with libraries. Revision
+1 keeps the index unsorted.
 
 ## 9. SST1 — cassette record
 
-One file on cassette. `tar` archives are sequences of SST1 records between archive begin and end records. Running a program from tape means finding an SST1 record whose payload is SSX1 and streaming it into an IMAGE block.
+One file on cassette. `tar` archives are sequences of SST1 records between archive begin and end
+records. Running a program from tape means finding an SST1 record whose payload is SSX1 and
+streaming it into an IMAGE block.
 
 **Spectrum header block (17 bytes, flag 00):**
 - type 3 (CODE)
@@ -325,7 +345,8 @@ The zxpack codec of 1.x, unchanged and bit-exact with `tools/zxpack.py`:
 - adaptive binary range coder
 - 342 adaptive probabilities
 
-A packed **file** keeps its sizes in its i-node and stores the bare stream. A packed stream that stands alone (an SSX1 image body, an SST1 payload) is preceded by:
+A packed **file** keeps its sizes in its i-node and stores the bare stream. A packed stream that
+stands alone (an SSX1 image body, an SST1 payload) is preceded by:
 
     'S' 'S' 'Z' '1', u16 logical size, u16 stream size
 
@@ -353,7 +374,7 @@ A packed **file** keeps its sizes in its i-node and stores the bare stream. A pa
 | 1 | Arena allocator with compaction; elastic v1 file system; boot file set; `/dev/rd0` removed; `tar`, `zxpack`, `df`, `du` adapted | the 1.x regression suite passes with files in the arena |
 | 2 | Window SAVE blocks replace the swap pool (reservation rule) | suite passes; `pool_capacity`-style tests pass with arena saves |
 | 3 | SSX1 loader (file and cassette), IMAGE blocks, u-area-only switches, twin swapping | hand-assembled SSX1 test programs run, fork, exec and exit |
-| 4 | Host toolchain: SSO1/SSA1/SSX1 writers, linker, assembler output | linked programs load and run on runix |
+| 4 | Host toolchain: SSO1/SSA1/SSX1 writers, linker, assembler output | linked programs load and run on ZX-UX |
 | 5 | C compiler backend and runtime | compiled programs run from cassette |
 | 6 | Measure and tune: window size, NINODE, reserves | biggest-program figure measured |
 

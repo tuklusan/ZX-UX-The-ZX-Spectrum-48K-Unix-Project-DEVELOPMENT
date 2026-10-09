@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""A .z80 snapshot of runix with hanoi and queens8 running together.
+"""A .z80 snapshot of ZX-UX with hanoi and queens8 running together.
 
-  python3 tools/mtsnap.py [FRAMES]        -> build/runixz80-multitask.z80 (+ .png)
+  python3 tools/mtsnap.py [FRAMES]        -> build/ZX-UX-multitask.z80 (+ .png)
 
 Boots from build/test.z80 (tools/t.sh), logs in, loads hanoi (&) and then
 queens8 (&) from build/c48-multitask.tzx's programs (tools/mktapes.py) the
@@ -51,7 +51,7 @@ def main(argv):
     if not hasattr(sim.tracer, 'border') or not isinstance(sim.tracer.border, (int, list)):
         sim.tracer.border = 0
     ram, regs, state, machine = get_state(sim)
-    out = os.path.join(ROOT, 'build', 'runixz80-multitask.z80')
+    out = os.path.join(ROOT, 'build', 'ZX-UX-multitask.z80')
     if os.path.exists(out):
         os.remove(out)
     write_snapshot(out, ram, regs, state, '48K')

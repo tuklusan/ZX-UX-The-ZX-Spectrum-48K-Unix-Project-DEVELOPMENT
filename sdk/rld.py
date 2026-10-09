@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""rld - runix SDK linker: SSO1 objects and SSA1 archives -> SSX1 executable.
+"""rld - ZX-UX SDK linker: SSO1 objects and SSA1 archives -> SSX1 executable.
 
   rld.py [-o prog.ssx] [--entry SYM] [--stack N] [--heap N] [--map FILE]
          obj.sso ... lib.ssa ...

@@ -4,7 +4,7 @@
   python3 tests/suite.py [SNAPSHOT] [-k name] [-v]
 
 Every test starts from a fresh copy of the snapshot that tap2sna.py made
-from build/runixz80.tzx (a real ROM tape load), logs in and drives the
+from build/ZX-UX.tzx (a real ROM tape load), logs in and drives the
 shell through the emulated keyboard.  A command's output is what appears
 between its echoed line and the next "# " prompt.  Exit status 1 if any
 test fails.
@@ -357,7 +357,7 @@ def pool_capacity(s):
     s.expect('echo /etc/[gi]*', '/etc/getty /etc/glob /etc/init')
 
 
-# ---- programs from the cassette (runix 2.x, SDK-compiled SSX1)
+# ---- programs from the cassette (ZX-UX 2.x, SDK-compiled SSX1)
 sys.path.insert(0, os.path.join(ROOT, 'sdk'))
 
 

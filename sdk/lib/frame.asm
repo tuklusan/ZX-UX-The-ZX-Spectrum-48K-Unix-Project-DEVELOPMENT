@@ -1,4 +1,4 @@
-; rcc runtime: stack frames for recursive functions        (runix SDK)
+; rcc runtime: stack frames for recursive functions        (ZX-UX SDK)
 ;
 ;   f:  call @enter / dw locals        frame: [args 1..n-1][ret][old IX] <- IX
 ;                                              [arg n] IX-2, locals below

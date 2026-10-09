@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ras - Z80 assembler producing SSO1 relocatable objects (runix SDK).
+"""ras - Z80 assembler producing SSO1 relocatable objects (ZX-UX SDK).
 
   ras.py [-o out.sso] file.asm
 

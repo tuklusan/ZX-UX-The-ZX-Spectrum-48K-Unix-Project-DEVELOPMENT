@@ -1,19 +1,23 @@
-# runix SDK — C Compiler, Virtual Machine and Kernel C Support
+# ZX-UX: C48 Tools and Runtime, R2
 
-**Revision 2 — the SDK as built for runix 2.0**
+This file describes the C48 tools and runtime used in version 2.
+It explains the compiler, calling rules, libraries, and VM.
+It also records the older test results. Those results need a fresh run
+after source changes.
 
-Revision 1 (`SPEC-SDK-R1.md`) was the design. This revision records what is built in `sdk/`, how it was checked, and where it departs from R1. Where R2 and R1 differ, R2 applies. The memory model and the SS formats are in `SPEC-ELASTIC-R2.md`.
+R2 takes precedence over R1. The memory layout and executable format
+are described in `SPEC-ELASTIC-R2.md`.
 
-## 1. Decisions
+## 1. Design choices
 
 | # | Decision | In 2.0 |
 |---|---|---|
-| S1 | The compiler is a standalone Python tool on the host; no native compiler on runix | Done: `sdk/bin/rcc` |
-| S2 | Source language: C48 Rev 0.11. The ZX-UX C48 SDK compiler is the behaviour reference; the runix implementation is independent | Done. Every corpus program gives the SDK reference VM's screen byte for byte (§8) |
-| S3 | The SDK lives in the runix repository | `sdk/` |
-| S4 | The compiler's output runs in the runix VM and goes to tape | One file, SSX1, does both: `rvm` runs the same file that `rtap` writes to cassette |
+| S1 | The compiler is a standalone Python tool on the host; no native compiler on ZX-UX | Done: `sdk/bin/rcc` |
+| S2 | Source language: C48 Rev 0.11. The ZX-UX C48 SDK compiler is the behaviour reference; the ZX-UX implementation is independent | Done. Every corpus program gives the SDK reference VM's screen byte for byte (§8) |
+| S3 | The SDK lives in the ZX-UX repository | `sdk/` |
+| S4 | The compiler's output runs in the ZX-UX VM and goes to tape | One file, SSX1, does both: `rvm` runs the same file that `rtap` writes to cassette |
 | S5 | Size strategy: (1) size-optimising native code, (2) SSB1 bytecode for what doesn't fit, (3) moving resident commands to tape in reserve | (1) and (2) done; the lever (3) was not needed (§9) |
-| S6 | Acceptance: the whole corpus compiles and runs in the VM and on runix from tape, `ailmzx48` exempt, `queens8`/`hanoi` best effort | All 56 programs, including `queens8`, `hanoi`, `chess` and `write48`, pass in the VM and run on runix from tape (§8) |
+| S6 | Acceptance: the whole corpus compiles and runs in the VM and on ZX-UX from tape, `ailmzx48` exempt, `queens8`/`hanoi` best effort | All 56 programs, including `queens8`, `hanoi`, `chess` and `write48`, pass in the VM and run on ZX-UX from tape (§8) |
 | S7 (new) | Floats and BEEP are computed by the program itself, through the ROM | R1's `sys fp` and `sys beep` are not in the kernel (§5) |
 | S8 (new) | A C program draws its own 64-column screen | R1's console colour codes are not in the kernel; the program claims the screen and draws into the display file (§5) |
 
@@ -21,7 +25,7 @@ Revision 1 (`SPEC-SDK-R1.md`) was the design. This revision records what is buil
 
     rcc  [-S|-c] [-o out] [--bytecode|--native] [--max BYTES] [--stack N] [--heap N] file.c
     ras  file.asm -> SSO1 object             rld  objects/archives -> SSX1
-    rtap [-o out.tzx|.tap] [--after runix.tzx] prog.ssx[=NAME] ...
+    rtap [-o out.tzx|.tap] [--after ZX-UX.tzx] prog.ssx[=NAME] ...
     rvm  prog.ssx [args] [--keys TEXT] [--frames N] [--png F] [--scr F] [--text] [--ticks N] [--root DIR]
 
 - **`rcc`** (`sdk/rcc/`) runs in this order:
@@ -30,8 +34,9 @@ Revision 1 (`SPEC-SDK-R1.md`) was the design. This revision records what is buil
   3. the native Z80 generator (`z80gen.py`) or the bytecode generator (`bcgen.py`);
   4. `ras` and `rld`, which link it with the runtime archive `sdk/lib/libc48.ssa`.
 
-  Float constants are folded by running the real ROM calculator in an emulated Z80 (`romfp.py`), so compile-time and run-time results are bit-identical.
-- **Native or bytecode:** a program is built native, unless its native image (image + bss + stack) would need more than `--max`, default 14,000 bytes — what runix can give a program loaded after login. Then it is rebuilt in bytecode, keeping the smaller. `--bytecode` and `--native` force the choice.
+  Float constants are folded by running the real ROM calculator in an emulated Z80 (`romfp.py`), so
+compile-time and run-time results are bit-identical.
+- **Native or bytecode:** a program is built native, unless its native image (image + bss + stack) would need more than `--max`, default 14,000 bytes — what ZX-UX can give a program loaded after login. Then it is rebuilt in bytecode, keeping the smaller. `--bytecode` and `--native` force the choice.
 - **`ras`** is a Z80 assembler (sjasmplus-compatible syntax for what the runtime uses) producing SSO1. `sdk/tests/test_ras.py` cross-checks 692 instruction forms against sjasmplus.
 - **`rld`** resolves symbols, pulls archive members on demand, lays out text, data and bss, and writes SSX1 with its relocation stream and checksum.
 - **`rtap`** writes SST1 cassette records (`SPEC-ELASTIC-R2` §6.2). `tools/mktapes.py` builds the corpus tapes.
@@ -56,11 +61,14 @@ Revision 1 (`SPEC-SDK-R1.md`) was the design. This revision records what is buil
 
 ## 4. Runtime library (`sdk/lib`, archive `libc48.ssa`)
 
-Members are linked only when referenced. `sdk/lib/build.py` cuts each `.asm` file into many small members, one per routine or group of routines that fall into each other (a cut is made before a label that the code above cannot fall into; data and bss stay whole), so a program links only the routines it reaches. Sizes below are each file's total, code + data:
+Members are linked only when referenced. `sdk/lib/build.py` cuts each `.asm` file into many small
+members, one per routine or group of routines that fall into each other (a cut is made before a
+label that the code above cannot fall into. data and bss stay whole), so a program links only the
+routines it reaches. Sizes below are each file's total, code + data:
 
 | Member | Bytes | Contents |
 |---|---|---|
-| `crt0` | 27 | `start`: argc/argv from the runix exec layout, screen claim, `main`, `exit` |
+| `crt0` | 27 | `start`: argc/argv from the ZX-UX exec layout, screen claim, `main`, `exit` |
 | `sys` | 133 | `getchar` (raw keys), `ticks`, `yield`, `sleep`, `getpid`, `exit` (gives the screen and the keyboard back) |
 | `console` | 1,098 | `cls`, `putchar`, `puts`, `print_at`, `ink`, `paper`, `bright`, `flash`, `inverse`, `over`, `border`, `plot`, `point`, the UDG functions (`udg_define`/`get`/`draw`/`draw_2x2`/`clear`) over the program's own bank: rcc gives a program that calls them a bank of 32 slots (256 bytes), or N with `rcc --udgs N` (slots 0..N−1; a slot beyond is an error, as slot 32 is), drawn straight into the display file in the 4 × 8 font (the C48 SDK screen's semantics, 64 × 24) |
 | `gfx` (C48) | 802 | `draw` (Bresenham), `circle` |
@@ -69,10 +77,14 @@ Members are linked only when referenced. `sdk/lib/build.py` cuts each `.asm` fil
 | `float` | 575 | five-byte floats through the ROM calculator (§5): `+ − × ÷`, conversions, compares, `sin` … `fabs`, `pow`, `beep` |
 | `arith` | 232 | 16-bit multiply, divide, modulo, shifts, signed compare |
 | `frame` | 65 | `@enter`, `@leave` |
-| `io` | 36 | `open`, `close`, `read`, `seek` (runix file calls) |
+| `io` | 36 | `open`, `close`, `read`, `seek` (ZX-UX file calls) |
 | `vm` | 1,232 | the SSB1 interpreter (§6); the dispatch table is the program's |
 
-`sdk/include/c48.h` declares exactly these functions; `#include <c48.h>` gives it. The rest of the C48 Rev 0.11 name list is not provided, and using it is a link error: `spawn`, `wait`, `kill`, `chdir`, `getcwd`, `getenv`, `write`, `stat`, `remove`, `rename`, `list`, `pipe`, `dup`, `ioctl`, `read_full`, `write_full`, `tape_save`, `tape_load`, `time_get`, `time_set`, `open_typed`. No corpus program uses them (R1 review, SDK items 2 and 3).
+`sdk/include/c48.h` declares exactly these functions; `#include <c48.h>` gives it. The rest of the
+C48 Rev 0.11 name list is not provided, and using it is a link error: `spawn`, `wait`, `kill`,
+`chdir`, `getcwd`, `getenv`, `write`, `stat`, `remove`, `rename`, `list`, `pipe`, `dup`, `ioctl`,
+`read_full`, `write_full`, `tape_save`, `tape_load`, `time_get`, `time_set`, `open_typed`. No corpus
+program uses them (R1 review, SDK items 2 and 3).
 
 **Language rules the runtime follows:**
 - A float error in arithmetic or a conversion ends the program with status 1.
@@ -100,9 +112,12 @@ Members are linked only when referenced. `sdk/lib/build.py` cuts each `.asm` fil
 3. It sets `ERR_SP` to a trap.
 4. It puts the kernel's values back afterwards.
 
-ROM error reports ("Number too big", "Invalid argument") come back through the trap as errors. Integer conversions use the ROM's `truncate` and `FP-TO-BC`. `beep` stacks its two numbers and jumps into ROM `BEEP` (03F8h), which ends in `BEEPER`.
+ROM error reports ("Number too big", "Invalid argument") come back through the trap as errors.
+Integer conversions use the ROM's `truncate` and `FP-TO-BC`. `beep` stacks its two numbers and jumps
+into ROM `BEEP` (03F8h), which ends in `BEEPER`.
 
-Results are the ROM's, bit for bit, as C48 requires. The kernel stays within 8 KB, and the C extensions cost it only `ticks` and `screen` (about 100 bytes).
+Results are the ROM's, bit for bit, as C48 requires. The kernel stays within 8 KB, and the C
+extensions cost it only `ticks` and `screen` (about 100 bytes).
 
 **The screen.**
 - **Owning it:** a C program owns the 64 × 24 screen while it runs. The status line and the cursor stop, and the console is silent, so the shell's prompt and echo don't draw over it.
@@ -114,7 +129,8 @@ Results are the ROM's, bit for bit, as C48 requires. The kernel stays within 8 K
 
 ## 6. SSB1 — the bytecode
 
-A bytecode function keeps the native entry and the rcc ABI, so native and bytecode functions call each other freely:
+A bytecode function keeps the native entry and the rcc ABI, so native and bytecode functions call
+each other freely:
 
     _f:   call @vm           ; enter the interpreter (sdk/lib/vm.asm)
           db frame           ; bytes of locals (255: a word follows)
@@ -131,7 +147,8 @@ A bytecode function keeps the native entry and the rcc ABI, so native and byteco
 - `@ct`: the call table, entries for functions called three times or more from bytecode, so that a call is 2 bytes;
 - `@vmtab`: the dispatch table of the instructions used (above).
 
-Range checks on an int variable, `x < A || x > B` and `x >= A && x <= B` with constant A ≤ B and B − A < 128, become one unsigned compare of x − A with B − A (`jgtuk`, `jleuk`).
+Range checks on an int variable, `x < A || x > B` and `x >= A && x <= B` with constant A ≤ B and B −
+A < 128, become one unsigned compare of x − A with B − A (`jgtuk`, `jleuk`).
 
 **Encoding:**
 - one-byte opcodes, with short forms for constants 0/1 and the common frame offsets; a short form is used only when the program uses it often enough to pay for its handler and table entry (a first compilation pass counts the uses);
@@ -140,7 +157,10 @@ Range checks on an int variable, `x < A || x > B` and `x >= A && x <= B` with co
 - array element loads (`ldxb`/`ldxw`: element of a static array indexed by HL);
 - branch relaxation, so a branch's offset is one byte unless it must be a word.
 
-The instruction set, in the order of `sdk/rcc/bcops.py`. **Opcodes are numbered per program:** the generator numbers the instructions a program uses densely, in this order, and emits the program's own dispatch table `@vmtab` with just those entries, so only their handlers are linked (`@o_NAME equ n` in the assembly). The index below is the position in the full list:
+The instruction set, in the order of `sdk/rcc/bcops.py`. **Opcodes are numbered per program:** the
+generator numbers the instructions a program uses densely, in this order, and emits the program's
+own dispatch table `@vmtab` with just those entries, so only their handlers are linked (`@o_NAME equ
+n` in the assembly). The index below is the position in the full list:
 
 | Index | Op | Operands | Effect |
 |---|---|---|---|
@@ -247,7 +267,9 @@ The instruction set, in the order of `sdk/rcc/bcops.py`. **Opcodes are numbered 
 | 84–8F | `pldl.d` | — | push; `ldl.d` (the same offsets as `ldl.d`) |
 
 
-Operand kinds: `f` a frame offset (signed byte, from IX), `a` a 16-bit address (relocated by the linker), `s`/`b` signed/unsigned bytes, and branches a signed byte relative to the next instruction. A compare-with-constant branch that is out of range becomes `pldk` + the long compare-and-branch.
+Operand kinds: `f` a frame offset (signed byte, from IX), `a` a 16-bit address (relocated by the
+linker), `s`/`b` signed/unsigned bytes, and branches a signed byte relative to the next instruction.
+A compare-with-constant branch that is out of range becomes `pldk` + the long compare-and-branch.
 
 **Density.** Against rcc's own native code, which is already dense, SSB1 saves about 30–45 % on code-heavy programs:
 
@@ -256,11 +278,13 @@ Operand kinds: `f` a frame offset (signed byte, from IX), `a` a 16-bit address (
 | `chess` | 12,038 | 7,829 | 16,879 → 12,774 |
 | `write48` | 8,608 | 6,321 | 13,467 → 11,113 |
 
-R1's target, 2.5 × the density of the C48 SDK's own native backend, is met: `chess` would be about 70 KB there.
+R1's target, 2.5 × the density of the C48 SDK's own native backend, is met: `chess` would be about
+70 KB there.
 
-## 7. The runix VM (`rvm`)
+## 7. The ZX-UX VM (`rvm`)
 
-`rvm` runs the SSX1 file that goes to tape, on SkoolKit's C Z80 core with the real 48K ROM, T-state timing and 50 Hz frames. The runix system calls are emulated in Python:
+`rvm` runs the SSX1 file that goes to tape, on SkoolKit's C Z80 core with the real 48K ROM, T-state
+timing and 50 Hz frames. The ZX-UX system calls are emulated in Python:
 - `exit`, `read` (keyboard script or host files under `--root`), `write`, `open`/`close`/`seek`;
 - `break`, `stty`/`gtty`, `sleep` (in frames), `getpid`;
 - `ticks` (real frames, or `--ticks N` for deterministic runs), `screen`.
@@ -269,11 +293,11 @@ R1's target, 2.5 × the density of the C48 SDK's own native backend, is met: `ch
 - floats and BEEP, in the ROM itself;
 - the screen, drawn by the program into the 6,912-byte display file.
 
-**Memory:** a program gets exactly what the runix loader gives it (image, bss, heap and stack, then its arguments), so a stack that is too small fails in `rvm` too.
+**Memory:** a program gets exactly what the ZX-UX loader gives it (image, bss, heap and stack, then its arguments), so a stack that is too small fails in `rvm` too.
 
 **Output:** the final screen as PNG/`.scr`/text, the exit status, the system-call count and the speaker edges.
 
-**Multitasking.** `rvm` runs one program. Multitasking between processes is runix's own and is tested on runix (`tests/ssxrun.py`, `tests/suite.py`). The C48 SDK's reference runner switches only at `yield`/`sleep`/`getchar` and has no frame clock, so screens are compared at the end of a scripted run with a fixed `ticks()`, as the SDK's own verification does (R1 review, SDK item 4).
+**Multitasking.** `rvm` runs one program. Multitasking between processes is ZX-UX's own and is tested on ZX-UX (`tests/ssxrun.py`, `tests/suite.py`). The C48 SDK's reference runner switches only at `yield`/`sleep`/`getchar` and has no frame clock, so screens are compared at the end of a scripted run with a fixed `ticks()`, as the SDK's own verification does (R1 review, SDK item 4).
 
 ## 8. Acceptance
 
@@ -282,27 +306,29 @@ R1's target, 2.5 × the density of the C48 SDK's own native backend, is met: `ch
 2. compile with `rcc` and run it in `rvm`, with the same arguments, keys and fixed `ticks()`;
 3. compare the final 6,912-byte screens.
 
-Programs the reference cannot run to completion (`hanoi --verify`, `queens8`, the security probes, `tune` without an audio device) are checked by screen hash, exit status or text instead.
+Programs the reference cannot run to completion (`hanoi --verify`, `queens8`, the security probes,
+`tune` without an audio device) are checked by screen hash, exit status or text instead.
 
 | Run | Result |
 |---|---|
 | default build (native, bytecode for `chess` and `write48`) | 73/73 sessions identical |
 | `--bytecode` (every function that has no floats in SSB1) | 73/73 sessions identical |
 
-**On runix — `python3 tests/ssxrun.py [--png DIR]`.** For every corpus program and session:
+**On ZX-UX — `python3 tests/ssxrun.py [--png DIR]`.** For every corpus program and session:
 1. compile it and write its cassette records;
-2. boot runix from the snapshot of the ROM tape load and log in;
+2. boot ZX-UX from the snapshot of the ROM tape load and log in;
 3. type `/dev/cassette/NAME args` and play the records;
 4. type the scripted keys;
 5. check that the program took the screen, ran, and reached its expected text.
 
-The runix screen is saved as a PNG at the last frame the program owned it.
+The ZX-UX screen is saved as a PNG at the last frame the program owned it.
 
-**Result: 73/73.** `chess` and `write48` run in bytecode, `write48` and `chess` with the window lent. Four scripted games are seeded from `ticks()`, which on runix is the real clock (`hangman`, `trek`, `snake`, `arith`). For them the runix check is that the keys were taken (`runix_text` in `runs.json`), since a different seed plays a different game.
+**Result: 73/73.** `chess` and `write48` run in bytecode, `write48` and `chess` with the window lent. Four scripted games are seeded from `ticks()`, which on ZX-UX is the real clock (`hangman`, `trek`, `snake`, `arith`). For them the ZX-UX check is that the keys were taken (`zxux_text` in `runs.json`), since a different seed plays a different game.
 
 ## 9. Sizes
 
-All 56 corpus programs (bytes). "Need" is what the program asks the loader for: image + bss + stack, and at least the file size. runix gives up to about 14,200 bytes after login.
+All 56 corpus programs (bytes). "Need" is what the program asks the loader for: image + bss + stack,
+and at least the file size. ZX-UX gives up to about 14,200 bytes after login.
 
 | Program | Group | C source | Native image | Native need | Bytecode image | Bytecode need | Built as |
 |---|---|---|---|---|---|---|---|
@@ -364,7 +390,9 @@ All 56 corpus programs (bytes). "Need" is what the program asks the loader for: 
 | `secuaf` | security | 535 | 1,313 | 3,016 | 1,538 | 3,239 | native |
 
 
-`ailmzx48` is exempt (S6). Since 2.2 only `chess` is built as bytecode by default; the largest native program is `write48` (13,467 bytes). The reserve lever — moving resident commands to tape — was not needed.
+`ailmzx48` is exempt (S6). Since 2.2 only `chess` is built as bytecode by default. the largest
+native program is `write48` (13,467 bytes). The reserve lever — moving resident commands to tape —
+was not needed.
 
 ## 10. R1 review items
 

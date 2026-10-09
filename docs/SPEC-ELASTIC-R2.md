@@ -1,14 +1,14 @@
-# runix — Elastic Memory Architecture and SS File Formats
+# ZX-UX: Memory and File Formats, R2
 
-**Revision 2 — the architecture as built in runix 2.0**
+This file describes the memory model used by the version 2 code.
+It replaces earlier plans where they differ. The system shares RAM among
+files, running programs, and a common execution window. Each process has
+one of four slots. Files can be packed when RAM becomes scarce.
 
-Revision 1 (`SPEC-ELASTIC-R1.md`) was the design for the 2.x rewrite. This revision records what runix 2.0 implements, the corrections the line-by-line review of R1 asked for, and the places where 2.0 departs from R1 and why. Where R2 and R1 differ, R2 applies; R1 is kept unchanged as the record of the design.
+This is a technical reference. It uses hex addresses and exact byte layouts.
+The plain-English build guide is in `README.md`.
 
-The C toolchain and the kernel's support for C programs are in `SPEC-SDK-R2.md`.
-
-The format prefix **SS** stands for Supratim Sanyal.
-
-## 1. Decisions
+## 1. Design choices
 
 | # | Decision (R1) | In 2.0 |
 |---|---|---|
@@ -56,7 +56,8 @@ As built (`python3 tools/build.py` prints these from the symbol table):
 
 ### 3.1 Blocks
 
-Every allocation in the arena is a block: `+0` size (word, header included, even), `+2` kind, `+3` spare, then the payload. The smallest block is 4 bytes.
+Every allocation in the arena is a block: `+0` size (word, header included, even), `+2` kind, `+3`
+spare, then the payload. The smallest block is 4 bytes.
 
 | Kind | Value | Placement | Holds |
 |---|---|---|---|
@@ -66,7 +67,8 @@ Every allocation in the arena is a block: `+0` size (word, header included, even
 | `K_IMG` | 4 | fixed | a loaded SSX1 program |
 | `K_TEMP` | 5 | fixed | zxpack's workspace while it packs |
 
-R1 review, item 1: there is no owner byte. "Free" is a kind, so there is no clash with i-node or slot 0.
+R1 review, item 1: there is no owner byte. "Free" is a kind, so there is no clash with i-node or
+slot 0.
 
 ### 3.2 Allocator (`arena.asm`)
 
@@ -122,15 +124,18 @@ The borrowing block is recorded in `wlend`.
 2. checks that the free space at the top reaches down to `WINDOW` or below;
 3. cuts the arena back to `WINDOW`.
 
-A gap of under 4 bytes is left outside the arena. If something still lies in the window, it stays lent (`wlend` = FFFF) until the next IMAGE block is freed.
+A gap of under 4 bytes is left outside the arena. If something still lies in the window, it stays
+lent (`wlend` = FFFF) until the next IMAGE block is freed.
 
 ### 3.7 Fork of an SSX1 program — not built
 
-R1 planned twin swapping, so that a forked SSX1 program could run at the parent's addresses. It is not built in 2.0, for two reasons:
+R1 planned twin swapping, so that a forked SSX1 program could run at the parent's addresses. It is
+not built in 2.0, for two reasons:
 - **No program needs it.** C48 has no `fork` (or any way to make a raw system call), and every SSX1 program comes from the C toolchain, so no program can reach it.
 - **The budget.** The kernel has 21 bytes left of its 8,192, against roughly 120 for twin exchange, TWIN blocks and the survivor rule.
 
-`fork` from an SSX1 process returns `EAGAIN`. R1 review, items 6 and 7 (twin restore on `exec`, no `fork` for big programs) are therefore moot.
+`fork` from an SSX1 process returns `EAGAIN`. R1 review, items 6 and 7 (twin restore on `exec`, no
+`fork` for big programs) are therefore moot.
 
 ## 4. Elastic v1 file system
 
@@ -157,7 +162,8 @@ R1 planned twin swapping, so that a forked SSX1 program could run at the parent'
 | `break` | inside the window, SAVE resized | inside the IMAGE block |
 | Started by | `exec` of resident text | `/dev/cassette/NAME` through `/etc/ldx` |
 
-Four process slots, preemptive round robin with a 4-tick quantum, single user, no permissions — as in 1.x.
+Four process slots, preemptive round robin with a 4-tick quantum, single user, no permissions — as
+in 1.x.
 
 ## 6. SSX1 — executable, and loading from cassette
 
@@ -223,15 +229,20 @@ One standard Spectrum CODE pair (R1 review, item 12):
 
 ## 7. SSO1 and 8. SSA1
 
-As R1 §7 and §8 (`sdk/ras.py`, `sdk/rld.py`). One addition: an empty section that defines symbols is still written, so that a label such as an empty call table is defined.
+As R1 §7 and §8 (`sdk/ras.py`, `sdk/rld.py`). One addition: an empty section that defines symbols is
+still written, so that a label such as an empty call table is defined.
 
 ## 9. Cassette archives
 
-`tar` keeps the 1.x tape format. R1's SST1 payload preamble for archive members is deferred: it would be a user-land change with no effect on the kernel. Archives and programs share a tape freely, because `ldx` skips `tar` headers (their parameter 2 is not `SS`).
+`tar` keeps the 1.x tape format. R1's SST1 payload preamble for archive members is deferred: it
+would be a user-land change with no effect on the kernel. Archives and programs share a tape freely,
+because `ldx` skips `tar` headers (their parameter 2 is not `SS`).
 
 ## 10. SSZ1 — deferred
 
-Packed SSX1 images and packed archive members are not built in 2.0. Files in the arena are packed by zxpack exactly as in 1.x, and `tar` writes packed files as their bare stream, with the stream length in the member preamble.
+Packed SSX1 images and packed archive members are not built in 2.0. Files in the arena are packed by
+zxpack exactly as in 1.x, and `tar` writes packed files as their bare stream, with the stream length
+in the member preamble.
 
 ## 11. System calls added in 2.x
 

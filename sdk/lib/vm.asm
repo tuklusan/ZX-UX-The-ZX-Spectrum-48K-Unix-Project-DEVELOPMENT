@@ -1,4 +1,4 @@
-; rcc runtime: the SSB1 bytecode virtual machine            (runix SDK)
+; rcc runtime: the SSB1 bytecode virtual machine            (ZX-UX SDK)
 ;
 ; A bytecode function starts   _f: call @vm / db frame / bytecode
 ; (rcc/bcgen.py; opcodes in rcc/bcops.py; the dispatch table @vmtab is the

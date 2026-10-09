@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Run SDK-compiled C48 programs on runix itself, loaded from cassette.
+"""Run SDK-compiled C48 programs on ZX-UX itself, loaded from cassette.
 
   python3 tests/ssxrun.py [--only a,b] [--png DIR] [--frames N] [-v]
 
 For each program in sdk/tests/runs.json: compile it with rcc (SSX1), write
-its cassette records with rtap, boot runix from the snapshot of the ROM
+its cassette records with rtap, boot ZX-UX from the snapshot of the ROM
 tape load (build/test.z80), log in, type /dev/cassette/NAME ARGS, play the
 records on the emulated tape, type the scripted keys and check that the
 program ran: its first screen appears (the shell's prompt is gone), it
@@ -80,16 +80,16 @@ def run_one(snap, name, run, pngdir, frames, verbose):
             break
         s.zx.type(ch)
     if not st['gone']:
-        watch(run.get('runix_frames', max(frames, int(run.get('frames', 6000) * 1.5))))
+        watch(run.get('zxux_frames', max(frames, int(run.get('frames', 6000) * 1.5))))
     if not st['gone']:
         st['text'] = s.screen()
     scr, border = st['last']
     if pngdir:
         os.makedirs(pngdir, exist_ok=True)
-        rvm.write_png(scr, os.path.join(pngdir, name.replace(':', '_') + '.runix.png'), border)
+        rvm.write_png(scr, os.path.join(pngdir, name.replace(':', '_') + '.ZX-UX.png'), border)
     ok = True
     why = []
-    want = run.get('runix_text', run.get('expect_text'))
+    want = run.get('zxux_text', run.get('expect_text'))
     if want and want not in st['text']:
         ok = False
         why.append('no %r' % want)
@@ -124,14 +124,14 @@ def main(argv):
     for name, run in RUNS.items():
         if only and name not in only and name.split(':')[0] not in only:
             continue
-        if run.get('runix') == 'skip':
+        if run.get('ZX-UX') == 'skip':
             continue
         t = time.time()
         good, why = run_one(snap, name, run, pngdir, frames, verbose)
         total += 1
         ok += good
         print('%-14s %s %s (%.0fs)' % (name, 'PASS' if good else 'FAIL', why, time.time() - t))
-    print('%d/%d ran on runix' % (ok, total))
+    print('%d/%d ran on ZX-UX' % (ok, total))
     return 0 if ok == total else 1
 
 

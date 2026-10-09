@@ -1,5 +1,5 @@
 # tools/dev/rstk.py - kept from the 2.2 size work; run from the repository root
-# runix stack slack: hanoi and queens8 (STACK from argv) loaded together, full run
+# ZX-UX stack slack: hanoi and queens8 (STACK from argv) loaded together, full run
 import sys
 sys.path.insert(0,'tools'); sys.path.insert(0,'sdk'); sys.path.insert(0,'tests')
 import zxrun, rtap, suite, rld

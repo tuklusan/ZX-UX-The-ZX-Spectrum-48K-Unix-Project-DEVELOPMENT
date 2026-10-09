@@ -1,25 +1,23 @@
-# runix SDK — C Compiler, Virtual Machine and Kernel C Support
+# ZX-UX: C48 Tools and Runtime, R1
 
-**Revision 1 — design specification, companion to SPEC-ELASTIC-R1**
+This file records the first design for the C48 compiler and runtime.
+It is kept for comparison with the later system. Some parts were changed
+before they were built. Read `SPEC-SDK-R2.md` for the working design.
 
-This document covers the C toolchain for runix and what the kernel adds to support it:
-- the C compiler
-- the linker, the tape writer and the virtual machine
-- the runtime library
-- the kernel's C-support extensions
+The goal was to compile small C48 programs on a host computer and run
+them on a 48K Spectrum. The tools use their own small object and program
+formats. Larger programs can use bytecode.
 
-It rests on measurements of the C48 SDK corpus (§2). Where it touches SPEC-ELASTIC-R1, the elastic memory model and the SS formats apply unchanged.
-
-## 1. Decisions
+## 1. Design choices
 
 | # | Decision |
 |---|---|
-| S1 | The compiler is a standalone **Python** tool on the host. There is no native compiler on runix. |
-| S2 | The source language is **C48 as defined by the C48 Language Specification Rev 0.11** (ZX-UX repository). The **ZX-UX C48 SDK** compiler is the behaviour reference: same diagnostics policy, same program results. runix's implementation is independent. |
-| S3 | The SDK lives in the runix repository (`sdk/`), next to the kernel and its tools. |
-| S4 | The compiler's output is consumed by the **runix VM** on the host and is also written as a **runix executable on tape** (SSX1 in SST1). |
+| S1 | The compiler is a standalone **Python** tool on the host. There is no native compiler on ZX-UX. |
+| S2 | The source language is **C48 as defined by the C48 Language Specification Rev 0.11** (ZX-UX repository). The **ZX-UX C48 SDK** compiler is the behaviour reference: same diagnostics policy, same program results. ZX-UX's implementation is independent. |
+| S3 | The SDK lives in the ZX-UX repository (`sdk/`), next to the kernel and its tools. |
+| S4 | The compiler's output is consumed by the **ZX-UX VM** on the host and is also written as a **ZX-UX executable on tape** (SSX1 in SST1). |
 | S5 | Size strategy, in order: **(1)** a size-optimising native Z80 code generator; **(2)** a compact **bytecode mode** (SSB1, §6) for programs native code can't fit (`chess`, `write48`, the large apps); **(3)** in reserve, moving resident commands to tape to enlarge the arena (SPEC-ELASTIC-R1 §13). |
-| S6 | Acceptance: every C program in the SDK corpus compiles and runs, in the VM and on runix from tape, with results matching the SDK reference. Exempt: `ailmzx48`. Best effort: `queens8` and `hanoi`. |
+| S6 | Acceptance: every C program in the SDK corpus compiles and runs, in the VM and on ZX-UX from tape, with results matching the SDK reference. Exempt: `ailmzx48`. Best effort: `queens8` and `hanoi`. |
 
 ## 2. Measured starting point
 
@@ -27,7 +25,8 @@ The SDK's own native backend (`c48b2tap`) can't lower any corpus program as ship
 - its runtime has no `print_at`, `beep`, `draw` or UDG calls
 - it rejects non-constant aggregate initializers
 
-With trivial stubs for the missing calls, it lowered 47 programs. Native image + bss, at SDK backend code density (2.2–3.5 bytes of Z80 per byte of C source):
+With trivial stubs for the missing calls, it lowered 47 programs. Native image + bss, at SDK backend
+code density (2.2–3.5 bytes of Z80 per byte of C source):
 
 | Native size | Count | Programs |
 |---|---|---|
@@ -36,7 +35,7 @@ With trivial stubs for the missing calls, it lowered 47 programs. Native image +
 | > 16 KB | 7 | `bgammon` 17.2, `cribbage` 18.0, `sheet48` 19.6, `dizzy4k` 20.1, `queens8` 20.7, `wire3d` 21.7, `hanoi` 24.9 |
 | not lowered | 11 | `write48` (> 32 KB), `chess` (est. ~70 KB at this density), `goblet`, `morph3d`, `argv`, `colors`, `fortune`, `hangman`, `maze`, `quiz` (initializers), `seckern` (rejected by design) |
 
-The runix 2.x budget for one program is about 14 KB (SPEC-ELASTIC-R1 §3.5).
+The ZX-UX 2.x budget for one program is about 14 KB (SPEC-ELASTIC-R1 §3.5).
 
 **Targets that follow:**
 - the native generator must be at least **30 % denser** than the SDK backend, so that the borderline group fits
@@ -60,7 +59,7 @@ The runix 2.x budget for one program is about 14 KB (SPEC-ELASTIC-R1 §3.5).
 | `ras` | Z80 assembler producing SSO1 (runtime library, hand-written routines) |
 | `rld` | linker: SSO1/SSA1 → SSX1 |
 | `rtap` | SSX1 and data files → SST1 tapes |
-| `rvm` | the runix VM |
+| `rvm` | the ZX-UX VM |
 
 Tool names are provisional.
 
@@ -68,7 +67,8 @@ Tool names are provisional.
 
 ## 4. Runtime library
 
-The runtime is written in C48 and in `ras` assembler, delivered as SSA1 archives, and linked per program. Only referenced members are included.
+The runtime is written in C48 and in `ras` assembler, delivered as SSA1 archives, and linked per
+program. Only referenced members are included.
 
 | Area | Implementation |
 |---|---|
@@ -83,15 +83,17 @@ The runtime is written in C48 and in `ras` assembler, delivered as SSA1 archives
 | `ticks`, `yield`, `sleep`, `exit`, arguments | system calls (§5.3; `rele`, `sleep`, `exit`; v1 argument layout) |
 | float arithmetic and `sin` … `fabs` | conversions and comparisons in Z80; arithmetic and functions through the kernel's float service (§5.4) |
 | `beep` | pitch and duration converted with the float service, then `sys beep` (§5.5) |
-| `open`, `close`, `read`, `seek` | runix file system calls (no corpus program uses them) |
+| `open`, `close`, `read`, `seek` | ZX-UX file system calls (no corpus program uses them) |
 
 ## 5. Kernel C-support extensions
 
-These five extensions are part of the runix kernel and are emulated by `rvm` with identical behaviour. Estimated kernel cost is about 300 bytes. New system call numbers follow 37 `zxpack`.
+These five extensions are part of the ZX-UX kernel and are emulated by `rvm` with identical
+behaviour. Estimated kernel cost is about 300 bytes. New system call numbers follow 37 `zxpack`.
 
 ### 5.1 Console colour codes (no new call)
 
-`kputc` accepts the Spectrum control codes, each followed by one parameter byte, alongside AT (16h) and INVERSE (14h):
+`kputc` accepts the Spectrum control codes, each followed by one parameter byte, alongside AT (16h)
+and INVERSE (14h):
 
 | Code | Meaning |
 |---|---|
@@ -101,7 +103,9 @@ These five extensions are part of the runix kernel and are emulated by `rvm` wit
 | 13h n | BRIGHT 0/1 |
 | 15h n | OVER 0/1 (XOR glyphs into the display) |
 
-Printed characters set the attribute byte of their 8×8 cell. Two 4×8 characters share one attribute cell, so the later one's colours win. This is inherent to 64-column text on the Spectrum and is documented, not hidden. FF (`cls`) clears using the current colours.
+Printed characters set the attribute byte of their 8×8 cell. Two 4×8 characters share one attribute
+cell, so the later one's colours win. This is inherent to 64-column text on the Spectrum and is
+documented, not hidden. FF (`cls`) clears using the current colours.
 
 ### 5.2 `sys screen` (39) — full-screen ownership
 
@@ -116,7 +120,8 @@ Printed characters set the attribute byte of their 8×8 cell. Two 4×8 character
 
 ### 5.3 `sys ticks` (38)
 
-Returns the 50 Hz frame counter: low 16 bits in HL, high 16 bits in DE. The counter is 32-bit, incremented by the clock interrupt, never reset, and wraps.
+Returns the 50 Hz frame counter: low 16 bits in HL, high 16 bits in DE. The counter is 32-bit,
+incremented by the clock interrupt, never reset, and wraps.
 
 ### 5.4 `sys fp` (40) — five-byte float service
 
@@ -148,13 +153,17 @@ Returns the 50 Hz frame counter: low 16 bits in HL, high 16 bits in DE. The coun
 
 ### 5.5 `sys beep` (41)
 
-`HL` = pitch period and `DE` = duration count, as ROM BEEPER takes them. The runtime converts C48's `beep(duration, pitch)` with the float service.
+`HL` = pitch period and `DE` = duration count, as ROM BEEPER takes them. The runtime converts C48's
+`beep(duration, pitch)` with the float service.
 
-The kernel runs BEEPER, during which interrupts are off, then advances the frame counter and clock by the elapsed time computed from `HL` and `DE`. Other processes don't run during a beep, as with tape operations.
+The kernel runs BEEPER, during which interrupts are off, then advances the frame counter and clock
+by the elapsed time computed from `HL` and `DE`. Other processes don't run during a beep, as with
+tape operations.
 
 ## 6. SSB1 — bytecode mode
 
-SSB1 is a compact stack-machine instruction set for C48. A program in bytecode mode is still an ordinary **SSX1** executable:
+SSB1 is a compact stack-machine instruction set for C48. A program in bytecode mode is still an
+ordinary **SSX1** executable:
 - its image holds the SSB1 **interpreter** (a Z80 runtime member of 2–3 KB)
 - plus the program's bytecode and data
 - the kernel and the SSX1 format are unchanged
@@ -170,18 +179,21 @@ SSB1 is a compact stack-machine instruction set for C48. A program in bytecode m
 - speed within 10× of native code
 - graphics primitives stay native, so graphics-heavy programs remain usable
 
-The opcode table is defined in revision 2 of this document, once the IR exists and real programs can be measured.
+The opcode table is defined in revision 2 of this document, once the IR exists and real programs can
+be measured.
 
-## 7. The runix VM (`rvm`)
+## 7. The ZX-UX VM (`rvm`)
 
-`rvm` runs **the same SSX1 file that goes to tape**, on an emulated Z80 (the C Z80 core with T-state timing that the runix test harness already uses). The runix kernel interface is emulated in Python. What is tested is what ships.
+`rvm` runs **the same SSX1 file that goes to tape**, on an emulated Z80 (the C Z80 core with T-state
+timing that the ZX-UX test harness already uses). The ZX-UX kernel interface is emulated in Python.
+What is tested is what ships.
 
 **Emulated faithfully:**
 - the system call interface (call 6003h), including the extensions in §5
-- the 64×23 console with status line, and the full-screen mode of §5.2, drawn into a real 6,912-byte display file with the runix 4×8 font
+- the 64×23 console with status line, and the full-screen mode of §5.2, drawn into a real 6,912-byte display file with the ZX-UX 4×8 font
 - the attribute rules of §5.1
 - the 50 Hz clock: `ticks` and `sleep` in frames, computed from emulated T-states
-- **multitasking:** up to 4 processes with preemptive time slices of 4 frames, as in runix, with `yield`, `sleep` and `wait`
+- **multitasking:** up to 4 processes with preemptive time slices of 4 frames, as in ZX-UX, with `yield`, `sleep` and `wait`
 - floats with the ROM's exact results (the VM runs the real ROM calculator code, the same way the kernel will)
 - `beep` recorded as (period, duration) events
 - keyboard input from a script
@@ -200,9 +212,10 @@ For each corpus program (except `ailmzx48`):
 
 1. `rcc` compiles it with no errors. Native mode is used unless it doesn't fit, in which case bytecode mode.
 2. In `rvm` it produces the same transcript and screen dumps at the same frames as `c48run`, given the same scripted input and the same frame budget as the SDK's verification gates.
-3. It loads from a runix tape and runs on runix in the emulated Spectrum (the existing `zxrun` harness), reaching its first screen and responding to scripted input.
+3. It loads from a ZX-UX tape and runs on ZX-UX in the emulated Spectrum (the existing `zxrun` harness), reaching its first screen and responding to scripted input.
 
-Size reports are published per program: native size, bytecode size, and the mode used. `queens8` and `hanoi` are attempted; if they don't fit, the report says by how much.
+Size reports are published per program: native size, bytecode size, and the mode used. `queens8` and
+`hanoi` are attempted. if they don't fit, the report says by how much.
 
 ## 9. Phases
 

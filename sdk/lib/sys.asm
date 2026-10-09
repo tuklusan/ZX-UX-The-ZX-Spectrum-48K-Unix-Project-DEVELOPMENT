@@ -1,4 +1,4 @@
-; rcc runtime: process and keyboard services                (runix SDK)
+; rcc runtime: process and keyboard services                (ZX-UX SDK)
 SYS     equ 6003h
         section text
         global _getchar,_ticks,_yield,_sleep,_exit,_getpid
