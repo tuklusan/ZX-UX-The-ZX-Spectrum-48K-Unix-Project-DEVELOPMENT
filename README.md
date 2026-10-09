@@ -1,6 +1,6 @@
-# RETRO UNIX Z80 v1 — UNIX v1 for the ZX Spectrum 48K
+# ZX-UX UNIX v1 for the Z80 based Sinclair ZX Spectrum 48K Home Computer
 
-A fresh Z80 implementation of **Retro UNIX 8086 v1** (Erdogan Tan's 8086 re-creation of the 1971 PDP-11 UNIX v1), running on a stock 48K ZX Spectrum. The 8086 and PDP-11 sources were used as a specification only: every kernel routine and every program was analysed and rewritten for the Z80, with the Spectrum ROM doing the keyboard, screen, sound and tape work.
+A fresh Z80 implementation of classic UNIX v1 running on a stock 48K ZX Spectrum.
 
 `build/runixz80.tzx` loads from tape straight into `login:`; log in and you are at the v1 shell prompt with the Retro UNIX user-land, plus `vi`, `ps` and `top`. Up to 4 processes run preemptively, switched by the Spectrum's 50 Hz interrupt.
 
@@ -280,7 +280,3 @@ docs/           SPEC-ELASTIC-R2.md, SPEC-SDK-R2.md (and their R1 designs)
 tools/zxrun.py  headless test harness;  tools/t.sh  build + test
 tests/suite.py  regression suite
 ```
-
-Retro UNIX 8086 v1 is © Erdogan Tan (singlix.com/runix); UNIX v1 by Ken Thompson and Dennis Ritchie. This port reimplements their design for the Z80 and contains none of their code.
-
-The console font `src/font4x8.bin` ("SANYALnet-Labs-4x8-font-FINAL") comes from the ZX-UX c48 SDK. Based on original work by Supratim Sanyal of SANYALnet Labs. It is used under the SANYALnet Labs Non-Commercial License, reproduced in `src/font4x8.LICENSE`; that license (non-commercial use, attribution required) therefore applies to builds that include the font.
