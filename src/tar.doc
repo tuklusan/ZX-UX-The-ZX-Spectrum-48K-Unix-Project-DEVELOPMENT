@@ -1,0 +1,48 @@
+TAR(1)                                       RETRO UNIX Z80
+
+NAME
+     tar, tap - file archives on the cassette
+
+SYNOPSIS
+     tar cvf /dev/cassette/name file ...
+     tar tvf /dev/cassette/name [file ...]
+     tar xvf /dev/cassette/name [file ...]
+     tap r file ...    tap t    tap x [file ...]
+
+DESCRIPTION
+     tar writes files to the cassette as one archive and reads
+     them back. A directory is archived with everything below
+     it. Each file keeps its full path name, mode, size and
+     modification time; packed files go to tape packed and come
+     back packed.
+
+     c    create an archive (start the recorder first)
+     t    list an archive
+     x    extract an archive, or only the files named, and the
+          files below a directory named
+     v    verbose: kind (- file, d directory, z packed), size
+          and path of every file
+     f    the archive: /dev/cassette/name. The name, up to 10
+          characters, labels the archive on the tape, so one
+          tape can hold several; t and x wind on to the archive
+          with that name. /dev/cassette alone means the next
+          archive.
+
+     Extracting replaces existing files without asking (it says
+     "replaced") and makes the directories a path needs. A file
+     that does not fit on the disk is removed again.
+
+     tap is UNIX v1's name for the same archiver: tap r, t and
+     x are tar c, t and x on the next archive, verbose.
+
+THE TAPE
+     Standard Spectrum blocks: a header named after the
+     archive, then for every file a header named after it and
+     its data in blocks of up to 512 bytes, then an empty
+     header. Tape browsers show the names. Devices and the
+     resident programs in /bin are not archived.
+
+EXAMPLES
+     tar cvf /dev/cassette/clive /usr/clive
+     tar tvf /dev/cassette/clive
+     tar xvf /dev/cassette/clive /usr/clive/notes

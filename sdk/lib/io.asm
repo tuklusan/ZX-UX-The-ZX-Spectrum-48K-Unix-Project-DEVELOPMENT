@@ -1,0 +1,31 @@
+; rcc runtime: files, through the runix file system calls   (runix SDK)
+;   int open(char *path, int mode)    mode 0 read, 1 write, 2 both
+;   int close(int h)
+;   int read(int h, void *p, unsigned int n)
+;   int seek(int h, unsigned int pos)
+; Results as the kernel gives them: -1 (FFFFh) on an error.
+SYS     equ 6003h
+        section text
+        global _open,_close,_read,_seek
+_open:  pop bc
+        pop de
+        push bc
+        ex de,hl                ; HL = path, DE = mode
+        ld a,5
+        jp SYS
+_close: ld a,6
+        jp SYS
+_read:  ld b,h                  ; BC = count
+        ld c,l
+        pop hl
+        pop de                  ; DE = buffer
+        ex (sp),hl              ; HL = handle
+        ld a,3
+        jp SYS
+_seek:  ex de,hl                ; DE = position
+        pop bc
+        pop hl                  ; HL = handle
+        push bc
+        ld bc,0
+        ld a,19
+        jp SYS

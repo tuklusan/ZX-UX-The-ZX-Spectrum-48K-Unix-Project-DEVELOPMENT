@@ -1,0 +1,44 @@
+ZXPACK(1)                                    RETRO UNIX Z80
+
+NAME
+     zxpack - packed files in memory
+
+SYNOPSIS
+     zxpack
+     zxpack file ...
+     zxpack -d file ...
+
+DESCRIPTION
+     Files live in the kernel's elastic memory, the arena,
+     either raw or packed. Packing is invisible: any read or
+     write of a packed file unpacks it first, so cat, vi and
+     exec never see the packed form.
+
+     The kernel packs on its own:
+     - when no process can run, it packs closed files that have
+       not been touched for 15 seconds, giving way at once to a
+       process that wakes up;
+     - when memory runs out, it packs closed files and tries
+       the allocation again.
+
+     With no arguments zxpack shows the packed files, the
+     bytes they save and the memory left. With files it packs
+     them now; with -d it unpacks them.
+
+     ls -l shows a z for a packed file and its full size; du
+     counts the blocks it really uses.
+
+THE CODEC
+     LZ77 with a 2K window. Every decision - literal or match,
+     each bit of a literal, of an offset and of a length - is
+     coded with an adaptive binary range coder, so text and
+     source code shrink to about a half and a third. Packing
+     takes a few seconds and needs room for the packed
+     stream; unpacking needs room for the whole file.
+
+     This page is stored packed.
+
+DIAGNOSTICS
+     open, not packed        in use
+     would not be smaller
+     no room                 not enough free memory

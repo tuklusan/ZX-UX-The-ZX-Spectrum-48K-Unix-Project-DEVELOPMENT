@@ -1,0 +1,8 @@
+until login: 2000
+type root\n
+until # 1000
+type echo /bin/c*\n
+wait 200
+type ls /etc/*\n
+wait 200
+screen
