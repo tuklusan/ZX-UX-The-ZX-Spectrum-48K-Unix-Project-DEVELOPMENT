@@ -10,7 +10,7 @@ char *fortunes[12] = {
     "The bug you skip today owns tomorrow morning.",
     "Small RAM encourages large opinions.",
     "If it works once, you have one data point.",
-    "A backup is a promise. A restore is proof it kept its word.",
+"A backup is a promise. A restore is proof it kept its word.",
     "Undefined behavior is optimism with paperwork.",
     "The shortest path often visits the debugger.",
     "A green test can still be the wrong test.",

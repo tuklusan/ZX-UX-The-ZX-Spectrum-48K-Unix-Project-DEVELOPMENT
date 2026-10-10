@@ -16,7 +16,8 @@ int main(void)
     print_at(0, 0, "SECURITY TEST: RAW POINTER FORGERY");
     print_at(2, 0,
              "ATTEMPT: copy pointer bytes by char writes");
-    print_at(3, 0, "MITIGATION: raw bytes are not access rights");
+    print_at(3, 0,
+  "MITIGATION: raw bytes cannot create a valid pointer handle");
     heap = malloc(2);
     if (heap == 0) return 2;
     p = 0;

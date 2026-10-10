@@ -1,0 +1,53 @@
+# ZX-UX Unix ZX Spectrum 48K SDK © 2026 SANYALnet Labs supratim-sanyal.blogspot.com
+#
+# SANYALnet Labs Non-Commercial License, attribution to SANYALnet Labs required, see LICENSE for more information
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from .errors import TypeC48Error
+from .limits import ResourceBudget
+from .parser import Parser
+from .preprocessor import Preprocessor
+from .semantics import SemanticAnalyzer, spos
+
+
+def _analyze(tree: dict[str, Any], budget: ResourceBudget) -> dict[str, Any]:
+    program = SemanticAnalyzer(budget=budget).analyze(tree)
+    # File-scope extern objects do not pass through initializer validation, so
+    # assert the language invariant here as a final compiler postcondition.
+    for item in program["items"]:
+        if item["kind"] != "declaration":
+            continue
+        for idecl in item["declarators"]:
+            if idecl["ctype"]["kind"] == "void":
+                raise TypeC48Error(
+                    "void object is invalid", spos(idecl["declarator"])
+                )
+    return program
+
+
+def compile_bytes(data: bytes, *, source_name: str = "<source>", base_dir: Path | None = None,
+                  builtin_header: str = "") -> dict[str, Any]:
+    budget = ResourceBudget()
+    pp = Preprocessor(builtin_header=builtin_header, budget=budget)
+    tokens = pp.preprocess_bytes(
+        data,
+        source_name=source_name,
+        base_dir=base_dir or Path.cwd(),
+        include_depth=0,
+    )
+    tree = Parser(tokens, budget=budget).parse()
+    budget.check_ast(tree, tokens[0].pos if tokens else None)
+    return _analyze(tree, budget)
+
+
+def compile_file(path: Path, *, builtin_header: str = "") -> dict[str, Any]:
+    path = path.resolve()
+    budget = ResourceBudget()
+    pp = Preprocessor(builtin_header=builtin_header, budget=budget)
+    tokens = pp.preprocess_file(path)
+    tree = Parser(tokens, budget=budget).parse()
+    budget.check_ast(tree, tokens[0].pos if tokens else None)
+    return _analyze(tree, budget)
