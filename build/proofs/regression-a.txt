@@ -1,0 +1,11 @@
+PASS boot_login_logout    0.1s     539 frames
+PASS glob                 0.3s    1280 frames
+PASS file_ops             0.8s    4369 frames
+PASS dirs                 0.5s    2252 frames
+PASS misc_cmds            0.3s    1222 frames
+PASS vi_session           0.2s     721 frames
+PASS tar_roundtrip        6.1s   11134 frames
+PASS zxpack_cmd           0.5s    2151 frames
+PASS idle_pack            0.7s    4199 frames
+PASS pack_under_pressure   1.9s    7257 frames
+0 failed, 11.4s

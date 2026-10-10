@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build RETRO UNIX Z80 v1: assemble, make the root RAM disk, write the TZX.
+"""Build ZX-UX UNIX v1: assemble, make the root RAM disk, write the TZX.
 
   build.py SJASMPLUS_PATH
 
@@ -37,8 +37,8 @@ EXTRA = os.path.join(SRC, 'programs.txt')   # more programs, one per line
 ADDFILES = []
 
 MOTD = ("\n"
-        "  Welcome to ZX-UX 2.2 for the ZX Spectrum 48K,\n"
-        "  after Retro UNIX 8086 v1 by Erdogan Tan.\n"
+        "  Welcome to ZX-UX UNIX v1 for the ZX Spectrum 48K,\n"
+        "  based on the 8086 UNIX v1 design by Erdogan Tan.\n"
         "  Read /usr/doc/zxpack about packed files.\n"
         "\n")
 
@@ -58,7 +58,7 @@ def assemble(sjasm):
     return open(os.path.join(SRC, 'unix.bin'), 'rb').read(), syms
 
 # ---------------------------------------------------------------- mkfs
-# ZX-UX 2.x: an i-node table (ITAB) and the arena, built as the kernel
+# ZX-UX v1: an i-node table (ITAB) and the arena, built as the kernel
 # keeps them; the tape loads them right after the resident text.
 NINODE = 24
 TXINO = 128
@@ -196,7 +196,7 @@ def basic_loader():
             b'\xd9' + num(7) + b':' +          # INK VAL "7"
             b'\xfb:' +                         # CLS
             b'\xfd' + num(KBASE - 1) + b':' +  # CLEAR VAL "24575"
-            b'\xf5"RETRO UNIX Z80 v1 loading":' +   # PRINT "..."
+            b'\xf5"ZX-UX UNIX v1 loading":' +   # PRINT "..."
             b'\xef""\xaf:' +                   # LOAD ""CODE
             b'\xef""\xaf:' +                   # LOAD ""CODE
             b'\xf9\xc0' + num(KBASE) +         # RANDOMIZE USR VAL "24576"
@@ -208,10 +208,10 @@ def tzx(blocks, title):
     # 0x30 text description, 0x32 archive info
     t = title.encode()
     out += bytes([0x30, len(t)]) + t
-    info = [(0x00, 'ZX-UX 2.2'),
+    info = [(0x00, 'ZX-UX v1'),
             (0x02, 'UNIX v1-inspired system for the 48K ZX Spectrum'),
             (0x03, '2026'), (0x04, 'English'), (0x05, 'Operating system'),
-            (0x08, 'ZX-UX 2.2, 48K ZX Spectrum'),
+            (0x08, 'ZX-UX v1, 48K ZX Spectrum'),
             (0xFF, 'Log in with any name of up to 8 characters; no passwords.')]
     body = bytes([len(info)])
     for k, s in info:
@@ -228,6 +228,19 @@ def tap(blocks):
         out += struct.pack('<H', len(data)) + data
     return out
 
+def write_bootinfo(kernel_bytes, free_bytes, process_count):
+    """Generate the boot figures from the assembled system and file image."""
+    payload = '        db "%dB free=%dB procs=%d ",0\n' % (
+        kernel_bytes, free_bytes, process_count)
+    path = os.path.join(OUT, 'bootinfo.inc')
+    old = open(path).read() if os.path.isfile(path) else None
+    if old == payload:
+        return False
+    with open(path, 'w') as stream:
+        stream.write(payload)
+    return True
+
+
 def main():
     args = sys.argv[1:]
     while args and args[0] == '--add':
@@ -240,8 +253,15 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     progs = program_list()
     write_ptab(progs)
-    kern, syms = assemble(sjasm)
-    rd0, texts, nfree, nino = mkfs(syms, progs)
+    write_bootinfo(8192, 99999, 4) if not os.path.isfile(
+        os.path.join(OUT, 'bootinfo.inc')) else None
+    for attempt in range(6):
+        kern, syms = assemble(sjasm)
+        rd0, texts, nfree, nino = mkfs(syms, progs)
+        if not write_bootinfo(syms['kend'] - KBASE, nfree, syms['NPROC']):
+            break
+    else:
+        raise SystemExit('boot figures did not settle after six builds')
     RD0 = syms['ITAB']
     open(os.path.join(OUT, 'unix.bin'), 'wb').write(kern)
     open(os.path.join(OUT, 'fs.img'), 'wb').write(rd0)
@@ -255,7 +275,7 @@ def main():
         (tap_block(0xFF, rd0), 2000),
     ]
     open(os.path.join(OUT, 'ZX-UX.tzx'), 'wb').write(
-        tzx(blocks, 'ZX-UX 2.2 - ZX Spectrum 48K'))
+        tzx(blocks, 'ZX-UX v1 - ZX Spectrum 48K'))
     open(os.path.join(OUT, 'ZX-UX.tap'), 'wb').write(tap(blocks))
     print('kernel %d bytes (6000-%04X), user text to %04X, image %d bytes'
           % (syms['kend'] - KBASE, syms['kend'] - 1, syms['utext_end'] - 1, len(kern)))

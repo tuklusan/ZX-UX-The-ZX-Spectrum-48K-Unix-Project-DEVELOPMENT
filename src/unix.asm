@@ -1,7 +1,7 @@
 ; =====================================================================
-;  RETRO UNIX Z80 v1  -  kernel
+;  ZX-UX UNIX v1  -  kernel
 ;
-;  Fresh Z80 implementation of the Retro UNIX 8086 v1 kernel design
+;  Fresh Z80 implementation based on Erdogan Tan's 8086 UNIX v1 design
 ;  (u0..u9: sysent, sysret, fork/exec/wait/exit, namei, iget, readi,
 ;  writei, mget, alloc/free, itrunc, swap, clock, tty driver).
 ;  The 8086 / PDP-11 code was used as a specification only.
@@ -26,7 +26,7 @@
         jp sysent               ; 6003  system call entry  (A = number)
 
 ; ---------------------------------------------------------------------
-;  boot  (Retro UNIX: u0 'kernel_init')
+;  boot  (UNIX v1: u0 'kernel_init')
 ; ---------------------------------------------------------------------
 ; default time: Wed Nov  3 1971 00:00:00 (UNIX v1 manual date)
 DEFTIME equ 671*86400
@@ -496,7 +496,7 @@ swtch:
         ret
 
 ; ---------------------------------------------------------------------
-;  images  (2.x: v1 'swap' to the drum becomes copies to arena blocks)
+;  images  (UNIX v1 swap to drum uses arena copies here)
 ;  Every process has a SAVE block for its u-area.  A resident-text
 ;  process's SAVE also has room for its whole window image (u-area,
 ;  data up to the break, STKRES of stack), reserved as long as it lives,
@@ -1884,6 +1884,16 @@ FONTEND:
         include "t_ldx.asm"
 ; the resident programs: text address, size, extra mode bits (build.py)
 PTAB:   include "ptab.inc"
+
+; Startup messages live in resident user text, outside the 8 KB kernel and
+; outside the 256-byte boot code / zxpack model work area.
+msg_boot:
+        db 10,"ZX-UX UNIX v1 48K ZX Spectrum Z80 3.5Mhz",10
+        db 127," 2006 SANYALnet Labs",10
+        db "ZX-UX v1 kernel "
+        include "../build/bootinfo.inc"
+msg_ok: db "ok",10,0
+msg_nofs: db "no root fs",0
 utext_end:
 
 ; ---------------------------------------------------------------------
@@ -1965,11 +1975,6 @@ boot:
         call uinit
         ei
         jp kinit                ; exec /etc/init
-
-msg_boot:
-        db 10,"ZX-UX 2.2 kernel ",0
-msg_ok: db "ok",10,0
-msg_nofs: db "no root fs",0
 
 bootend:
         ASSERT bootend - ZXW <= ZXWSZ

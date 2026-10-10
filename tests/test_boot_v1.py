@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""Static checks for a rebuilt ZX-UX v1 system image.
+
+These checks do not replace a real ROM tape boot or a display test.
+Run them after tools/build.py has completed.
+"""
+from pathlib import Path
+import re
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+KBASE = 0x6000
+
+
+def main():
+    values = {}
+    for line in (ROOT / 'src/unix.sym').read_text().splitlines():
+        match = re.match(r'(\S+): EQU 0x([0-9A-Fa-f]+)', line)
+        if match:
+            values[match[1]] = int(match[2], 16)
+    kbytes = values['kend'] - KBASE
+    fs = (ROOT / 'build/fs.img').read_bytes()
+    image = (ROOT / 'build/unix.bin').read_bytes()
+    font = (ROOT / 'src/font4x8.bin').read_bytes()
+    free_bytes = int.from_bytes(fs[-4:-2], 'little')
+    nproc = values['NPROC']
+    boot_area = values['bootend'] - values['ZXW']
+    start = values['msg_boot'] - KBASE
+    end = image.index(0, start)
+    banner = image[start:end]
+    check = [
+        ('kernel size', kbytes <= 8192 and kbytes > 0),
+        ('boot area size', boot_area <= 256),
+        ('memory order', values['kend'] < values['ZXW'] <
+         values['ITAB'] < values['AR0'] < values['WINDOW']),
+        ('256-byte model area', values['ITAB'] - values['ZXW'] == 256),
+        ('boot banner', banner.startswith(b'\nZX-UX UNIX v1 48K ZX Spectrum Z80 3.5Mhz\n')),
+        ('copyright glyph', b'\x7f 2006 SANYALnet Labs' in banner and
+         font[8 + (127 - 32) * 4:8 + (128 - 32) * 4] != b'\0' * 4),
+        ('kernel and memory values',
+         ('%dB free=%dB procs=%d ' % (kbytes, free_bytes, nproc)).encode()
+         in banner),
+        ('filesystem fits', values['AR0'] + free_bytes <= values['WINDOW']),
+        ('login banner', b'  ZX-UX  v1 (tty)\n' in image),
+        ('64-column font', len(font) == 392 and values['TROWS'] == 23),
+        ('boot success text', image[values['msg_ok'] - KBASE:
+                                    values['msg_ok'] - KBASE + 3] == b'ok\n'),
+        ('tape names', b'ZX-UX v1' in (ROOT / 'build/ZX-UX.tzx').read_bytes()),
+    ]
+    for name, good in check:
+        print(('%s ' % name).ljust(32) + ('PASS' if good else 'FAIL'))
+    print('Kernel %d bytes; free arena %d bytes; boot code %d bytes' %
+          (kbytes, free_bytes, boot_area))
+    return 0 if all(good for _, good in check) else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

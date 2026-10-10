@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Headless ZX Spectrum 48K test runner for RETRO UNIX Z80.
+"""Headless ZX Spectrum 48K test runner for ZX-UX UNIX v1.
 
 Loads a snapshot (made by tap2sna.py from the TZX, i.e. after a real
 ROM tape load), runs it with 50 Hz interrupts, types keys through the
