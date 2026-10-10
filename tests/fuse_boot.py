@@ -72,6 +72,52 @@ def font_match(image, rom, phrase):
     return None
 
 
+# Checked login-screen markers from an actual ZX-UX v1 tape boot.
+# The console uses a narrow screen font rather than the Spectrum ROM font.
+# Coordinates apply to the fixed 900 by 700 virtual screen above.
+ZXUX_LOGIN_MARKERS = (
+    (322, 263, (
+        '111010100000101010100000',
+        '001010100000101010100000',
+        '001001000000101001000000',
+        '010001001110101001000000',
+        '100010100000101010100000',
+        '111010100000111010100000',
+    )),
+    (330, 295, (
+        '111010100000101010100000',
+        '001010100000101010100000',
+        '001001000000101001000000',
+        '010001001110101001000000',
+        '100010100000101010100000',
+        '111010100000111010100000',
+    )),
+    (322, 303, (
+        '0100000000000100000000000000',
+        '0100000000000000000000000000',
+        '0100111001100100110000000000',
+        '0100101010100100101001000000',
+        '0100101010100100101000000000',
+        '0110111001100100101001000000',
+        '0000000011000000000000000000',
+    )),
+)
+
+
+def zxux_login_match(image):
+    """Match three checked 4-pixel console-font boot markers exactly."""
+    pixels = image.convert('RGB').load()
+    for x, y, rows in ZXUX_LOGIN_MARKERS:
+        for dy, bits in enumerate(rows):
+            for dx, expected in enumerate(bits):
+                actual = pixels[x + dx, y + dy]
+                lit = max(actual) > 64
+                if lit != (expected == '1'):
+                    return None
+    return {'boot_banner': [322, 263], 'console_title': [330, 295],
+            'login_prompt': [322, 303]}
+
+
 def send_rom_load(display):
     """Type the Spectrum ROM LOAD command using XTEST under a US Xvfb map."""
     info = subprocess.run(['xwininfo', '-root', '-tree'], env=dict(os.environ, DISPLAY=display),
@@ -157,7 +203,9 @@ def run(args):
                     raise RuntimeError('FUSE exited while checking the tape')
                 time.sleep(2)
                 picture = ImageGrab.grab(xdisplay=display)
-                location = font_match(picture, rom, args.expected_text)
+                location = (zxux_login_match(picture)
+                            if args.expect_zxux_login
+                            else font_match(picture, rom, args.expected_text))
                 if location:
                     picture.save(screen)
                     proof = {
@@ -165,7 +213,12 @@ def run(args):
                         'emulator': str(fuse), 'rom_sha256': sha256(romfile),
                         'tape_sha256': sha256(tapefile),
                         'screen_sha256': sha256(screen),
-                        'expected_text': args.expected_text, 'text_position': location,
+                        'expected_text': ('ZX-UX login' if args.expect_zxux_login
+                                          else args.expected_text),
+                        'match_method': ('checked ZX-UX login screen markers'
+                                         if args.expect_zxux_login
+                                         else '48K ROM font'),
+                        'text_position': location,
                     }
                     screen.with_suffix('.json').write_text(json.dumps(proof, indent=2) + '\n')
                     return proof
@@ -190,7 +243,9 @@ def main():
     parser.add_argument('--assets', type=Path, required=True)
     parser.add_argument('--libdir', type=Path, required=True)
     parser.add_argument('--screen', type=Path, required=True)
-    parser.add_argument('--expected-text', required=True)
+    marker = parser.add_mutually_exclusive_group(required=True)
+    marker.add_argument('--expected-text')
+    marker.add_argument('--expect-zxux-login', action='store_true')
     parser.add_argument('--wait', type=int, default=30)
     args = parser.parse_args()
     if not 3 <= args.wait <= 120:
