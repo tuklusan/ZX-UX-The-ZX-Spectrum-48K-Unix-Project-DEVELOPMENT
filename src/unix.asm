@@ -1865,7 +1865,7 @@ kend:
 ; console font: 96 glyphs of 4 x 8 pixels, two rows a byte (384 bytes,
 ; 4-aligned).  "SANYALnet-Labs-4x8-font-FINAL" from the ZX-UX c48 SDK.
 ; Based on original work by Supratim Sanyal of SANYALnet Labs.
-; SANYALnet Labs Non-Commercial License: see font4x8.LICENSE.
+; SANYALnet Labs Non-Commercial License: see ../LICENSE.
         ALIGN 4
 FONT:   incbin "font4x8.bin", 8, 384
 FONTEND:

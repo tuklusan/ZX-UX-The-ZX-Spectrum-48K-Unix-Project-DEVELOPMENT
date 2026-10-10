@@ -40,7 +40,7 @@ def main(arguments: list[str]) -> None:
         deliver(BUILD / name, name)
     deliver(BUILD / 'test.z80', 'ZX-UX.z80')
     deliver(BUILD / 'README.txt', 'README.txt')
-    deliver(ROOT / 'src/font4x8.LICENSE', 'font4x8.LICENSE')
+    deliver(ROOT / 'LICENSE', 'LICENSE')
     for name in ('c48-apps.tzx', 'c48-demos.tzx', 'c48-examples.tzx',
                  'c48-games.tzx', 'c48-multitask.tzx'):
         deliver(BUILD / name, name)

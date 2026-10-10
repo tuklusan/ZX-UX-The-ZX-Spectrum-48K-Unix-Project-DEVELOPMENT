@@ -187,5 +187,5 @@ The source code is the final guide to what the current build does.
 | `tests/` | System tests and test C programs |
 | `docs/` | Memory and compiler design notes |
 
-`src/font4x8.bin` uses the terms in `src/font4x8.LICENSE`.
-Read that license before sharing a build that includes the font.
+`src/font4x8.bin` uses the font-specific terms retained in the root `LICENSE`.
+The 48K ROM at `rom/48.rom` has separate redistribution terms in that same file.
