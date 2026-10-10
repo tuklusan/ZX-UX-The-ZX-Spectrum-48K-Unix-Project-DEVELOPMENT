@@ -1,6 +1,6 @@
 # ZX-UX working notes
 
-These notes cover the source at version 2.2.
+These notes describe the ZX-UX v1 source and its build process.
 They describe the expected build and the tests recorded before this import.
 They do not claim a fresh test run.
 
@@ -75,8 +75,8 @@ Repeat the tests after changes to the source.
 | `4000h`–`5AFFh` | Spectrum display |
 | `5B00h`–`5FFFh` | System data and low-memory work space |
 | `6000h`–`7FFFh` | Resident kernel, up to 8 KB |
-| `8000h`–`B0FFh` | Resident commands and text |
-| `B10Eh` onward | Startup code, file table, and shared memory area |
+| `8000h` onward | Resident commands and text; end varies by build |
+| After resident text | 256-byte startup area, i-node table, and RAM file area |
 | `F000h` onward | Execution window and process data |
 
 The build prints exact addresses.

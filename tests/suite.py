@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression suite for RETRO UNIX Z80 v1.
+"""Regression suite for ZX-UX UNIX v1.
 
   python3 tests/suite.py [SNAPSHOT] [-k name] [-v]
 
@@ -126,7 +126,9 @@ def test(f):
 
 @test
 def boot_login_logout(s):
-    s.until('kernel ok', 2000)
+    s.until('procs=4 ok', 2000)
+    if 'ZX-UX UNIX v1' not in s.screen():
+        raise Fail('ZX-UX v1 boot title is missing')
     s.login('ken')
     s.expect('ps', 'init', 'sh')
     s.key('CS', '1')                    # EDIT = EOF: log out
@@ -280,7 +282,11 @@ def zxpack_cmd(s):
     s.expect('zxpack /usr/doc/zxpack', '1293 -> 584 bytes', frames=60000)
     s.sh('echo x > /tmp/s')
     s.expect('zxpack /tmp/s', 'would not be smaller')
-    s.expect('zxpack /etc/motd', '136 -> 109 bytes', frames=60000)
+    import build, zxpack
+    motd = build.MOTD.encode()
+    packed = zxpack.pack(motd)
+    expected = '%d -> %d bytes' % (len(motd), len(packed))
+    s.expect('zxpack /etc/motd', expected, frames=60000)
 
 
 @test
@@ -357,7 +363,7 @@ def pool_capacity(s):
     s.expect('echo /etc/[gi]*', '/etc/getty /etc/glob /etc/init')
 
 
-# ---- programs from the cassette (ZX-UX 2.x, SDK-compiled SSX1)
+# ---- programs from the cassette (ZX-UX v1, SDK-compiled SSX1)
 sys.path.insert(0, os.path.join(ROOT, 'sdk'))
 
 

@@ -137,7 +137,7 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
 <div class="stripes" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 <div class="wrap">
 <h1>ZX-UX C48 Gallery</h1>
-<p class="lede">The C48 SDK corpus, compiled by the ZX-UX SDK (rcc). Each program was loaded from cassette and run on ZX-UX 2.x on an emulated 48K Spectrum,
+<p class="lede">The C48 SDK corpus, compiled by the ZX-UX SDK (rcc). Each program was loaded from cassette and run on ZX-UX v1 on an emulated 48K Spectrum,
 and run in the ZX-UX VM; the right-hand screen is the C48 SDK's own compiler and reference VM, given the same arguments, keys and ticks().
 Four games are seeded from ticks(), which on ZX-UX is the real clock, so their ZX-UX screens show a different game.</p>
 <p class="tally"><span><b>@NP@</b> programs, <b>@N@</b> sessions</span><span>ZX-UX: <b>@NR@/@N@</b> ran from tape</span><span>VM: <b>@NV@/@N@</b> screens identical to the SDK</span></p>

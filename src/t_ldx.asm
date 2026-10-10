@@ -1,5 +1,5 @@
 ; =====================================================================
-;  /etc/ldx - the SSX1 program loader (ZX-UX 2.x)
+;  /etc/ldx - the SSX1 program loader (ZX-UX v1)
 ;
 ;  "exec /dev/cassette/NAME args" runs this program instead (the kernel
 ;  redirects it, argv unchanged).  It searches the cassette for the

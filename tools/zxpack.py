@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""zxpack - reference codec for the RETRO UNIX Z80 file compressor.
+"""zxpack - reference codec for the ZX-UX UNIX v1 file compressor.
 
 Bit-exact model of the kernel's Z80 implementation (src/zx.asm): the
 build uses it to store files packed on the RAM disk image, and the test

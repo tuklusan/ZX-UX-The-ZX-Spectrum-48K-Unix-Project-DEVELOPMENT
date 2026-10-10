@@ -1,6 +1,6 @@
 ; =====================================================================
-;  RETRO UNIX Z80 v1  -  system constants
-;  A fresh Z80 / ZX Spectrum 48K implementation of the Retro UNIX 8086 v1
+;  ZX-UX UNIX v1  -  system constants
+;  A fresh Z80 / ZX Spectrum 48K implementation inspired by 8086 UNIX v1
 ;  (Erdogan Tan) architecture, itself a port of 1971 PDP-11 UNIX v1.
 ; =====================================================================
 
@@ -167,7 +167,7 @@ _mdate  equ 30
 _stty   equ 31
 _gtty   equ 32
 _ilgins equ 33
-_sleep  equ 34              ; Retro UNIX 8086 v1 extension
+_sleep  equ 34              ; UNIX v1-compatible extension
 _kill   equ 35              ; Z80 extension (needed with a 2-slot proc table)
 _getpid equ 36              ; Z80 extension
 _zxpack equ 37              ; Z80 extension: HL = name (0: arena status)

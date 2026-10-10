@@ -4,7 +4,9 @@ ZX-UX brings a small UNIX v1-style system to the 48K ZX Spectrum.
 It uses new Z80 code and the Spectrum ROM.
 It runs on a real 48K machine or a compatible emulator.
 
-The system boots from a cassette image. It opens at `login:`.
+The system boots from a cassette image. It shows the ZX-UX UNIX v1
+banner, the copyright mark, the measured kernel and free-memory values,
+and then the `login:` prompt. The boot uses the 64-column text screen.
 Enter any name with up to eight characters. There is no password.
 All sessions have the same user rights.
 
@@ -55,8 +57,11 @@ The main build writes four files:
 | `build/fs.img` | Starting RAM file system image |
 
 The assembler also writes `src/unix.sym` and `src/unix.bin`.
-The build generates `src/ptab.inc` from the program list.
-These are build inputs and working files, not tape releases.
+The build generates `src/ptab.inc` from the program list. It also
+writes `build/bootinfo.inc` with the measured kernel size, free space,
+and process count. The assembler repeats until those figures agree
+with the finished image. They are not guessed banner values.
+These files are build inputs and working files, not tape releases.
 
 ## C48 programs
 
@@ -128,20 +133,28 @@ The tests can write these files:
 
 ## Release files
 
-After the full build and tests finish, run:
+Use the release script from a clean committed checkout, with the
+private checker and tools stored outside this source folder:
 
 ```sh
-python3 tools/mkrelease.py
+python3 tools/release_v1.py \
+  --checker /private/checker.py \
+  --sjasm /tools/sjasmplus \
+  --sdk /sources/zx-ux-c48-sdk \
+  --tap2sna /tools/tap2sna.py
 ```
 
-This copies finished files to `release/`.
-The release files keep their real file types.
-Tapes stay `.tzx` or `.tap`. Snapshots stay `.z80`.
-Images stay `.png`. The release tool does not wrap files in ZIPs.
-It stops when a required build output is missing.
+The script checks the tools and source, builds the tapes and C48
+programs, runs the emulator and SDK tests, checks real screenshots,
+and copies approved files into `release/`. It then writes a manifest
+with the source commit, byte sizes, SHA-256 hashes, and test results.
+It stops before creating a release if a required check fails.
 
-The private source checker is not part of any release.
-It must remain outside the repository.
+The copying helper `tools/mkrelease.py` does not run tests by itself.
+Do not use it as proof that the system was tested.
+Release files keep their native `.tzx`, `.tap`, `.z80`, `.ssx`, and
+`.png` formats. The private checker and its list stay outside Git
+and outside the release.
 
 ## Memory and system calls
 

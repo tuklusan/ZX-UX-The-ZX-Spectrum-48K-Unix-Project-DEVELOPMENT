@@ -59,7 +59,7 @@ def main():
     src = '\n'.join(' ' + l for l in L) + '\n'
     with tempfile.TemporaryDirectory() as td:
         open(os.path.join(td, 'a.asm'), 'w').write(' org 0\n' + src)
-        sj = os.path.join(HERE, '..', '..', 'tools', 'bin', 'sjasmplus')
+        sj = os.environ.get('SJASMPLUS') or os.path.join(HERE, '..', '..', 'tools', 'bin', 'sjasmplus')
         r = subprocess.run([sj, '--nologo', '--raw=' + os.path.join(td, 'a.bin'), os.path.join(td, 'a.asm')],
                            capture_output=True, text=True)
         if r.returncode:

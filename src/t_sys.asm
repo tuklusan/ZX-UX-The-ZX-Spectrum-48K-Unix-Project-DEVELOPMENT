@@ -87,7 +87,7 @@ gstty:  ld (U_T+4),a
         ld de,U_T
         SC _stty
         ret
-s_banner: db 10,"RETRO UNIX Z80 v1 (tty)",10,0
+s_banner: db 10,"  ZX-UX  v1 (tty)",10,0
 s_login: db "login: ",0
 s_lgnp: db "/bin/login",0
 s_lgn   equ s_lgnp+5            ; "login"
