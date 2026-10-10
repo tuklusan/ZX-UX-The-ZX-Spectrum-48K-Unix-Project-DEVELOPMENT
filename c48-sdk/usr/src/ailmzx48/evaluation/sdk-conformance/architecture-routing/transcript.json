@@ -1,0 +1,72 @@
+{
+  "iteration": 9132,
+  "schema": 1,
+  "turns": [
+    {
+      "diag": {
+        "ai_altuse": 0,
+        "ai_beeps": 2,
+        "ai_bruse": 1,
+        "ai_compact": 0,
+        "ai_error": 0,
+        "ai_histuse": 0,
+        "ai_l0bytes": 57,
+        "ai_l1count": 0,
+        "ai_l2count": 0,
+        "ai_l2evict": 0,
+        "ai_lasttop": 4,
+        "ai_litloss": 0,
+        "ai_lituse": 0,
+        "ai_lmcount": 27,
+        "ai_mbytes": 8566,
+        "ai_mhits": 2,
+        "ai_mreads": 353,
+        "ai_mrecords": 69,
+        "ai_scanwhy": 0,
+        "ai_semuse": 1,
+        "ai_triuse": 1,
+        "ai_turns": 1,
+        "ai_yields": 9
+      },
+      "expected_keyword": "16384",
+      "keyword_hit": true,
+      "prompt": "what address does the spectrum screen bitmap start at",
+      "response": "Memory code graphics the 48k spectrum screen bitmap occupies addresses 16384 through 22527.",
+      "turn": 1,
+      "vm_steps": 932492
+    },
+    {
+      "diag": {
+        "ai_altuse": 0,
+        "ai_beeps": 3,
+        "ai_bruse": 0,
+        "ai_compact": 0,
+        "ai_error": 0,
+        "ai_histuse": 0,
+        "ai_l0bytes": 78,
+        "ai_l1count": 0,
+        "ai_l2count": 0,
+        "ai_l2evict": 0,
+        "ai_lasttop": 0,
+        "ai_litloss": 0,
+        "ai_lituse": 0,
+        "ai_lmcount": 43,
+        "ai_mbytes": 8566,
+        "ai_mhits": 0,
+        "ai_mreads": 353,
+        "ai_mrecords": 69,
+        "ai_scanwhy": 0,
+        "ai_semuse": 0,
+        "ai_triuse": 3,
+        "ai_turns": 2,
+        "ai_yields": 9
+      },
+      "expected_keyword": "small",
+      "keyword_hit": true,
+      "prompt": "ah",
+      "response": "Small computer with the machine and i am ailmzx48 a.",
+      "turn": 2,
+      "vm_steps": 765971
+    }
+  ]
+}
