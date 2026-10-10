@@ -8,10 +8,11 @@ all required build and emulator tests have passed.
 Usage:
   python3 tools/release_v1.py --checker /private/checker.py \
       --sjasm /tools/sjasmplus --sdk /sources/zx-ux-c48-sdk \
-      --tap2sna /tools/tap2sna.py
+      --tap2sna /tools/tap2sna.py \
+      --fuse-test-command '/path/to/checked-fuse-boot-test'
 
-Use --fuse-test-command to run a separate, validated FUSE boot test.
-The command must return zero on success and must not require interaction.
+The independent FUSE boot test is mandatory. Its command must return
+zero on success and must not require interaction.
 """
 import argparse
 import hashlib
@@ -114,7 +115,7 @@ def main():
     parser.add_argument('--sjasm', required=True, type=Path)
     parser.add_argument('--sdk', required=True, type=Path)
     parser.add_argument('--tap2sna', required=True, type=Path)
-    parser.add_argument('--fuse-test-command', default='')
+    parser.add_argument('--fuse-test-command', required=True)
     args = parser.parse_args()
     checker = args.checker.resolve()
     sjasm = args.sjasm.resolve()
@@ -178,8 +179,12 @@ def main():
     step('hanoi-queens8', [PYTHON, '-B', 'tools/mtsnap.py'])
     step('gallery', [PYTHON, '-B', 'tools/gallery.py',
                      str(logs['c48-emulator']), str(logs['c48-sdk-bytecode'])])
-    if args.fuse_test_command:
-        step('fuse-independent-boot', shlex.split(args.fuse_test_command))
+    try:
+        fuse_command = shlex.split(args.fuse_test_command)
+    except ValueError as exc:
+        raise RuntimeError('Invalid FUSE boot test command') from exc
+    require(fuse_command, 'Independent FUSE boot test command is empty')
+    step('fuse-independent-boot', fuse_command)
     screenshot_check(checker)
     check(checker, '--tree', ROOT)
     doc = ['ZX-UX UNIX v1 for the ZX Spectrum 48K',
@@ -189,8 +194,7 @@ def main():
            'Load ZX-UX.tzx or ZX-UX.tap through the Spectrum tape loader.',
            'Log in with any user name of 1 to 8 characters.',
            'Project, font, and third-party ROM terms are recorded in LICENSE.',
-           'FUSE: ' + ('independent boot checked' if args.fuse_test_command
-                       else 'not run; runtime not supplied')]
+           'FUSE: independent boot checked']
     (BUILD / 'README.txt').write_text('\n'.join(doc) + '\n')
     check(checker, '--file', BUILD / 'README.txt')
     check(checker, '--tree', BUILD)
