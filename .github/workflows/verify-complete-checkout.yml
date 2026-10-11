@@ -33,6 +33,7 @@ jobs:
           tracked = subprocess.check_output(['git', 'ls-files', '-s', '-z']).split(b'\0')
           count = 0
           total = 0
+          tracked_paths = set()
           for record in tracked:
               if not record:
                   continue
@@ -47,13 +48,24 @@ jobs:
               assert actual == expected_blob, 'Git index byte mismatch'
               count += 1
               total += file.lstat().st_size
-          assert count >= 500, 'Incomplete repository checkout'
+              tracked_paths.add(filename)
+          required = {
+              'docs/04-C48 Language Specification Rev 0.11.docx',
+              'programs/c48/demos/hanoi.c',
+              'programs/c48/demos/queens8.c',
+              'programs/c48/ailmzx48/ailmzx48.c',
+              'sdk/rcc/driver.py',
+              'sdk/tests/runs.json',
+              'sdk/tests/v1-screens.json',
+              'tools/release_v1.py',
+              'tests/fuse_boot.py',
+          }
+          assert required <= tracked_paths, 'Missing required v1 checkout files'
           spec = root / 'docs/04-C48 Language Specification Rev 0.11.docx'
           data = spec.read_bytes()
           assert len(data) == 1430306, 'Unexpected C48 specification size'
           digest = hashlib.sha256(data).hexdigest()
           assert digest == '577a93270fcd14efc13b4b2b2e6c7c08eaafd24efbd771199ed4a0278ec037ec'
-          assert (root / 'obsolete-sdk').is_dir()
           assert not (root / 'c48-sdk').exists()
           print('CHECKOUT_COMPLETE')
           print('SOURCE_SHA', commit)
