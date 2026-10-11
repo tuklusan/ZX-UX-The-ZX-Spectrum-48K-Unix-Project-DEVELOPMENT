@@ -21,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/zxux-export"
-          git show-ref --verify refs/heads/main
+          git branch zxux-snapshot HEAD
           git archive --format=zip --prefix=ZX-UX/ --output="$RUNNER_TEMP/zxux-export/ZX-UX-main.zip" HEAD
           git bundle create "$RUNNER_TEMP/zxux-export/ZX-UX.bundle" --all
           git bundle verify "$RUNNER_TEMP/zxux-export/ZX-UX.bundle"
