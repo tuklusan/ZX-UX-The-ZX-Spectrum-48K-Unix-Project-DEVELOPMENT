@@ -4,7 +4,7 @@ This guide describes the checked release procedure for the Sinclair ZX Spectrum 
 
 ## Preconditions
 
-Work from a clean, checked checkout of the intended GitHub `main` commit. Confirm its commit ID before starting. Keep the private checker, the checked assembler, SkoolKit, the C48 source collection, the tape tools, the Spectrum 48K ROM, FUSE, and FUSE support files outside the checkout. Inspect each external tool and its dependencies before use.
+Work from a clean, checked checkout of the intended GitHub `main` commit. Confirm its commit ID before starting. Keep the private checker, the checked assembler, SkoolKit, the tape tools, the Spectrum 48K ROM, FUSE, and FUSE support files outside the checkout. Inspect each external tool and its dependencies before use.
 
 Run the supplied private checker self-tests. Check all inputs, scripts, commands, file paths, and final files before delivery. Keep the checker and its private data outside the Git checkout and release.
 
@@ -12,20 +12,23 @@ Use the checked new C48 SDK to build and test ZX-UX v1 programs. Keep separate r
 
 ## Mandatory release command
 
-The strict entry point is `tools/release_v1_strict.py`. Use the same Python interpreter for the launcher and the nested independent FUSE verifier. Substitute the actual, individually checked external paths below. This example is not executable until those paths have been set correctly.
+The mandatory entry point is `tools/release_v1.py`. Use the same Python interpreter for the launcher and the nested independent FUSE verifier. Substitute the actual, individually checked external paths below. This example is not executable until those paths have been set correctly.
 
 ```sh
-python3 -B tools/release_v1_strict.py \
+python3 -B tools/release_v1.py \
   --checker /external/checker.py \
   --sjasm /external/sjasmplus \
-  --sdk /external/c48-sdk \
   --tap2sna /external/tap2sna.py \
   --fuse-test-command 'python3 -B tests/fuse_boot.py --fuse /external/fuse-sdl --rom /external/48.rom --tape build/ZX-UX.tzx --assets /external/fuse-assets --libdir /external/fuse-libs --screen build/logs/fuse-login.png --expect-zxux-login --wait 45'
 ```
 
-The strict launcher validates the FUSE command before the build. Its verifier must use the real newly built `build/ZX-UX.tzx`, the checked 48K ROM, FUSE running in Spectrum 48K mode, and exact ZX-UX login-screen markers. The guard checks the resulting capture and its JSON proof against the tape, screen, and ROM hashes. A successful emulator launch or an unrelated zero exit status is not a boot proof.
+The release script requires the FUSE verification command and validates it. Its verifier must use the real newly built `build/ZX-UX.tzx`, the checked 48K ROM, FUSE running in Spectrum 48K mode, and exact ZX-UX login-screen markers. The guard checks the resulting capture and its JSON proof against the tape, screen, and ROM hashes. A successful emulator launch or an unrelated zero exit status is not a boot proof.
 
-The base runner `tools/release_v1.py` builds the system and runs the system, SDK, tape, screenshot, and release checks. It stops on failed commands or file checks. Always use the strict launcher for the additional independent FUSE command and capture validation.
+The release script runs the independent FUSE capture test before copying files.
+It builds and tests the system, SDK and cassette programs. It stops on a
+failed test or check. The optional wrapper `tools/release_v1_strict.py`
+is not required. See `docs/REPRODUCIBLE-V1-RELEASE.md` for the full
+standalone procedure.
 
 ## Release decision and output
 
