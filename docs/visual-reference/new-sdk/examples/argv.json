@@ -1,0 +1,13 @@
+{
+  "bytecode_sha256": "db72ca813b90bde0f4446169c5be34ef5402d0094c5eb5c20708151e325fc004",
+  "historical_png_sha256": "2f411b60ec27e855d6e713074c627ae10252bd23ea2d065aff5eec26a7692bf1",
+  "native_v1_execution": "pending",
+  "normalization": "exact threefold replication",
+  "old_capture_state": "unknown",
+  "pixel_differences": 728,
+  "program": "argv",
+  "result_png_sha256": "b5b1bedb9cce126fee346779d4d8b454e5da8f8e1777ec8ccca451b43e24123b",
+  "same_pixels": false,
+  "screen_sha256": "f0373c370eee96f31315effb67674e8b43acf1b667fbe5c2a007bf399441ab6b",
+  "source_sha256": "3497970dfbeb168ad75996b64ec090e005ef4d283c1045fb13c4549d5c9eedf3"
+}
