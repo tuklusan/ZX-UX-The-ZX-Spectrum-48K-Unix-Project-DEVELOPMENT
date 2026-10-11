@@ -902,7 +902,7 @@ class BGen(Gen):
                 else:
                     out += self.init_lines(s.init)
         keep = self.p.gvars
-        self.p.gvars = [s for s in keep if s not in self.gsvars]
+        self.p.gvars = [s for s in keep if not self.bc or s not in self.gsvars]
         out += super().data_lines()
         out += self.calltable()
         self.p.gvars = keep
@@ -910,7 +910,7 @@ class BGen(Gen):
 
     def bss_lines(self):
         keep = self.p.gvars
-        self.p.gvars = [s for s in keep if s not in self.gsvars]
+        self.p.gvars = [s for s in keep if not self.bc or s not in self.gsvars]
         out = super().bss_lines()
         self.p.gvars = keep
         return out

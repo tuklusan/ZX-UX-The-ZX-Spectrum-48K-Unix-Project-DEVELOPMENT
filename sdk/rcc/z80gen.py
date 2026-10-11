@@ -288,20 +288,12 @@ class Gen:
                 continue
             out.append('%s:' % s.label)
             out += self.init_lines(s.init)
-        # string literals: one copy of each, and a string that ends
-        # another is a pointer into it ("FAIL" in "MODEL FAIL")
-        lits = sorted(((e.v + b'\0', e.sym) for e in self.p.strings if e.sym is not None),
-                      key=lambda t: -len(t[0]))
-        kept = []
-        for b, sym in lits:
-            for kb, ksym in kept:
-                if kb.endswith(b):
-                    out.append('%s\tequ %s+%d' % (sym, ksym, len(kb) - len(b)))
-                    break
-            else:
-                kept.append((b, sym))
-                out.append('%s:' % sym)
-                out += self.bytes_lines(b)
+        # Each non-adjacent literal occurrence is an independent static array.
+        # C48 Rev 0.11 section 15 forbids identical/suffix address pooling.
+        for literal in self.p.strings:
+            if literal.sym is not None:
+                out.append('%s:' % literal.sym)
+                out += self.bytes_lines(literal.v + b'\0')
         for b, l in self.fconst.items():
             out.append('%s:\tdb %s' % (l, ','.join(str(x) for x in b)))
         return out
