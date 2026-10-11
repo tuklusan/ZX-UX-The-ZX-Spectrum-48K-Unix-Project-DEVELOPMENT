@@ -58,7 +58,8 @@ def main(argv):
             mode = '%s · needs %s bytes' % ('SSB1 bytecode' if s['mode'] == 'bytecode' else 'native Z80',
                                            format(s['bc_need'] if s['mode'] == 'bytecode' else s['native_need'], ','))
         ok_r = 'PASS' in rx.get(n, '')
-        has_vm = os.path.isfile(os.path.join(VM, f + '.png')) and os.path.isfile(os.path.join(VM, f + '.sdk.png'))
+        has_vm = os.path.isfile(os.path.join(VM, f + '.png'))
+        has_ref = os.path.isfile(os.path.join(VM, f + '.sdk.png'))
         ok_v = has_vm and 'PASS' in ov.get(n, '')
         cards.append('''<article class="prog" id="%s">
 <header><h3>%s</h3><span class="grp">%s</span>
@@ -68,12 +69,12 @@ def main(argv):
 <div class="shots">
 <figure>%s<figcaption>ZX-UX on the Spectrum, loaded from tape</figcaption></figure>
 <figure>%s<figcaption>rvm, the ZX-UX SDK's VM</figcaption></figure>
-<figure>%s<figcaption>C48 SDK reference VM</figcaption></figure>
+<figure>%s<figcaption>Optional historical reference VM</figcaption></figure>
 </div></article>''' % (
             html.escape(f), html.escape(n), html.escape(r['dir']),
             'ok' if ok_r else 'bad', 'ran' if ok_r else 'failed',
             'ok' if ok_v else ('bad' if has_vm else 'unknown'),
-            ('identical' if ok_v else 'differs') if has_vm else 'not tested',
+            ('passed' if ok_v else 'failed') if has_vm else 'not tested',
             html.escape(cmd), (' <span class="keys">keys: <code>%s</code></span>' % html.escape(keys)) if keys else '',
             html.escape(mode),
             img(os.path.join(SHOTS, f + '.ZX-UX.png'), n + ' on ZX-UX'),
@@ -138,9 +139,9 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
 <div class="wrap">
 <h1>ZX-UX C48 Gallery</h1>
 <p class="lede">The C48 SDK corpus, compiled by the ZX-UX SDK (rcc). Each program was loaded from cassette and run on ZX-UX v1 on an emulated 48K Spectrum,
-and run in the ZX-UX VM; the right-hand screen is the C48 SDK's own compiler and reference VM, given the same arguments, keys and ticks().
+and run in the independent ZX-UX VM. The third screen is present only when a separately supplied historical reference VM was used.
 Four games are seeded from ticks(), which on ZX-UX is the real clock, so their ZX-UX screens show a different game.</p>
-<p class="tally"><span><b>@NP@</b> programs, <b>@N@</b> sessions</span><span>ZX-UX: <b>@NR@/@N@</b> ran from tape</span><span>VM: <b>@NV@/@N@</b> screens identical to the SDK</span></p>
+<p class="tally"><span><b>@NP@</b> programs, <b>@N@</b> sessions</span><span>ZX-UX: <b>@NR@/@N@</b> ran from tape</span><span>VM: <b>@NV@/@N@</b> independent v1 VM sessions passed</span></p>
 @CARDS@
 </div>
 '''

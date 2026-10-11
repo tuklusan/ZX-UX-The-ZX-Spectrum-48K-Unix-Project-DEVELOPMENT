@@ -5,7 +5,7 @@ sys.path.insert(0,'tools'); sys.path.insert(0,'sdk'); sys.path.insert(0,'tests')
 import zxrun, rtap, suite, rld
 from rcc import driver
 import os; S=os.path.join('build','dev')+os.sep; os.makedirs(S, exist_ok=True)
-C='../tuklusan/zx-ux-c48-sdk/usr/src/demos/'
+C='programs/c48/demos/'
 stack=sys.argv[1]
 ssx={}
 for n in ('hanoi','queens8'):

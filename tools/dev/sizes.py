@@ -9,13 +9,13 @@ sys.path.insert(0, os.path.join(ROOT, 'sdk'))
 import rld                      # noqa: E402
 from rcc import driver          # noqa: E402
 
-SDK = os.environ.get('C48SDK') or os.path.join(ROOT, '..', 'tuklusan', 'zx-ux-c48-sdk')
+CORPUS = os.path.join(ROOT, 'programs', 'c48')
 R = json.load(open(os.path.join(ROOT, 'sdk', 'tests', 'runs.json')))
 rows = []
 for n, r in R.items():
     if ':' in n:
         continue
-    src = os.path.join(SDK, 'usr', 'src', r['dir'], r.get('src', n) + '.c')
+    src = os.path.join(CORPUS, r['dir'], r.get('src', n) + '.c')
     d1, g1, t1, o1, need1 = driver.build(src, {'heap': 1024})
     d2, g2, t2, o2, need2 = driver.build(src, {'heap': 1024, 'bytecode': 'all'})
     rows.append(dict(name=n, dir=r['dir'], src=os.path.getsize(src),

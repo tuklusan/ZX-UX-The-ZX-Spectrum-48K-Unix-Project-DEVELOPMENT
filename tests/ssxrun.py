@@ -3,9 +3,8 @@
 
   python3 tests/ssxrun.py [--only a,b] [--png DIR] [--frames N] [-v]
 
-For each program in sdk/tests/runs.json, use the source if it is available.
-Otherwise, load the checked image from build/c48. Then make cassette
-records, boot ZX-UX from the snapshot of the ROM
+For each program in sdk/tests/runs.json, compile the checked-in v1
+programs/c48 source using rcc. Make cassette records and boot ZX-UX from the ROM
 tape load (build/test.z80), log in, type /dev/cassette/NAME ARGS, play the
 records on the emulated tape, type the scripted keys and check that the
 program ran: its first screen appears (the shell's prompt is gone), it
@@ -28,23 +27,20 @@ import rvm                         # noqa: E402
 import suite                       # noqa: E402
 
 RUNS = json.load(open(os.path.join(ROOT, 'sdk', 'tests', 'runs.json')))
-SDK = os.environ.get('C48SDK') or os.path.normpath(os.path.join(ROOT, '..', 'tuklusan', 'zx-ux-c48-sdk'))
+CORPUS = os.path.join(ROOT, 'programs', 'c48')
 OUT = os.path.join(ROOT, 'build', 'ssx')
 SCROWN = 0x5B63                    # kvars.inc: scrown = KV+99
 
 
 def compile_prog(name, run):
-    src = os.path.join(SDK, 'usr', 'src', run['dir'], run.get('src', name.split(':')[0]) + '.c')
+    src = os.path.join(CORPUS, run['dir'], run.get('src', name.split(':')[0]) + '.c')
     out = os.path.join(OUT, run.get('src', name.split(':')[0]) + '.ssx')
     if not os.path.isfile(src):
-        ready = os.path.join(ROOT, 'build', 'c48', run.get('src', name.split(':')[0]) + '.ssx')
-        if not os.path.isfile(ready):
-            raise FileNotFoundError('C48 program source and built image are both missing')
-        return open(ready, 'rb').read()
-    if not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(src):
-        os.makedirs(OUT, exist_ok=True)
-        if driver.main([src, '-o', out]):
-            return None
+        raise FileNotFoundError('Missing checked-in C48 source: ' + src)
+    # Always build a current v1 image; a checked-out binary is not run proof.
+    os.makedirs(OUT, exist_ok=True)
+    if driver.main([src, '-o', out]):
+        return None
     return open(out, 'rb').read()
 
 

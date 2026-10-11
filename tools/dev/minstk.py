@@ -2,7 +2,7 @@
 import sys; sys.path.insert(0,'sdk')
 import rvm
 from rcc import driver
-C='../tuklusan/zx-ux-c48-sdk/usr/src/demos/'
+C='programs/c48/demos/'
 import os; S=os.path.join('build','dev')+os.sep; os.makedirs(S, exist_ok=True)
 for n in ('hanoi','queens8'):
     lo,hi=200,600

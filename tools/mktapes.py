@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Compile the C48 SDK corpus with the ZX-UX SDK and write cassette tapes.
 
-  python3 tools/mktapes.py [--sdk DIR]
+  python3 tools/mktapes.py
 
-For every program in sdk/tests/runs.json (the ZX-UX C48 SDK's usr/src):
+For every program in sdk/tests/runs.json (the checked-in programs/c48 sources):
 rcc -> build/c48/NAME.ssx (native code, or SSB1 bytecode when native code
 would not fit), then rtap writes
   build/c48/NAME.tap              one program
@@ -28,9 +28,9 @@ GROUPS = (('apps', ('apps',)), ('games', ('games',)), ('demos', ('demos',)),
 
 
 def main(argv):
-    sdk = os.environ.get('C48SDK') or os.path.normpath(os.path.join(ROOT, '..', 'tuklusan', 'zx-ux-c48-sdk'))
-    if argv[:1] == ['--sdk']:
-        sdk = argv[1]
+    if argv:
+        raise SystemExit('usage: python3 tools/mktapes.py')
+    corpus = os.path.join(ROOT, 'programs', 'c48')
     runs = json.load(open(os.path.join(ROOT, 'sdk', 'tests', 'runs.json')))
     out = os.path.join(ROOT, 'build', 'c48')
     os.makedirs(out, exist_ok=True)
@@ -38,7 +38,7 @@ def main(argv):
     for name, run in runs.items():
         if ':' in name:
             continue
-        src = os.path.join(sdk, 'usr', 'src', run['dir'], run.get('src', name) + '.c')
+        src = os.path.join(corpus, run['dir'], run.get('src', name) + '.c')
         ssx = os.path.join(out, name + '.ssx')
         if driver.main([src, '-o', ssx]):
             raise SystemExit('rcc failed: %s' % name)
@@ -60,7 +60,7 @@ def main(argv):
     blocks = []
     # (hanoi uses UDG slots 0-15 only: a 16-slot bank)
     for name, extra in (('hanoi', ['--stack', '400', '--udgs', '16']), ('queens8', ['--stack', '448'])):
-        src = os.path.join(sdk, 'usr', 'src', 'demos', name + '.c')
+        src = os.path.join(corpus, 'demos', name + '.c')
         ssx = os.path.join(out, name + '-mt.ssx')
         if driver.main([src, '-o', ssx, '--bytecode'] + extra):
             raise SystemExit('rcc failed: %s' % name)
