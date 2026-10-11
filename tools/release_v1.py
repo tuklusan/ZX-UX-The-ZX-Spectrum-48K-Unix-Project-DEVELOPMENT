@@ -141,12 +141,28 @@ def main():
     spec = importlib.util.find_spec('skoolkit')
     require(spec is not None and spec.origin is not None,
             'SkoolKit 10.1 is not installed')
-    # Check package source, ROM, and native simulator before importing it.
-    check(checker, '--tree', Path(spec.origin).parent)
+    # Third-party simulator binaries are outside the project-text scan.
+    # Verify these exact owner-supplied toolbox bytes instead.
     import skoolkit
+    import skoolkit.csimulator
     require(skoolkit.CSimulator is not None and Path(skoolkit.ROM48).is_file(),
             'SkoolKit emulator and its 48K ROM are unavailable')
     require(skoolkit.VERSION == '10.1', 'Requires SkoolKit 10.1')
+    toolbox = sjasm.parent.parent
+    require(Path(spec.origin).resolve() ==
+            (toolbox / 'runtime/skoolkit/__init__.py').resolve(),
+            'SkoolKit was not loaded from the checked toolbox')
+    sim_path = Path(skoolkit.csimulator.__file__).resolve()
+    require(sim_path.parent == Path(spec.origin).resolve().parent,
+            'Compiled simulator does not belong to the checked toolbox')
+    for path, expected in (
+        (sjasm, '2aafd9bbc62c4ff90b6c69aa71a94a33afda395b587c2936c5fedb970e67adc0'),
+        (Path(skoolkit.ROM48), 'd55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42'),
+        (sim_path, '2116a3d1416bb273be4ef686797a9e055cfbc3217be337ecb878f07f093601b2'),
+    ):
+        require(path.is_file() and not path.is_symlink() and
+                hashlib.sha256(path.read_bytes()).hexdigest() == expected,
+                'Checked toolbox file hash does not match')
     from PIL import Image  # Required for real image generation and inspection.
     require(Image is not None, 'Pillow is missing')
     sj_version = version_data(str(sjasm))
