@@ -1,7 +1,7 @@
 # tools/dev/ops.py - kept from the 2.2 size work; run from the repository root
 import sys, collections; sys.path.insert(0,'sdk')
 from rcc import driver
-C='../tuklusan/zx-ux-c48-sdk/usr/src/demos/'
+C='programs/c48/demos/'
 for n in sys.argv[1:]:
     st={}
     driver.compile_to_asm(C+n+'.c',{'bytecode':'all','stats':st})

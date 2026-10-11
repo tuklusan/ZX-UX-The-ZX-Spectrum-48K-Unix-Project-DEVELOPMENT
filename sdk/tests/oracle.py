@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""Compare rcc+rvm against the C48 SDK reference VM (c48run) screen by screen.
+"""Check the v1 C48 compiler and VM independently of historical binaries.
 
-  oracle.py [--sdk DIR] [--only NAME,...] [--keys-file JSON] [--png DIR]
+  oracle.py [--native|--bytecode] [--only NAMES] [--png DIR]
+  oracle.py --reference-sdk DIR [other options]  # optional historical comparison
 
-For each corpus program: compile with the SDK compiler and run it in the SDK
-VM (ROM maths), compile with rcc and run it in rvm, with the same arguments,
-the same scripted keys and the same fixed ticks() value; compare the final
-6912-byte screens.  The SDK repository is read from --sdk (default
-$C48SDK or ../../tuklusan/zx-ux-c48-sdk next to this repository).
+The default runner uses the local C48 source collection and known output
+checks. An explicitly supplied historical reference VM may also compare
+displays; it is not part of v1 code generation or program loading.
 """
 import json
 import os
@@ -24,6 +23,7 @@ from rcc import driver        # noqa: E402
 
 # per-program scripted runs: args, keys, rvm frame budget
 RUNS = json.load(open(os.path.join(HERE, 'runs.json')))
+V1_SCREENS = json.load(open(os.path.join(HERE, 'v1-screens.json')))
 
 
 class StopRun(Exception):
@@ -80,12 +80,13 @@ def diff(a, b):
 
 
 def main(argv):
-    sdk = os.environ.get('C48SDK') or os.path.normpath(os.path.join(SDKDIR, '..', '..', 'tuklusan', 'zx-ux-c48-sdk'))
+    sdk = None
+    RCCFLAGS.clear()
     only = None
     pngdir = None
     i = 0
     while i < len(argv):
-        if argv[i] == '--sdk':
+        if argv[i] == '--reference-sdk':
             sdk = argv[i + 1]
             i += 2
         elif argv[i] == '--only':
@@ -98,8 +99,10 @@ def main(argv):
             RCCFLAGS.append(argv[i])
             i += 1
         else:
-            i += 1
-    src = os.path.join(sdk, 'usr', 'src')
+            raise SystemExit('unknown option: ' + argv[i])
+    if set(RUNS) != set(V1_SCREENS):
+        raise SystemExit('Missing or unexpected v1 screen baselines')
+    src = os.path.normpath(os.path.join(SDKDIR, '..', 'programs', 'c48'))
     total = ok = 0
     for name, run in RUNS.items():
         if only and name not in only and name.split(':')[0] not in only:
@@ -116,7 +119,13 @@ def main(argv):
         if b is None:
             print('%-14s FAIL %s' % (name, why_b))
             continue
-        checks = []
+        expected = V1_SCREENS.get(name)
+        checks = [('screen', len(b) == 6912),
+                  ('baseline', expected is not None)]
+        if expected is not None:
+            import hashlib
+            checks.append(('screen-sha', hashlib.sha256(b).hexdigest() == expected['sha256']))
+            checks.append(('state', why_b.strip() == expected['state']))
         if 'sha' in run:
             import hashlib
             checks.append(('sha', hashlib.sha256(b).hexdigest() == run['sha']))
@@ -125,7 +134,7 @@ def main(argv):
         if 'expect_status' in run:
             checks.append(('status', why_b.strip() == 'exit %d' % run['expect_status']))
         sdkinfo = ''
-        if not run.get('nosdk'):
+        if sdk is not None and not run.get('nosdk'):
             a, why_a = sdk_run(sdk, path, args, keys, ticks, run.get('steps', 6000000))
             d = diff(a, b)
             checks.append(('sdk-screen', d <= run.get('tolerance', 0)))
@@ -142,7 +151,7 @@ def main(argv):
         if pngdir:
             os.makedirs(pngdir, exist_ok=True)
             rvm.write_png(b, os.path.join(pngdir, name.replace(':', '_') + '.png'))
-    print('%d/%d match' % (ok, total))
+    print('%d/%d v1 sessions pass' % (ok, total))
     return 0 if ok == total else 1
 
 

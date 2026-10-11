@@ -49,8 +49,7 @@ See `include/c48.h` for the available functions.
 
 ## Run the examples
 
-The separate C48 source repository holds the program collection.
-Set `C48SDK` to its local folder and run:
+The C48 sources are checked in at `programs/c48/`. Run:
 
 ```sh
 python3 tools/mktapes.py
@@ -62,7 +61,9 @@ Two programs can share the screen with `build/c48-multitask.tzx`.
 
 The test settings are in `sdk/tests/runs.json`.
 The collection has 56 named programs and 17 extra test cases.
-Use `sdk/tests/oracle.py` to compare VM results.
+Use `sdk/tests/oracle.py` for independent native and bytecode VM checks.
+An old SDK comparison requires the explicit `--reference-sdk DIR` flag
+and is not needed to build, run, or release ZX-UX.
 Use `tests/ssxrun.py` to run programs from tape in ZX-UX.
 
 ## Program formats
@@ -74,5 +75,5 @@ Use `tests/ssxrun.py` to run programs from tape in ZX-UX.
 For the byte layouts, read `docs/SPEC-SDK-R2.md` and
 `docs/SPEC-ELASTIC-R2.md`.
 
-The C48 source collection has its own license.
-Check its license before sharing its programs.
+The C48 source programs retain their attribution and licensing notices.
+See `programs/c48/README.md` and the repository `LICENSE`.

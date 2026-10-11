@@ -7,7 +7,7 @@ all required build and emulator tests have passed.
 
 Usage:
   python3 tools/release_v1.py --checker /private/checker.py \
-      --sjasm /tools/sjasmplus --sdk /sources/zx-ux-c48-sdk \
+      --sjasm /tools/sjasmplus \
       --tap2sna /tools/tap2sna.py \
       --fuse-test-command '/path/to/checked-fuse-boot-test'
 
@@ -113,22 +113,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--checker', required=True, type=Path)
     parser.add_argument('--sjasm', required=True, type=Path)
-    parser.add_argument('--sdk', required=True, type=Path)
     parser.add_argument('--tap2sna', required=True, type=Path)
     parser.add_argument('--fuse-test-command', required=True)
     args = parser.parse_args()
     checker = args.checker.resolve()
     sjasm = args.sjasm.resolve()
-    sdk = args.sdk.resolve()
+    corpus = ROOT / 'programs' / 'c48'
     tape_tool = args.tap2sna.resolve()
     for tool in (checker, sjasm, tape_tool):
         require(tool.is_file() and not tool.is_symlink(), 'Missing checked tool')
         require(ROOT not in tool.parents, 'Private tools must stay outside Git')
-    require(sdk.is_dir() and ROOT not in sdk.parents,
-            'External C48 source collection is missing')
-    require((sdk / 'usr/src/demos/hanoi.c').is_file() and
-            (sdk / 'usr/src/demos/queens8.c').is_file(),
-            'C48 Hanoi and Queens8 source files are missing')
+    require((corpus / 'demos/hanoi.c').is_file() and
+            (corpus / 'demos/queens8.c').is_file() and
+            (corpus / 'ailmzx48/ailmzx48.c').is_file(),
+            'Checked-in v1 C48 sources or LM source are missing')
     require(not RELEASE.exists(), 'Remove or archive the old release first')
     require(not run(['git', 'status', '--porcelain']).strip(),
             'Release must start from a clean checkout')
@@ -136,7 +134,6 @@ def main():
     run([PYTHON, checker, 'self-test'])
     check(checker, '--file', sjasm)
     check(checker, '--file', tape_tool)
-    check(checker, '--tree', sdk)
     check(checker, '--tree', ROOT)
     spec = importlib.util.find_spec('skoolkit')
     require(spec is not None and spec.origin is not None,
@@ -174,6 +171,8 @@ def main():
         logs[name] = log
         check(checker, '--file', log)
 
+    step('release-self-tests', [PYTHON, '-B', '-m', 'unittest', 'discover',
+                                '-s', 'tests', '-p', 'release_*checks.py', '-v'])
     step('build', [PYTHON, '-B', 'tools/build.py', str(sjasm)])
     for name in ('unix.bin', 'fs.img', 'ZX-UX.tap', 'ZX-UX.tzx'):
         check(checker, '--file', BUILD / name)
@@ -184,23 +183,23 @@ def main():
     step('rom-tape-boot', [PYTHON, '-B', str(tape_tool),
                            'build/ZX-UX.tzx', 'build/test.z80'])
     step('system-regression', [PYTHON, '-B', 'tests/suite.py'])
-    step('c48-program-tapes', [PYTHON, '-B', 'tools/mktapes.py', '--sdk', str(sdk)])
+    step('c48-program-tapes', [PYTHON, '-B', 'tools/mktapes.py'])
     step('c48-emulator', [PYTHON, '-B', 'tests/ssxrun.py', '--png',
                           str(BUILD / 'shots')])
-    step('c48-sdk-native', [PYTHON, '-B', 'sdk/tests/oracle.py', '--sdk',
-                            str(sdk), '--native', '--png', str(BUILD / 'shots-vm')])
-    step('c48-sdk-bytecode', [PYTHON, '-B', 'sdk/tests/oracle.py', '--sdk',
-                              str(sdk), '--bytecode', '--png',
-                              str(BUILD / 'shots-vm')])
+    step('c48-v1-native', [PYTHON, '-B', 'sdk/tests/oracle.py',
+                           '--native', '--png', str(BUILD / 'shots-vm')])
+    step('c48-v1-bytecode', [PYTHON, '-B', 'sdk/tests/oracle.py',
+                             '--bytecode', '--png', str(BUILD / 'shots-vm')])
+    step('lm-new-sdk', [PYTHON, '-B', 'tools/lm_v1.py'])
     step('hanoi-queens8', [PYTHON, '-B', 'tools/mtsnap.py'])
     step('gallery', [PYTHON, '-B', 'tools/gallery.py',
-                     str(logs['c48-emulator']), str(logs['c48-sdk-bytecode'])])
-    try:
-        fuse_command = shlex.split(args.fuse_test_command)
-    except ValueError as exc:
-        raise RuntimeError('Invalid FUSE boot test command') from exc
-    require(fuse_command, 'Independent FUSE boot test command is empty')
+                     str(logs['c48-emulator']), str(logs['c48-v1-bytecode'])])
+    from fuse_release_gate import validate_boot_command, validate_boot_proof
+    fuse_command, proof_paths = validate_boot_command(
+        args.fuse_test_command, ROOT, BUILD, PYTHON)
     step('fuse-independent-boot', fuse_command)
+    validate_boot_proof(proof_paths,
+                        lambda path: check(checker, '--file', path))
     screenshot_check(checker)
     check(checker, '--tree', ROOT)
     doc = ['ZX-UX UNIX v1 for the ZX Spectrum 48K',

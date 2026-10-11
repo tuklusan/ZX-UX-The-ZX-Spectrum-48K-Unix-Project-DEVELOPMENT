@@ -67,7 +67,7 @@ These files are build inputs and working files, not tape releases.
 
 ZX-UX includes tools for a small C language called C48.
 The compiler, linker, assembler, cassette writer, and VM live in `sdk/`.
-The separate C48 source collection supplies the example programs.
+The checked-in `programs/c48/` source collection supplies the example programs.
 
 ```sh
 python3 sdk/lib/build.py
@@ -83,7 +83,7 @@ On ZX-UX, type `/dev/cassette/game` and play the program tape.
 You can add program arguments after the name.
 Start some programs with `&` to keep the shell running.
 
-With the separate C48 source collection available, run:
+To build the included C48 program collection, run:
 
 ```sh
 python3 tools/mktapes.py
@@ -110,11 +110,12 @@ python3 tests/suite.py
 python3 tools/mktapes.py
 python3 tools/mtsnap.py
 python3 tests/ssxrun.py
-python3 sdk/tests/oracle.py
+python3 sdk/tests/oracle.py --native
+python3 sdk/tests/oracle.py --bytecode
 python3 tools/gallery.py
 ```
 
-Some of these commands need the C48 source collection.
+The C48 sources are included in `programs/c48/`.
 Tests that make pictures may need their `--png` option.
 See `WORKING-NOTES.md` for the full sequence and required paths.
 
@@ -189,3 +190,11 @@ The source code is the final guide to what the current build does.
 
 `src/font4x8.bin` uses the font-specific terms retained in the root `LICENSE`.
 The 48K ROM at `rom/48.rom` has separate redistribution terms in that same file.
+
+## Reproducing a checked release
+
+The complete offline release command and required private tooling are
+documented in `docs/REPRODUCIBLE-V1-RELEASE.md`. GitHub Actions is not
+needed. `tools/release_v1.py` runs the mandatory independent FUSE proof
+and uses only the current v1 C48 source tree. Historical visual
+comparisons are optional and never gate the independent release workflow.
