@@ -26,7 +26,7 @@ The core native files are `build/ZX-UX.tzx`, `build/ZX-UX.tap`,
 ## C48 compilation and execution
 
 The 56 standard programs were compiled from the committed, checked
-`c48-sdk/usr/src/` sources. This includes the repaired programs
+historical source collection (now preserved separately in `obsolete-sdk/usr/src/`). This includes the repaired programs
 `games/fortune.c` and `security/secforge.c`. The two extra multitask
 images, `hanoi-mt.ssx` and `queens8-mt.ssx`, were also compiled from
 those sources. No standard C48 program was removed or skipped.
@@ -71,7 +71,8 @@ Independent FUSE boot testing was also not performed.
 ## LM memory limit
 
 The checked `ailmzx48` source and the 8,566-byte cold model remain in
-`c48-sdk/usr/src/ailmzx48/`. The previously measured compiled program
+the historical source collection. The current v1 LM source is in
+`programs/c48/ailmzx48/`. The previously measured compiled program
 requires 21,010 bytes, exceeding the 12,946-byte free arena of this
 build. No on-device execution of the complete LM has been verified.
 
@@ -88,7 +89,7 @@ python3 sdk/lib/build.py
 python3 sdk/tests/test_ras.py
 python3 /path/to/tap2sna.py build/ZX-UX.tzx build/test.z80
 python3 tests/suite.py
-python3 tools/mktapes.py --sdk c48-sdk
+python3 tools/mktapes.py
 python3 tests/ssxrun.py --png build/shots
 python3 tools/mtsnap.py 500
 python3 tools/bootshot.py

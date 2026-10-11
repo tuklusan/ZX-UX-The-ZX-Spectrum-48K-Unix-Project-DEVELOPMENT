@@ -141,8 +141,8 @@ private checker and tools stored outside this source folder:
 python3 tools/release_v1.py \
   --checker /private/checker.py \
   --sjasm /tools/sjasmplus \
-  --sdk /sources/zx-ux-c48-sdk \
-  --tap2sna /tools/tap2sna.py
+  --tap2sna /tools/tap2sna.py \
+  --fuse-test-command 'python3 -B tests/fuse_boot.py --fuse /tools/fuse-sdl --rom /tools/48.rom --tape build/ZX-UX.tzx --assets /tools/fuse-assets --libdir /tools/fuse-libs --screen build/proofs/fuse-login.png --expect-zxux-login'
 ```
 
 The script checks the tools and source, builds the tapes and C48

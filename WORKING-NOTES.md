@@ -34,9 +34,8 @@ R2 describes the later code and overrides R1 when they differ.
 ## Build inputs
 
 Use Python 3, `sjasmplus` 1.24.0, SkoolKit 10.1, and Pillow.
-The system and compiler scripts expect a checkout of the C48 SDK
-source collection when building the example C programs.
-Set `C48SDK` to that folder or pass `--sdk` to `tools/mktapes.py`.
+The current C48 program collection is checked into `programs/c48/`.
+Building it does not need an external or retired C48 SDK.
 
 The main build needs only Python and the Z80 assembler.
 The test snapshot needs SkoolKit's `tap2sna.py`.
@@ -47,7 +46,7 @@ The C48 compiler also uses SkoolKit for ROM-based float constants.
 Run these commands in the source root:
 
 ```sh
-python3 tools/build.py
+python3 tools/build.py /path/to/sjasmplus
 python3 sdk/lib/build.py
 sh tools/t.sh
 python3 tools/mktapes.py
