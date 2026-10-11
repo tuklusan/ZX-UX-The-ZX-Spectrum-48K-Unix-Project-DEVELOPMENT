@@ -1,0 +1,113 @@
+{
+  "source": "Checked historical SDK PNGs, read-only owner archive",
+  "images": [
+    {
+      "path": "docs/visual-reference/old-sdk/apps/gp82.png",
+      "git_blob_sha1": "6e9e0202e881df6925099f6d44d840a3b110a5c5",
+      "sha256": "c63f53d44ff7a23aac691f682b90f3435d448cb09f547ca3dadcb23b7b3f02eb",
+      "size": 6437
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/apps/sheet48.png",
+      "git_blob_sha1": "e0bb31ebf07b2b7f50101df218d78c583c011e6e",
+      "sha256": "9a7482f64ce75e8969604e758501dc6b8f5f9c60467439cb76ed10a83d2a3d5f",
+      "size": 5533
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/apps/wire3d.png",
+      "git_blob_sha1": "a96bc7b80f0f9c796d7996aaf1e0ffdce8998b0b",
+      "sha256": "fbc135e3b527ecab6094377377b7a14c0c8c374c21c47f05552f0d112427bd5f",
+      "size": 6213
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/apps/write48.png",
+      "git_blob_sha1": "f54f8d5eb569a392a323597a620d8d19ecc041b0",
+      "sha256": "ede26f7fdc9c23f1f2acf00666c2ab9a16fb701cf36a4106a0b7a8a5805be716",
+      "size": 6806
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/advent.png",
+      "git_blob_sha1": "2fa54ea4c1e705837e1fbedc8c9bd1303b0616e8",
+      "sha256": "f1c72c25dfec891cfb363495555c5683dc3eac6db78212eef07c49f6b7629a4c",
+      "size": 2482
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/arith.png",
+      "git_blob_sha1": "f0baf6e8b6f1db77aaa4a41506ab6775cdb625b0",
+      "sha256": "8d46d7ae93c6640e7b4117b237b8d0cd885a41ce0b72991395d6b991df56955d",
+      "size": 1863
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/bgammon.png",
+      "git_blob_sha1": "a2a6637bd6ed79613d8b480216830dbb5ef77f16",
+      "sha256": "79ae1a66d330ac7a7ff8a2eda57a7d75c7a5ef793ca86142db6747427889efeb",
+      "size": 3596
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/chess.png",
+      "git_blob_sha1": "c8a6ec6f3ef6b74dc801d6870e7461ec670de9f3",
+      "sha256": "edd55c6372e3f3437588ddeb075a7788a8f8622ad62c2c30247bbb9e4b6ae8c8",
+      "size": 2160
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/cribbage.png",
+      "git_blob_sha1": "22f00e1ef046b9d7e632fd772849ffd82c75c06d",
+      "sha256": "5edecc260fcbb642e849b342911aafe11026c3206d29b7a8711dd785fcf7fcd5",
+      "size": 2617
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/fish.png",
+      "git_blob_sha1": "a3b6e7a51ee918bd0fe92fc6bb341f51c5309d64",
+      "sha256": "c82d13f1438e5bf297c7e03b7ed020213c258ea4488a3a81202de4c5a725a96b",
+      "size": 2909
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/fortune.png",
+      "git_blob_sha1": "0eede16d4c72dcff160545d2c3152798b4fa6643",
+      "sha256": "f9aa9d802ffdf81724a76c6f303a9404cc141a5660a776cc50de699d438d6de9",
+      "size": 2151
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/hangman.png",
+      "git_blob_sha1": "ede95f1a287b13ede48aced30c3e23b6e3a5b1ba",
+      "sha256": "2e3d59367cb2e69b6b2464c27de7b60b46bd0b6d4737b8d1d580a77a065dd818",
+      "size": 2164
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/maze.png",
+      "git_blob_sha1": "57dc01d50c8ea399aae29787128f6c413b63485f",
+      "sha256": "1cb2784d9437ab42a2ba55335430bac4f707ab94e9b9142829f0e2604f10c716",
+      "size": 4350
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/quiz.png",
+      "git_blob_sha1": "5893fc8e90c08bead7821bc9dcbdcb13eb136ad6",
+      "sha256": "27e55cc189257b694726c62744638f340ad3335722d49516a1df864bcc610582",
+      "size": 2118
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/rogue.png",
+      "git_blob_sha1": "d5076e3eb7cb00700d5e245267f4d617144eaa43",
+      "sha256": "bb6c4ac8336b54350a8548f06535a3cd04af07c5fc011307296c31a4d7101f68",
+      "size": 4321
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/snake.png",
+      "git_blob_sha1": "fc6c2ddc62ebf8c58d6b764923b175031f6a1383",
+      "sha256": "e34894680a07f24ec725b14ae38bddf80a2226325655154f64a48c3ae61e3474",
+      "size": 2969
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/trek.png",
+      "git_blob_sha1": "1a276e1d4c4261e71db37f5c41e2e6f6a58f631a",
+      "sha256": "8a83cd5bc35dae041f9b01ace25dacb9cd92173e3f6075f1bb72d2b804e5fd8d",
+      "size": 3744
+    },
+    {
+      "path": "docs/visual-reference/old-sdk/games/wump.png",
+      "git_blob_sha1": "a4af465ebc3984724d615ae84a26c164f633b1ed",
+      "sha256": "471116852b050873f024165a4fa9cf8d884ab3393acf10bc0de570b1abe389a8",
+      "size": 2329
+    }
+  ]
+}
