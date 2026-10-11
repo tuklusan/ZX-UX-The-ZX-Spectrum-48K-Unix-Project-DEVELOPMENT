@@ -1,0 +1,34 @@
+name: Recover original C48 specification
+on:
+  push:
+    paths:
+      - .github/workflows/recover-c48-spec.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Retrieve and verify original document
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth=1 --branch main https://github.com/tuklusan/ZX-UX-old-abandoned.git "$RUNNER_TEMP/original"
+          git -C "$RUNNER_TEMP/original" rev-parse HEAD
+          source_file="$RUNNER_TEMP/original/docs/04-C48 Language Specification Rev 0.11.docx"
+          test "$(stat -c %s "$source_file")" = 1431954
+          test "$(git hash-object "$source_file")" = a84c314a6d2957835efdc916a49e5289718140c2
+          python3 - "$source_file" <<'PY'
+          import sys, zipfile
+          path = sys.argv[1]
+          with zipfile.ZipFile(path) as z:
+              assert z.testzip() is None
+              assert '[Content_Types].xml' in z.namelist()
+              assert 'word/document.xml' in z.namelist()
+          PY
+          sha256sum "$source_file"
+          echo "ZXUX_DOCUMENT_BASE64_BEGIN"
+          base64 -w 3072 "$source_file" | sed 's/^/ZXUX_DOCUMENT_BASE64_PART:/'
+          echo "ZXUX_DOCUMENT_BASE64_END"
