@@ -272,9 +272,16 @@ def preprocess(path, include_dirs=(), _macros=None, _depth=0, src=None):
                         rep.extend(macros[x.val])
                     else:
                         rep.append(x)
-                if line[2].kind == 'op' and line[2].val == '(' and \
-                        False:
-                    pass
+                # C48 replacements must be complete, compile-time constants.
+                # Reuse the language's own typed constant-expression parser
+                # instead of accidentally accepting arbitrary source fragments.
+                from .parse import Parser
+                sentinel = Tok('eof', None, t.file, t.line, False)
+                parser = Parser(rep + [sentinel])
+                expr = parser.expr()
+                if parser.tok.kind != 'eof' or expr.op not in ('num', 'fnum', 'str'):
+                    raise CError('macro replacement is not a constant expression',
+                                 t.where, 'preprocessing')
                 key = [(x.kind, x.val) for x in rep]
                 if name in macros and [(x.kind, x.val) for x in macros[name]] != key:
                     raise CError('macro %s redefined' % name, t.where, 'preprocessing')
