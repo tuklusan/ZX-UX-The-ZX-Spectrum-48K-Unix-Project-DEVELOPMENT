@@ -78,3 +78,22 @@ passed 73/73 native and 73/73 bytecode sessions. Those are VM tests, not
 native hardware or a fresh FUSE boot. The final revision still needs on-target
 integration, matched historical image states, LM load/size documentation, and
 the mandatory new FUSE ROM boot. No v1 release has been approved.
+
+## Independent checked-ROM floating corpus — 12 October 2026
+
+`tests/c48/spec_batch7.py` records 17 literal-to-five-byte golden
+representations, a chained operation with fixed intermediate rounding, and
+two independent numeric-error cases. Its reference is the actual verified
+48K Spectrum ROM (SHA-256
+`d55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42`)
+executed through the checked Z80 simulator. The test reruns that ROM oracle
+and checks its fixed byte results before compiling programs on the new SDK.
+It then compares actual runtime storage and error statuses using native and
+bytecode backends. This is not a comparison to ordinary IEEE host floats.
+
+The complete verifier now records **850 PASS, 0 FAIL, 0 ERROR**, with **437**
+paragraphs linked to specific passing assertions. **320 required**
+paragraphs and two explicitly undefined entries remain unexercised.
+No Windows C48 implementation has been tested; a real final ZX-UX native
+and FUSE integration release gate remains mandatory. No final release is
+approved.
