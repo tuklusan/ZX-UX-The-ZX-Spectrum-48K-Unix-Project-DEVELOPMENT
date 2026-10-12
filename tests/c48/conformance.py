@@ -38,7 +38,7 @@ CASES = []
 def add(ident, paras, kind, source, expected=0, extra=None, note=''):
     if isinstance(source, str):
         source = source.encode('ascii')
-    assert kind in ('accept', 'reject', 'run', 'object', 'repeat', 'cli')
+    assert kind in ('accept', 'reject', 'run', 'object', 'repeat', 'cli', 'audit', 'format')
     CASES.append(Case(ident, tuple(paras), kind, source, expected, extra or {}, note))
 
 def accepted(ident, p, s): add(ident, p, 'accept', s)
@@ -460,6 +460,18 @@ populate_spec_batch11(add, accepted, rejected, runprogram)
 from spec_batch12 import populate as populate_spec_batch12
 populate_spec_batch12(add, accepted, rejected, runprogram)
 
+from spec_batch13 import populate as populate_spec_batch13
+populate_spec_batch13(add, accepted, rejected, runprogram)
+
+from spec_batch14_audit import populate as populate_spec_batch14_audit
+populate_spec_batch14_audit(add, CASES)
+
+from spec_batch15 import populate as populate_spec_batch15
+populate_spec_batch15(runprogram, accepted)
+
+from spec_batch16_comments import populate as populate_spec_batch16_comments
+populate_spec_batch16_comments(accepted, rejected, runprogram)
+
 def _rcc(src, out, mode, timeout=35):
     return subprocess.run([sys.executable,str(RCC),mode,'-o',str(out),str(src)],
         cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=timeout,
@@ -547,6 +559,50 @@ def execute(c, temp, backend):
         (case_dir / name).write_text(contents,encoding='ascii')
     if c.kind == 'cli':
         return execute_cli(c, case_dir, src)
+    if c.kind == 'format':
+        sys.path.insert(0,str(ROOT/'sdk'))
+        import rld
+        from rcc import driver
+        if c.note == 'symbols':
+            out = case_dir/'fixture.sso'
+            proc = _rcc(src,out,'-c')
+            if proc.returncode or not out.is_file():
+                return False, 'SSO1 compiler rejected symbol fixture'
+            parsed = rld.Obj(out.read_bytes(), 'fixture.sso')
+            exported = parsed.defs()
+            undefined = parsed.undefs()
+            correct = {'_main','_PublicVar','_publicvar'} <= exported and '_hidden' not in exported and '_External' in undefined and all(n.startswith('_') or n.startswith('@') for n in exported)
+            return correct, 'SSO1 declared exports=%s and unresolved=%s' % (len(exported),len(undefined))
+        if c.note == 'iy':
+            asm, _, _ = driver.compile_to_asm(str(src))
+            import re
+            instructions = '\n'.join(line.split(';')[0] for line in asm.splitlines())
+            register = bool(re.search(r'\biy\b', instructions, re.I))
+            return not register, 'native generated assembly IY-register instructions=%s' % register
+        data, _, _, _, need = driver.build(str(src),{})
+        h = rld.parse_ssx(data)
+        if c.note == 'ssx':
+            original = data[18:20]
+            damaged = bytearray(data)
+            damaged[18] ^= 1
+            try:
+                rld.parse_ssx(bytes(damaged))
+                invalid_rejected = False
+            except rld.LinkError:
+                invalid_rejected = True
+            return (data[:4] == b'SSX1' and data[5] == 20 and h['size'] == len(data)
+                    and len(original)==2 and invalid_rejected), '20-byte header and invalid checksum rejected; bytes=%d'%len(data)
+        if c.note == 'tape':
+            import rtap
+            header, payload = rtap.records(data,'HELLO')
+            correct = (header[0] == 0 and header[1] == 3 and header[2:12] == b'HELLO     '
+                       and payload[0] == 255 and payload[1:-1] == data
+                       and int.from_bytes(header[12:14],'little') == len(data)
+                       and int.from_bytes(header[14:16],'little') == rtap.need(data)
+                       and header[16:18] == b'SS')
+            return correct, 'SST1 tape records contain exact SSX1 bytes=%d; memory need=%d'%(len(data),need)
+        raise ValueError('unknown format assertion')
+
     if c.kind in ('accept','reject'):
         sys.path.insert(0,str(ROOT/'sdk'))
         from rcc.driver import compile_to_asm
@@ -604,6 +660,7 @@ def main(argv=None):
     with tempfile.TemporaryDirectory(prefix='zxux-c48-') as t:
         temp=Path(t)
         for c in CASES:
+            if c.kind == 'audit':continue
             if names and c.ident not in names:continue
             if kinds and c.kind not in kinds:continue
             if c.kind in ('run','repeat') and args.backend=='both':
@@ -621,6 +678,23 @@ def main(argv=None):
                 statuses.append(dict(id=c.ident,paragraphs=list(c.paragraphs),backend=backend,
                                      kind=c.kind,status=state,detail=why))
                 print('%-5s %-46s %-8s %s'%(state,c.ident,backend,why[:170]))
+    for c in CASES:
+        if c.kind != 'audit' or (names and c.ident not in names) or (kinds and 'audit' not in kinds):
+            continue
+        failures=[]
+        for ident in c.extra['required_cases']:
+            expected=next(t for t in CASES if t.ident==ident)
+            rows=[s for s in statuses if s['id']==ident]
+            backends={'native','bytecode'} if expected.kind in ('run','repeat') and args.backend=='both' else {
+                args.backend if args.backend!='both' else 'native'}
+            if len(rows)!=len(backends) or {s['backend'] for s in rows}!=backends or any(s['status']!='PASS' for s in rows):
+                failures.append(ident)
+        ok=not failures
+        result='PASS' if ok else 'FAIL'
+        why='checked %d passing constituent cases' % len(c.extra['required_cases']) if ok else 'missing or failed: '+', '.join(failures[:4])
+        statuses.append(dict(id=c.ident,paragraphs=list(c.paragraphs),backend='native',
+                             kind='audit',status=result,detail=why))
+        print('%-5s %-46s %-8s %s'%(result,c.ident,'native',why[:170]))
     index={x['paragraph_index']:[] for x in trace['requirements']}
     invalid = [(c.ident, p) for c in CASES for p in c.paragraphs if p not in index]
     if invalid:

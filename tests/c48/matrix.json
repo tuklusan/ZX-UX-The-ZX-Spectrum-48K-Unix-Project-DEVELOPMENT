@@ -1,0 +1,266 @@
+{
+  "schema": 1,
+  "purpose": "Trace target ABI contracts to observed C48 tests, source and recorded emulator runs; partial results remain open",
+  "rows": [
+    {
+      "paragraph": 600,
+      "status": "supported",
+      "passing_cases": [
+        "spec10_call_arguments_left_to_right",
+        "spec10_recursive_frame_float_argument"
+      ],
+      "source_paths": [
+        "docs/SPEC-SDK-R2.md",
+        "tests/c48/spec_batch10.py"
+      ],
+      "finding": "rcc caller/callee frame and argument checks, native and bytecode"
+    },
+    {
+      "paragraph": 608,
+      "status": "supported",
+      "passing_cases": [
+        "spec10_mixed_arguments_restore_caller_stack",
+        "spec10_recursive_frame_float_argument"
+      ],
+      "source_paths": [
+        "docs/SPEC-SDK-R2.md",
+        "sdk/lib/vm.asm"
+      ],
+      "finding": "SSB1 entry uses shared ABI; mixed source cases execute in both modes"
+    },
+    {
+      "paragraph": 613,
+      "status": "supported",
+      "passing_cases": [
+        "spec10_unsigned_char_argument_full_value",
+        "spec12_process_exit_low_byte_all_ones"
+      ],
+      "source_paths": [
+        "docs/SPEC-SDK-R2.md",
+        "sdk/rcc/z80gen.py"
+      ],
+      "finding": "Scalar and byte results, compiler source and host execution"
+    },
+    {
+      "paragraph": 615,
+      "status": "supported",
+      "passing_cases": [
+        "spec10_float_result_preserves_explicit_parameters",
+        "spec10_independent_float_results_survive_later_calls"
+      ],
+      "source_paths": [
+        "docs/SPEC-SDK-R2.md",
+        "sdk/lib/float.asm"
+      ],
+      "finding": "Float return convention, real five-byte result retained across calls"
+    },
+    {
+      "paragraph": 622,
+      "status": "partial",
+      "passing_cases": [
+        "spec10_recursive_frame_float_argument",
+        "spec10_mixed_arguments_restore_caller_stack"
+      ],
+      "source_paths": [
+        "docs/SPEC-SDK-R2.md",
+        "sdk/lib/frame.asm"
+      ],
+      "finding": "IX preservation is specified and uses checked frame routines; direct register-clobber assembly witness is still desirable"
+    },
+    {
+      "paragraph": 625,
+      "status": "contract",
+      "passing_cases": [
+        "spec13_native_register_iy_guard"
+      ],
+      "source_paths": [
+        "docs/SPEC-SDK-R2.md",
+        "sdk/rcc/z80gen.py"
+      ],
+      "finding": "Language and ABI warning: user code cannot rely on alternate register survival"
+    },
+    {
+      "paragraph": 626,
+      "status": "contract",
+      "passing_cases": [
+        "spec10_mixed_arguments_restore_caller_stack"
+      ],
+      "source_paths": [
+        "docs/SPEC-SDK-R2.md",
+        "sdk/lib/crt0.asm"
+      ],
+      "finding": "Assembly callers must honor published ABI; interoperability is not an extra compiler feature"
+    },
+    {
+      "paragraph": 751,
+      "status": "supported",
+      "passing_cases": [
+        "spec15_many_function_translation_unit",
+        "spec13_ssx_header_and_checksum"
+      ],
+      "source_paths": [
+        "docs/SPEC-ELASTIC-R2.md",
+        "tests/suite.py"
+      ],
+      "finding": "Host units compile; image memory remains bounded by target loader"
+    },
+    {
+      "paragraph": 753,
+      "status": "supported",
+      "passing_cases": [
+        "spec13_canonical_source_to_ssx",
+        "spec9_invalid_source"
+      ],
+      "source_paths": [
+        "sdk/rcc/driver.py",
+        "tests/suite.py"
+      ],
+      "finding": "Compiler diagnostic and load rejection are different outcomes, not syntax extensions"
+    },
+    {
+      "paragraph": 759,
+      "status": "supported",
+      "passing_cases": [
+        "spec15_many_function_translation_unit",
+        "spec15_many_function_source_accept"
+      ],
+      "source_paths": [
+        "docs/SPEC-SDK-R2.md",
+        "sdk/rcc/driver.py"
+      ],
+      "finding": "Verified multi-function source builds outside on-machine compiler limitations"
+    },
+    {
+      "paragraph": 770,
+      "status": "supported",
+      "passing_cases": [
+        "spec13_ssx_header_and_checksum",
+        "spec13_current_tape_payload"
+      ],
+      "source_paths": [
+        "docs/C48-NATIVE-INTEGRATION-905-2026-10-12.md",
+        "tests/suite.py"
+      ],
+      "finding": "Native tape loading, memory rejection and observed LM oversize exception"
+    },
+    {
+      "paragraph": 776,
+      "status": "supported",
+      "passing_cases": [
+        "spec9_invalid_source",
+        "spec9_include_error",
+        "spec9_write_error"
+      ],
+      "source_paths": [
+        "sdk/rcc/driver.py",
+        "sdk/rld.py"
+      ],
+      "finding": "Compiler diagnostics and nonzero error paths; linker is separate stage"
+    },
+    {
+      "paragraph": 779,
+      "status": "supported",
+      "passing_cases": [
+        "spec9_invalid_source",
+        "lex_bad_unknown_escape"
+      ],
+      "source_paths": [
+        "sdk/rcc/lex.py",
+        "sdk/rcc/driver.py"
+      ],
+      "finding": "Reported diagnostics include source line; no historical exact byte-column promise"
+    },
+    {
+      "paragraph": 924,
+      "status": "supported",
+      "passing_cases": [
+        "spec12_public_header_has_beep_prototype",
+        "spec12_public_header_has_no_printf"
+      ],
+      "source_paths": [
+        "sdk/include/c48.h",
+        "sdk/lib/libc48.ssa"
+      ],
+      "finding": "Public header inventory and linked runtime support, not historical optional services"
+    },
+    {
+      "paragraph": 981,
+      "status": "supported",
+      "passing_cases": [
+        "spec13_canonical_source_to_sso",
+        "spec13_ssx_header_and_checksum",
+        "spec13_current_tape_payload"
+      ],
+      "source_paths": [
+        "sdk/ras.py",
+        "sdk/rld.py",
+        "tests/ssxrun.py"
+      ],
+      "finding": "Native compiler and actual SSO1/SSX1/SST1 format probes, cassette loading"
+    },
+    {
+      "paragraph": 982,
+      "status": "supported",
+      "passing_cases": [
+        "spec13_current_tape_payload",
+        "spec12_public_header_has_beep_prototype"
+      ],
+      "source_paths": [
+        "docs/C48-NATIVE-INTEGRATION-905-2026-10-12.md",
+        "tests/suite.py"
+      ],
+      "finding": "Checked 48K program budget and public header, with LM size recorded separately"
+    },
+    {
+      "paragraph": 1041,
+      "status": "supported",
+      "passing_cases": [
+        "spec12_public_header_has_beep_prototype",
+        "spec12_public_header_checks_beep_arity"
+      ],
+      "source_paths": [
+        "sdk/include/c48.h",
+        "sdk/lib/libc48.ssa"
+      ],
+      "finding": "Canonical public declarations checked and runtime archive built"
+    },
+    {
+      "paragraph": 1044,
+      "status": "contract",
+      "passing_cases": [
+        "spec12_public_header_has_no_printf"
+      ],
+      "source_paths": [
+        "sdk/include/c48.h",
+        "sdk/lib/arith.asm"
+      ],
+      "finding": "Internal arithmetic helpers do not create user-visible declarations"
+    },
+    {
+      "paragraph": 1080,
+      "status": "partial",
+      "passing_cases": [
+        "spec12_pointer_parameter_is_independent_value"
+      ],
+      "source_paths": [
+        "tests/suite.py",
+        "sdk/lib/crt0.asm"
+      ],
+      "finding": "cassette_args validates argv and process lifetime through return, but distinct ENV1 read-only storage is not independently probed"
+    },
+    {
+      "paragraph": 1086,
+      "status": "supported",
+      "passing_cases": [
+        "spec9_source_output_guard",
+        "spec9_source_alias_guard",
+        "spec13_canonical_source_to_ssx"
+      ],
+      "source_paths": [
+        "sdk/rcc/driver.py",
+        "tests/c48/spec_batch9.py"
+      ],
+      "finding": "Safe host output contract, no legacy transaction claim"
+    }
+  ]
+}

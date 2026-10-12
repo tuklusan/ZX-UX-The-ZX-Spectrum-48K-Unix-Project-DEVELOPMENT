@@ -196,3 +196,77 @@ The new spec_batch12.py checks source values, memory layouts, calling
 behavior and error status. All 22 release unit tests passed. The
 full release remains blocked by incomplete required-language coverage
 and historical visual comparison work.
+
+## Batch disposition of the original 220 pending paragraphs
+
+The current new-SDK verifier records **1,122 PASS, 0 FAIL, 0 ERROR** in
+its two execution modes. **645 of 759** indexed paragraphs have direct
+passing assertions. **112 required** paragraphs remain without linked
+proof, alongside two entries expressly classified as undefined.
+
+The audited set is the exact **220 required paragraphs** outstanding in
+the earlier 1,022-execution checkpoint. The checked clause inventory in
+`tests/c48/original_220_dispositions.csv` records each outcome:
+
+| Review outcome | Number |
+| --- | ---: |
+| Newly linked to a passing assertion | 108 |
+| Documentation, contract policy, or verification-process requirements | 54 |
+| Requires genuinely independent host/cross-system validation | 34 |
+| Requires further target/runtime, ABI, or format proof | 20 |
+| Broad compiler-corpus requirements still incomplete | 2 |
+| Outside defined portable pointer behavior | 1 |
+| Optional internal implementation method | 1 |
+| **Total** | **220** |
+
+A disposition is not a waiver, a compiler pass, or a reclassification of
+specification requirements. The 112 remaining required clauses are still
+reported by the unmodified mandatory coverage gate. The suite's new
+`spec_batch13.py` contains direct compiler/runtime/format checks; the
+`spec_batch14_audit.py` entries only pass when the exact identified
+constituent compiler tests pass, including both runtime modes where
+applicable. An audit confirms the checked examples, not all behavior
+in a broad paragraph.
+
+The new format probes parse actual SSO1 symbols, check the SSX1 20-byte
+header and checksum rejection, and check the SST1 cassette data against
+the compiler-generated executable. A generated-code probe checks that
+its tested native output does not use IY. These are narrow observations,
+not a complete ABI proof. No historical format adapter was introduced.
+
+To regenerate the language report, the original-220 inventory, and the
+full release gate result from the checked SDK toolbox:
+
+```
+python3 tests/c48/conformance.py --backend both --report build/logs/c48-conformance.json
+python3 tests/c48/review_original_220.py --report build/logs/c48-conformance.json --output tests/c48/original_220_dispositions.csv
+python3 tests/c48/dispositions.py --run build/logs/c48-conformance.json --output tests/c48/dispositions.csv
+python3 tests/c48/coverage_gate.py --report build/logs/c48-conformance.json
+```
+
+The release coverage command remains nonzero while requirements lack
+proof. An additional implementation and previous runtime captures need
+separate verification. Output modes from this SDK do not replace it.
+Final native integration and clean FUSE release approval must use a fresh
+exact-current-revision checkout. This source milestone is not a release.
+
+## Canonical source comment-byte clarification
+
+The specification's source-representation paragraphs 39, 42, 44, the
+code listing in paragraph 45, and paragraph 49 now explicitly permit
+any byte inside `//` or `/* ... */` comments. An LF still terminates
+a physical line, and the normal rules for comment termination apply.
+Outside comments, the canonical ASCII source restrictions remain in
+force; non-ASCII language tokens and literal contents are not admitted.
+This accommodates, for example, copyright symbols in UTF-8 comments.
+
+The updated document and traceability file carry a new source hash.
+The direct comment-byte fixtures run in both compiler modes, including
+positive high-byte, control-byte and UTF-8 comment cases and negative
+outside-comment cases. The full verifier records **1146 PASS, zero FAIL,
+zero ERROR**. There are **647 linked paragraphs, 110 required pending,
+and two explicitly undefined entries**. The scoped host-compiler gate
+passes under the approved `rcc` architecture interpretation; the full
+release gate still stops on 110 required paragraphs. The separate target
+ABI matrix distinguishes 15 supported entries, 3 recorded contracts,
+and 2 partial entries; no new target execution is implied here.

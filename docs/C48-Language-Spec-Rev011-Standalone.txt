@@ -60,32 +60,33 @@ Where this document freezes behavior more tightly than ISO C, C48 behavior gover
 
 4. Canonical source representation
 
-Canonical C48 source is an 8-bit byte stream using ASCII source characters.
+Canonical C48 source is an 8-bit byte stream. Language tokens use ASCII source characters; comment contents may contain any byte value.
 
 The canonical line separator is exactly:
 
 LF = 0x0A
 
-Portable C48 source MUST contain only:
+Outside comments, portable C48 source MUST contain only:
 
 TAB             0x09
 LF              0x0A
 printable ASCII 0x20..0x7E
 
-A canonical target-side C source object MUST NOT contain:
+Outside comments, a canonical C48 source object MUST NOT contain:
 
 CR              0x0D
 NUL             0x00
 bytes 0x80..0xFF
 other ASCII control bytes
+These byte values are permitted within comments only.
 
-A Windows-hosted development implementation MAY accept CRLF input as an input convenience, but its strict portability checker MUST report CRLF as noncanonical unless it normalizes the source to LF before transfer.
+A host compiler MAY accept CRLF files as an input convenience, provided its strict portability check can normalize to canonical LF without changing program meaning.
 
-The native ZX-UX compiler is required only to accept canonical LF C48 source.
+Portable C48 source uses canonical LF line endings. Native Z80 compilation of C48 source is not a ZX-UX v1 requirement; sdk/rcc runs on the host.
 
 There is no source-byte-order mark.
 
-UTF-8 multibyte source text is not C48 Version 1.
+UTF-8 multibyte sequences and all other byte values are permitted only within /* ... */ and // comments. Outside comments, UTF-8 non-ASCII source characters are not valid C48 Version 1 tokens. Comment bytes are ignored, not interpreted as language tokens.
 
 Non-ASCII data required by a program MUST be expressed using character or string escapes.
 
