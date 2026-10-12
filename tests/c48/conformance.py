@@ -390,6 +390,13 @@ CASES = [Case(c.ident, (CLAUSE_FOR_CASE[c.ident],) if c.ident in CLAUSE_FOR_CASE
          for c in CASES]
 
 
+
+# Checked-in grouped source fixture, shared by native and bytecode runs.
+GROUPED_SOURCE = Path(__file__).with_name('grouped-runtime.c')
+add('grouped_runtime_core', [475, 483, 495, 584, 612, 662, 692],
+    'run', GROUPED_SOURCE.read_bytes())
+
+
 def _rcc(src, out, mode, timeout=35):
     return subprocess.run([sys.executable,str(RCC),mode,'-o',str(out),str(src)],
         cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=timeout,
