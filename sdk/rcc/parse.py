@@ -968,6 +968,8 @@ class Parser:
         if op in ('==', '!=', '<', '<=', '>', '>='):
             if is_ptr(a.ty) or is_ptr(b.ty):
                 if is_ptr(a.ty) and is_ptr(b.ty):
+                    if op not in ('==', '!=') and 'void' in (a.ty[1], b.ty[1]):
+                        raise CError('relational comparison of void pointers', where, 'type')
                     if a.ty != b.ty and not (op in ('==', '!=') and 'void' in (a.ty[1], b.ty[1])):
                         raise CError('comparison of incompatible pointers', where, 'type')
                 elif op in ('==', '!=') and (b.op == 'num' and b.v == 0 and is_int(b.ty) or a.op == 'num' and a.v == 0 and is_int(a.ty)):
