@@ -205,6 +205,9 @@ def main():
         check(checker, '--file', BUILD / name)
     step('boot-image-static', [PYTHON, '-B', 'tests/test_boot_v1.py'])
     step('c48-runtime', [PYTHON, '-B', 'sdk/lib/build.py'])
+    step('c48-abi-ix', [PYTHON, '-B', 'tests/c48/ix_abi_probe.py',
+                        '--report', str(BUILD / 'logs/ix-abi-proof.json')])
+    check(checker, '--file', BUILD / 'logs/ix-abi-proof.json')
     step('c48-language', [PYTHON, '-B', 'tests/c48/conformance.py',
                           '--backend', 'both', '--report',
                           str(BUILD / 'logs' / 'c48-conformance.json')])
