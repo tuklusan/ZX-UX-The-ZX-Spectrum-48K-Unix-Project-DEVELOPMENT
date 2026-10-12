@@ -51,3 +51,30 @@ the verified 673-execution report, not inferred from accepted compilation.
 
 The mandatory coverage gate still rejects v1 publication. The earlier
 emulator results do not replace a fresh final-revision integration run.
+
+## Fifth and sixth direct-assertion batches — 12 October 2026
+
+The two new specification-led batches add `tests/c48/spec_batch5.py` and
+`tests/c48/spec_batch6.py`. They check preprocessing, exact scope and
+conversion rules, pointer operations, scalar/array initializers, and
+control-flow semantics using the new SDK. A negative directive test exposed
+a lexer error: multiline block comments crossing a preprocessing directive's
+physical line were accepted. `sdk/rcc/lex.py` now rejects that source. The
+same change correctly restores beginning-of-line state after a multiline
+comment outside a directive. An 8-bit negative shift-count assertion was
+corrected to the specification's low-three-bit count rule.
+
+The complete independent verifier recorded **806 PASS, 0 FAIL, 0 ERROR** in
+both requested backend modes. Exactly **430 of 759** indexed paragraphs have
+one or more direct passing assertions; **327 required paragraphs remain
+pending**, together with **two explicitly undefined** entries. A linked
+assertion is not a complete proof of its paragraph's other obligations.
+The regenerated `tests/c48/dispositions.csv` reflects the actual checked
+run. The release gate returns 1, as required, because coverage is incomplete.
+
+The private checker passed 491 self-tests and 344223 whole-tree checks before
+the final report update; 22 release unit tests passed. SDK host VM regression
+passed 73/73 native and 73/73 bytecode sessions. Those are VM tests, not
+native hardware or a fresh FUSE boot. The final revision still needs on-target
+integration, matched historical image states, LM load/size documentation, and
+the mandatory new FUSE ROM boot. No v1 release has been approved.

@@ -66,11 +66,13 @@ def lex(src, fname):
     toks = []
     i, n, line = 0, len(src), 1
     bol = True
+    directive_line = None
     while i < n:
         c = src[i]
         if c == '\n':
             line += 1
             bol = True
+            directive_line = None
             i += 1
             continue
         if c in ' \t':
@@ -84,7 +86,14 @@ def lex(src, fname):
             j = src.find('*/', i + 2)
             if j < 0:
                 raise CError('unterminated comment', (fname, line), 'lexical')
-            line += src.count('\n', i, j)
+            crossed_lines = src.count('\n', i, j)
+            if crossed_lines and directive_line == line:
+                raise CError('comment crosses directive line',
+                             (fname, line), 'preprocessing')
+            line += crossed_lines
+            if crossed_lines:
+                bol = True
+                directive_line = None
             i = j + 2
             continue
         where = (fname, line)
@@ -126,6 +135,8 @@ def lex(src, fname):
             i = j
             continue
         if c == '#':
+            if bol:
+                directive_line = line
             toks.append(Tok('hash', '#', fname, line, bol))
             bol = False
             i += 1
