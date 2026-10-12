@@ -37,3 +37,17 @@ because the remaining required duties have not been proven. Earlier
 execution and FUSE results apply to previous source revisions. The final
 revision still needs new integration tests and matching historical frames.
 The LM load-budget exception is unresolved. No v1 release is claimed.
+
+## Further direct compiler assertions — 12 October 2026
+
+A fourth specification-led batch exercises pointer initializers, numeric
+conversions, storage initialization, expression semantics, and argument
+order. The complete two-backend verifier now records **673 passing
+executions**, with no failures or errors. There are 351 paragraphs with
+specific linked assertions, 406 required paragraphs without linked proof,
+and two explicitly undefined cases. The source of these additions is
+`tests/c48/spec_batch4.py`; the updated disposition table is derived from
+the verified 673-execution report, not inferred from accepted compilation.
+
+The mandatory coverage gate still rejects v1 publication. The earlier
+emulator results do not replace a fresh final-revision integration run.
