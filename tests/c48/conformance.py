@@ -444,6 +444,9 @@ populate_spec_batch6(accepted, rejected, runprogram)
 from spec_batch7 import populate as populate_spec_batch7
 populate_spec_batch7(runprogram)
 
+from spec_batch8 import populate as populate_spec_batch8
+populate_spec_batch8(add, accepted, rejected, runexpr, runprogram)
+
 def _rcc(src, out, mode, timeout=35):
     return subprocess.run([sys.executable,str(RCC),mode,'-o',str(out),str(src)],
         cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=timeout,

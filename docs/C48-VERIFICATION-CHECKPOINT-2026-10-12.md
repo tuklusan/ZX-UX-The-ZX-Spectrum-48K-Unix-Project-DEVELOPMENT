@@ -97,3 +97,21 @@ paragraphs and two explicitly undefined entries remain unexercised.
 No Windows C48 implementation has been tested; a real final ZX-UX native
 and FUSE integration release gate remains mandatory. No final release is
 approved.
+
+## Primary expressions and control-flow batch — 12 October 2026
+
+`tests/c48/spec_batch8.py` adds direct runtime and diagnostic assertions for
+C48 primary expressions, excluded expression syntax, executable statement
+forms, host-source line conventions, and local quoted include behavior.
+The current SDK's native and bytecode backends were both exercised;
+acceptance/rejection cases use the compiler's language front end.
+
+The complete specification verifier records **888 PASS, 0 FAIL, 0 ERROR**.
+Exactly **461 of 759** indexed specification paragraphs are linked to at
+least one passing assertion; **296 required paragraphs** and two explicitly
+undefined entries remain without linked checks. Each link supports only its
+observed behavior, not every clause of the paragraph. Twenty-two release
+unit tests passed, and the private checker passed its self-tests and
+complete proposed-tree inspection. The mandatory coverage gate returned
+status 1. No final release approval is recorded. The earlier ZX-UX native
+and FUSE runs remain checkpoints for the preceding source revision.
