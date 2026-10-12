@@ -213,6 +213,11 @@ def main():
                           str(BUILD / 'logs' / 'c48-conformance.json')])
     step('c48-coverage', [PYTHON, '-B', 'tests/c48/coverage_gate.py',
                           '--report', str(BUILD / 'logs' / 'c48-conformance.json')])
+    step('c48-target-units', [PYTHON, '-B', '-m', 'unittest', 'discover',
+                              '-s', 'tests/c48', '-p', 'target_gate_tests.py', '-v'])
+    step('c48-target', [PYTHON, '-B', 'tests/c48/target_gate.py',
+                        '--report', str(BUILD / 'logs/c48-conformance.json'),
+                        '--ix-proof', str(BUILD / 'logs/ix-abi-proof.json')])
     step('assembler-comparison', [PYTHON, '-B', 'sdk/tests/test_ras.py'],
          {**os.environ, 'SJASMPLUS': str(sjasm)})
     step('rom-tape-boot', [PYTHON, '-B', str(tape_tool),
