@@ -59,8 +59,7 @@
       "status": "supported",
       "passing_cases": [
         "spec10_recursive_frame_float_argument",
-        "spec10_mixed_arguments_restore_caller_stack",
-        "native_ix_register_preservation_8_cases"
+        "spec10_mixed_arguments_restore_caller_stack"
       ],
       "source_paths": [
         "docs/SPEC-SDK-R2.md",
