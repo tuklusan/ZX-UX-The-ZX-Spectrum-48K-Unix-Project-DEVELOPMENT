@@ -393,7 +393,7 @@ CASES = [Case(c.ident, (CLAUSE_FOR_CASE[c.ident],) if c.ident in CLAUSE_FOR_CASE
 
 # Checked-in grouped source fixture, shared by native and bytecode runs.
 GROUPED_SOURCE = Path(__file__).with_name('grouped-runtime.c')
-add('grouped_runtime_core', [475, 483, 495, 584, 612, 662, 692],
+add('grouped_runtime_core', [301, 543, 593, 672, 696],
     'run', GROUPED_SOURCE.read_bytes())
 
 
@@ -512,6 +512,10 @@ def main(argv=None):
                                      kind=c.kind,status=state,detail=why))
                 print('%-5s %-46s %-8s %s'%(state,c.ident,backend,why[:170]))
     index={x['paragraph_index']:[] for x in trace['requirements']}
+    invalid = [(c.ident, p) for c in CASES for p in c.paragraphs if p not in index]
+    if invalid:
+        print('STOP: invalid C48 paragraph mappings', file=sys.stderr)
+        return 2
     for s in statuses:
         for p in s['paragraphs']:
             if p in index:index[p].append(s)
