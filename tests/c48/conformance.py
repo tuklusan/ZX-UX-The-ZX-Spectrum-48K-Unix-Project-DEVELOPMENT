@@ -423,6 +423,9 @@ for fixture_id, clause, filename in (
     rejected(fixture_id, [clause],
              Path(__file__).with_name(filename).read_bytes())
 
+from spec_batch import populate as populate_spec_batch
+populate_spec_batch(accepted, rejected, runexpr, runprogram)
+
 def _rcc(src, out, mode, timeout=35):
     return subprocess.run([sys.executable,str(RCC),mode,'-o',str(out),str(src)],
         cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=timeout,
