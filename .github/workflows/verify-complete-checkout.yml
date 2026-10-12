@@ -63,9 +63,9 @@ jobs:
           assert required <= tracked_paths, 'Missing required v1 checkout files'
           spec = root / 'docs/04-C48 Language Specification Rev 0.11.docx'
           data = spec.read_bytes()
-          assert len(data) == 1430306, 'Unexpected C48 specification size'
+          assert len(data) == 1413709, 'Unexpected C48 specification size'
           digest = hashlib.sha256(data).hexdigest()
-          assert digest == '577a93270fcd14efc13b4b2b2e6c7c08eaafd24efbd771199ed4a0278ec037ec'
+          assert digest == '6368abb4126c01f598f4b533a4e2a0a46a7ce4790cce02d3decbfba59e150d7e'
           assert not (root / 'c48-sdk').exists()
           print('CHECKOUT_COMPLETE')
           print('SOURCE_SHA', commit)
