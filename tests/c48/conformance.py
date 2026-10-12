@@ -38,7 +38,7 @@ CASES = []
 def add(ident, paras, kind, source, expected=0, extra=None, note=''):
     if isinstance(source, str):
         source = source.encode('ascii')
-    assert kind in ('accept', 'reject', 'run', 'object', 'repeat')
+    assert kind in ('accept', 'reject', 'run', 'object', 'repeat', 'cli')
     CASES.append(Case(ident, tuple(paras), kind, source, expected, extra or {}, note))
 
 def accepted(ident, p, s): add(ident, p, 'accept', s)
@@ -447,10 +447,85 @@ populate_spec_batch7(runprogram)
 from spec_batch8 import populate as populate_spec_batch8
 populate_spec_batch8(add, accepted, rejected, runexpr, runprogram)
 
+from spec_batch9 import populate as populate_spec_batch9
+populate_spec_batch9(add)
+
+
 def _rcc(src, out, mode, timeout=35):
     return subprocess.run([sys.executable,str(RCC),mode,'-o',str(out),str(src)],
         cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=timeout,
         env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1'})
+
+def execute_cli(c, case_dir, src):
+    operation = c.note
+    original = src.read_bytes()
+    target = case_dir / 'custom.ssx'
+    if operation == 'default_ssx':
+        args, output, signature = [str(src)], src.with_suffix('.ssx'), b'SSX1'
+    elif operation == 'default_obj':
+        args, output, signature = ['-c', str(src)], src.with_suffix('.sso'), b'SSO1'
+    elif operation == 'default_asm':
+        args, output, signature = ['-S', str(src)], src.with_suffix('.s'), None
+    elif operation == 'custom_output':
+        args, output, signature = ['-o', str(target), str(src)], target, b'SSX1'
+    elif operation == 'source_guard':
+        args, output, signature = ['-o', str(src), str(src)], None, None
+    elif operation == 'alias_guard':
+        alias = case_dir / 'input-alias.c'
+        os.link(src, alias)
+        args, output, signature = ['-o', str(alias), str(src)], None, None
+    elif operation == 'extension_guard':
+        other = case_dir / 'fixture.ssx'
+        other.write_bytes(original)
+        src.unlink()
+        src, original = other, other.read_bytes()
+        args, output, signature = [str(src)], None, None
+    elif operation == 'no_inputs':
+        args, output, signature = [], None, None
+    elif operation == 'missing_output':
+        args, output, signature = ['-o'], None, None
+    elif operation == 'missing_numeric':
+        args, output, signature = ['--max'], None, None
+    elif operation == 'invalid_numeric':
+        args, output, signature = ['--max', 'invalid', str(src)], None, None
+    elif operation == 'negative_numeric':
+        args, output, signature = ['--max', '-1', str(src)], None, None
+    elif operation == 'conflicting_forms':
+        args, output, signature = ['-S', '-c', str(src)], None, None
+    elif operation == 'conflicting_backends':
+        args, output, signature = ['--bytecode', '--native', str(src)], None, None
+    elif operation == 'write_error':
+        args, output, signature = ['-o', str(case_dir/'nonexistent'/'program.ssx'), str(src)], None, None
+    elif operation == 'source_error':
+        args, output, signature = [str(src)], None, None
+    else:
+        raise ValueError('unexpected CLI contract case')
+    proc = subprocess.run([sys.executable, str(RCC), *args], cwd=case_dir,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          timeout=35,
+                          env={**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'})
+    stderr = proc.stderr.decode('utf-8', 'replace')
+    expected_status = (0 if output is not None else
+                       1 if operation in ('source_error', 'write_error') else 2)
+    correct = proc.returncode == expected_status and src.read_bytes() == original
+    if output is not None:
+        correct = correct and output.is_file()
+        if output.is_file():
+            contents = output.read_bytes()
+            correct = correct and bool(contents)
+            if signature is not None:
+                correct = correct and contents.startswith(signature)
+    if operation in ('source_error', 'write_error', 'source_guard',
+                     'alias_guard', 'extension_guard', 'missing_output',
+                     'missing_numeric', 'invalid_numeric', 'negative_numeric'):
+        correct = correct and stderr.startswith('rcc:')
+    if operation in ('source_error',):
+        correct = correct and src.name in stderr
+    correct = correct and 'Traceback' not in stderr
+    return correct, ('status=%s, src-unchanged=%s, output=%s, stderr=%s' %
+                     (proc.returncode, src.read_bytes() == original,
+                      output.name if output else '(none)', stderr[:110]))
+
 
 def execute(c, temp, backend):
     case_dir = temp / c.ident
@@ -461,6 +536,8 @@ def execute(c, temp, backend):
         if not name.isascii() or '/' in name or '..' in name:
             raise ValueError('invalid test include path')
         (case_dir / name).write_text(contents,encoding='ascii')
+    if c.kind == 'cli':
+        return execute_cli(c, case_dir, src)
     if c.kind in ('accept','reject'):
         sys.path.insert(0,str(ROOT/'sdk'))
         from rcc.driver import compile_to_asm
@@ -503,7 +580,7 @@ def main(argv=None):
     ap.add_argument('--report', type=Path)
     ap.add_argument('--backend',choices=('native','bytecode','both'),default='both')
     ap.add_argument('--only',help='comma separated case IDs')
-    ap.add_argument('--kinds',help='comma separated kinds: accept,reject,run,object,repeat')
+    ap.add_argument('--kinds',help='comma separated kinds: accept,reject,run,object,repeat,cli')
     args=ap.parse_args(argv)
     trace=json.loads(TRACE.read_text())
     if hashlib.sha256(SPEC.read_bytes()).hexdigest()!=trace['spec_sha256']:

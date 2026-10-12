@@ -115,3 +115,25 @@ unit tests passed, and the private checker passed its self-tests and
 complete proposed-tree inspection. The mandatory coverage gate returned
 status 1. No final release approval is recorded. The earlier ZX-UX native
 and FUSE runs remain checkpoints for the preceding source revision.
+
+## Host compiler command and output contract — 12 October 2026
+
+The current SDK command driver had two reproducible contract defects:
+`-o` could target its own source file and overwrite it with a compiled
+image, and an option missing its value could emit a Python traceback.
+`sdk/rcc/driver.py` now checks output aliases, including links, before
+writing; it also validates numeric option values and conflicting mode flags.
+Output write errors receive a nonzero status and a host diagnostic.
+
+`tests/c48/spec_batch9.py` adds 17 direct host subprocess cases covering
+assembly, SSO1 and SSX1 output, default and explicit filenames, source
+retention, invalid command use, and error status behavior. The release
+independence check now tests the output signature and source guard without
+relying on the former literal implementation spelling.
+
+The complete independent C48 verifier records **905 PASS, 0 FAIL, 0 ERROR**.
+There are **476 paragraphs with linked passing assertions**, **281 required
+paragraphs pending**, and **two explicitly undefined entries**. Both SDK
+host-runtime modes passed their complete 73-session suites; 22 release unit
+checks passed. The C48 coverage gate returned status 1. The current
+source has no final release approval.
