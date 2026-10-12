@@ -397,6 +397,10 @@ add('grouped_runtime_core', [475, 483, 495, 584, 612, 662, 692],
     'run', GROUPED_SOURCE.read_bytes())
 
 
+# Additional checked-in grouped integer runtime fixture.
+add('grouped_integer_runtime', [484, 496], 'run',
+    Path(__file__).with_name('grouped-integers.c').read_bytes())
+
 # Checked-in negative fixtures: explicit compile-time rejection, never runtime.
 for fixture_id, clause, filename in (
     ('negative_reserved', 111, 'negative-reserved.c'),
