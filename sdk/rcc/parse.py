@@ -622,10 +622,26 @@ class Parser:
         self.check_tok()
         return lhs
 
+    def literal_storage(self, e):
+        """True for a direct designator into a string literal's storage.
+
+        Do not follow pointer variables: their current value cannot be
+        established from the syntax of the assignment.
+        """
+        if e.op == 'str':
+            return True
+        if e.op == 'deref':
+            return self.literal_storage(e.a)
+        if e.op == 'addr':
+            return self.literal_storage(e.a)
+        if e.op == 'bin' and e.opty == 'ptr':
+            return self.literal_storage(e.a)
+        return False
+
     def assign(self, lhs, rhs, where):
         if not lhs.lv or is_arr(lhs.ty) or not is_scalar(lhs.ty):
             raise CError('assignment to non-lvalue', where, 'type')
-        if lhs.op == 'str':
+        if self.literal_storage(lhs):
             raise CError('assignment to string literal', where, 'type')
         rhs = self.convert(rhs, lhs.ty, 'assignment', where)
         return N('asg', lhs.ty, lhs, rhs, where=where)

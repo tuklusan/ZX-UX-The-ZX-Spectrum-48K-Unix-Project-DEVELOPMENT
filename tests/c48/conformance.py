@@ -401,6 +401,19 @@ add('grouped_runtime_core', [475, 483, 495, 584, 612, 662, 692],
 add('grouped_integer_runtime', [484, 496], 'run',
     Path(__file__).with_name('grouped-integers.c').read_bytes())
 
+add('batch_literal_runtime', [177, 178, 181], 'run',
+    Path(__file__).with_name('batch-literals.c').read_bytes())
+
+# Independent lexical and literal diagnostic assertions.
+for name, clause, source in (
+    ('wide_character', 171, "int main(void){return L'A';}"),
+    ('unterminated_character', 172, "int main(void){return 'a;}"),
+    ('unterminated_string', 179, 'int main(void){return "abc;}'),
+    ('literal_assignment', 180, 'int main(void){"abc"[0]=1;return 0;}'),
+    ('wide_string', 182, 'int main(void){char *s=L"abc";return 0;}'),
+):
+    rejected('batch_literal_bad_' + name, [clause], source)
+
 # Checked-in negative fixtures: explicit compile-time rejection, never runtime.
 for fixture_id, clause, filename in (
     ('negative_reserved', 111, 'negative-reserved.c'),
