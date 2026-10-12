@@ -363,7 +363,13 @@ class Gen:
                     self.emit('pop bc')
                     for p in reversed(f.params[:-1]):
                         self.emit('pop hl')
+                        # @fmov uses BC for its byte count.  BC currently
+                        # holds the caller's return address.
+                        if p.ty == 'float':
+                            self.emit('push bc')
                         self.store_param(p, 'hl')
+                        if p.ty == 'float':
+                            self.emit('pop bc')
                     self.emit('push bc')
         self.stmt(f.body)
         # fall off the end

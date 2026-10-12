@@ -137,3 +137,28 @@ paragraphs pending**, and **two explicitly undefined entries**. Both SDK
 host-runtime modes passed their complete 73-session suites; 22 release unit
 checks passed. The C48 coverage gate returned status 1. The current
 source has no final release approval.
+
+
+## Multiscalar ABI regression — 12 October 2026
+
+The specification-led verifier now includes `tests/c48/spec_batch10.py`:
+conversion, evaluation order, stack argument passing, multiple float
+parameters, a recursive IX frame, and rejection of unsupported calling
+convention keywords. An observed native compiler defect caused a
+nonrecursive float callee to overwrite its saved return-address register
+while copying an earlier float argument. `sdk/rcc/z80gen.py` now protects
+the saved return address across that copy. Separate tests exercise two
+and three float arguments, mixed scalar/float parameters, and recursion.
+
+The checked 48K ROM's decimal parser does not produce the canonical exact
+binary-half bytes for text `0.5`. The mixed-conversion test therefore
+compares against runtime `1.0/2.0`, instead of assuming decimal parsing
+and arithmetic produce identical encodings for the same mathematical value.
+The numeric behavior and ROM conversion remain unchanged.
+
+Complete C48 verifier (both output modes): **937 PASS, 0 FAIL, 0 ERROR**.
+**492 of 759** paragraphs have linked assertions, **265 required**
+paragraphs lack linked tests. The other two entries are undefined.
+The required coverage gate still exits with status 1. No v1 release has
+been approved; newly built system images and visual alignment still need
+the final clean-release gate.
