@@ -63,6 +63,33 @@ def check(checker, flag, name):
             'Private checker rejected input; do not distribute it')
 
 
+def check_tracked_sources(checker, after_build=False):
+    """Check only Git-indexed project files, never .git or untracked caches.
+
+    All tracked paths must exist and have the bytes recorded by the index.
+    Generated outputs receive their own validation before delivery.
+    """
+    records = subprocess.check_output(['git', 'ls-files', '-s', '-z'], cwd=ROOT)
+    require(bool(records), 'No tracked project files')
+    for record in records.split(b'\0'):
+        if not record:
+            continue
+        descriptor, raw_path = record.split(b'\t', 1)
+        mode, expected, stage = descriptor.split(b' ')
+        require(stage == b'0', 'Unmerged Git index')
+        relative = Path(os.fsdecode(raw_path))
+        require(not relative.is_absolute() and '..' not in relative.parts,
+                'Unsafe Git path')
+        path = ROOT / relative
+        require(path.is_file() and not path.is_symlink(),
+                'Tracked file missing or unsupported')
+        actual = subprocess.check_output(['git', 'hash-object', '--', str(relative)],
+                                         cwd=ROOT).strip()
+        if not (after_build and relative.parts[0] == 'build'):
+            require(actual == expected, 'Tracked file differs from Git index')
+        check(checker, '--file', path)
+
+
 def version_data(sjasm):
     text = run([sjasm, '--version'])
     return text.strip().splitlines()[0]
@@ -134,7 +161,7 @@ def main():
     run([PYTHON, checker, 'self-test'])
     check(checker, '--file', sjasm)
     check(checker, '--file', tape_tool)
-    check(checker, '--tree', ROOT)
+    check_tracked_sources(checker)
     spec = importlib.util.find_spec('skoolkit')
     require(spec is not None and spec.origin is not None,
             'SkoolKit 10.1 is not installed')
@@ -201,7 +228,7 @@ def main():
     validate_boot_proof(proof_paths,
                         lambda path: check(checker, '--file', path))
     screenshot_check(checker)
-    check(checker, '--tree', ROOT)
+    check_tracked_sources(checker, after_build=True)
     doc = ['ZX-UX UNIX v1 for the ZX Spectrum 48K',
            'This release was built from Git commit ' + commit + '.',
            'All required emulator and C48 tests completed without errors.',
