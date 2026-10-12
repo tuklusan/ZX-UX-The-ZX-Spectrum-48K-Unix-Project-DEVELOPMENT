@@ -53,8 +53,11 @@ class IndependenceChecks(unittest.TestCase):
         self.assertTrue((ROOT / 'tools/fuse_release_gate.py').is_file())
         self.assertTrue((ROOT / 'tools/mkrelease.py').is_file())
         text = (ROOT / 'sdk/rcc/driver.py').read_text(encoding='utf-8')
-        self.assertIn("base + '.ssx'", text)
-        self.assertIn("base + '.sso'", text)
+        # The CLI contract is exercised by the C48 verifier. Do not tie
+        # the release check to one spelling of the driver's output expression.
+        self.assertIn("'.ssx'", text)
+        self.assertIn("'.sso'", text)
+        self.assertIn('os.path.samefile(src, target)', text)
 
 
 if __name__ == '__main__':

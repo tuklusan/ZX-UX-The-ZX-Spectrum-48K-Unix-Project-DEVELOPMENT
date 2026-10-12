@@ -102,6 +102,19 @@ def main(argv):
     i = 0
     while i < len(argv):
         a = argv[i]
+        if a in ('-o', '--max', '--stack', '--heap', '--udgs'):
+            if i + 1 >= len(argv):
+                print('rcc: missing value for %s' % a, file=sys.stderr)
+                return 2
+            if a != '-o':
+                try:
+                    value = int(argv[i + 1], 0)
+                except ValueError:
+                    print('rcc: invalid numeric value for %s' % a, file=sys.stderr)
+                    return 2
+                if value < 0:
+                    print('rcc: negative value for %s' % a, file=sys.stderr)
+                    return 2
         if a == '-o':
             out = argv[i + 1]
             i += 2
@@ -134,12 +147,24 @@ def main(argv):
         else:
             files.append(a)
         i += 1
-    if len(files) != 1:
+    if (len(files) != 1 or (asm_only and obj_only) or
+            ('--native' in argv and '--bytecode' in argv) or
+            (out is not None and not out)):
         print('usage: rcc [-S|-c] [-o out] [--bytecode|--native] [--max BYTES] [--stack N] [--heap N] [--udgs N] file.c',
               file=sys.stderr)
         return 2
     src = files[0]
     base = os.path.splitext(src)[0]
+    target = out or base + ('.s' if asm_only else '.sso' if obj_only else '.ssx')
+    # Source text must not be replaced by binary or assembly output. Protect
+    # path aliases (including symlinks and hard links), not just equal strings.
+    try:
+        same_file = os.path.samefile(src, target)
+    except OSError:
+        same_file = os.path.realpath(src) == os.path.realpath(target)
+    if same_file:
+        print('rcc: output path points to the input source', file=sys.stderr)
+        return 2
     opts = {'lib': lib, 'heap': heap, 'stack': stack, 'udgs': udgs}
     if mode == 'all':
         opts['bytecode'] = 'all'
@@ -147,10 +172,10 @@ def main(argv):
         if asm_only or obj_only:
             text, prog, g = compile_to_asm(src, opts)
             if asm_only:
-                open(out or base + '.s', 'w').write(text)
+                open(target, 'w').write(text)
                 return 0
             obj = ras.assemble_text(text, os.path.basename(base) + '.s')
-            open(out or base + '.sso', 'wb').write(obj)
+            open(target, 'wb').write(obj)
             return 0
         data, g, text, obj, need = build(src, opts)
         if mode is None and limit and need > limit:
@@ -168,7 +193,14 @@ def main(argv):
     except rld.LinkError as e:
         print('rcc: link: %s' % e, file=sys.stderr)
         return 1
+    except OSError as e:
+        print('rcc: file error: %s' % e, file=sys.stderr)
+        return 1
     if limit and need > limit:
         print('rcc: %s needs %d bytes of memory (limit %d)' % (src, need, limit), file=sys.stderr)
-    open(out or base + '.ssx', 'wb').write(data)
+    try:
+        open(target, 'wb').write(data)
+    except OSError as e:
+        print('rcc: output error: %s' % e, file=sys.stderr)
+        return 1
     return 0
