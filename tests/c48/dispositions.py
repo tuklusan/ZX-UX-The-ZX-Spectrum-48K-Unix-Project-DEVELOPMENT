@@ -49,8 +49,9 @@ def main():
         assert status in ('EXERCISED', 'UNTESTED')
         code = 'linked_pass' if status == 'EXERCISED' else category(item)
         rows.append((index, code, item['text_sha256'], ';'.join(clause['tests'])))
-    assert sum(row[1] == 'linked_pass' for row in rows) == 106
-    assert sum(row[1] != 'linked_pass' for row in rows) == 653
+    assert sum(row[1] == 'linked_pass' for row in rows) == sum(
+        entry['status'] == 'EXERCISED' for entry in run['clauses'])
+    assert sum(row[1] != 'linked_pass' for row in rows) == run['summary']['UNTESTED_PARAGRAPHS']
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open('w', newline='') as handle:
         writer = csv.writer(handle)
