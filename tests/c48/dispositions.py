@@ -54,7 +54,7 @@ def main():
     assert sum(row[1] != 'linked_pass' for row in rows) == run['summary']['UNTESTED_PARAGRAPHS']
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open('w', newline='') as handle:
-        writer = csv.writer(handle)
+        writer = csv.writer(handle, lineterminator='\n')
         writer.writerow(('clause', 'status', 'digest', 'cases'))
         writer.writerows(rows)
     print('Rows:', len(rows))
