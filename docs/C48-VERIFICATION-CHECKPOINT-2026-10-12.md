@@ -182,3 +182,17 @@ do not establish every obligation in a paragraph. Both host runtime
 suites passed 73 sessions each; the 22 release unit tests passed.
 The full release remains blocked by the incomplete required-language
 coverage and historical visual comparison work.
+
+
+
+## More C48 conformance checks — 12 October 2026
+
+The updated SDK records 1022 passing executions across both compiler
+backends, zero failures, and zero errors. The verified tests link
+537 of the 759 indexed specification paragraphs. Another 220 required
+paragraphs remain pending and two have explicitly undefined behavior.
+
+The new spec_batch12.py checks source values, memory layouts, calling
+behavior and error status. All 22 release unit tests passed. The
+full release remains blocked by incomplete required-language coverage
+and historical visual comparison work.
