@@ -162,3 +162,23 @@ paragraphs lack linked tests. The other two entries are undefined.
 The required coverage gate still exits with status 1. No v1 release has
 been approved; newly built system images and visual alignment still need
 the final clean-release gate.
+
+
+## Additional C48 direct tests — 12 October 2026
+
+The updated SDK records 978 passing executions across both compiler
+backends, zero failures, and zero errors. The verified tests link
+516 of the 759 indexed specification paragraphs. Another 241 required
+paragraphs remain pending and two have explicitly undefined behavior.
+
+The new `tests/c48/spec_batch11.py` checks source syntax, initialization,
+pointer comparisons, pointer differences within an array, numeric results,
+argument passing, and repeated compiler output. A defect in pointer
+comparison checking was repaired in `sdk/rcc/parse.py`, so unsupported
+relational comparisons involving `void *` now fail compilation.
+
+The updated tests and ledger cover only their observed results. They
+do not establish every obligation in a paragraph. Both host runtime
+suites passed 73 sessions each; the 22 release unit tests passed.
+The full release remains blocked by the incomplete required-language
+coverage and historical visual comparison work.
