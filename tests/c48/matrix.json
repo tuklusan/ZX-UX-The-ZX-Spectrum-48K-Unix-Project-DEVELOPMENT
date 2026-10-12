@@ -56,16 +56,18 @@
     },
     {
       "paragraph": 622,
-      "status": "partial",
+      "status": "supported",
       "passing_cases": [
         "spec10_recursive_frame_float_argument",
-        "spec10_mixed_arguments_restore_caller_stack"
+        "spec10_mixed_arguments_restore_caller_stack",
+        "native_ix_register_preservation_8_cases"
       ],
       "source_paths": [
         "docs/SPEC-SDK-R2.md",
-        "sdk/lib/frame.asm"
+        "sdk/lib/frame.asm",
+        "tests/c48/ix_abi_probe.py"
       ],
-      "finding": "IX preservation is specified and uses checked frame routines; direct register-clobber assembly witness is still desirable"
+      "finding": "Direct SSO1 assembly/link and SkoolKit 10.1 Z80 execution of unmodified frame.asm; eight nested-call IX and stack restoration witnesses pass. Repeat on final candidate."
     },
     {
       "paragraph": 625,
