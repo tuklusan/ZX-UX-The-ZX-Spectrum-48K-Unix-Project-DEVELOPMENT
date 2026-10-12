@@ -397,6 +397,15 @@ add('grouped_runtime_core', [475, 483, 495, 584, 612, 662, 692],
     'run', GROUPED_SOURCE.read_bytes())
 
 
+# Checked-in negative fixtures: explicit compile-time rejection, never runtime.
+for fixture_id, clause, filename in (
+    ('negative_reserved', 111, 'negative-reserved.c'),
+    ('negative_operator', 126, 'negative-operator.c'),
+    ('negative_preprocessor', 739, 'negative-preprocessor.c'),
+):
+    rejected(fixture_id, [clause],
+             Path(__file__).with_name(filename).read_bytes())
+
 def _rcc(src, out, mode, timeout=35):
     return subprocess.run([sys.executable,str(RCC),mode,'-o',str(out),str(src)],
         cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=timeout,
