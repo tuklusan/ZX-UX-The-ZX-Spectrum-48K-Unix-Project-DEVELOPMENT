@@ -1,0 +1,43 @@
+name: Tag SDK upgrade
+
+on:
+  push:
+    branches:
+      - tag-beta-0.0.3-sdk-upgrade
+    paths:
+      - .github/workflows/tag-beta-0.0.3-sdk-upgrade.yml
+
+permissions:
+  contents: write
+
+jobs:
+  make-tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Create tag for the verified SDK upgrade
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EXPECTED_SOURCE: 91c1cbd2d7ca4cc2d210e914d4ec31aab5d55d3a
+          EXPECTED_TREE: 18d411f568cba760e48ef0d0db3b8cd3b1d88cfd
+          TAG_NAME: beta-0.0.3-sdk-upgrade
+        run: |
+          set -euo pipefail
+          test "$REPOSITORY" = 'tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project'
+          test "$GITHUB_REF" = 'refs/heads/tag-beta-0.0.3-sdk-upgrade'
+          main="$(gh api "repos/$REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test "$main" = "$EXPECTED_SOURCE"
+          tree="$(gh api "repos/$REPOSITORY/git/commits/$EXPECTED_SOURCE" --jq '.tree.sha')"
+          test "$tree" = "$EXPECTED_TREE"
+          if gh api "repos/$REPOSITORY/git/ref/tags/$TAG_NAME" >/dev/null 2>&1; then
+            echo 'The tag already exists. No change made.' >&2
+            exit 1
+          fi
+          gh api -X POST "repos/$REPOSITORY/git/refs" \
+            -f "ref=refs/tags/$TAG_NAME" \
+            -f "sha=$EXPECTED_SOURCE" >/dev/null
+          actual="$(gh api "repos/$REPOSITORY/git/ref/tags/$TAG_NAME" --jq '.object.sha')"
+          test "$actual" = "$EXPECTED_SOURCE"
+          echo "Created $TAG_NAME at $actual"
