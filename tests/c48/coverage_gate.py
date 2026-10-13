@@ -156,12 +156,13 @@ def assess_reviewed(trace, run, review_rows, target_unresolved=TARGET_PARAGRAPHS
                 target_indexed=len(target), target_unresolved=sorted(unresolved))
 
 
-def independent_target_status(report, proof_path):
+def independent_target_status(report, proof_path, env1_path=None):
     """Run the strict native target/IX witness gate, not an assertion from CSV."""
     from target_gate import assess as assess_target
     matrix = json.loads((ROOT / 'tests/c48/matrix.json').read_text())
     ix = json.loads(proof_path.read_text())
-    result = assess_target(matrix, report, ix)
+    native = json.loads(env1_path.read_text()) if env1_path is not None else None
+    result = assess_target(matrix, report, ix, env1_proof=native)
     if set(result['unresolved']) - TARGET_PARAGRAPHS:
         raise ValueError('unexpected target verification scope')
     return result['unresolved']
@@ -169,6 +170,8 @@ def independent_target_status(report, proof_path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--report', type=Path, required=True)
+    ap.add_argument('--env1-proof', type=Path, default=None,
+                    help='Actual approved-rcc native ENV1 execution report')
     ap.add_argument('--ix-proof', type=Path, default=None,
                     help='Independent native IX proof from this release build')
     args = ap.parse_args()
@@ -179,7 +182,7 @@ def main():
     proof = args.ix_proof or args.report.parent / 'ix-abi-proof.json'
     # No proof, no target credit. A missing proof is a release blocker.
     if proof.is_file():
-        outstanding = independent_target_status(report, proof)
+        outstanding = independent_target_status(report, proof, args.env1_proof)
     else:
         outstanding = sorted(TARGET_PARAGRAPHS)
     if hashlib.sha256(REVIEW.read_bytes()).hexdigest() != REVIEW_SHA256:

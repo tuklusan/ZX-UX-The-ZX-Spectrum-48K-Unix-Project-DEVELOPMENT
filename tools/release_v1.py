@@ -216,17 +216,26 @@ def main():
     step('c48-language', [PYTHON, '-B', 'tests/c48/conformance.py',
                           '--backend', 'both', '--report',
                           str(BUILD / 'logs' / 'c48-conformance.json')])
-    step('c48-coverage', [PYTHON, '-B', 'tests/c48/coverage_gate.py',
-                          '--report', str(BUILD / 'logs' / 'c48-conformance.json')])
-    step('c48-target-units', [PYTHON, '-B', '-m', 'unittest', 'discover',
-                              '-s', 'tests/c48', '-p', 'target_gate_tests.py', '-v'])
-    step('c48-target', [PYTHON, '-B', 'tests/c48/target_gate.py',
-                        '--report', str(BUILD / 'logs/c48-conformance.json'),
-                        '--ix-proof', str(BUILD / 'logs/ix-abi-proof.json')])
     step('assembler-comparison', [PYTHON, '-B', 'sdk/tests/test_ras.py'],
          {**os.environ, 'SJASMPLUS': str(sjasm)})
     step('rom-tape-boot', [PYTHON, '-B', str(tape_tool),
                            'build/ZX-UX.tzx', 'build/test.z80'])
+    # The process-owned ENV1 assertion is an actual linked rcc-native run,
+    # not a C48 host-language case or a change to the static ABI matrix.
+    step('c48-native-env1', [PYTHON, '-B', 'tests/c48/native_env1_v1.py',
+                             '--tap2sna', str(tape_tool), '--report',
+                             str(BUILD / 'logs/native-env1-v1.json')])
+    validated_file(BUILD / 'logs/native-env1-v1.json')
+    step('c48-coverage', [PYTHON, '-B', 'tests/c48/coverage_gate.py',
+                          '--report', str(BUILD / 'logs/c48-conformance.json'),
+                          '--ix-proof', str(BUILD / 'logs/ix-abi-proof.json'),
+                          '--env1-proof', str(BUILD / 'logs/native-env1-v1.json')])
+    step('c48-target-units', [PYTHON, '-B', '-m', 'unittest', 'discover',
+                              '-s', 'tests/c48', '-p', 'target_gate_tests.py', '-v'])
+    step('c48-target', [PYTHON, '-B', 'tests/c48/target_gate.py',
+                        '--report', str(BUILD / 'logs/c48-conformance.json'),
+                        '--ix-proof', str(BUILD / 'logs/ix-abi-proof.json'),
+                        '--env1-proof', str(BUILD / 'logs/native-env1-v1.json')])
     step('system-regression', [PYTHON, '-B', 'tests/suite.py'])
     step('c48-program-tapes', [PYTHON, '-B', 'tools/mktapes.py'])
     step('c48-emulator', [PYTHON, '-B', 'tests/ssxrun.py', '--png',
