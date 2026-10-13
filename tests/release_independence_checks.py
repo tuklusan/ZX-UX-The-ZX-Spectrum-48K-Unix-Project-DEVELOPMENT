@@ -14,20 +14,20 @@ RUNS = ROOT / 'sdk/tests/runs.json'
 class IndependenceChecks(unittest.TestCase):
     def test_checked_in_source_for_all_sessions(self):
         runs = json.loads(RUNS.read_text(encoding='utf-8'))
-        self.assertEqual(len(runs), 73)
+        self.assertEqual(len(runs), 74)
         base = set()
         for name, entry in runs.items():
             program = entry.get('src', name.split(':')[0])
             source = CORPUS / entry['dir'] / (program + '.c')
             self.assertTrue(source.is_file(), str(source))
             base.add((entry['dir'], program))
-        self.assertEqual(len(base), 56)
+        self.assertEqual(len(base), 57)
 
     def test_v1_goldens_cover_all_sessions(self):
         runs = json.loads(RUNS.read_text(encoding='utf-8'))
         expected = json.loads((ROOT / 'sdk/tests/v1-screens.json').read_text(encoding='utf-8'))
         self.assertEqual(set(runs), set(expected))
-        self.assertEqual(len(expected), 73)
+        self.assertEqual(len(expected), 74)
         for name, proof in expected.items():
             self.assertEqual(len(proof['sha256']), 64, name)
             self.assertTrue(all(c in '0123456789abcdef' for c in proof['sha256']), name)
