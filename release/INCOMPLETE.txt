@@ -1,0 +1,9 @@
+ZX-UX v1 — INCOMPLETE REMOTE COPY
+
+The file release/c48/moire.tap is absent from this directory.
+The original transfer was rejected by a separate platform safety check.
+No substitute was inserted and the original manifest.txt is unchanged.
+The omitted file has SHA-256 ae4a07a0ad88c9ef12e2eb1de93500f30f01452859124b40f13a836abfafe1e3.
+Source revision: 1445b3b27ad4790cd88923316c95accd853a01b3.
+All other listed files were checked against their original bytes.
+Do not treat this remote copy as complete.
