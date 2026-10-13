@@ -15,6 +15,7 @@ not a local release-building dependency. It must still run before GitHub
 pushes/API commits. This driver does not authorize a remote write.
 """
 import argparse
+import ast
 import hashlib
 import importlib.util
 import json
@@ -93,9 +94,28 @@ def version_data(sjasm):
 
 
 def count_log(log):
+    """Count executed outcomes; labels in a summary are not observations."""
     text = log.read_text()
-    passed = len(re.findall(r'\bPASS\b', text))
-    failed = len(re.findall(r'\bFAIL\b', text))
+    summaries = re.findall(r'^SUMMARY: (\{[^\n]+\})', text, re.MULTILINE)
+    if 'SUMMARY:' in text:
+        require(len(summaries) == 1, 'Missing or duplicated test summary')
+        try:
+            data = ast.literal_eval(summaries[0])
+        except (ValueError, SyntaxError) as error:
+            raise RuntimeError('Malformed test summary') from error
+        require(isinstance(data, dict) and all(
+            isinstance(data.get(key), int) and not isinstance(data.get(key), bool)
+            and data[key] >= 0 for key in ('PASS', 'FAIL', 'ERROR')),
+            'Invalid test summary counts')
+        return data['PASS'], data['FAIL'] + data['ERROR']
+    # For unittest logs, the actual runner reports how many tests ran.
+    unit = re.findall(r'^Ran (\d+) tests? in ', text, re.MULTILINE)
+    if unit:
+        require(len(unit) == 1 and re.search(r'^OK$', text, re.MULTILINE),
+                'Unsuccessful unittest summary')
+        return int(unit[0]), 0
+    passed = len(re.findall(r'^PASS(?:\s|:)', text, re.MULTILINE))
+    failed = len(re.findall(r'^FAIL(?:\s|:)', text, re.MULTILINE))
     return passed, failed
 
 
@@ -133,6 +153,7 @@ def manifest(commit, versions, logs):
              'Tests:']
     for key, log in logs.items():
         p, f = count_log(log)
+        require(f == 0, 'Test log reports a failure: ' + key)
         parts.append('  %s: PASS=%d FAIL=%d exit=0' % (key, p, f))
     parts.extend(['', 'Files (SHA-256 and byte size):'])
     for file in sorted(RELEASE.rglob('*')):
@@ -240,11 +261,17 @@ def main():
     step('c48-program-tapes', [PYTHON, '-B', 'tools/mktapes.py'])
     step('c48-emulator', [PYTHON, '-B', 'tests/ssxrun.py', '--png',
                           str(BUILD / 'shots')])
-    step('c48-v1-native', [PYTHON, '-B', 'sdk/tests/oracle.py',
+    step('c48-v1-native', [PYTHON, '-B', 'sdk/tests/vm_checks.py',
                            '--native', '--png', str(BUILD / 'shots-vm')])
-    step('c48-v1-bytecode', [PYTHON, '-B', 'sdk/tests/oracle.py',
+    step('c48-v1-bytecode', [PYTHON, '-B', 'sdk/tests/vm_checks.py',
                              '--bytecode', '--png', str(BUILD / 'shots-vm')])
     step('lm-new-sdk', [PYTHON, '-B', 'tools/lm_v1.py'])
+    step('lm-memory-bound', [PYTHON, '-B', 'tests/lm_native_memory.py',
+                             '--snapshot', str(BUILD / 'test.z80'),
+                             '--image', str(BUILD / 'lm/ailmzx48.ssx'),
+                             '--tape', str(BUILD / 'ZX-UX.tzx'),
+                             '--output', str(BUILD / 'logs/lm-native')])
+    validated_file(BUILD / 'logs/lm-native/lm-native-memory.json')
     step('hanoi-queens8', [PYTHON, '-B', 'tools/mtsnap.py'])
     step('gallery', [PYTHON, '-B', 'tools/gallery.py',
                      str(logs['c48-emulator']), str(logs['c48-v1-bytecode'])])
@@ -267,6 +294,15 @@ def main():
     validated_file(BUILD / 'README.txt')
     step('release-copy', [PYTHON, '-B', 'tools/mkrelease.py', str(BUILD / 'logs')])
     shutil.copyfile(logs['release-copy'], RELEASE / 'logs/release-copy.txt')
+    for name, source in (
+        ('fuse-login.png', proof_paths['screen']),
+        ('fuse-login.json', proof_paths['json']),
+        ('lm-memory.png', BUILD / 'logs/lm-native/lm-rejected.png'),
+        ('lm-memory.scr', BUILD / 'logs/lm-native/lm-rejected.scr'),
+        ('lm-memory.json', BUILD / 'logs/lm-native/lm-native-memory.json'),
+    ):
+        validated_file(source)
+        shutil.copyfile(source, RELEASE / name)
     for extra in ('unix.bin', 'fs.img'):
         shutil.copyfile(BUILD / extra, RELEASE / extra)
     for output in RELEASE.rglob('*'):

@@ -51,13 +51,38 @@ class LocalReleaseChecks(unittest.TestCase):
                      'c48-abi-ix', 'c48-language', 'c48-coverage', 'c48-target-units',
                      'c48-target', 'assembler-comparison', 'rom-tape-boot',
                      'system-regression', 'c48-program-tapes', 'c48-emulator',
-                     'c48-v1-native', 'c48-v1-bytecode', 'lm-new-sdk',
+                     'c48-v1-native', 'c48-v1-bytecode', 'lm-new-sdk', 'lm-memory-bound',
                      'hanoi-queens8', 'gallery', 'fuse-independent-boot', 'release-copy'):
             self.assertIn("step('" + name + "'", text)
         self.assertIn('validate_boot_command(', text)
         self.assertIn('validate_boot_proof(', text)
         self.assertIn('check_tracked_sources(after_build=True)', text)
         self.assertIn("step('c48-coverage'", text)
+
+    def test_summary_counts_are_values_not_label_occurrences(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / 'language.log'
+            log.write_text("PASS valid-case native\nSUMMARY: {'PASS': 1146, 'FAIL': 0, 'ERROR': 0} / 759\n")
+            self.assertEqual(release.count_log(log), (1146, 0))
+            log.write_text("SUMMARY: {'PASS': 1145, 'FAIL': 1, 'ERROR': 0}\n")
+            self.assertEqual(release.count_log(log), (1145, 1))
+            log.write_text('SUMMARY: broken\n')
+            with self.assertRaises(RuntimeError):
+                release.count_log(log)
+
+    def test_unit_and_line_log_counts(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / 'unit.log'
+            log.write_text('Ran 36 tests in 2.6s\n\nOK\n')
+            self.assertEqual(release.count_log(log), (36, 0))
+            log.write_text('PASS named-case\nFAIL named-case\n')
+            self.assertEqual(release.count_log(log), (1, 1))
+
+    def test_release_copies_actual_fuse_and_lm_proofs(self):
+        text = SRC.read_text()
+        for name in ('fuse-login.png', 'fuse-login.json', 'lm-memory.png',
+                     'lm-memory.scr', 'lm-memory.json'):
+            self.assertIn(name, text)
 
     def test_nonempty_file_has_correct_sha256(self):
         with tempfile.TemporaryDirectory() as d:

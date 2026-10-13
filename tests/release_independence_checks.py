@@ -45,7 +45,7 @@ class IndependenceChecks(unittest.TestCase):
         self.assertIn('validate_boot_proof', runner)
         self.assertIn('tools/lm_v1.py', runner)
         self.assertIn('tools/mktapes.py', runner)
-        self.assertIn('sdk/tests/oracle.py', runner)
+        self.assertIn('sdk/tests/vm_checks.py', runner)
 
     def test_format_and_mandatory_gate(self):
         self.assertTrue((ROOT / 'programs/c48/ailmzx48/ailmzx48.c').is_file())
