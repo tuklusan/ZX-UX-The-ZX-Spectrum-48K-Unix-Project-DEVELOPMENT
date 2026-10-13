@@ -1,0 +1,9 @@
+Command: /opt/pyvenv/bin/python3 -B tests/c48/target_gate.py --report /mnt/data/ZX-UX/build/logs/c48-conformance.json --ix-proof /mnt/data/ZX-UX/build/logs/ix-abi-proof.json --env1-proof /mnt/data/ZX-UX/build/logs/native-env1-v1.json
+Exit: 0
+
+C48 target rows: 20
+Supported: 16
+Documented contracts: 3
+Unresolved target paragraphs: none
+C48 target gate passed
+

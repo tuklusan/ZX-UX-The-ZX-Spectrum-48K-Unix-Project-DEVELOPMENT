@@ -1,0 +1,7 @@
+Command: /opt/pyvenv/bin/python3 -B tools/build.py /mnt/data/zxux-tools/ZX-UX-48K-toolbox/bin/sjasmplus
+Exit: 0
+
+kernel 8191 bytes (6000-7FFE), user text to B180, image 21031 bytes
+boot code / zxpack model B182-B281, i-nodes B282-B581, arena B582-EFFF (14974 bytes), window F000-FFB8, u-area FFB9-FFF3
+file system: 10 i-nodes used of 24, arena 12946 bytes free, 37 programs
+

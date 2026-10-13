@@ -1,0 +1,16 @@
+Command: /opt/pyvenv/bin/python3 -B sdk/lib/build.py
+Exit: 0
+
+arith        233 bytes
+console     1098 bytes
+crt0          33 bytes
+float        590 bytes
+frame         67 bytes
+io            36 bytes
+string       154 bytes
+sys          133 bytes
+vm          1232 bytes
+gfx          802 bytes
+heap         522 bytes
+244 members
+

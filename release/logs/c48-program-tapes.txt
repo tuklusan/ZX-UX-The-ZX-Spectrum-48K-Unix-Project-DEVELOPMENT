@@ -1,0 +1,61 @@
+Command: /opt/pyvenv/bin/python3 -B tools/mktapes.py
+Exit: 0
+
+apps      gp82         4497 bytes, needs  4497
+apps      sheet48      5641 bytes, needs  6813
+apps      wire3d       6770 bytes, needs  6770
+apps      write48     10035 bytes, needs 13473
+demos     city         4515 bytes, needs  4515
+demos     dizzy4k      6025 bytes, needs  6025
+demos     firework     3761 bytes, needs  3761
+demos     forest       3633 bytes, needs  4268
+demos     galaxy       4803 bytes, needs  4803
+demos     goblet       5523 bytes, needs  5523
+demos     hanoi        7011 bytes, needs  7551
+demos     julia        2950 bytes, needs  3126
+demos     kaleido      3739 bytes, needs  3739
+demos     mandel       2660 bytes, needs  2855
+demos     mobius       5514 bytes, needs  5514
+demos     moire        3835 bytes, needs  3835
+demos     morph3d      5878 bytes, needs  5878
+demos     ocean        5020 bytes, needs  5020
+demos     orrery       5229 bytes, needs  5229
+demos     plasma       2391 bytes, needs  2789
+demos     queens8      6488 bytes, needs  7244
+demos     raymaze      3679 bytes, needs  3679
+demos     spriteanim   2459 bytes, needs  2865
+demos     sprites      2799 bytes, needs  3160
+demos     terrain      5082 bytes, needs  5082
+demos     torus        5552 bytes, needs  5552
+demos     tunnel       3694 bytes, needs  3694
+demos     warp         3421 bytes, needs  3623
+examples  argv         2662 bytes, needs  2895
+examples  colors       1418 bytes, needs  1658
+examples  graphics     2048 bytes, needs  2178
+examples  hello         774 bytes, needs  1082
+games     maze         2586 bytes, needs  2716
+examples  udg           988 bytes, needs  1546
+games     advent       3279 bytes, needs  3372
+games     arith        2169 bytes, needs  2317
+games     bgammon      4988 bytes, needs  4988
+games     chess        8550 bytes, needs 12780
+games     cribbage     5215 bytes, needs  5215
+games     fish         4005 bytes, needs  4009
+games     fortune      1725 bytes, needs  1985
+games     hangman      3426 bytes, needs  3470
+games     quiz         2473 bytes, needs  2628
+games     rogue        3750 bytes, needs  3750
+games     snake        3596 bytes, needs  4048
+games     trek         4171 bytes, needs  4171
+games     wump         3430 bytes, needs  3473
+security  secdbl       1551 bytes, needs  3058
+security  secforge     1646 bytes, needs  3153
+security  secfree      1545 bytes, needs  3054
+security  secguard     2445 bytes, needs  4159
+security  secloop       836 bytes, needs  1142
+security  secoob        912 bytes, needs  1220
+security  secrecur      935 bytes, needs  1874
+security  secuaf       1513 bytes, needs  3022
+sound     tune         1689 bytes, needs  2013
+56 programs
+
