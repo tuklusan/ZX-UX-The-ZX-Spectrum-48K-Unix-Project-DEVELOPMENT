@@ -1,4 +1,4 @@
-Command: /opt/pyvenv/bin/python3 -B tools/build.py /mnt/data/zxux-tools/ZX-UX-48K-toolbox/bin/sjasmplus
+Command: /opt/pyvenv/bin/python3 -B tools/build.py /mnt/data/zxux-tooling/ZX-UX-48K-toolbox/bin/sjasmplus
 Exit: 0
 
 kernel 8191 bytes (6000-7FFE), user text to B180, image 21031 bytes

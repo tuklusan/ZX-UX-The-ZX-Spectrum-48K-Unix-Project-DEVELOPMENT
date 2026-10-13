@@ -1,4 +1,4 @@
-Command: /opt/pyvenv/bin/python3 -B tests/c48/conformance.py --backend both --report /mnt/data/ZX-UX/build/logs/c48-conformance.json
+Command: /opt/pyvenv/bin/python3 -B tests/c48/conformance.py --backend both --report /mnt/data/zxux-release-repair/build/logs/c48-conformance.json
 Exit: 0
 
 PASS  lex_ok_decimal_zero                            native   assembly bytes=152
@@ -913,7 +913,7 @@ PASS  spec9_conflicting_output_modes                 native   status=2, src-unch
 
 PASS  spec9_conflicting_backends                     native   status=2, src-unchanged=True, output=(none), stderr=usage: rcc [-S|-c] [-o out] [--bytecode|--native] [--max BYTES] [--stack N] [--heap N] [--udgs N] file.c
 
-PASS  spec9_write_error                              native   status=1, src-unchanged=True, output=(none), stderr=rcc: output error: [Errno 2] No such file or directory: '/tmp/zxux-c48-dy1i3qul/native/spec9_write_error/nonex
+PASS  spec9_write_error                              native   status=1, src-unchanged=True, output=(none), stderr=rcc: output error: [Errno 2] No such file or directory: '/tmp/zxux-c48-kuhldq4w/native/spec9_write_error/nonex
 PASS  spec9_invalid_source                           native   status=1, src-unchanged=True, output=(none), stderr=rcc: fixture.c:1: declaration: undeclared identifier missing_symbol
 
 PASS  spec9_include_error                            native   status=1, src-unchanged=True, output=(none), stderr=rcc: fixture.c:1: io: include not found: not-a-valid-local-header.h

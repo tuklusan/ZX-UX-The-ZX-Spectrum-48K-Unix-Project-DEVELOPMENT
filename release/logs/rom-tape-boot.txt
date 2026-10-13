@@ -1,4 +1,4 @@
-Command: /opt/pyvenv/bin/python3 -B /mnt/data/zxux-tools/ZX-UX-48K-toolbox/bin/tap2sna.py build/ZX-UX.tzx build/test.z80
+Command: /opt/pyvenv/bin/python3 -B /mnt/data/zxux-tooling/ZX-UX-48K-toolbox/bin/tap2sna.py build/ZX-UX.tzx build/test.z80
 Exit: 0
 
 Program: ZX-UX     

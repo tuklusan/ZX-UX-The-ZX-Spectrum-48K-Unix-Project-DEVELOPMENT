@@ -1,4 +1,4 @@
-Command: /opt/pyvenv/bin/python3 -B tests/lm_native_memory.py --snapshot /mnt/data/ZX-UX/build/test.z80 --image /mnt/data/ZX-UX/build/lm/ailmzx48.ssx --tape /mnt/data/ZX-UX/build/ZX-UX.tzx --output /mnt/data/ZX-UX/build/logs/lm-native
+Command: /opt/pyvenv/bin/python3 -B tests/lm_native_memory.py --snapshot /mnt/data/zxux-release-repair/build/test.z80 --image /mnt/data/zxux-release-repair/build/lm/ailmzx48.ssx --tape /mnt/data/zxux-release-repair/build/ZX-UX.tzx --output /mnt/data/zxux-release-repair/build/logs/lm-native
 Exit: 0
 
 {

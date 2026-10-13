@@ -1,17 +1,17 @@
-Command: /opt/pyvenv/bin/python3 -B tools/mkrelease.py /mnt/data/ZX-UX/build/logs
+Command: /opt/pyvenv/bin/python3 -B tools/mkrelease.py /mnt/data/zxux-release-repair/build/logs
 Exit: 0
 
 release/ZX-UX.tzx  24224 bytes
 release/ZX-UX.tap  23986 bytes
-release/ZX-UX-c48.tzx  232889 bytes
-release/ZX-UX-multitask.z80  38290 bytes
-release/ZX-UX-multitask.png  4544 bytes
+release/ZX-UX-c48.tzx  235012 bytes
+release/ZX-UX-multitask.z80  38274 bytes
+release/ZX-UX-multitask.png  4536 bytes
 release/ZX-UX.z80  24526 bytes
 release/README.txt  440 bytes
 release/LICENSE  20691 bytes
 release/c48-apps.tzx  27103 bytes
 release/c48-demos.tzx  106442 bytes
-release/c48-examples.tzx  21436 bytes
+release/c48-examples.tzx  23559 bytes
 release/c48-games.tzx  53834 bytes
 release/c48-multitask.tzx  10133 bytes
 release/c48/advent.tap  3304 bytes
@@ -38,6 +38,7 @@ release/c48/julia.tap  2975 bytes
 release/c48/kaleido.tap  3764 bytes
 release/c48/mandel.tap  2685 bytes
 release/c48/maze.tap  2611 bytes
+release/c48/maze1982.tap  2117 bytes
 release/c48/mobius.tap  5539 bytes
 release/c48/moire.tap  3860 bytes
 release/c48/morph3d.tap  5903 bytes
@@ -95,6 +96,7 @@ release/c48/julia.ssx  2950 bytes
 release/c48/kaleido.ssx  3739 bytes
 release/c48/mandel.ssx  2660 bytes
 release/c48/maze.ssx  2586 bytes
+release/c48/maze1982.ssx  2092 bytes
 release/c48/mobius.ssx  5514 bytes
 release/c48/moire.ssx  3835 bytes
 release/c48/morph3d.ssx  5878 bytes
@@ -128,7 +130,7 @@ release/c48/warp.ssx  3421 bytes
 release/c48/wire3d.ssx  6770 bytes
 release/c48/write48.ssx  10035 bytes
 release/c48/wump.ssx  3430 bytes
-release/gallery.html  59131 bytes
+release/gallery.html  59882 bytes
 release/shots/advent.ZX-UX.png  1694 bytes
 release/shots/advent_play.ZX-UX.png  2187 bytes
 release/shots/argv.ZX-UX.png  9539 bytes
@@ -164,6 +166,7 @@ release/shots/julia.ZX-UX.png  2703 bytes
 release/shots/kaleido.ZX-UX.png  6159 bytes
 release/shots/mandel.ZX-UX.png  2765 bytes
 release/shots/maze.ZX-UX.png  2671 bytes
+release/shots/maze1982.ZX-UX.png  4726 bytes
 release/shots/maze_play.ZX-UX.png  2949 bytes
 release/shots/mobius.ZX-UX.png  3071 bytes
 release/shots/moire.ZX-UX.png  9073 bytes
@@ -237,6 +240,7 @@ release/shots-vm/julia.png  2706 bytes
 release/shots-vm/kaleido.png  6180 bytes
 release/shots-vm/mandel.png  2765 bytes
 release/shots-vm/maze.png  2671 bytes
+release/shots-vm/maze1982.png  4879 bytes
 release/shots-vm/maze_play.png  2949 bytes
 release/shots-vm/mobius.png  3081 bytes
 release/shots-vm/moire.png  9076 bytes
@@ -277,24 +281,25 @@ release/shots-vm/wump.png  1553 bytes
 release/shots-vm/wump_play.png  1117 bytes
 release/logs/assembler-comparison.txt  119 bytes
 release/logs/boot-image-static.txt  575 bytes
-release/logs/build.txt  375 bytes
-release/logs/c48-abi-ix.txt  167 bytes
-release/logs/c48-coverage.txt  463 bytes
-release/logs/c48-emulator.txt  2470 bytes
-release/logs/c48-language.txt  133563 bytes
-release/logs/c48-native-env1.txt  199 bytes
-release/logs/c48-program-tapes.txt  2707 bytes
+release/logs/build.txt  377 bytes
+release/logs/c48-abi-ix.txt  181 bytes
+release/logs/c48-coverage.txt  505 bytes
+release/logs/c48-emulator.txt  2516 bytes
+release/logs/c48-language.txt  133577 bytes
+release/logs/c48-native-env1.txt  215 bytes
+release/logs/c48-program-tapes.txt  2754 bytes
 release/logs/c48-runtime.txt  328 bytes
 release/logs/c48-target-units.txt  795 bytes
-release/logs/c48-target.txt  360 bytes
-release/logs/c48-v1-bytecode.txt  7825 bytes
-release/logs/c48-v1-native.txt  8273 bytes
-release/logs/fuse-independent-boot.txt  995 bytes
-release/logs/gallery.txt  195 bytes
-release/logs/hanoi-queens8.txt  124 bytes
-release/logs/lm-memory-bound.txt  1076 bytes
-release/logs/lm-new-sdk.txt  320 bytes
-release/logs/release-self-tests.txt  5337 bytes
-release/logs/rom-tape-boot.txt  372 bytes
-release/logs/system-regression.txt  1163 bytes
+release/logs/c48-target.txt  402 bytes
+release/logs/c48-v1-bytecode.txt  7934 bytes
+release/logs/c48-v1-native.txt  8452 bytes
+release/logs/fuse-independent-boot.txt  1019 bytes
+release/logs/gallery.txt  237 bytes
+release/logs/hanoi-queens8.txt  138 bytes
+release/logs/lm-memory-bound.txt  1132 bytes
+release/logs/lm-new-sdk.txt  334 bytes
+release/logs/release-self-tests.txt  6175 bytes
+release/logs/rom-tape-boot.txt  374 bytes
+release/logs/system-regression.txt  1191 bytes
+release/screens/tests/fuse-login.png  3348 bytes
 
