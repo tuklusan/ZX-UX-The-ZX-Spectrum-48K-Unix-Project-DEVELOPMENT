@@ -57,7 +57,8 @@ class IndependenceChecks(unittest.TestCase):
         # the release check to one spelling of the driver's output expression.
         self.assertIn("'.ssx'", text)
         self.assertIn("'.sso'", text)
-        self.assertIn('os.path.samefile(src, target)', text)
+        self.assertTrue('os.path.samefile(src, target)' in text or
+                        'os.path.samefile(target, src)' in text)
 
 
 if __name__ == '__main__':
