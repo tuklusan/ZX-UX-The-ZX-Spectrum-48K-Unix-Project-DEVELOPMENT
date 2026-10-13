@@ -1,10 +1,10 @@
-Command: /opt/pyvenv/bin/python3 -B tests/ssxrun.py --png /mnt/data/ZX-UX/build/shots
+Command: /opt/pyvenv/bin/python3 -B tests/ssxrun.py --png /mnt/data/zxux-release-repair/build/shots
 Exit: 0
 
 gp82           PASS running (2s)
 sheet48        PASS running (2s)
 wire3d         PASS running (2s)
-write48        PASS running (3s)
+write48        PASS running (2s)
 city           PASS exited (1s)
 dizzy4k        PASS exited (1s)
 firework       PASS exited (1s)
@@ -33,10 +33,11 @@ argv           PASS exited (1s)
 colors         PASS exited (0s)
 graphics       PASS exited (0s)
 hello          PASS exited (0s)
-maze           PASS running (1s)
+maze           PASS running (2s)
+maze1982       PASS exited (1s)
 udg            PASS exited (0s)
 advent         PASS running (2s)
-arith          PASS running (1s)
+arith          PASS running (2s)
 bgammon        PASS running (2s)
 chess          PASS running (3s)
 cribbage       PASS running (2s)
@@ -69,10 +70,10 @@ chess:play     PASS exited (2s)
 fish:play      PASS exited (1s)
 bgammon:play   PASS exited (1s)
 cribbage:play  PASS exited (1s)
-fortune:play   PASS exited (0s)
+fortune:play   PASS exited (1s)
 arith:play     PASS exited (1s)
 chess:play2    PASS exited (2s)
 chess:play3    PASS exited (2s)
 chess:play4    PASS exited (2s)
-73/73 ran on ZX-UX
+74/74 ran on ZX-UX
 

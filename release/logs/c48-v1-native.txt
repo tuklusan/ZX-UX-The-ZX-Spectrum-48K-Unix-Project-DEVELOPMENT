@@ -1,4 +1,4 @@
-Command: /opt/pyvenv/bin/python3 -B sdk/tests/vm_checks.py --native --png /mnt/data/ZX-UX/build/shots-vm
+Command: /opt/pyvenv/bin/python3 -B sdk/tests/vm_checks.py --native --png /mnt/data/zxux-release-repair/build/shots-vm
 Exit: 0
 
 gp82           PASS rvm: input     ssx  4497   [screen,baseline,screen-sha,state] (0.3s/0.0s) 
@@ -8,10 +8,10 @@ write48        PASS rvm: input     ssx 10035   [screen,baseline,screen-sha,state
 city           PASS rvm: exit 0    ssx  4515   [screen,baseline,screen-sha,state] (0.1s/0.0s) 
 dizzy4k        PASS rvm: exit 0    ssx  6025   [screen,baseline,screen-sha,state] (0.1s/0.0s) 
 firework       PASS rvm: exit 0    ssx  3761   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
-forest         PASS rvm: exit 0    ssx  3633   [screen,baseline,screen-sha,state] (0.1s/0.0s) 
+forest         PASS rvm: exit 0    ssx  3633   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
 galaxy         PASS rvm: exit 0    ssx  4803   [screen,baseline,screen-sha,state] (0.1s/0.0s) 
 goblet         PASS rvm: exit 0    ssx  5523   [screen,baseline,screen-sha,state] (0.1s/0.0s) 
-hanoi          PASS rvm: exit 0    ssx  7011   [screen,baseline,screen-sha,state,sha] (0.7s/0.0s) 
+hanoi          PASS rvm: exit 0    ssx  7011   [screen,baseline,screen-sha,state,sha] (0.8s/0.0s) 
 julia          PASS rvm: exit 0    ssx  2950   [screen,baseline,screen-sha,state] (0.2s/0.0s) 
 kaleido        PASS rvm: exit 0    ssx  3739   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
 mandel         PASS rvm: exit 0    ssx  2660   [screen,baseline,screen-sha,state] (0.3s/0.0s) 
@@ -34,6 +34,7 @@ colors         PASS rvm: exit 0    ssx  1418   [screen,baseline,screen-sha,state
 graphics       PASS rvm: exit 0    ssx  2048   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
 hello          PASS rvm: exit 0    ssx   774   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
 maze           PASS rvm: input     ssx  2586   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
+maze1982       PASS rvm: exit 0    ssx  2092   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
 udg            PASS rvm: exit 0    ssx   988   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
 advent         PASS rvm: input     ssx  3279   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
 arith          PASS rvm: input     ssx  2169   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
@@ -47,8 +48,8 @@ quiz           PASS rvm: input     ssx  2473   [screen,baseline,screen-sha,state
 rogue          PASS rvm: input     ssx  3750   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
 snake          PASS rvm: input     ssx  3596   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
 trek           PASS rvm: input     ssx  4171   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
-wump           PASS rvm: input     ssx  3430   [screen,baseline,screen-sha,state] (0.0s/0.0s) 
-secdbl         PASS rvm: exit 1    ssx  1551   [screen,baseline,screen-sha,state,status] (0.1s/0.0s) heap guard traps (exit status 1)
+wump           PASS rvm: input     ssx  3430   [screen,baseline,screen-sha,state] (0.1s/0.0s) 
+secdbl         PASS rvm: exit 1    ssx  1551   [screen,baseline,screen-sha,state,status] (0.0s/0.0s) heap guard traps (exit status 1)
 secforge       PASS rvm: exit 99   ssx  1646   [screen,baseline,screen-sha,state,status] (0.0s/0.0s) native code has no pointer checking or bounds checks: the write escapes (documented)
 secfree        PASS rvm: exit 1    ssx  1545   [screen,baseline,screen-sha,state,status] (0.0s/0.0s) heap guard traps (exit status 1)
 secguard       PASS rvm: exit 0    ssx  2445   [screen,baseline,screen-sha,state,status] (0.0s/0.0s) 
@@ -74,10 +75,10 @@ arith:play     PASS rvm: exit 0    ssx  2169   [screen,baseline,screen-sha,state
 chess:play2    PASS rvm: exit 0    ssx 13871   [screen,baseline,screen-sha,state,text,status] (0.2s/0.0s) 
 chess:play3    PASS rvm: exit 0    ssx 13871   [screen,baseline,screen-sha,state,text,status] (0.2s/0.0s) 
 chess:play4    PASS rvm: exit 0    ssx 13871   [screen,baseline,screen-sha,state,text,status] (0.2s/0.0s) 
-73/73 v1 sessions pass
+74/74 v1 sessions pass
 
-rcc: /mnt/data/ZX-UX/programs/c48/games/chess.c needs 16885 bytes of memory (limit 14000)
-rcc: /mnt/data/ZX-UX/programs/c48/games/chess.c needs 16885 bytes of memory (limit 14000)
-rcc: /mnt/data/ZX-UX/programs/c48/games/chess.c needs 16885 bytes of memory (limit 14000)
-rcc: /mnt/data/ZX-UX/programs/c48/games/chess.c needs 16885 bytes of memory (limit 14000)
-rcc: /mnt/data/ZX-UX/programs/c48/games/chess.c needs 16885 bytes of memory (limit 14000)
+rcc: /mnt/data/zxux-release-repair/programs/c48/games/chess.c needs 16885 bytes of memory (limit 14000)
+rcc: /mnt/data/zxux-release-repair/programs/c48/games/chess.c needs 16885 bytes of memory (limit 14000)
+rcc: /mnt/data/zxux-release-repair/programs/c48/games/chess.c needs 16885 bytes of memory (limit 14000)
+rcc: /mnt/data/zxux-release-repair/programs/c48/games/chess.c needs 16885 bytes of memory (limit 14000)
+rcc: /mnt/data/zxux-release-repair/programs/c48/games/chess.c needs 16885 bytes of memory (limit 14000)

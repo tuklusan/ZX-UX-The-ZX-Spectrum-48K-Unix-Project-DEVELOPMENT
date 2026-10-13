@@ -34,6 +34,7 @@ examples  colors       1418 bytes, needs  1658
 examples  graphics     2048 bytes, needs  2178
 examples  hello         774 bytes, needs  1082
 games     maze         2586 bytes, needs  2716
+examples  maze1982     2092 bytes, needs  2222
 examples  udg           988 bytes, needs  1546
 games     advent       3279 bytes, needs  3372
 games     arith        2169 bytes, needs  2317
@@ -57,5 +58,5 @@ security  secoob        912 bytes, needs  1220
 security  secrecur      935 bytes, needs  1874
 security  secuaf       1513 bytes, needs  3022
 sound     tune         1689 bytes, needs  2013
-56 programs
+57 programs
 
