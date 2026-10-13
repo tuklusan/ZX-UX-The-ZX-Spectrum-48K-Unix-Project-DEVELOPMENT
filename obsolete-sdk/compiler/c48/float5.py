@@ -39,7 +39,7 @@ class Float5:
 
     ROM-derived transcendental functions live in ``c48.rommath``. Full
     # ROM, native, and host parity remains a separate release boundary; see
-    docs/FLOAT5-ORACLE.md in the SDK release.
+    docs/FLOAT5-reference.md in the SDK release.
     """
 
     raw: bytes
@@ -167,7 +167,7 @@ class Float5:
         return -1 if a < b else (1 if a > b else 0)
 
     def approx_unary(self, name: str) -> "Float5":
-        """Explicitly non-oracle host approximation for opt-in development only."""
+        """Explicitly non-reference host approximation for opt-in development only."""
         x = float(self.to_fraction())
         funcs = {
             "sin": math.sin, "cos": math.cos, "tan": math.tan,

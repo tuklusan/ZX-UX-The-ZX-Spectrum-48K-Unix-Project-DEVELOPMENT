@@ -4,7 +4,7 @@
 # SANYALnet Labs Non-Commercial License, attribution to SANYALnet Labs required, see LICENSE for more information
 """Host reference for Candidate-A compressed conversation context.
 
-This is an executable correctness oracle, not target storage.  Extra Python
+This is an executable correctness reference, not target storage.  Extra Python
 metadata attached to L0 descriptors exists only to make promotion and
 differential tests explicit.  Target L0 descriptors remain exactly 4 bytes.
 """

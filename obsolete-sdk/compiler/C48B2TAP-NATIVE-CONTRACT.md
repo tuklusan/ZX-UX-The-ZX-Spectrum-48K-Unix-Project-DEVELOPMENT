@@ -33,7 +33,7 @@ formats frozen below:
    just-loaded image byte before `ld (hl),a`.
 
 The SDK keeps generated OBJ1, MEX1, M48O and TAP bytes unchanged. Independent
-format oracles and native linker consumption remain unmodified. The execution
+format references and native linker consumption remain unmodified. The execution
 verifier first proves each frozen native failure at the earliest reachable
 site, then uses only independently bounded, fail-closed in-memory corrections
 to reach and prove later sites and the final executable behavior. A correction

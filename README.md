@@ -27,6 +27,13 @@ This area grows and shrinks as programs run and files change.
 The `zxpack` command can pack files to save RAM.
 Files that are idle may also be packed when space runs low.
 
+The shell runs `cd` (or `chdir`), `kill PID`, `exec CMD`, `sh FILE` and
+`login` itself, without a separate process, so they work even when all
+four process slots are taken. `exit` or `logout` ends the shell and
+returns to `login:`. Inside a command file run with `sh FILE`, `exit`
+ends that file. Background jobs keep running after you log out; stop
+them with `kill`.
+
 The system supports one terminal and one user.
 It can switch among four processes without help from the shell.
 A C48 program may draw on the screen while a shell command runs below it.
@@ -110,8 +117,8 @@ python3 tests/suite.py
 python3 tools/mktapes.py
 python3 tools/mtsnap.py
 python3 tests/ssxrun.py
-python3 sdk/tests/oracle.py --native
-python3 sdk/tests/oracle.py --bytecode
+python3 sdk/tests/vm_checks.py --native
+python3 sdk/tests/vm_checks.py --bytecode
 python3 tools/gallery.py
 ```
 

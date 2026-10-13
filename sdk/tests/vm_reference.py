@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Check the v1 C48 compiler and VM independently of historical binaries.
 
-  oracle.py [--native|--bytecode] [--only NAMES] [--png DIR]
-  oracle.py --reference-sdk DIR [other options]  # optional historical comparison
+  vm_reference.py [--native|--bytecode] [--only NAMES] [--png DIR]
+  vm_reference.py --reference-sdk DIR [other options]  # optional historical comparison
 
 The default runner uses the local C48 source collection and known output
 checks. An explicitly supplied historical reference VM may also compare

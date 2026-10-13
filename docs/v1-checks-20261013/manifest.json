@@ -52,12 +52,12 @@
     },
     {
       "bytes": 7708,
-      "path": "docs/v1-checks-20261013/oracle-bytecode-20261013.log",
+      "path": "docs/v1-checks-20261013/reference-bytecode-20261013.log",
       "sha256": "59ad4151fc6b0cfca96f8079571a7056620c09e891bc9b8016340805f5e4505e"
     },
     {
       "bytes": 8248,
-      "path": "docs/v1-checks-20261013/oracle-native-20261013.log",
+      "path": "docs/v1-checks-20261013/reference-native-20261013.log",
       "sha256": "a6757226b5c0f94d3ff635bed7a85d28b7996530e73cd57f9c5cc809b8a6316e"
     },
     {

@@ -18,7 +18,7 @@ usage:  push hl
 
 ; ------------------------------------------------------------- cat
 t_cat:  db 18h,6
-        dw e_cat-t_cat, TV-UDATA, cat_m
+        dw STKRES, TV-UDATA, cat_m
 cat_m:  pop hl
         call args
         ld hl,1
@@ -61,7 +61,7 @@ e_cat:
 CP_DST  equ TV                  ; 64
 CP_TMP  equ R_BUF               ; directory name while building dir/name
 t_cp:   db 18h,6
-        dw e_cp-t_cp, TV+64-UDATA, cp_m
+        dw STKRES, TV+64-UDATA, cp_m
 cp_m:   pop hl
         call args
         ld a,(U_ARGC)
@@ -105,7 +105,19 @@ cpfile: ld (U_T),hl
         ld de,U_STB
         call sc_stat
         jr c,.no
-        ld hl,(U_T)
+        ld hl,CP_DST            ; the target is the source itself?
+        ld de,CP_TMP
+        call sc_stat
+        jr c,.new
+        ld hl,(CP_TMP)          ; (i-numbers)
+        ld de,(U_STB)
+        or a
+        sbc hl,de
+        jr nz,.new
+        ld hl,CP_DST
+        ld de,s_same
+        jr cpfile.xj0_41
+.new:   ld hl,(U_T)
         ld de,0
         call sc_open
         jr nc,.op
@@ -142,11 +154,12 @@ cpfile: ld (U_T),hl
         scf
         ret
 s_werr: db "write error",0
+s_same: db "same file",0
 e_cp:
 
 ; ------------------------------------------------------------- mv
 t_mv:   db 18h,6
-        dw e_mv-t_mv, TV+64-UDATA, mv_m
+        dw STKRES, TV+64-UDATA, mv_m
 mv_m:   pop hl
         call args
         ld a,(U_ARGC)
@@ -174,8 +187,25 @@ mv_m:   pop hl
         ld de,CP_DST
         ld hl,CP_TMP
         call catpath
-.nd:    ; an existing target is replaced
+.nd:    ; the source must exist; an existing target that is not the
+        ; source itself is replaced
+        ld a,1
+        call argn
+        ld de,U_STB
+        call sc_stat
+        jr c,.nos
+        ld hl,(U_STB)           ; source i-number
+        push hl
         ld hl,CP_DST
+        ld de,U_STB
+        call sc_stat
+        pop de
+        jr c,.ul
+        ld hl,(U_STB)
+        or a
+        sbc hl,de
+        jp z,exit0              ; mv f f: nothing to do
+.ul:    ld hl,CP_DST
         call sc_unlink
         ld a,1
         call argn
@@ -192,6 +222,11 @@ mv_m:   pop hl
         call argn
         call sc_unlink
         jp exit0
+.nos:   ld a,1
+        call argn
+        ld de,s_cantopen
+        call perr
+        jr .err
 .xj0_31:
 .xj1_12:
 .xj2_4:
@@ -201,7 +236,7 @@ e_mv:
 
 ; ------------------------------------------------------------- ln
 t_ln:   db 18h,6
-        dw e_ln-t_ln, TV-UDATA, ln_m
+        dw STKRES, TV-UDATA, ln_m
 ln_m:   pop hl
         call args
         ld a,(U_ARGC)
@@ -231,7 +266,7 @@ e_ln:
 
 ; ------------------------------------------------------------- rm
 t_rm:   db 18h,6
-        dw e_rm-t_rm, TV+1-UDATA, rm_m
+        dw STKRES, TV+1-UDATA, rm_m
 RM_F    equ TV
 rm_m:   pop hl
         call args
@@ -284,7 +319,7 @@ e_rm:
 RD_P    equ TV                  ; 64 path buffer
 RD_E    equ TV+64               ; 10 entry
 t_rmdir: db 18h,6
-        dw e_rmdir-t_rmdir, RD_E+10-UDATA, rmdir_m
+        dw STKRES, RD_E+10-UDATA, rmdir_m
 rmdir_m: pop hl
         call args
         ld a,1
@@ -340,7 +375,7 @@ e_rmdir:
 
 ; ------------------------------------------------------------- mkdir
 t_mkdir: db 18h,6
-        dw e_mkdir-t_mkdir, TV-UDATA, mkdir_m
+        dw STKRES, TV-UDATA, mkdir_m
 mkdir_m: pop hl
         call args
         ld a,1
@@ -364,7 +399,7 @@ e_mkdir:
 
 ; ------------------------------------------------------------- chmod
 t_chmod: db 18h,6
-        dw e_chmod-t_chmod, TV+2-UDATA, chmod_m
+        dw STKRES, TV+2-UDATA, chmod_m
 chmod_m: pop hl
         call args
         ld a,(U_ARGC)
@@ -405,7 +440,7 @@ LS_TAB  equ TV+212              ; 64 records: name (8), 0, mtime (4)
 LSREC   equ 13
 LSMAX   equ 64
 t_ls:   db 18h,6
-        dw e_ls-t_ls, LS_TAB+LSMAX*LSREC-UDATA, ls_m
+        dw STKRES, LS_TAB+LSMAX*LSREC-UDATA, ls_m
 ls_m:   pop hl
         call args
         ld a,1
@@ -701,7 +736,7 @@ PW_P    equ TV+20               ; 64
 PW_B    equ TV+84               ; 80 result, built backwards
 PW_Q    equ TV+164
 t_pwd:  db 18h,6
-        dw e_pwd-t_pwd, PW_Q+2-UDATA, pwd_m
+        dw STKRES, PW_Q+2-UDATA, pwd_m
 pwd_m:  ld hl,PW_B+79
         ld (hl),0
         ld (PW_Q),hl
@@ -801,7 +836,7 @@ e_pwd:
 ; ------------------------------------------------------------- df
 ;  df - free memory: the arena holds every file (and every program)
 t_df:   db 18h,6
-        dw e_df-t_df, 0, df_m
+        dw STKRES, TV-UDATA, df_m
 df_m:   ld hl,0
         SC _zxpack              ; HL = free bytes, DE = free i-nodes
         push de

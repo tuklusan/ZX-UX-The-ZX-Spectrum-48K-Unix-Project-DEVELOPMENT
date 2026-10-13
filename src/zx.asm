@@ -612,8 +612,8 @@ zpack:  push ix
         ld de,-8                ; the stream must save 8 bytes at least
         add hl,de
         ld (zolim),hl
-        ld l,(ix+I_DSKP)        ; (reload: the allocation may have
-        ld h,(ix+I_DSKP+1)      ; moved the file)
+        call idskp              ; (reload: the allocation may have
+                                ; moved the file)
         ld (zib),hl
         ld de,(zn)
         add hl,de
@@ -628,8 +628,7 @@ zpack:  push ix
         ld (ix+I_RSVD+1),h
         ld b,h
         ld c,l
-        ld l,(ix+I_DSKP)        ; the raw block goes
-        ld h,(ix+I_DSKP+1)
+        call idskp              ; the raw block goes
         call afree
         ld hl,(zob)             ; the workspace becomes the file
         call ashrink
@@ -668,7 +667,6 @@ zunpack:
         ret z
         push ix
         call isize
-        ld (zn),hl
         ld b,h
         ld c,l
         ld a,K_FILE
@@ -676,13 +674,13 @@ zunpack:
         ld a,ENOSPC
         jr c,zfail
         ld (zob),hl
-        ld de,(zn)
+        ex de,hl
+        call isize              ; (not zn: a file packed meanwhile set it)
         add hl,de
         ld (zn),hl              ; zn = end of the output
         ld a,1
         ld (zbusy),a
-        ld l,(ix+I_DSKP)        ; the stream (reloaded after allocating)
-        ld h,(ix+I_DSKP+1)
+        call idskp              ; the stream (reloaded after allocating)
         ld (zib),hl
         push hl
         ld hl,(zob)

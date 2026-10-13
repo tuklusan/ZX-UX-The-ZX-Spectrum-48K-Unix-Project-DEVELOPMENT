@@ -1786,11 +1786,11 @@ Host representation is an implementation detail.
 
 84. Host floating execution
 
-A Windows implementation MUST NOT use ordinary IEEE host floating point as its conformance oracle.
+A Windows implementation MUST NOT use ordinary IEEE host floating point as its conformance reference.
 
 Every C48 floating operator and every integer<->float conversion produces a canonical five-byte C48 value at that language operation boundary. A host implementation MUST NOT keep extra precision across two C48 floating operations if doing so changes the value that the ROM-backed target would obtain after the first operation. Compile-time folding is permitted only when it reproduces the same per-operation five-byte rounding/conversion sequence.
 
-The canonical 48K ROM services are the executable oracle for parsing, arithmetic, comparison, transcendental operations, formatting, and domain/range behavior. A host emulator or mathematical reimplementation is conforming only after a golden corpus demonstrates equivalence to those services; it may not invent IEEE NaN, infinity, denormal, or rounding behavior.
+The canonical 48K ROM services are the executable reference for parsing, arithmetic, comparison, transcendental operations, formatting, and domain/range behavior. A host emulator or mathematical reimplementation is conforming only after a golden corpus demonstrates equivalence to those services; it may not invent IEEE NaN, infinity, denormal, or rounding behavior.
 
 It may use wider host arithmetic internally only if final values, comparisons, conversions, errors, and other observable results are demonstrably equivalent to C48's canonical five-byte Spectrum numeric semantics.
 

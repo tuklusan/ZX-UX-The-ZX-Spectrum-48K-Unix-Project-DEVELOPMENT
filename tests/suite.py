@@ -213,7 +213,7 @@ def dirs(s):
 @test
 def misc_cmds(s):
     s.login()
-    s.expect('date', 'Wed Nov  3 00:0', '1971')
+    s.expect('date', 'Fri Apr 23 00:0', '1982')   # the ZX Spectrum's release
     s.sh('date 0704120076')
     s.expect('date', 'Jul  4 12:00', '1976')
     s.expect('hello', 'Hello World!')
@@ -285,7 +285,10 @@ def zxpack_cmd(s):
     import build, zxpack
     motd = build.MOTD.encode()
     packed = zxpack.pack(motd)
-    expected = '%d -> %d bytes' % (len(motd), len(packed))
+    if len(motd) < 129:                 # zok: smaller files are never packed
+        expected = 'would not be smaller'
+    else:
+        expected = '%d -> %d bytes' % (len(motd), len(packed))
     s.expect('zxpack /etc/motd', expected, frames=60000)
 
 
@@ -390,6 +393,20 @@ def ssx_tape(name):
     if driver.main([os.path.join(HERE, 'c', name + '.c'), '-o', out]):
         raise Fail('rcc failed for ' + name)
     return rtap.records(open(out, 'rb').read(), name)
+
+
+def ssx_tape_asm(name):
+    """tests/c/NAME.c plus the helpers in tests/c/NAME.s -> cassette records"""
+    import ras, rld, rtap
+    from rcc import driver
+    src = os.path.join(HERE, 'c', name + '.c')
+    text, prog, g = driver.compile_to_asm(src, {'heap': 1024})
+    text += open(os.path.join(HERE, 'c', name + '.s')).read()
+    obj = ras.assemble_text(text, name + '.s')
+    libp = os.path.join(ROOT, 'sdk', 'lib', 'libc48.ssa')
+    data = rld.link([rld.Obj(obj, name)], [rld.read_archive(open(libp, 'rb').read(), libp)],
+                    'start', driver.stack_estimate(g), 0)[0]
+    return rtap.records(data, name)
 
 
 def run_cassette(s, name, args='', before=()):
@@ -573,6 +590,262 @@ def cassette_too_big(s):
     s.until('not enough memory', 3000)
     s.wait_prompt(1000)
     s.expect('echo still here', 'still here')
+
+
+@test
+def banner_motd(s):
+    """boot banner year, the message of the day, init's small SAVE"""
+    s.until('procs=4 ok', 2000)
+    scr = s.screen()
+    if '2026 SANYALnet Labs' not in scr or '2006' in scr:
+        raise Fail('copyright line:\n' + scr)
+    s.login()
+    scr = s.screen()
+    if 'Spectrum 48K.' not in scr or 'Erdogan' in scr:
+        raise Fail('motd:\n' + scr)
+    save = kword(s, 'p_save')           # init is slot 0: u-area, U_T, 160 stack
+    size = s.zx.mem[save - 4] | s.zx.mem[save - 3] << 8
+    if size > 59 + 15 + 160 + 8:
+        raise Fail('init SAVE block is %d bytes' % size)
+
+
+@test
+def more_pager(s):
+    s.login()
+    s.sh('od /usr/doc/zxpack > /tmp/m', frames=20000)
+    s.zx.type('more /tmp/m\n')
+    s.until('--More--', 3000)
+    first = s.rows()[0]
+    s.key('SPACE')                      # the next page
+    s.wait(200)
+    s.until('--More--', 3000)
+    if s.rows()[0] == first:
+        raise Fail('SPACE did not page:\n' + s.screen())
+    s.key('ENTER')                      # one more line
+    s.wait(100)
+    s.until('--More--', 1000)
+    s.type('q')
+    s.wait_prompt()
+    s.expect('echo echoed', 'echoed')   # the terminal is back in echo mode
+    s.zx.type('more < /tmp/m\n')
+    s.until('--More--', 3000)
+    s.key('CS', 'SPACE')                # BREAK quits too
+    s.wait_prompt()
+    s.expect('echo again', 'again')
+    s.sh('echo short > /tmp/n')
+    s.expect('more /tmp/n /tmp/n', '::: /tmp/n', 'short', absent=('--More--',))
+    s.expect('more', 'usage: more')
+
+
+@test
+def sh_script_args(s):
+    """sh file args: the script buffers are above the break only meanwhile"""
+    s.login()
+    s.sh("echo 'echo arg $1 $2' > /tmp/s")
+    free = df_free(s)
+    s.expect('sh /tmp/s one two', 'arg one two')
+    s.expect('df', re.compile(r'\d+ bytes free'))
+    if df_free(s) != free:
+        raise Fail('memory not given back: %d -> %d' % (free, df_free(s)))
+
+
+@test
+def exit_logout(s):
+    """exit and logout end the shell; in a command file, exit ends the file"""
+    s.login()
+    # a command file: exit ends it (later lines and the rest of its line
+    # are not run) and the calling shell carries on
+    s.sh('echo echo a > /tmp/x1')
+    s.sh('echo exit >> /tmp/x1')
+    s.sh('echo echo b >> /tmp/x1')
+    out = s.sh('sh /tmp/x1')
+    if out != ['a']:
+        raise Fail('sh /tmp/x1 gave %r, want [\'a\']' % out)
+    s.sh('echo "echo c; exit; echo d" > /tmp/x2')
+    out = s.sh('sh /tmp/x2')
+    if out != ['c']:
+        raise Fail('sh /tmp/x2 gave %r, want [\'c\']' % out)
+    s.expect('echo still here', 'still here')
+    # a second shell: exit returns to the first
+    s.type('sh\n')
+    s.wait(150)
+    s.type('exit\n')
+    s.wait_prompt()
+    s.expect('echo top', 'top')
+    # a background job survives logout; logout and exit end the login shell
+    s.sh('sleep 30 &')
+    for cmd in ('logout', 'exit'):
+        s.type(cmd + '\n')
+        for _ in range(60):                 # a new getty's prompt, last line
+            s.wait(10)
+            if s.last_line().rstrip() == 'login:':
+                break
+        else:
+            raise Fail('%s: no login prompt:\n%s' % (cmd, s.screen()))
+        s.type('root\n')
+        s.wait_prompt()
+    s.expect('ps', 'sleep', 'init')
+
+
+@test
+def kernel_fixes(s):
+    """review fixes C1, C2, M1, M3, M6 and the exec argument bound (tests/c/kfix.c)"""
+    s.login()
+    inodes = lambda: int(re.search(r'(\d+) i-nodes free', '\n'.join(s.sh('df'))).group(1))
+    before = inodes()
+    s.zx.type('/dev/cassette/kfix\n')
+    s.zx.tr.edges = zxrun.tape_pulses(ssx_tape_asm('kfix'), s.zx.sim.registers[25] + 350000)
+    s.until('kfix done', 6000)
+    scr = s.screen()
+    for w in ('eof ok', 'far ok', 'unlink ok', 'ssxload ok', 'iy ok', 'args ok'):
+        if w not in scr:
+            raise Fail('%r missing:\n%s' % (w, scr))
+    s.wait_prompt(3000)
+    s.expect('ls /tmp', absent=('k1',))
+    if inodes() != before:
+        raise Fail('i-node leaked: %d -> %d' % (before, inodes()))
+    s.expect('echo alive', 'alive')
+
+
+@test
+def path_safety(s):
+    """a file used as a directory, mv and cp onto the same file, mv of a
+    missing file: nothing is lost (namei ENOTDIR, t_file mv and cp)"""
+    s.login()
+    s.sh('echo a > /tmp/f')
+    s.sh('echo b > /tmp/f/x')
+    s.sh('mkdir /tmp/f/d')
+    s.expect('ls /tmp', 'f', absent=('x', 'd'))
+    s.expect('cat /tmp/f', 'a')
+    s.sh('mv /tmp/f /tmp/f')
+    s.expect('cat /tmp/f', 'a')
+    s.expect('cp /tmp/f /tmp/f', 'same file')
+    s.expect('cat /tmp/f', 'a')
+    s.sh('cd /tmp')
+    s.expect('cp f .', 'same file')
+    s.sh('mv f .')
+    s.expect('mv nothere f', "can't open")
+    s.expect('cat f', 'a')
+    s.sh('mkdir d')
+    s.sh('cp f d')
+    s.sh('mv f d/g')
+    s.expect('ls /tmp/d', 'f', 'g')
+    s.expect('cat d/g', 'a')
+
+
+@test
+def unpack_sizes(s):
+    """an unpack that packs a file of another size meanwhile keeps its own
+    size (zx.asm zunpack: zn was the other file's)"""
+    s.login()
+    s.sh('cp /usr/doc/tar /tmp/t', frames=20000)       # 1480 bytes, raw
+    sum_z = s.sh('sum /usr/doc/zxpack', frames=60000)
+    s.expect('zxpack /usr/doc/zxpack', '1293 -> 584 bytes', frames=60000)
+    n = 0
+    while df_free(s) > 1300 and n < 12:
+        s.sh('cp /tmp/t /tmp/f%d' % n, frames=20000)
+        n += 1
+    s.expect('wc /usr/doc/zxpack', re.compile(r'38 +213 +1293 /usr/doc/zxpack'),
+             frames=200000)
+    s.expect('sum /usr/doc/zxpack', *sum_z, frames=60000)
+    for i in range(n):
+        s.sh('rm /tmp/f%d' % i)
+    s.expect('cmp /tmp/t /usr/doc/tar', absent=('differ', 'EOF'), frames=60000)
+
+
+@test
+def tape_break(s):
+    """BREAK during a tape read: the ROM's error path (interrupts already
+    on) unwinds to a trap on the caller's stack, not into the kernel
+    globals; ERR_SP is the kernel's again afterwards"""
+    s.login()
+    m = s.zx.mem
+    errsp = lambda: m[0x5C3D] | m[0x5C3E] << 8
+    home = errsp()
+    for i in range(3):
+        s.zx.type('cat /dev/tap\n')
+        s.zx.run(60 + 7 * i)
+        if not 0xF000 <= errsp() < 0xFFB9:
+            raise Fail('ERR_SP %04X during the read: not on the stack' % errsp())
+        s.key('CS', 'SPACE')
+        s.wait_prompt(3000)
+        if errsp() != home or m[0x5C92 + 5]:
+            raise Fail('after BREAK: ERR_SP %04X (want %04X), tapbusy %d'
+                       % (errsp(), home, m[0x5C92 + 5]))
+    s.expect('echo alive', 'alive')
+
+
+@test
+def ssx_own_args(s):
+    """the program from tape gets /etc/ldx's arguments even if another
+    process has exec'd meanwhile (KARGS is global; sys ssxload takes argv)"""
+    s.login()
+    s.zx.type('/dev/cassette/ssxargs one two\n')
+    s.zx.run(150)                       # /etc/ldx is waiting for the tape
+    k = ksym('KARGS')                   # another exec's arguments
+    junk = b'echo\0QQQQQQQQ\0'
+    s.zx.mem[k:k + len(junk)] = junk
+    s.zx.mem[ksym('xargc')] = 2
+    s.zx.mem[ksym('xtop')] = (k + len(junk)) & 255
+    s.zx.mem[ksym('xtop') + 1] = (k + len(junk)) >> 8
+    s.zx.tr.edges = zxrun.tape_pulses(ssx_tape('ssxargs'), s.zx.sim.registers[25] + 350000)
+    s.wait_prompt(9000)
+    scr = s.screen()
+    if 'ssx args:' not in scr or '\n  one' not in scr or '\n  two' not in scr or 'QQQ' in scr:
+        raise Fail('wrong arguments:\n' + scr)
+
+
+@test
+def vi_big_file(s):
+    """vi on a file bigger than its buffer: ':wq' must not cut it short"""
+    s.login()
+    s.sh('cat /usr/doc/zxpack /usr/doc/tar /usr/doc/more > /tmp/big', frames=60000)
+    ref = s.sh('sum /tmp/big', frames=60000)
+    s.zx.type('vi /tmp/big\n')
+    s.until('buffer full', 3000)
+    s.zx.type(':wq')
+    s.key('ENTER')
+    s.until("can't write", 3000)
+    s.zx.type(':q')
+    s.key('ENTER')
+    s.wait_prompt(3000)
+    s.expect('ls -l /tmp/big', ' 3275 ')
+    s.expect('sum /tmp/big', *ref, frames=60000)
+
+
+@test
+def beep_pitch(s):
+    """beep() at 12:34 on the status clock plays C4 then C5 (sdk float.asm)"""
+    s.login()
+    s.zx.mem[0x5C92] = 12           # tod_h, tod_m (dev.asm): past the first
+    s.zx.mem[0x5C93] = 34           # minute, BEEP used to read these bytes
+    tr = s.zx.tr
+    spk = []
+    plain = type(tr).write_port
+
+    def write_port(registers, port, value, *rest):
+        if not port & 1:
+            if (value ^ tr.outfe) & 0x10:
+                spk.append(registers[25])
+            tr.outfe = value
+        return plain(tr, registers, port, value, *rest)
+    tr.write_port = write_port
+    s.zx.sim.set_tracer(tr)
+    s.zx.type('/dev/cassette/beepck\n')
+    tr.edges = zxrun.tape_pulses(ssx_tape('beepck'), s.zx.sim.registers[25] + 350000)
+    s.until('beepck done', 6000)
+    if 'beep ok' not in s.screen():
+        raise Fail('beep failed:\n' + s.screen())
+    if s.zx.mem[0x5C92] != 12 or s.zx.mem[0x5C93] != 34:
+        raise Fail('clock bytes not put back: %d %d' % (s.zx.mem[0x5C92], s.zx.mem[0x5C93]))
+    gaps = [b - a for a, b in zip(spk, spk[1:])]
+    # half periods: C4 261.6 Hz is 6689 T-states, C5 3344; 0.1 s of each
+    # is about 51 and 104 of them (the key clicks are 540 T-states)
+    n1 = sum(1 for g in gaps if 6000 < g < 7400)
+    n2 = sum(1 for g in gaps if 3000 < g < 3700)
+    if not (46 <= n1 <= 56 and 98 <= n2 <= 110):
+        raise Fail('half periods: %d of C4, %d of C5; want about 51 and 104' % (n1, n2))
+    s.wait_prompt(3000)
 
 
 TESTS_BY_NAME = {f.__name__: f for f in TESTS}

@@ -179,8 +179,7 @@ itrunc:
         bit 3,(ix+1)            ; resident text: stays as it is
         ret nz
         push hl
-        ld l,(ix+I_DSKP)
-        ld h,(ix+I_DSKP+1)
+        call idskp
         call afree
         xor a
         ld (ix+I_DSKP),a
@@ -206,14 +205,14 @@ readi:
         ld de,(u_off)
         or a
         sbc hl,de
-        ret c
-        ret z
+        ret z                   ; at the end: 0 bytes
+        ccf
+        ret nc                  ; past the end: 0 bytes, no error
         ld de,(u_count)
         call minhlde
         ld b,h
         ld c,l
-        ld l,(ix+I_DSKP)
-        ld h,(ix+I_DSKP+1)
+        call idskp
         ld de,(u_off)
         add hl,de
         ld de,(u_base)
@@ -246,8 +245,7 @@ writei:
         ld a,EFBIG
         ret c
         push hl
-        ld l,(ix+I_DSKP)
-        ld h,(ix+I_DSKP+1)
+        call idskp
         ld bc,0
         ld a,h
         or l
@@ -264,6 +262,7 @@ writei:
         srl b
         rr c
         add hl,bc
+        jr c,.ex                ; end + end/4 overflowed
         ld bc,16
         add hl,bc
         ld b,h
@@ -285,8 +284,7 @@ writei:
 .new:   ; the old contents (the old block may have moved: reload it)
         push hl
         ex de,hl
-        ld l,(ix+I_DSKP)
-        ld h,(ix+I_DSKP+1)
+        call idskp
         push hl
         ld c,(ix+I_SIZE)
         ld b,(ix+I_SIZE+1)
@@ -321,8 +319,7 @@ writei:
         ld a,b
         or c
         jr nz,.zg
-.cp:    ld l,(ix+I_DSKP)
-        ld h,(ix+I_DSKP+1)
+.cp:    call idskp
         ld de,(u_off)
         add hl,de
         ex de,hl
@@ -435,7 +432,10 @@ namei:
         jr nz,.sl3
         inc a
 .sl3:   ld (u_nlast),a
-        ; search the directory
+        ; search the directory (an error below leaves no parent: creat,
+        ; mkdir and link must not write into the last directory searched)
+        ld hl,0FFFFh
+        ld (u_pdir),hl
         ld hl,(u_nmi)
         call iget
         ret c
@@ -695,27 +695,26 @@ fclosea:
         call fget
         pop bc
         ret c
-        bit 7,b                 ; F_DEL
-        jr nz,.del
+        ld a,(ix+I_NLKS)        ; unlinked: freed by the last close of
+        or a                    ; any descriptor
+        jr z,.del
         ; trim the file's block to its size
         call isspec
         ret z
         ld a,(ix+1)
         and 0Ch                 ; resident text, packed: leave alone
         ret nz
-        ld l,(ix+I_DSKP)
-        ld h,(ix+I_DSKP+1)
+        call idskp
         ld a,h
         or l
         ret z
         ld c,(ix+I_SIZE)
         ld b,(ix+I_SIZE+1)
         jp ashrink
-.del:   ld a,(ix+I_NLKS)
-        or a
+.del:   call ldind              ; HL = i-number
+        call isopen             ; another fsp entry still has it
         ret nz
         call itrunc
-        call ldind
         jp ifree
 
 ; fpdup: a forked child shares the open files
@@ -945,12 +944,8 @@ sysunlink:                      ; HL = name
         call iget
         dec (ix+I_NLKS)
         jp nz,sysok
-        call isopen             ; still open: delete on the last close
-        jr z,.fr
-        ex de,hl
-        set 7,(hl)
-        jp sysok
-.fr:
+        call isopen             ; still open: freed by the last close
+        jp nz,sysok
         call itrunc
         call ifree
         jp sysok

@@ -213,7 +213,7 @@ One standard Spectrum CODE pair (R1 review, item 12):
 1. `exec /dev/cassette/NAME args` (or `/dev/tap/NAME`) runs `/etc/ldx` in its place. The arguments are unchanged, so `argv[0]` is the path as typed.
 2. `ldx` opens the tape and reads headers until it finds a CODE header named NAME with parameter 2 `SS`. Data blocks and other programs are passed over; BREAK stops the search.
 3. `ldx` adds the room the arguments need to parameter 1. If that exceeds the arena's free bytes, plus the window, plus its own image, it says `not enough memory` and exits.
-4. `sys ssxload` (40) takes BC = file length and DE = total memory. From here the caller's image is given up, as at an `exec`'s point of no return:
+4. `sys ssxload` (40) takes BC = file length, DE = total memory and HL = the arguments (argv, 0-terminated, as for `exec`; `ldx` passes its own). From here the caller's image is given up, as at an `exec`'s point of no return:
    - The window is freed.
    - The SAVE block shrinks to the u-area.
    - The arena is compacted, so all its free space is one block: the image goes just above the movable blocks, and what is left stays in one piece above it, next to the window (2.2; before, holes left below a first program could keep a second one from fitting).
@@ -251,7 +251,7 @@ in the member preamble.
 | 37 | `zxpack` | HL = name → stream length (packing it); HL = 0 → HL = arena free bytes, DE = free i-nodes |
 | 38 | `ticks` | → HL = 50 Hz frame counter |
 | 39 | `screen` | HL = 1: the caller shares the screen (no status line, no cursor, the console is silent for the owners; a process that is not an owner and uses the console moves it to rows 21–22, with the status line on row 23, and sets `ttop` (5BE4h) = 21 so that owners stop drawing there) → HL = the 4 × 8 font, E = 0 if it is the first owner; HL = 0: give its share back. When the last owner gives it back, the picture stays, in white on black, and the console carries on below it. Ownership is a bit per process slot, so several programs can draw at once (`hanoi` and `queens8` each draw one half) |
-| 40 | `ssxload` | BC = SSX1 file length, DE = memory → becomes the program (§6.3) |
+| 40 | `ssxload` | BC = SSX1 file length, DE = memory, HL = argv → becomes the program (§6.3) |
 
 ## 12. Kernel budget
 

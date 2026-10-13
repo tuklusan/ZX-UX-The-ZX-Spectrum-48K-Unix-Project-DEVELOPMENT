@@ -11,6 +11,8 @@
 ; exec starts the new image with a fresh, empty ENV1.  It never points into
 ; the kernel's KARGS buffer.  There is no getenv() API (C48 Rev 0.11 does
 ; not define one); @env1 is the bootstrap storage only.
+; __c48_env1 is an internal alias at the SAME address, for native
+; process-isolation diagnostics. It does not introduce an ENV API.
 SYS     equ 6003h
         section text
         global start,@noret,@divz,@env1
@@ -33,4 +35,6 @@ start:  xor a
 @noret: ld hl,1
         jp _exit
         section bss
-@env1:  ds 1
+        global __c48_env1
+@env1:
+__c48_env1: ds 1

@@ -86,7 +86,7 @@ representations, a chained operation with fixed intermediate rounding, and
 two independent numeric-error cases. Its reference is the actual verified
 48K Spectrum ROM (SHA-256
 `d55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42`)
-executed through the checked Z80 simulator. The test reruns that ROM oracle
+executed through the checked Z80 simulator. The test reruns that ROM reference
 and checks its fixed byte results before compiling programs on the new SDK.
 It then compares actual runtime storage and error statuses using native and
 bytecode backends. This is not a comparison to ordinary IEEE host floats.

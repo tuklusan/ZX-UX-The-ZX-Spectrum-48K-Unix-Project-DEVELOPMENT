@@ -25,9 +25,9 @@
 ;             each resident-text process and loaded SSX1 programs
 ;             (arena.asm), up to the window, or through it while the
 ;             window is lent to a program (a_top)
-;  F000-FFB6  WINDOW: data/bss + stack of the resident-text process that
+;  F000-FFB8  WINDOW: data/bss + stack of the resident-text process that
 ;             owns it (UDATA .. CORETOP)
-;  FFB7-FFF3  u-area of the running process
+;  FFB9-FFF3  u-area of the running process (UASZ bytes)
 ;  FFF4-FFF6  JP isr        IM 2 with I = 39h: the vector is read from
 ;  FFFF       JR (FFF4)     the ROM's FFh filler -> FFFFh; the JR offset
 ;                           is ROM byte 0000h (F3h = -13).  I stays out
@@ -40,7 +40,8 @@ CORE    equ TRAMP-UASZ      ; u-area of the running process
 WINDOW  equ 0F000h          ; window: resident-text process images
 UDATA   equ WINDOW          ; first byte of user data
 CORETOP equ CORE            ; window top: stack and arguments below
-STKRES  equ 384             ; save space reserved for a process's stack
+STKRES  equ 384             ; most stack a program may reserve (its header's
+                            ; second word, saved with its window image)
 
 KV      equ 05B00h          ; kernel globals (printer buffer)
 KSTACK  equ 05F00h          ; kernel stack top (grows into 5CEB..)
@@ -173,7 +174,7 @@ _getpid equ 36              ; Z80 extension
 _zxpack equ 37              ; Z80 extension: HL = name (0: arena status)
 _ticks  equ 38              ; C support: HL = 50 Hz frame counter
 _screen equ 39              ; C support: HL = 1 claim (-> font), 0 release
-_ssxload equ 40             ; HL -> SST1 header, DE = memory: run it
+_ssxload equ 40             ; BC = file length, DE = memory, HL = argv
 NSYS    equ 41
 
 ; tty modes (stty word 3)

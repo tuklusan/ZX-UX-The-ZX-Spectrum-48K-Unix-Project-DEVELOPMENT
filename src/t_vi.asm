@@ -32,7 +32,7 @@ VI_LIM  equ CORETOP-750         ; keep 750 bytes for stack and arguments
 VROWS   equ 22
 
 t_vi:   db 18h,6
-        dw e_vi-t_vi, VI_BUF-UDATA, vi_m
+        dw STKRES, VI_BUF-UDATA, vi_m
 vi_m:   pop hl
         call args
         ld hl,0                 ; BREAK does not kill the editor
@@ -913,6 +913,8 @@ vload:  ld hl,VI_FN
         jr .r
 .full:  ld hl,s_full
         ld (VI_MSG),hl
+        xor a                       ; only part of it: the name goes, so
+        ld (VI_FN),a                ; :w cannot cut the file short
 .e:     ld hl,(VI_FD)
         call sc_close
         ; the text must end with a newline
@@ -962,9 +964,17 @@ vsave:  ld hl,VI_FN
         push bc
         ld hl,(VI_FD)
         call sc_write
+        pop de
+        push de
+        jr c,.wr
+        or a
+        sbc hl,de                   ; CF: written short (no space)
+.wr:    push af
         ld hl,(VI_FD)
         call sc_close
+        pop af
         pop hl                      ; "<n> chars written"
+        jr c,.err                   ; (still modified: :wq stays in vi)
         ld de,VI_CMD+1
         call fmtdec
         ld hl,s_written

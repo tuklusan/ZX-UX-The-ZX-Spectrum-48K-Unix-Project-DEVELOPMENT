@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run approved-rcc C48 ENV1/ARG1 native integration; fail closed.
 
-Designed for a clean current ZX-UX checkout with reviewed crt0 BSS patch
+Designed to run on a clean current ZX-UX checkout with reviewed crt0 BSS patch
 applied. Requires fresh build/test.z80 (boot from checked current tape),
 checked native SDK, and installed SkoolKit/48K ROM. Records actual test
 executions, never source-only claims. No private checker (local-only gate).
@@ -22,7 +22,7 @@ FIXTURE = ROOT / 'tests/c48/native_env1_storage_lifetime.c'
 CRT = ROOT / 'sdk/lib/crt0.asm'
 SSX_NAME = 'env48'
 ROM_HASH = 'd55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42'
-BASE_CRT_GIT_BLOB = '9e7a34eea922b1e15d3f7a824bcc245873225f8e'
+BASE_CRT_GIT_BLOB = 'dd100a8ce86ea9f5681dd073088df05f26035276'
 MAX_NATIVE_RAM = 14000
 TAP2SNA_SHA256 = 'c754087b68897780211e60d062da4831f04e83a72dc15d88a6dab436e2150e8d'
 ARG = '/dev/cassette/' + SSX_NAME
@@ -58,9 +58,9 @@ def assess_sources():
            'SDK, fixture or v1 boot inputs missing; no native proof')
     candidate = CRT.read_text()
     ensure(candidate.count('__c48_env1: ds 1') == 1 and
-           'ld hl,__c48_env1' in candidate and
-           '        section bss\n        global __c48_env1' in candidate,
-           'reviewed ENV1 allocation absent')
+           'ld (@env1),a' in candidate and
+           '        section bss\n        global __c48_env1\n@env1:\n__c48_env1: ds 1' in candidate,
+           'current process-owned ENV1 bootstrap or exact diagnostic alias absent')
     before = subprocess.check_output(['git', 'show', 'HEAD:sdk/lib/crt0.asm'], cwd=ROOT)
     expected = hashlib.sha1(b'blob ' + str(len(before)).encode() + b'\0' + before).hexdigest()
     ensure(expected == BASE_CRT_GIT_BLOB or before == CRT.read_bytes(),
@@ -88,8 +88,10 @@ def archive_env1_symbol(src, output):
     actual = output.read_bytes()
     ensure(actual == native, 'CLI build and independent SDK link differ')
     h = rld.parse_ssx(actual)
-    ensure('start' in gaddr and '__c48_env1' in gaddr,
-           'ENV1 symbol unresolved in native image')
+    ensure('start' in gaddr and '__c48_env1' in gaddr and '@env1' in gaddr,
+           'ENV1 bootstrap or diagnostic symbol unresolved in native image')
+    ensure(gaddr['@env1'] == gaddr['__c48_env1'],
+           'diagnostic ENV1 symbol does not alias the bootstrap byte')
     offset, reloc = gaddr['__c48_env1']
     ensure(reloc and len(h['image']) <= offset < len(h['image']) + h['bss'],
            'ENV1 not in separately zero-initialized BSS')
@@ -224,6 +226,8 @@ def simultaneous_processes(snapshot, blocks, env_offset):
 
 def fresh_snapshot(tap2sna):
     """Always create a new 48K ROM tape-load snapshot, not a cached .z80."""
+    from skoolkit import ROM48
+    ensure(sha(ROM48) == ROM_HASH, '48K ROM checksum differs')
     p = Path(tap2sna).resolve()
     ensure(p.is_file() and not p.is_symlink() and ROOT not in p.parents,
            'checked tap2sna must be a real tool outside Git')
@@ -238,6 +242,7 @@ def fresh_snapshot(tap2sna):
     ensure(out.is_file() and out.stat().st_size >= 1000,
            'new tape-driven native snapshot not produced')
     return out, {'tap2sna_sha256':sha(p), 'snapshot_sha256':sha(out),
+                 'rom_sha256':sha(ROM48),
                  'tape_boot_sha256':sha(ROOT/'build/ZX-UX.tzx'),
                  'command_log_sha256':hashlib.sha256(command.encode()).hexdigest()}
 

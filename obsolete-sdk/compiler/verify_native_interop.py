@@ -57,13 +57,13 @@ def main() -> int:
     args = parser.parse_args()
     root = args.native_root.resolve()
 
-    obj_oracle = load_module(root / "v1/tools-host/inspect-obj/inspect.py", "zxux_obj_oracle")
-    mex_oracle = load_module(root / "v1/tools-host/inspect-mex/inspect.py", "zxux_mex_oracle")
+    obj_reference = load_module(root / "v1/tools-host/inspect-obj/inspect.py", "zxux_obj_reference")
+    mex_reference = load_module(root / "v1/tools-host/inspect-mex/inspect.py", "zxux_mex_reference")
     tape_tool = load_module(root / "v1/tools-host/maketap/maketap.py", "zxux_tape_tool")
     sys.path.insert(0, str(root / "v1/tools-host/test-driver"))
-    tape_oracle = load_module(
+    tape_reference = load_module(
         root / "v1/tools-host/test-driver/phase5_roundtrip.py",
-        "zxux_tape_oracle",
+        "zxux_tape_reference",
     )
 
     sources = (
@@ -86,16 +86,16 @@ def main() -> int:
             name = f"P{index + 1}"
             tap_bytes = build_bin_tap(name, mex_bytes)
 
-            obj_info = obj_oracle.inspect_bytes(obj_bytes)
-            mex_info = mex_oracle.inspect_bytes(mex_bytes, base=0x6000)
-            decoded = tape_oracle.parse_stream(tape_tool, tap_bytes)
+            obj_info = obj_reference.inspect_bytes(obj_bytes)
+            mex_info = mex_reference.inspect_bytes(mex_bytes, base=0x6000)
+            decoded = tape_reference.parse_stream(tape_tool, tap_bytes)
 
-            require(obj_info["magic"] == "OBJ1", "native OBJ1 oracle rejected identity")
-            require(obj_info["stored_length"] == len(obj_bytes), "native OBJ1 oracle length mismatch")
-            require(mex_info["magic"] == "MEX1", "native MEX1 oracle rejected identity")
-            require(mex_info["stored_length"] == len(mex_bytes), "native MEX1 oracle length mismatch")
+            require(obj_info["magic"] == "OBJ1", "native OBJ1 reference rejected identity")
+            require(obj_info["stored_length"] == len(obj_bytes), "native OBJ1 reference length mismatch")
+            require(mex_info["magic"] == "MEX1", "native MEX1 reference rejected identity")
+            require(mex_info["stored_length"] == len(mex_bytes), "native MEX1 reference length mismatch")
             require(decoded == [(name, tape_tool.M48O_BIN, tape_tool.DIR_BIN, mex_bytes)],
-                    "native cassette oracle payload mismatch")
+                    "native cassette reference payload mismatch")
 
             (temp / f"{name}.obj").write_bytes(obj_bytes)
             (temp / f"{name}.mex").write_bytes(mex_bytes)

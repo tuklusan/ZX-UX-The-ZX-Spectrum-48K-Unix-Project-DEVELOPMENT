@@ -104,35 +104,47 @@ def main(argv):
     i = 0
     while i < len(argv):
         a = argv[i]
-        if a == '-o':
-            out = argv[i + 1]
+        if a in ('-o', '--max', '--stack', '--heap', '--udgs'):
+            if i + 1 >= len(argv):
+                print('rcc: missing value for %s' % a, file=sys.stderr)
+                return 2
+            val = argv[i + 1]
+            if a == '-o':
+                out = val
+            else:
+                try:
+                    num = int(val, 0)
+                except ValueError:
+                    print('rcc: invalid value for %s: %s' % (a, val), file=sys.stderr)
+                    return 2
+                if num < 0:
+                    print('rcc: negative value for %s' % a, file=sys.stderr)
+                    return 2
+                if a == '--max':
+                    limit = num
+                elif a == '--stack':
+                    stack = num
+                elif a == '--heap':
+                    heap = num
+                else:
+                    if not 4 <= num <= 32:
+                        print('rcc: --udgs takes 4 to 32', file=sys.stderr)
+                        return 2
+                    udgs = num
             i += 2
             continue
-        if a == '-S':
-            asm_only = True
-        elif a == '-c':
-            obj_only = True
-        elif a == '--lib':
-            lib = True
-        elif a == '--bytecode':
-            mode = 'all'
-        elif a == '--native':
-            mode = 'none'
-        elif a == '--max':
-            limit = int(argv[i + 1], 0)     # 0: no limit
-            i += 1
-        elif a == '--stack':
-            stack = int(argv[i + 1], 0)
-            i += 1
-        elif a == '--heap':
-            heap = int(argv[i + 1], 0)
-            i += 1
-        elif a == '--udgs':
-            udgs = int(argv[i + 1], 0)
-            if not 4 <= udgs <= 32:
-                print('rcc: --udgs takes 4 to 32', file=sys.stderr)
+        if a in ('-S', '-c'):
+            if (a == '-S' and obj_only) or (a == '-c' and asm_only):
+                print('rcc: conflicting output modes', file=sys.stderr)
                 return 2
-            i += 1
+            asm_only |= a == '-S'
+            obj_only |= a == '-c'
+        elif a in ('--bytecode', '--native'):
+            selected = 'all' if a == '--bytecode' else 'none'
+            if mode is not None and mode != selected:
+                print('rcc: conflicting backends', file=sys.stderr)
+                return 2
+            mode = selected
         else:
             files.append(a)
         i += 1

@@ -28,8 +28,8 @@
 ; ---------------------------------------------------------------------
 ;  boot  (UNIX v1: u0 'kernel_init')
 ; ---------------------------------------------------------------------
-; default time: Wed Nov  3 1971 00:00:00 (UNIX v1 manual date)
-DEFTIME equ 671*86400
+; default time: Fri Apr 23 1982 00:00:00, the ZX Spectrum's release
+DEFTIME equ 4495*86400
 
 ; --- initialize u-area of the process in core (fresh process 1)
 uinit:
@@ -71,8 +71,8 @@ initarg_e:
 ; ---------------------------------------------------------------------
 panic:
         push hl
-        ld a,1
-        ld (kcon),a
+        xor a                   ; a screen owner must not hide the panic
+        ld (scrown),a
         ld hl,msg_panic
         call kputs
         pop hl
@@ -89,8 +89,7 @@ rom_error:                      ; RST 8 from a ROM routine
         ld a,(tapbusy)
         or a
         jr z,.p
-        ld sp,(tapsp)           ; BREAK during tape i/o
-        jp tapfail
+        jp tapend               ; BREAK during tape i/o (NC: failed)
 .p:     ld sp,KSTACK
         ld hl,msg_romerr
         jr panic
@@ -105,6 +104,8 @@ isr:
         push de
         push hl
         push ix
+        push iy
+        ld iy,05C3Ah            ; ROM KEYBOARD / KEY-INPUT need it
         exx
         ex af,af'
         push af
@@ -135,10 +136,9 @@ isr:
         call c,ttrawin
         ; BREAK (CAPS SHIFT + SPACE) = interrupt (v1 DEL)
         call ROM_BREAKKEY       ; NC = pressed
-        ld a,0
-        jr c,.b1
-        inc a
-.b1:    ld hl,brkst
+        sbc a,a                 ; FF released / 00 pressed
+        inc a                   ; 00 released / 01 pressed
+        ld hl,brkst
         cp (hl)
         ld (hl),a
         jr z,.b2
@@ -215,6 +215,7 @@ isr:
         pop af
         ex af,af'
         exx
+        pop iy
         pop ix
         pop hl
         pop de
@@ -297,8 +298,8 @@ stdraw:
         ld c,a                  ; slot: a 12 column cell each
 .p:     push bc
         ld a,c
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld e,(hl)
         ld a,(cur)              ; the running process in inverse
         cp c
@@ -380,8 +381,8 @@ stc:    push hl
 ; ---------------------------------------------------------------------
 ; isrun: A = C = slot -> Z if runnable
 isrun:
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld a,(hl)
         cp SRUN
         ret nz
@@ -433,10 +434,11 @@ swtch:
         push hl
         ld a,(inkern)
         push af
-        ld (tmpsp),sp
+        ld hl,0
+        add hl,sp
+        ex de,hl
         ld sp,KSTACK
         ld a,(cur)
-        ld de,(tmpsp)
         ld hl,p_sp
         call setw2
         call kmode
@@ -507,7 +509,6 @@ swtch:
 ; ---------------------------------------------------------------------
 
 ; imgext: A = slot -> sw_lo = break - UDATA, sw_hi = CORETOP - sp,
-;   sw_n = HL = UASZ + sw_lo + STKRES  (its SAVE block size)
 imgext: push af
         ld hl,p_brk
         call getw2
@@ -523,10 +524,6 @@ imgext: push af
         or a
         sbc hl,de
         ld (sw_hi),hl
-        ld hl,(sw_lo)
-        ld de,UASZ+STKRES
-        add hl,de
-        ld (sw_n),hl
         ret
 
 ; ldirz: LDIR that does nothing for BC = 0
@@ -549,12 +546,25 @@ savead: ld hl,p_save
 ; wsave: A = slot (the window's owner): window image -> its SAVE
 wsave:  push af
         call imgext
-        ld hl,(sw_hi)
-        ld de,STKRES+1
-        call cphlde
-        ld hl,msg_stk
-        jp nc,panic
         pop af
+        push af
+        call savead
+        call acap               ; BC = its SAVE's size
+        ld hl,-UASZ
+        add hl,bc
+        ld de,(sw_lo)
+        or a
+        sbc hl,de               ; HL = the room left for the stack
+        ld de,(sw_hi)
+        call cphlde
+        jr nc,.ok
+        ld (sw_hi),hl           ; too deep for its SAVE: keep the newest
+        pop af                  ; bytes that fit, it dies when it resumes
+        push af
+        ld hl,p_sig
+        call addhla
+        ld (hl),2
+.ok:    pop af
         push af
         call savead
         ld hl,UDATA
@@ -566,7 +576,6 @@ wsave:  push af
         call getw2
         pop de
         jr wload.xj0_5  ; (shared tail)
-msg_stk: db "stack",0
 
 ; wload: A = slot: its SAVE -> the window
 wload:  push af
@@ -591,8 +600,8 @@ wload:  push af
 ; swapout: A = slot leaving the processor -> its u-area into its SAVE
 swapout:
         ld c,a
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld a,(hl)
         or a
         ret z
@@ -625,7 +634,6 @@ swapin: ld c,a
         push bc
         call wload
         pop bc
-        jr .ua
 .ua:    ld a,c
         ld hl,p_save
         call getw2
@@ -659,8 +667,8 @@ ksleep:
         call addhla
         ld (hl),e
         ld a,(cur)
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld (hl),SSLEEP
         call setdirty
         call swtch
@@ -680,8 +688,8 @@ kwakeup:
         ret
 ; wakeslot: A = slot, C = channel
 wakeslot:
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld e,a
         ld a,(hl)
         cp SSLEEP
@@ -735,6 +743,8 @@ sigck:
 ; ---------------------------------------------------------------------
 sysent:
         push ix
+        push iy
+        ld iy,05C3Ah            ; ROM routines and RST 8 rely on it
         push af
         call kmode
         pop af
@@ -774,6 +784,7 @@ sysx:
         xor a
         ld (inkern),a
         pop af
+        pop iy
         pop ix
         ei
         ret
@@ -781,41 +792,35 @@ sysx:
 systab:
         dw sysrele, sysexit, sysfork, sysread, syswrite, sysopen
         dw sysclose, syswait, syscreat, syslink, sysunlink, sysexec
-        dw syschdir, systimec, sysmkdir, syschmod, sysemt, sysbreak
-        dw sysstat, sysseek, systell, badsys, badsys, sysemt
-        dw sysgetuid, sysstime, sysemt, sysintr, sysfstat, sysemt
-        dw sysmdate, sysstty, sysgtty, sysilgins, syssleep, syskill
+        dw syschdir, systimec, sysmkdir, syschmod, sysok, sysbreak
+        dw sysstat, sysseek, systell, badsys, badsys, sysok
+        dw sysgetuid, sysstime, sysok, sysintr, sysfstat, sysok
+        dw sysmdate, sysstty, sysgtty, sysok, syssleep, syskill
         dw sysgetpid, syszx, systicks, sysscreen, sysssxl
 
 ; ---------------------------------------------------------------------
 ;  process system calls  (u1/u2)
 ; ---------------------------------------------------------------------
 sysrele:                        ; give up the processor
-        di
-        call othrun
-        call z,swtch
-        ei
+        call preempt
         jr sysok
 
-sysemt:
-sysilgins:
-        jr sysok
 
 sysgetpid:
-        call mypid
-        jp sysok
-
+        ld hl,sysok
+        push hl
 mypid:  ld a,(cur)
         ld hl,p_pid
         jp getw2
 
 sysfork:
-        di
+        ; (no DI: other processes cannot run while we are in the kernel,
+        ;  and forkmem may pack files for a long time)
         ; a free slot, or the zombie of a child nobody waited for
         ld b,0
 .f:     ld a,b
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld a,(hl)
         or a
         jr z,.got
@@ -825,8 +830,8 @@ sysfork:
         ex de,hl
         ld b,0
 .z:     ld a,b
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld a,(hl)
         cp SZOMB
         jr nz,.zn
@@ -914,8 +919,8 @@ sysfork:
         ex af,af'
         ld a,1
         push af                 ; inkern = 1
-        ld (tmpsp),sp
-        ld hl,(tmpsp)
+        ld hl,0
+        add hl,sp
         ex de,hl
         ld a,c
         ld hl,p_sp
@@ -929,8 +934,8 @@ sysfork:
         add hl,sp
         ld sp,hl
         ld a,c
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld (hl),SRUN
         call setdirty
         ei
@@ -944,13 +949,10 @@ forkret:                        ; first run of the child
 forkmem:
         ld a,c
         ld (chslot),a
-        call isssx
+        call isssx              ; HL = this process's SAVE
         scf
         ret nz
-        ld a,(cur)
-        call imgext
-        ld b,h
-        ld c,l
+        call acap               ; the child's SAVE: the same size
         ld a,K_SAVE
         call aalloc
         ret c
@@ -1017,11 +1019,8 @@ doexit:                         ; HL = status
         ld a,h
         or l
         jr nz,.z
-        ld hl,UDATA
-        ld a,(cur)
-        push hl
-        ld hl,p_brk
-        pop de
+        ld de,UDATA
+        call curbrk
         call setw2
         call uinit
         jp kinit
@@ -1054,8 +1053,8 @@ doexit:                         ; HL = status
         call curbrk
         call setw2
         ld a,(cur)
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld (hl),SZOMB
         ld a,WC_WAIT
         call kwakeup
@@ -1069,8 +1068,8 @@ syswait:
         ex de,hl
         ld bc,0                 ; B = slot, C = live children
 .s:     ld a,b
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld a,(hl)
         or a
         jr z,.n
@@ -1098,8 +1097,8 @@ syswait:
         call sigck
         jr .l
 .reap:  ld a,b
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld (hl),SFREE
         call setdirty
         ld a,b
@@ -1119,8 +1118,8 @@ syskill:                        ; HL = pid
         ex de,hl
         ld b,0
 .s:     ld a,b
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld a,(hl)
         cp SRUN
         jr c,.n
@@ -1142,8 +1141,8 @@ syskill:                        ; HL = pid
         call addhla
         ld (hl),2               ; 2 = kill (cannot be ignored)
         ld a,b
-        ld hl,p_stat
-        call addhla
+        ld l,a                  ; p_stat is page aligned (KV)
+        ld h,p_stat >> 8
         ld (hl),SRUN            ; wake it so it dies
 .xj0_10:
         ei
@@ -1236,12 +1235,20 @@ sysbreak:                       ; HL = new break
         call cphlde
         jr c,.bad
         ; a window image that big must fit its SAVE block
-        push hl
-        ld de,UDATA-UASZ-STKRES
+        push hl                 ; SAVE size needed: as now + (new - old
+        ex de,hl                ; break), so the stack reserve is kept
+        call curbrk
+        call getw2
+        ex de,hl
         or a
         sbc hl,de
+        push hl
+        call cursave
+        call acap
+        pop hl
+        add hl,bc
         ld b,h
-        ld c,l                  ; SAVE size needed
+        ld c,l
         call savefit
         jr c,.bad1
         pop de
@@ -1259,16 +1266,24 @@ sysbreak:                       ; HL = new break
 ; ---------------------------------------------------------------------
 sysexec:                        ; HL = path, DE = argv (0-terminated)
         ld (u_tmp),hl
-        ; copy arguments into the kernel argument buffer
-        ld bc,KARGS
+        call kargv
+        ld a,EINVAL
+        jp c,syserr
+        ld hl,(u_tmp)
+        call kexec
+        jp syserr
+
+; kargv: DE = argv (0-terminated; 0: argv[0] = the path at HL) -> the
+;   strings in KARGS, xargc, xtop.  CF if too many or too long
+kargv:  ld bc,KARGS
         xor a
         ld (xargc),a
         ld a,d
         or e
         jr nz,.a0
-        ; no argv: argv[0] = path
-        ex de,hl
+        ex de,hl                ; no argv: argv[0] = path
         call .str
+        ret c
         jr .a9
 .a0:    ld a,(de)
         ld l,a
@@ -1282,14 +1297,10 @@ sysexec:                        ; HL = path, DE = argv (0-terminated)
         ex de,hl
         call .str
         pop de
-        jr c,.big
+        ret c
         jr .a0
-.a9:    ld (xtop),bc
-        ld hl,(u_tmp)
-        call kexec
-        jp syserr
-.big:   ld a,EINVAL
-        jp syserr
+.a9:    ld (xtop),bc            ; (NC)
+        ret
 ; copy string DE -> (BC), count it; CF if too many / too long
 .str:   ld a,(xargc)
         cp 24
@@ -1297,21 +1308,16 @@ sysexec:                        ; HL = path, DE = argv (0-terminated)
         ret c
         inc a
         ld (xargc),a
-.s1:    ld a,(de)
+.s1:    ld hl,KARGS+KARGSZ-1    ; room checked before the store: the
+        or a                    ; byte after KARGS is the kernel's
+        sbc hl,bc
+        ret c
+        ld a,(de)
         ld (bc),a
         inc de
         inc bc
-        push af
-        ld hl,KARGS+KARGSZ
-        or a
-        sbc hl,bc
-        jr c,.ov
-        pop af
         or a
         jr nz,.s1
-        ret
-.ov:    pop af
-        scf
         ret
 
 ; kexec: HL = path; KARGS/xargc/xtop hold the arguments.
@@ -1336,8 +1342,8 @@ kexec:
         ld a,(ix+0)
         and IEXEC
         jr z,.nox
-        ld l,(ix+I_DSKP)        ; its 8-byte a.out style header:
-        ld h,(ix+I_DSKP+1)      ; jr .+8, text size, bss size, entry
+        call idskp              ; its 8-byte a.out style header:
+                                ; jr .+8, stack reserve, bss size, entry
         ld de,xhdr
         ld bc,8
         ldir
@@ -1367,10 +1373,12 @@ kexec:
         pop hl
         jr .big
 .wok:   pop hl
-        ; a SAVE block for an image that big
-        ld de,UDATA-UASZ-STKRES
+        ; a SAVE block: u-area, data and bss, the program's stack reserve
+        ld de,UDATA-UASZ
         or a
         sbc hl,de
+        ld de,(xhdr+2)
+        add hl,de
         ld b,h
         ld c,l
         call savefit
@@ -1564,12 +1572,12 @@ exname: ld a,(u_intr)
         inc hl
         inc de
         djnz .n1
-        jp setdirty
+        jr .n3
 .n2:    ld a,' '
         ld (de),a
         inc de
         djnz .n2
-        jp setdirty
+.n3:    jp setdirty
 
 ; tapnam: HL = path -> Z, HL = the name if it is /dev/cassette/NAME or
 ;   /dev/tap/NAME
@@ -1606,8 +1614,9 @@ ks_ldx: db "/etc/ldx",0
 ;  runs in place of /dev/cassette/NAME (kexec); it finds NAME's header
 ;  on the tape (a CODE header whose second parameter is 'SS', the first
 ;  the memory the program needs) and makes this call with BC = the
-;  length of the SSX1 file (the data block that follows) and DE = the
-;  bytes of memory for the program and its arguments.  The caller's image is given up at once (as an exec), so
+;  length of the SSX1 file (the data block that follows), DE = the
+;  bytes of memory for the program and its arguments and HL = the
+;  arguments (argv, 0-terminated, as for exec).  The caller's image is given up at once (as an exec), so
 ;  a program that cannot be loaded ends the process with status 1.  If
 ;  the arena cannot hold it, the window is lent to it: resident-text
 ;  processes wait until it ends.  (SPEC-ELASTIC-R2 section 6.)
@@ -1617,8 +1626,21 @@ KC_TOT  equ xhdr+2              ; bytes of memory: image .. arguments
 KC_IMG  equ xhdr+4              ; the IMAGE block
 KC_F    equ xhdr+6              ; the file, at the top of the block
 sysssxl:
+        push hl                 ; argv (isssx returns HL = the SAVE)
+        call isssx              ; only a resident caller (/etc/ldx)
+        ld a,EINVAL
+        jp nz,syserr
+        ld h,d                  ; the file must fit the memory asked for
+        ld l,e
+        sbc hl,bc               ; (CF clear: isssx ends with OR)
+        pop hl
+        jp c,syserr
         ld (KC_TOT),de
         ld (KC_ENT),bc
+        ex de,hl                ; the caller's argv, again: KARGS may hold
+        call kargv              ; another process's exec arguments by now
+        ld a,EINVAL
+        jp c,syserr
         ; ---- point of no return: the caller's image goes
         di
         ld sp,KSTACK
@@ -1629,6 +1651,10 @@ sysssxl:
         call cursave            ; the SAVE keeps just the u-area
         ld bc,UASZ
         call ashrink
+        ld hl,(wlend)           ; window lent already: no second program
+        ld a,h                  ; may be placed in it (exec could not
+        or l                    ; take it back)
+        jr nz,.bad
         call acompact           ; all free space in one block: the image
         ld bc,(KC_TOT)          ; goes just above the movable ones
         push bc
@@ -1636,10 +1662,9 @@ sysssxl:
         call aalloc
         pop bc
         jr nc,.img
-        ld hl,(wlend)           ; no room: lend it the window
-        ld a,h
-        or l
-        jr nz,.bad
+        ld a,(u_intr)           ; no room: lend it the window - not to a
+        or a                    ; program BREAK cannot stop (background)
+        jr z,.bad
         push bc
         call lend
         pop bc
@@ -1725,6 +1750,11 @@ sysssxl:
         inc d
 .p:     push hl
         push de
+        ld hl,(u_tmp2)          ; the patched word must lie in the image
+        dec hl
+        call cphlde             ; (size-1) - offset
+        jp c,.bad
+        jp z,.bad
         ld hl,(KC_IMG)
         add hl,de
         ld de,(KC_IMG)
@@ -1812,6 +1842,10 @@ setdirty:
 curbrk: ld a,(cur)
         ld hl,p_brk
         ret
+; idskp: IX = i-node -> HL = its block (i.dskp)
+idskp:  ld l,(ix+I_DSKP)
+        ld h,(ix+I_DSKP+1)
+        ret
 ; isize: IX = i-node -> HL = its size
 isize:  ld l,(ix+I_SIZE)
         ld h,(ix+I_SIZE+1)
@@ -1885,15 +1919,6 @@ FONTEND:
 ; the resident programs: text address, size, extra mode bits (build.py)
 PTAB:   include "ptab.inc"
 
-; Startup messages live in resident user text, outside the 8 KB kernel and
-; outside the 256-byte boot code / zxpack model work area.
-msg_boot:
-        db 10,"ZX-UX UNIX v1 48K ZX Spectrum Z80 3.5Mhz",10
-        db 127," 2006 SANYALnet Labs",10
-        db "ZX-UX v1 kernel "
-        include "../build/bootinfo.inc"
-msg_ok: db "ok",10,0
-msg_nofs: db "no root fs",0
 utext_end:
 
 ; ---------------------------------------------------------------------
@@ -1912,6 +1937,10 @@ boot:
         ld bc,255
         ld (hl),0
         ldir
+        ld hl,MEMBOT            ; kernel scratch in MEMBOT: BASIC's
+        ld b,15                 ; calculator left values there
+        xor a
+        call zfill
         ; IM 2: vector FFFFh from the ROM, JR at FFFF -> JP isr at FFF4
         ld a,0C3h
         ld (TRAMP),a
@@ -1975,12 +2004,22 @@ boot:
         call uinit
         ei
         jp kinit                ; exec /etc/init
+; Startup messages: printed once, so they live in the boot area too
+msg_boot:
+        db 10,"ZX-UX UNIX v1 48K ZX Spectrum Z80 3.5Mhz",10
+        db 127," 2026 SANYALnet Labs",10
+        db "ZX-UX v1 kernel "
+        include "../build/bootinfo.inc"
+msg_ok: db "ok",10,0
+msg_nofs: db "no root fs",0
 
 bootend:
-        ASSERT bootend - ZXW <= ZXWSZ
 
-; the i-node table and the arena follow, up to the window
-ITAB    equ ZXW + ZXWSZ
+; the i-node table and the arena follow, up to the window.  The boot area
+; is ZXWSZ bytes, or longer if the boot code and messages need it (true
+; is -1 in sjasmplus expressions)
+ZXEXTRA equ -((bootend - ZXW > ZXWSZ) * (bootend - ZXW - ZXWSZ))
+ITAB    equ ZXW + ZXWSZ + ZXEXTRA
 AR0     equ ITAB + NINODE*INOSZ
 
         SAVEBIN "unix.bin", KBASE, bootend-KBASE
