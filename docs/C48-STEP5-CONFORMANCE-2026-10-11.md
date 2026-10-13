@@ -9,8 +9,8 @@ Run with the checked independent external toolchain, after building `sdk/lib/lib
 
 ```
 python3 tests/c48/conformance.py --backend both --report build/logs/c48-conformance.json
-python3 sdk/tests/oracle.py --native
-python3 sdk/tests/oracle.py --bytecode
+python3 sdk/tests/vm_reference.py --native
+python3 sdk/tests/vm_reference.py --bytecode
 ```
 
 The new standalone verifier has 252 source cases, with 56 native/bytecode cases executed twice. The October 11 candidate generated 308 PASS executions, zero FAIL, zero ERROR. It indexes 759 prose entries under 103 numbered specification sections and seven appendices. Only 106 of these entries had direct linked test assertions; 653 remain unexercised. An EXERCISED paragraph only means a specific linked assertion passed; it is not proof of all duties in that paragraph. The conservative required/undefined classification in `tests/c48/traceability.json` requires individual review. No language extensions are permitted by section 81. Missing coverage, float golden bytes, diagnostics precision, runtime libraries, and resource boundaries remain open.

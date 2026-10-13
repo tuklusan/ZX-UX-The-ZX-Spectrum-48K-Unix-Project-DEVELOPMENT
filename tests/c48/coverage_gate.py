@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SPEC = ROOT / 'docs' / '04-C48 Language Specification Rev 0.11.docx'
 TRACE = Path(__file__).with_name('traceability.json')
 REVIEW = Path(__file__).with_name('original_220_dispositions.csv')
-REVIEW_SHA256 = 'b6d38da04fa9ea02a5e88ce268cd7dc23620e94d6cdb104026c526e345361592'
+REVIEW_SHA256 = '5c20f7503d5c64e849bc7484e6cc8c557be7b317d6635adca735bbb66ab2921d'
 REVIEW_KIND_SHA256 = '14f550d59006895eddbd43fc6b5e544e81e91caa96e97f8fdfea39ffdbaf6c4a'
 TARGET_PARAGRAPHS = frozenset((600, 608, 613, 615, 622, 625, 626, 751,
                                753, 759, 770, 776, 779, 924, 981, 982,

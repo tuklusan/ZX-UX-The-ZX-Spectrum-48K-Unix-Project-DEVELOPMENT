@@ -46,6 +46,7 @@ class NativeProofChecks(unittest.TestCase):
                 'code':24,'bss':3,'env1_bss_offset':24,'native_required_bytes':8000,
                 'selected_archive_members':['crt0']}
         snapshot = {'tap2sna_sha256':gate.TAP2SNA_SHA256,
+                    'rom_sha256':gate.ROM_SHA256,
                     'tape_boot_sha256':source['files']['build/ZX-UX.tzx'],
                     'snapshot_sha256':sha((self.root/'build/c48-env1/native-current-tape.z80').read_bytes())}
         records = []
@@ -148,6 +149,9 @@ class NativeProofChecks(unittest.TestCase):
 
     def test_old_tape_loader_rejected(self):
         x=copy.deepcopy(self.proof);x['native_snapshot']['tap2sna_sha256']='0'*64;self.rejected(x)
+    def test_wrong_rom_rejected(self):
+        x=copy.deepcopy(self.proof);x['native_snapshot']['rom_sha256']='0'*64;self.rejected(x)
+
 
     def test_bad_screenshot_bytes_rejected(self):
         self.write('build/c48-env1/proof/concurrent.png',b'not a PNG');self.rejected(self.proof)

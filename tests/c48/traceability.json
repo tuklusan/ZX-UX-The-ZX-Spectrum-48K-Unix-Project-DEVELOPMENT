@@ -1,5 +1,5 @@
 {
-  "spec_sha256": "6368abb4126c01f598f4b533a4e2a0a46a7ce4790cce02d3decbfba59e150d7e",
+  "spec_sha256": "0fa74eb904fce98bd095a2f6d8f4ef9b5bde1b082c5f89692e13e7a04f176f13",
   "format_version": 1,
   "description": "Each prose clause individually traced; no section-level pass inference.",
   "sections": [
@@ -5365,8 +5365,8 @@
       "section_title": "84. Host floating execution",
       "classification": "required",
       "style": "First Paragraph",
-      "text_prefix": "A Windows implementation MUST NOT use ordinary IEEE host floating point as its conformance oracle.",
-      "text_sha256": "46fca3f4ff5e8a9b7b439f0cdd9c3e599d3e5f623a3b6ea96311ec971099d183"
+      "text_prefix": "A Windows implementation MUST NOT use ordinary IEEE host floating point as its conformance reference.",
+      "text_sha256": "f5b3409247d885ef5bf0c4c1c4427d583783a008d67f39d0a0d5a1928370dafb"
     },
     {
       "paragraph_index": 807,
@@ -5383,8 +5383,8 @@
       "section_title": "84. Host floating execution",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "The canonical 48K ROM services are the executable oracle for parsing, arithmetic, comparison, transcendental operations, formatting, and domain/range behavior. A host emulator or mathematical reimplem",
-      "text_sha256": "a544dcd8aa5bafbbbe15a997a4cca5c35e11463cb03cb117abb5651e619a017f"
+      "text_prefix": "The canonical 48K ROM services are the executable reference for parsing, arithmetic, comparison, transcendental operations, formatting, and domain/range behavior. A host emulator or mathematical reimplem",
+      "text_sha256": "9e4a2cbe23b455a76a1a043bed3d6c3ab9ac66ee88b732184123d4cb57c69bfd"
     },
     {
       "paragraph_index": 809,

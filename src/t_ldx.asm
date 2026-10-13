@@ -15,7 +15,7 @@ LX_NM   equ TV+19               ; the name looked for
 LX_END  equ TV+21
 
 t_ldx:  db 18h,6
-        dw e_ldx-t_ldx, LX_END-UDATA, ldx_m
+        dw STKRES, LX_END-UDATA, ldx_m
 ldx_m:  pop hl
         call args
         xor a
@@ -87,6 +87,7 @@ ldx_m:  pop hl
         jr c,.err
         ld de,(LX_NM)           ; the memory
         ld bc,(LX_H+11)         ; the file's length
+        ld hl,(U_ARGV)          ; and our arguments, for the program
         ld a,_ssxload
         call SYS                ; returns only if it was refused
 .ioe:   ld de,s_lxio

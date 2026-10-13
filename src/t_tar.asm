@@ -45,7 +45,7 @@ TPBSZ   equ 512
 PRE     equ 11                  ; preamble before the path
 
 t_tar:  db 18h,6
-        dw e_tar-t_tar, TP_B+TPBSZ-UDATA, tar_m
+        dw STKRES, TP_B+TPBSZ-UDATA, tar_m
 tar_m:  pop hl
         call args
         ld hl,TP_LB             ; no label: any archive
@@ -757,10 +757,10 @@ tpadopt:
         ld bc,1
         call .w
         ld de,4                 ; size
-        ld c,2
+        ld bc,2
         call .w
         ld de,30                ; stored length
-        ld c,2
+        ld bc,2
 ; .w: i-node bytes DE.., BC of them, from the stat buffer
 .w:     push bc
         push de

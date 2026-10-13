@@ -88,7 +88,7 @@ class FakeSession:
     def wait_prompt(self,frames):pass
 
 
-class ConcurrentOracleChecks(unittest.TestCase):
+class ConcurrentReferenceChecks(unittest.TestCase):
     def run_case(self,valid):
         fake=types.ModuleType('suite')
         fake.Session=lambda snap:FakeSession(snap,valid)
@@ -121,7 +121,7 @@ class FakeSequentialSession:
         return 'C48-ENV1-FAIL-ARGV' if self.broken else 'C48-ENV1-OK'
 
 
-class SequentialOracleChecks(unittest.TestCase):
+class SequentialReferenceChecks(unittest.TestCase):
     def run_case(self, broken=False, free=None):
         fake=types.ModuleType('suite')
         fake.Session=lambda snap:FakeSequentialSession(snap,broken)

@@ -652,10 +652,10 @@ class C48VM:
         if not isinstance(f,Float5):raise RuntimeC48Error("float argument required")
         return f
     def _math1(self,name,a):
-        if not self.approximate_rom_math:raise RuntimeC48Error(f"{name} requires --allow-approx-rom-math; exact ROM oracle unavailable")
+        if not self.approximate_rom_math:raise RuntimeC48Error(f"{name} requires --allow-approx-rom-math; exact ROM reference unavailable")
         try:return Value(FLOAT,self._farg(a,0).approx_unary(name))
         except Float5Error:raise RuntimeExit(1)
     def _b_pow(self,a):
-        if not self.approximate_rom_math:raise RuntimeC48Error("pow requires --allow-approx-rom-math; exact ROM oracle unavailable")
+        if not self.approximate_rom_math:raise RuntimeC48Error("pow requires --allow-approx-rom-math; exact ROM reference unavailable")
         try:return Value(FLOAT,self._farg(a,0).approx_pow(self._farg(a,1)))
         except Float5Error:raise RuntimeExit(1)

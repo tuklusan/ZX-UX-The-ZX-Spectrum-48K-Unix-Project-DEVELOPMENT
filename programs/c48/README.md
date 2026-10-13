@@ -16,4 +16,4 @@ of LM is claimed merely because its SSX1 output can be generated.
 
 To compile the 56 C48 programs, run `python3 tools/mktapes.py` after
 `python3 sdk/lib/build.py`. To run independent VM checks, use
-`python3 sdk/tests/oracle.py --native` and `--bytecode`.
+`python3 sdk/tests/vm_reference.py --native` and `--bytecode`.

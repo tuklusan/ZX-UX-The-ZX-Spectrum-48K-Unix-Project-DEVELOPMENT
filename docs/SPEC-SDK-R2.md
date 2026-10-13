@@ -301,7 +301,7 @@ timing and 50 Hz frames. The ZX-UX system calls are emulated in Python:
 
 ## 8. Acceptance
 
-**In the VM — `python3 sdk/tests/oracle.py [--bytecode] [--png DIR]`.** For every corpus program, in every scripted session in `sdk/tests/runs.json`:
+**In the VM — `python3 sdk/tests/vm_reference.py [--bytecode] [--png DIR]`.** For every corpus program, in every scripted session in `sdk/tests/runs.json`:
 1. compile with the SDK's own compiler and run it in the SDK's reference VM (ROM maths);
 2. compile with `rcc` and run it in `rvm`, with the same arguments, keys and fixed `ticks()`;
 3. compare the final 6,912-byte screens.

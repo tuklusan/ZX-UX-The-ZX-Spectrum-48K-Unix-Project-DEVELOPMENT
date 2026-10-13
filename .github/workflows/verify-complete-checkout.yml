@@ -65,7 +65,7 @@ jobs:
           data = spec.read_bytes()
           assert len(data) == 1413709, 'Unexpected C48 specification size'
           digest = hashlib.sha256(data).hexdigest()
-          assert digest == '6368abb4126c01f598f4b533a4e2a0a46a7ce4790cce02d3decbfba59e150d7e'
+          assert digest == '0fa74eb904fce98bd095a2f6d8f4ef9b5bde1b082c5f89692e13e7a04f176f13'
           assert not (root / 'c48-sdk').exists()
           print('CHECKOUT_COMPLETE')
           print('SOURCE_SHA', commit)

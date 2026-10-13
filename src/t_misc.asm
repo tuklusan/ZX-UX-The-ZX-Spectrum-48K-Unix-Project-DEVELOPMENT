@@ -7,7 +7,7 @@
 ;  date [mmddhhmm[yy]]
 DT_T    equ TV                  ; 4 byte accumulator
 t_date: db 18h,6
-        dw e_date-t_date, TV+10-UDATA, date_m
+        dw STKRES, TV+10-UDATA, date_m
 date_m: pop hl
         call args
         ld a,1
@@ -192,7 +192,7 @@ e_date:
 ; ------------------------------------------------------------- stat
 ST_L    equ TV
 t_stat: db 18h,6
-        dw e_stat-t_stat, TV+7-UDATA, stat_m
+        dw STKRES, TV+7-UDATA, stat_m
 stat_m: pop hl
         call args
         ld a,1
@@ -259,7 +259,7 @@ WC_W    equ TV+2
 WC_C    equ TV+4
 WC_IN   equ TV+6
 t_wc:   db 18h,6
-        dw e_wc-t_wc, TV+8-UDATA, wc_m
+        dw STKRES, TV+8-UDATA, wc_m
 wc_m:   pop hl
         call args
         ld a,1
@@ -332,7 +332,7 @@ e_wc:
 OD_B    equ TV
 OD_O    equ TV+18
 t_od:   db 18h,6
-        dw e_od-t_od, TV+20-UDATA, od_m
+        dw STKRES, TV+20-UDATA, od_m
 od_m:   pop hl
         call args
         ld a,1
@@ -409,7 +409,7 @@ CM_B    equ TV+6                ; 128 second buffer
 CM_N    equ TV+134
 CM_P    equ TV+136
 t_cmp:  db 18h,6
-        dw e_cmp-t_cmp, CM_P+2-UDATA, cmp_m
+        dw STKRES, CM_P+2-UDATA, cmp_m
 cmp_m:  pop hl
         call args
         ld a,(U_ARGC)
@@ -519,7 +519,7 @@ e_cmp:
 
 ; ------------------------------------------------------------- sum
 t_sum:  db 18h,6
-        dw e_sum-t_sum, TV+4-UDATA, sum_m
+        dw STKRES, TV+4-UDATA, sum_m
 sum_m:  pop hl
         call args
         ld a,1
@@ -565,7 +565,7 @@ e_sum:
 
 ; ------------------------------------------------------------- echo
 t_echo: db 18h,6
-        dw e_echo-t_echo, TV-UDATA, echo_m
+        dw STKRES, TV-UDATA, echo_m
 echo_m: pop hl
         call args
         ld a,1
@@ -590,7 +590,7 @@ e_echo:
 
 ; ------------------------------------------------------------- sleep
 t_sleep: db 18h,6
-        dw e_sleep-t_sleep, TV-UDATA, sleep_m
+        dw STKRES, TV-UDATA, sleep_m
 sleep_m: pop hl
         call args
         ld a,1
@@ -615,13 +615,13 @@ e_sleep:
 
 ; ------------------------------------------------------------- cls
 t_cls:  db 18h,6
-        dw e_cls-t_cls, TV-UDATA, cls_m
+        dw STKRES, TV-UDATA, cls_m
 cls_m:  jp vquit.xj0_8  ; (shared tail)
 e_cls:
 
 ; ------------------------------------------------------------- demos
 t_hello: db 18h,6
-        dw e_hello-t_hello, TV-UDATA, hello_m
+        dw STKRES, TV-UDATA, hello_m
 hello_m: ld hl,s_hello
 .xj0_20:
         jp zxst.xj1_4  ; (shared tail)
@@ -629,14 +629,14 @@ s_hello: db "Hello World!",10,0
 e_hello:
 
 t_beep: db 18h,6
-        dw e_beep-t_beep, TV-UDATA, beep_m
+        dw STKRES, TV-UDATA, beep_m
 beep_m: ld a,7
         jp vquit.xj1_6  ; (shared tail)
 e_beep:
 
 ; clock: show the time every second (BREAK to stop)
 t_clock: db 18h,6
-        dw e_clock-t_clock, TV-UDATA, clock_m
+        dw STKRES, TV-UDATA, clock_m
 clock_m: call sc_time
         call ctime
         xor a
@@ -655,7 +655,7 @@ e_clock:
 ; forktest: parent and child print in turn - preemptive scheduling
 FK_C    equ TV
 t_fork: db 18h,6
-        dw e_fork-t_fork, TV+1-UDATA, fork_m
+        dw STKRES, TV+1-UDATA, fork_m
 fork_m: call sc_fork
         jr c,.p
         ld a,h
@@ -694,3 +694,167 @@ fork_m: call sc_fork
         jp zxst.xj0_15  ; (shared tail)
 s_ferr: db "fork failed: no free process slot",10,0
 e_fork:
+
+; ------------------------------------------------------------- more
+;  more [file ...]     (or more < file)
+;  Shows a page, then --More--: SPACE the next page, ENTER one more line,
+;  q, EDIT or BREAK quit.  Keys come from /dev/tty, so input may be a file.
+MO_TTY  equ TV                  ; key fd
+MO_ROW  equ TV+2                ; rows shown on this page
+MO_COL  equ TV+3                ; print column
+MO_K    equ TV+4                ; key read
+MO_NF   equ TV+5                ; several files: name headers
+MOPAGE  equ 22                  ; text rows a page, the prompt below
+t_more: db 18h,6
+        dw STKRES, TV+6-UDATA, more_m
+more_m: pop hl
+        call args
+        ld a,1
+        call argn
+        jr nz,.go
+        ld hl,0                 ; no file: input must not be the terminal
+        ld de,U_STB
+        SC _gtty
+        ld hl,s_mou
+        jp nc,usage
+.go:    ld hl,0                 ; BREAK only at the prompt (raw mode is
+        call sc_intr            ; always put back)
+        ld hl,s_tty
+        ld de,0
+        call sc_open
+        jp c,exit0
+        ld (MO_TTY),hl
+        ld a,TT_RAW
+        call mstty
+        ld a,(U_ARGC)
+        cp 3
+        sbc a,a
+        cpl
+        ld (MO_NF),a
+        ld a,1
+        call argn
+        jr nz,.f
+        xor a
+        call rsetfd             ; standard input
+        call mpage
+        jr .x
+.f:     ld a,1
+        ld hl,mfile
+        call each
+.x:     ld a,TT_ECHO
+        call mstty
+        jp exit0
+s_mou:  db "more [file ...]",0
+
+; mstty: A = tty mode -> the key fd
+mstty:  ld (U_T+4),a
+        xor a
+        ld (U_T+5),a
+        ld hl,(MO_TTY)
+        ld de,U_T
+        SC _stty
+        ret
+
+; mfile: HL = name -> page it
+mfile:  push hl
+        call ropen
+        pop hl
+        jr nc,.o
+        ld de,s_cantopen
+        jp perr
+.o:     ld a,(MO_NF)
+        or a
+        jr z,.p
+        push hl
+        ld hl,s_mohd
+        call mputs
+        pop hl
+        call mputs
+        ld a,10
+        call mputc
+.p:     call mpage
+        jp rclose
+
+; mpage: the reader's input to the end
+mpage:  call getch
+        ret c
+        call mputc
+        jr mpage
+
+; mputs: HL = string
+mputs:  ld a,(hl)
+        or a
+        ret z
+        call mputc
+        inc hl
+        jr mputs
+
+; mputc: A -> stdout, counting screen rows as the console does (it wraps
+;   after column 63; TAB goes to the next multiple of 8); keeps HL, DE, BC
+;   Other control codes are not sent: they would move the cursor, clear
+;   the screen or (AT, INVERSE) take the next bytes as parameters.
+mputc:  cp 10
+        jr z,.nl0
+        cp 9
+        jr z,.tab
+        cp ' '
+        ret c
+        call putc               ; (keeps A)
+        cp 7Fh+1
+        ret nc                  ; not drawn by the console
+        ld a,(MO_COL)
+        inc a
+        jr .c
+.tab:   call putc
+        ld a,(MO_COL)
+        or 7
+        inc a
+.c:     ld (MO_COL),a
+        cp 64
+        ret c
+        jr .nl
+.nl0:   call putc
+.nl:    xor a
+        ld (MO_COL),a
+        ld a,(MO_ROW)
+        inc a
+        ld (MO_ROW),a
+        cp MOPAGE
+        ret c
+        push hl                 ; a full page: the prompt
+        push de
+        push bc
+        ld hl,s_more
+        call puts
+.k:     ld hl,(MO_TTY)
+        ld de,MO_K
+        ld bc,1
+        call sc_read
+        jr c,.q                 ; BREAK
+        ld a,(MO_K)
+        ld b,0                  ; SPACE: a whole page
+        cp ' '
+        jr z,.go
+        ld b,MOPAGE-1           ; ENTER: one line
+        cp 13
+        jr z,.go
+        cp 7                    ; EDIT
+        jr z,.q
+        or 20h
+        cp 'q'
+        jr nz,.k                ; other keys: still waiting
+.q:     ld hl,s_moer
+        call puts
+        jp more_m.x             ; (the stack is left: more exits)
+.go:    ld a,b
+        ld (MO_ROW),a
+        ld hl,s_moer
+        call puts
+        pop bc
+        pop de
+        pop hl
+        ret
+s_more: db 14h,1,"--More--",14h,0FEh,0  ; (INVERSE 0FEh: bit 0 clear)
+s_moer: db 8,8,8,8,8,8,8,8,"        ",8,8,8,8,8,8,8,8,0
+s_mohd: db "::: ",0
+e_more:

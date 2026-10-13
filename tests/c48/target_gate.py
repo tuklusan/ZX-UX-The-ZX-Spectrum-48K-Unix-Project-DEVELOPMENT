@@ -29,6 +29,7 @@ ENV1_INPUTS = frozenset((
     'sdk/rcc/driver.py', 'build/ZX-UX.tzx',
 ))
 TAP2SNA_SHA256 = 'c754087b68897780211e60d062da4831f04e83a72dc15d88a6dab436e2150e8d'
+ROM_SHA256 = 'd55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42'
 
 
 def verify_native_env1(proof, root=ROOT):
@@ -87,6 +88,7 @@ def verify_native_env1(proof, root=ROOT):
     snapshot = proof.get('native_snapshot')
     ensure(isinstance(snapshot, dict) and
            snapshot.get('tap2sna_sha256') == TAP2SNA_SHA256 and
+           snapshot.get('rom_sha256') == ROM_SHA256 and
            snapshot.get('tape_boot_sha256') == source_files['build/ZX-UX.tzx'],
            'ROM and tape identities differ')
     sha_file('build/c48-env1/native-current-tape.z80',
