@@ -113,3 +113,24 @@ All old-kernel outputs below are genuine PNG/SCR pairs from the retired historic
 The `examples/maze` screenshot and potentially its execution coverage must be corrected and actually retested; add distinct directory-specific capture records. Rebuild from a clean current-HEAD source checkout, run all required new-revision gates including actual FUSE tape boot, then update and verify the tracked release manifest and all affected captures. The last full passing report relates to source `1445b3b27ad4790cd88923316c95accd853a01b3`, not the later `main` revision above. This review did not execute a new full release build.
 
 LM remains an approved compilation-only exception; its non-execution is **not** a release blocker. A physical ZX Spectrum test was not requested. The repository and release remain private pending final release approval.
+
+## Final update after source correction and actual 74-scenario verification
+
+This is a revision-scoped addendum, not an erasure of the authentic prior FAIL.
+The earlier `examples/maze` screenshot mismatch was a basename/capture mapping
+error. On fully tested source `b4a46b2bf56b93524fe67e4ed103c4e756418a95`, `maze1982` now compiles the
+`examples/maze.c` source separately and produces its own valid SSX, cassette
+and native/VM screenshots. The final native PNG at
+`release/shots/maze1982.ZX-UX.png` shows the intended white diagonal-line
+pattern and 1982 caption, rather than the interactive games/maze wall grid.
+Native screenshot SHA-256:
+`38a23a4c40450005cba3685105e1de74e2c1b10ed0c053f7520918f84c9adc73`.
+
+The other 47 release screenshot bytes remain identical to the earlier
+inspected images, so their per-program PASS observations carry over with
+identical scope. **Final old-SDK versus v1 same-program semantic review:
+48 PASS, 0 FAIL, 0 INCONCLUSIVE** (subject plausibility only; not exact frames).
+The independent 30 old-kernel subjects/titles also match, but full later
+frame/graphics equivalence remains INCONCLUSIVE for those title-only early
+captures and was never a demonstrated v1 behavioral defect. See
+`docs/V1-RELEASE-SIGNOFF-2026-10-13.md` for final GitHub release hashes.
