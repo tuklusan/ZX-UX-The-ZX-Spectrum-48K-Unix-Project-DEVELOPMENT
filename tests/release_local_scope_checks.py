@@ -122,4 +122,52 @@ class LocalReleaseChecks(unittest.TestCase):
                     release.check_tracked_sources()
 
 
+    def test_checked_in_release_can_be_rebuilt(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            old = root / 'release'
+            old.mkdir()
+            (old / 'old.tap').write_bytes(b'old checked release')
+            subprocess.run(['git', 'add', 'release/old.tap'], cwd=root, check=True)
+            with patch.object(release, 'ROOT', root), patch.object(release, 'RELEASE', old):
+                release.clear_verified_release()
+            self.assertFalse(old.exists())
+
+    def test_untracked_release_entry_prevents_removal(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            old = root / 'release'
+            old.mkdir()
+            (old / 'tracked.tap').write_bytes(b'checked')
+            (old / 'untracked.tap').write_bytes(b'untracked')
+            subprocess.run(['git', 'add', 'release/tracked.tap'], cwd=root, check=True)
+            with patch.object(release, 'ROOT', root), patch.object(release, 'RELEASE', old):
+                with self.assertRaisesRegex(RuntimeError, 'untracked'):
+                    release.clear_verified_release()
+            self.assertTrue((old / 'tracked.tap').exists())
+            self.assertTrue((old / 'untracked.tap').exists())
+
+    def test_release_link_prevents_removal(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            outside = root / 'outside'
+            outside.mkdir()
+            (outside / 'content').write_text('keep')
+            old = root / 'release'
+            old.symlink_to(outside, target_is_directory=True)
+            with patch.object(release, 'ROOT', root), patch.object(release, 'RELEASE', old):
+                with self.assertRaisesRegex(RuntimeError, 'link|directory'):
+                    release.clear_verified_release()
+            self.assertEqual((outside / 'content').read_text(), 'keep')
+
+    def test_release_clear_happens_after_required_gates(self):
+        text = SRC.read_text()
+        self.assertLess(text.index('    check_tracked_sources(after_build=True)'),
+                        text.index('    clear_verified_release()'))
+        self.assertLess(text.index("    step('fuse-independent-boot',"),
+                        text.index('    clear_verified_release()'))
+
+
 if __name__ == '__main__': unittest.main()
