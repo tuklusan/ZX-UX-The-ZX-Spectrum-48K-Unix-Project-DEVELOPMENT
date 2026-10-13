@@ -36,8 +36,11 @@ class GateBehavior(unittest.TestCase):
             gate.validate_output('compiler success only','C48-ENV1-OK')
 
     def test_missing_source_release_hard_stops(self):
-        with self.assertRaises(gate.GateFailure):
-            gate.assess_sources()
+        with tempfile.TemporaryDirectory() as t:
+            with patch.object(gate, 'ROOT', Path(t)), patch.object(
+                    gate, 'FIXTURE', Path(t) / 'tests/c48/native_env1_storage_lifetime.c'):
+                with self.assertRaises(gate.GateFailure):
+                    gate.assess_sources()
 
     def test_no_lib_build_means_fail_not_pass(self):
         with tempfile.TemporaryDirectory() as t:
@@ -113,6 +116,8 @@ class FakeSequentialSession:
     def login(self):pass
     def wait_prompt(self,frames):self.n+=1
     def screen(self):
+        if self.n > 0:
+            return ''  # Screen is reclaimed on process exit.
         return 'C48-ENV1-FAIL-ARGV' if self.broken else 'C48-ENV1-OK'
 
 
@@ -123,7 +128,8 @@ class SequentialOracleChecks(unittest.TestCase):
         values=free if free is not None else [3000,2998,2999]
         with patch.dict(sys.modules, {'suite': fake}),\
              patch.object(gate, 'df_free', side_effect=values),\
-             patch.object(gate, 'inject_cassette'),\
+             patch.object(gate, 'inject_cassette',
+                          side_effect=lambda session, *args: setattr(session, 'n', 0)),\
              patch.object(gate, 'save_capture',return_value={'scr_sha256':'a','png_sha256':'b'}):
             return gate.consecutive_processes('ignored.z80',[])
 
