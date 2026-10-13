@@ -29,15 +29,12 @@ def main():
     original_run = release_v1.run
     observed = [False]
 
-    def audited_run(cmd, checker=None, env=None, log=None):
-        result = original_run(cmd, checker=checker, env=env, log=log)
+    def audited_run(cmd, env=None, log=None):
+        result = original_run(cmd, env=env, log=log)
         if list(map(str, cmd)) == expected_argv:
             if observed[0]:
                 raise RuntimeError('FUSE verification repeated')
-            if checker is None:
-                raise RuntimeError('FUSE verification requires the private checker')
-            validate_boot_proof(
-                paths, lambda file: release_v1.check(checker, '--file', file))
+            validate_boot_proof(paths, release_v1.validated_file)
             observed[0] = True
         return result
 
