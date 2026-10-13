@@ -33,6 +33,21 @@ def copy_matching(directory: Path, pattern: str, destination: str) -> int:
     return count
 
 
+def copy_logs(directory: Path) -> None:
+    """Exclude only empty, optional FUSE stdout/stderr diagnostics.
+
+    Independent FUSE boot proof and JSON are still mandatory. Every
+    other log is copied for the driver's nonempty-file validation.
+    """
+    for item in sorted(directory.glob('*.txt')):
+        if not item.is_file():
+            continue
+        if (item.name in ('fuse-login.stdout.txt', 'fuse-login.stderr.txt')
+                and item.stat().st_size == 0):
+            continue
+        deliver(item, f'logs/{item.name}')
+
+
 def main(arguments: list[str]) -> None:
     RELEASE.mkdir(parents=True, exist_ok=True)
     for name in ('ZX-UX.tzx', 'ZX-UX.tap', 'ZX-UX-c48.tzx',
@@ -56,7 +71,7 @@ def main(arguments: list[str]) -> None:
         logs = Path(arguments[0])
         if not logs.is_dir():
             raise SystemExit(f'Log folder missing: {logs}')
-        copy_matching(logs, '*.txt', 'logs')
+        copy_logs(logs)
         copy_matching(logs, '*.png', 'screens/tests')
 
 
