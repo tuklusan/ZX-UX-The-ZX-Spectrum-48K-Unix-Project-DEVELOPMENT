@@ -1,7 +1,7 @@
-"""Verify the exact public-name inventory in the controlling C48 Rev 0.11 DOCX.
+"""Verify the 52 required public names and the approved kernel API additions.
 
-Header signatures must already be documented. This gate only verifies names
-against the DOCX and linked SDK symbols; it does not create new interfaces.
+Appendix B stays normative; extra names are kernel interfaces and are
+verified here separately rather than silently treated as Appendix B entries.
 """
 import hashlib
 from pathlib import Path
@@ -89,8 +89,22 @@ class PublicAPIReleaseChecks(unittest.TestCase):
 
     def test_header_and_library_match_current_appendix(self):
         required = inventory()
-        differences = missing_names(required, declared(HEADER.read_text()), implemented())
-        self.assertEqual(differences, ([], [], []), str(differences))
+        # These are the additional kernel syscall wrappers explicitly requested
+        # for the independent SDK. They do not change the 52-name Appendix B.
+        additional_kernel_api = {
+            'brk', 'cemt', 'chdir', 'chmod', 'chown', 'creat', 'exec',
+            'fork', 'fstat', 'getuid', 'gtty', 'ilgins', 'intr', 'kill',
+            'link', 'lseek', 'mdate', 'mkdir', 'quit', 'screen', 'setuid',
+            'ssxload', 'stat', 'stime', 'stty', 'tell', 'time', 'unlink',
+            'wait', 'write', 'zxinfo', 'zxpack',
+        }
+        header = declared(HEADER.read_text())
+        library = implemented()
+        self.assertEqual(missing_names(required, header, library),
+                         ([], [], sorted(additional_kernel_api)))
+        self.assertEqual(additional_kernel_api - library, set())
+        self.assertEqual(header - required, additional_kernel_api)
+
 
 
 if __name__ == '__main__':
