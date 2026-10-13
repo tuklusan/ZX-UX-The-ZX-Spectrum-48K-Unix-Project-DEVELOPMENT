@@ -1,0 +1,42 @@
+name: One-time beta v1 tag
+
+on:
+  push:
+    paths:
+      - .github/workflows/one-time-beta-tag.yml
+
+permissions:
+  contents: write
+
+jobs:
+  create-tag:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Tag the verified v1 release commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW_COMMIT: ${{ github.sha }}
+          EXPECTED_SOURCE: cf2481cac6affef297ed1b9928e6bd18a5fa6641
+          EXPECTED_TREE: 01bffc70f193369840f46c2c89d6115e1434cdad
+          TAG_NAME: beta-0.0.2
+        run: |
+          set -euo pipefail
+          test "$REPOSITORY" = 'tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          parent="$(gh api "repos/$REPOSITORY/commits/$WORKFLOW_COMMIT" --jq '.parents[0].sha')"
+          test "$parent" = "$EXPECTED_SOURCE"
+          tree="$(gh api "repos/$REPOSITORY/git/commits/$EXPECTED_SOURCE" --jq '.tree.sha')"
+          test "$tree" = "$EXPECTED_TREE"
+          if gh api "repos/$REPOSITORY/git/ref/tags/$TAG_NAME" >/dev/null 2>&1; then
+            echo 'Tag already exists; refusing to change it.' >&2
+            exit 1
+          fi
+          gh api -X POST "repos/$REPOSITORY/git/refs" \
+            -f "ref=refs/tags/$TAG_NAME" -f "sha=$EXPECTED_SOURCE" >/dev/null
+          actual="$(gh api "repos/$REPOSITORY/git/ref/tags/$TAG_NAME" --jq '.object.sha')"
+          test "$actual" = "$EXPECTED_SOURCE"
+          echo "Created and verified $TAG_NAME at $actual"
