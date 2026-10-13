@@ -139,8 +139,16 @@ def count_log(log):
         require(len(unit) == 1 and re.search(r'^OK$', text, re.MULTILINE),
                 'Unsuccessful unittest summary')
         return int(unit[0]), 0
-    passed = len(re.findall(r'^PASS(?:\s|:)', text, re.MULTILINE))
-    failed = len(re.findall(r'^FAIL(?:\s|:)', text, re.MULTILINE))
+    # Native ZX-UX and VM sessions report "case PASS ..." rather than
+    # "PASS case". Count executed outcomes from either form.
+    passed = len(re.findall(r'^(?:PASS\b|\S+\s+PASS\b)', text, re.MULTILINE))
+    failed = len(re.findall(r'^(?:FAIL\b|\S+\s+FAIL\b)', text, re.MULTILINE))
+    totals = re.findall(r'^(\d+)/(\d+) (?:v1 sessions pass|ran on ZX-UX)$',
+                        text, re.MULTILINE)
+    if totals:
+        require(len(totals) == 1 and
+                (passed, passed + failed) == tuple(map(int, totals[0])),
+                'Program-session totals disagree with executed outcomes')
     return passed, failed
 
 

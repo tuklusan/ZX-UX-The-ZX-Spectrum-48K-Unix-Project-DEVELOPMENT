@@ -78,6 +78,22 @@ class LocalReleaseChecks(unittest.TestCase):
             log.write_text('PASS named-case\nFAIL named-case\n')
             self.assertEqual(release.count_log(log), (1, 1))
 
+    def test_native_and_bytecode_session_counts(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / 'sessions.log'
+            log.write_text('hanoi          PASS exited\nqueens8        PASS exited\n'
+                           '2/2 ran on ZX-UX\n')
+            self.assertEqual(release.count_log(log), (2, 0))
+            log.write_text('hanoi          PASS exit 0\nqueens8        PASS exit 0\n'
+                           '2/2 v1 sessions pass\n')
+            self.assertEqual(release.count_log(log), (2, 0))
+            log.write_text('hanoi          PASS exit 0\nqueens8        FAIL bad state\n'
+                           '1/2 v1 sessions pass\n')
+            self.assertEqual(release.count_log(log), (1, 1))
+            log.write_text('hanoi          PASS exit 0\n2/2 v1 sessions pass\n')
+            with self.assertRaisesRegex(RuntimeError, 'totals disagree'):
+                release.count_log(log)
+
     def test_release_copies_actual_fuse_and_lm_proofs(self):
         text = SRC.read_text()
         for name in ('fuse-login.png', 'fuse-login.json', 'lm-memory.png',
