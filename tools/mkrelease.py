@@ -48,6 +48,22 @@ def copy_logs(directory: Path) -> None:
         deliver(item, f'logs/{item.name}')
 
 
+def copy_fresh_proofs() -> None:
+    """Deliver the exact reports and native ENV1 captures from this run.
+
+    Release/manifest.txt will hash these files alongside the executable
+    images. Avoid copying older build/proofs/ items into a fresh release.
+    """
+    for name in ('c48-conformance.json', 'ix-abi-proof.json',
+                 'native-env1-v1.json'):
+        deliver(BUILD / 'logs' / name, f'proofs/{name}')
+    for name in ('sequential-1.png', 'sequential-1.scr',
+                 'sequential-2.png', 'sequential-2.scr',
+                 'concurrent.png', 'concurrent.scr'):
+        deliver(BUILD / 'c48-env1' / 'proof' / name,
+                f'proofs/native-env1/{name}')
+
+
 def main(arguments: list[str]) -> None:
     RELEASE.mkdir(parents=True, exist_ok=True)
     for name in ('ZX-UX.tzx', 'ZX-UX.tap', 'ZX-UX-c48.tzx',
@@ -67,6 +83,7 @@ def main(arguments: list[str]) -> None:
     deliver(BUILD / 'sizes.json', 'sizes.json', required=False)
     copy_matching(BUILD / 'shots', '*.png', 'shots')
     copy_matching(BUILD / 'shots-vm', '*.png', 'shots-vm')
+    copy_fresh_proofs()
     if arguments:
         logs = Path(arguments[0])
         if not logs.is_dir():
