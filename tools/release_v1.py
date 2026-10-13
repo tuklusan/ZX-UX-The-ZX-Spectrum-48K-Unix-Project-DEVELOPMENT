@@ -88,6 +88,31 @@ def check_tracked_sources(after_build=False):
             require(actual == expected, 'Tracked file differs from Git index')
 
 
+
+def clear_verified_release():
+    """Replace a tracked old release only after the current gates pass.
+
+    Reject symlinks and files not recorded by Git before removing anything.
+    Source/index integrity was checked before the build and just before this
+    operation; an old release does not authorize skipping either check.
+    """
+    if not RELEASE.exists():
+        require(not RELEASE.is_symlink(), 'Unsafe release link')
+        return
+    require(RELEASE.is_dir() and not RELEASE.is_symlink(),
+            'Unsafe existing release directory')
+    records = subprocess.check_output(['git', 'ls-files', '-z', '--', 'release/'],
+                                      cwd=ROOT)
+    tracked = {ROOT / Path(os.fsdecode(raw)) for raw in records.split(b'\0') if raw}
+    for path in RELEASE.rglob('*'):
+        require(not path.is_symlink(), 'Release contains an unsupported link')
+        if path.is_file():
+            require(path in tracked, 'Release contains an untracked file')
+        else:
+            require(path.is_dir(), 'Release contains an unsupported entry')
+    shutil.rmtree(RELEASE)
+
+
 def version_data(sjasm):
     text = run([sjasm, '--version'])
     return text.strip().splitlines()[0]
@@ -180,7 +205,8 @@ def main():
             (corpus / 'demos/queens8.c').is_file() and
             (corpus / 'ailmzx48/ailmzx48.c').is_file(),
             'Checked-in v1 C48 sources or LM source are missing')
-    require(not RELEASE.exists(), 'Remove or archive the old release first')
+    require(not RELEASE.is_symlink() and (not RELEASE.exists() or RELEASE.is_dir()),
+            'Unsafe release directory')
     require(not run(['git', 'status', '--porcelain']).strip(),
             'Release must start from a clean checkout')
     commit = run(['git', 'rev-parse', 'HEAD']).strip()
@@ -292,6 +318,7 @@ def main():
            'FUSE: independent boot checked']
     (BUILD / 'README.txt').write_text('\n'.join(doc) + '\n')
     validated_file(BUILD / 'README.txt')
+    clear_verified_release()
     step('release-copy', [PYTHON, '-B', 'tools/mkrelease.py', str(BUILD / 'logs')])
     shutil.copyfile(logs['release-copy'], RELEASE / 'logs/release-copy.txt')
     for name, source in (
