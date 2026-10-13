@@ -48,7 +48,7 @@ def run_one(snap, name, run, pngdir, frames, verbose):
     ssx = compile_prog(name, run)
     if ssx is None:
         return False, 'compile failed'
-    tname = run.get('src', name.split(':')[0])[:10]
+    tname = name.split(':')[0][:10]
     blocks = rtap.records(ssx, tname)
     s = suite.Session(snap)
     s.login()

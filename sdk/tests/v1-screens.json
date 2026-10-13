@@ -139,6 +139,10 @@
     "sha256": "669c10981d24d29ef483e85e050f21849aca0ecaad5e0d606d227083316a515a",
     "state": "input"
   },
+  "maze1982": {
+    "sha256": "fd786d501cb1bdad63e3954b481fbadd30114d903401fd1c165f23e1f15b26c9",
+    "state": "exit 0"
+  },
   "maze:play": {
     "sha256": "d8cf2ad80233059f36cd410b7f12f24f4ba1dee2964b8abaeb7fcb2b013d2aa2",
     "state": "exit 0"

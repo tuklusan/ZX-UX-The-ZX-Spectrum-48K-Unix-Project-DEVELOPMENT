@@ -182,6 +182,11 @@
   "dir": "games",
   "args": []
  },
+ "maze1982": {
+  "dir": "examples",
+  "src": "maze",
+  "args": []
+ },
  "udg": {
   "dir": "examples",
   "args": []

@@ -3,7 +3,7 @@
 Reads PNG files from build/shots and build/shots-vm, then writes
 build/gallery.html with links to those images.
 
-  python3 tools/gallery.py [results-ssxrun.txt] [results-oracle.txt]
+  python3 tools/gallery.py [results-ssxrun.txt] [results-vm.txt]
 """
 import html
 import json
@@ -51,7 +51,7 @@ def main(argv):
         base = n.split(':')[0]
         args = ' '.join(r.get('args', []))
         keys = r.get('keys', '')
-        cmd = '/dev/cassette/%s%s' % (r.get('src', base), (' ' + args) if args else '')
+        cmd = '/dev/cassette/%s%s' % (base, (' ' + args) if args else '')
         s = sizes.get(base)
         mode = ''
         if s:
