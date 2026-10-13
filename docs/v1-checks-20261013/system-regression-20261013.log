@@ -1,0 +1,23 @@
+rcc: /mnt/data/ZX-UX-current-candidate/tests/c/ssxhuge.c needs 20610 bytes of memory (limit 14000)
+rcc: /mnt/data/ZX-UX-current-candidate/tests/c/ssxhuge.c needs 20610 bytes of memory (limit 14000)
+PASS boot_login_logout    0.1s     539 frames
+PASS glob                 0.2s    1280 frames
+PASS file_ops             0.5s    4369 frames
+PASS dirs                 0.3s    2252 frames
+PASS misc_cmds            0.2s    1222 frames
+PASS vi_session           0.1s     721 frames
+PASS tar_roundtrip        4.0s   11134 frames
+PASS zxpack_cmd           0.3s    2151 frames
+PASS idle_pack            0.5s    4199 frames
+PASS pack_under_pressure   1.2s    7257 frames
+PASS processes            0.3s    1543 frames
+PASS pool_capacity        0.1s     620 frames
+PASS cassette_args        0.4s    1181 frames
+PASS cassette_search      0.9s    2259 frames
+PASS window_lending       0.4s    1334 frames
+PASS lending_background   0.5s    1550 frames
+PASS cassette_multitask   0.9s    5814 frames
+PASS shell_below_picture   0.6s    4704 frames
+PASS pair_without_lending   1.4s    4399 frames
+PASS cassette_too_big     0.2s     813 frames
+0 failed, 13.3s
