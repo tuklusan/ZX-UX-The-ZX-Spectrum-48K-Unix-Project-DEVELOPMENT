@@ -142,6 +142,17 @@ def save_capture(session, name):
             'png_sha256': sha(png)}
 
 
+def wait_native_marker(session, expected, frames=6000):
+    """Observe the C48 marker before process exit reclaims its screen."""
+    for _ in range(frames):
+        session.zx.run(1)
+        screen = session.screen()
+        ensure('C48-ENV1-FAIL' not in screen, 'native C48 execution failed')
+        if expected in screen:
+            return screen
+    raise GateFailure('native marker not observed while process ran: ' + expected)
+
+
 def consecutive_processes(snapshot, blocks):
     import suite
     s = suite.Session(str(snapshot))
@@ -150,14 +161,15 @@ def consecutive_processes(snapshot, blocks):
     records = []
     for i in range(2):
         inject_cassette(s, blocks, 'e48')
-        s.wait_prompt(6000)
-        screen = s.screen()
+        screen = wait_native_marker(s, 'C48-ENV1-OK')
         validate_output(screen, 'C48-ENV1-OK')
+        capture = save_capture(s, 'sequential-' + str(i+1))
+        s.wait_prompt(6000)
         after = df_free(s)
         ensure(after >= free - 8, 'process allocation not released')
         records.append({'run': i+1, 'outcome':'PASS', 'free_bytes':after,
                         'screen_sha256': hashlib.sha256(screen.encode()).hexdigest(),
-                        'capture': save_capture(s, 'sequential-' + str(i+1))})
+                        'capture': capture})
     return records
 
 
@@ -243,6 +255,7 @@ def full_run(report, tap2sna):
                       '-o', out, FIXTURE])
     link = archive_env1_symbol(FIXTURE, out)
     sys.path.insert(0, str(ROOT/'sdk'))
+    sys.path.insert(0, str(ROOT/'tests'))
     import rtap, suite
     snap, snapshot_proof = fresh_snapshot(tap2sna)
     ssx = out.read_bytes()
