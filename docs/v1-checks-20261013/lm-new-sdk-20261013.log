@@ -1,0 +1,3 @@
+rcc: /mnt/data/ZX-UX-current-candidate/programs/c48/ailmzx48/ailmzx48.c needs 21151 bytes of memory (limit 14000)
+PASS LM current SDK: SSX1 file 17870 bytes, need 21151 bytes, v1 limit 14000 bytes
+LM exceeds the configured v1 loader memory budget; native execution not claimed
