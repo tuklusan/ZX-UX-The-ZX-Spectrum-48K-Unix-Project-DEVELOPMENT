@@ -1,6 +1,10 @@
 ZX-UX v1 release manifest
 
 Source commit: 4adae86929832596ffce0f47eab1b8960b1a6fc7
+Source tree: 8bbc5cf689c42ac0efc09c3856f40ca08179225b
+Canonical source commit: 37b8a7f7a0f67f1cae4ab9b490085d51bb8d05c8
+Canonical source tree: 8bbc5cf689c42ac0efc09c3856f40ca08179225b
+Source identity: the build checkout and canonical commit have identical source trees.
 Assembler: SjASMPlus Z80 Cross-Assembler v1.24.0 (https://github.com/z00m128/sjasmplus)
 SkoolKit: 10.1
 Tests:
@@ -30,7 +34,7 @@ Tests:
 
 Files (SHA-256 and byte size):
 42f6fa283e24d45e21279660590e91fa96d85e2469f88d5b186936fc6436a17d  20691  LICENSE
-982494dd9f783753337ce4968d7390ac260dc77f301ad3f7340f32818f272e23  440  README.txt
+2f72aee7c72f14e2b5d6f060a3c42afd8ea66162f1b8bb77286645866583bfea  608  README.txt
 3684787bd40d01f3ed07502ce81e7ad0abc7902b39a967ca018c763c05a95b86  236358  ZX-UX-c48.tzx
 c5b84a67caca1ab1ba4e86840e3bd1a58666bfa72d2247201a8341f770865a20  4572  ZX-UX-multitask.png
 956b35047e32a3f7013d4e40783b910a8c2c152e50398bf499e75929fccfcbee  39194  ZX-UX-multitask.z80
