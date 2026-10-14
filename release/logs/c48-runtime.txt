@@ -2,7 +2,7 @@ Command: /opt/pyvenv/bin/python3 -B sdk/lib/build.py
 Exit: 0
 
 arith        233 bytes
-console     1098 bytes
+console     1110 bytes
 crt0          32 bytes
 float        620 bytes
 frame         67 bytes

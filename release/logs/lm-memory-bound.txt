@@ -1,4 +1,4 @@
-Command: /opt/pyvenv/bin/python3 -B tests/lm_native_memory.py --snapshot /mnt/data/ZX-UX-release-source/build/test.z80 --image /mnt/data/ZX-UX-release-source/build/lm/ailmzx48.ssx --tape /mnt/data/ZX-UX-release-source/build/ZX-UX.tzx --output /mnt/data/ZX-UX-release-source/build/logs/lm-native
+Command: /opt/pyvenv/bin/python3 -B tests/lm_native_memory.py --snapshot /mnt/data/work-beta04-clean/repo/build/test.z80 --image /mnt/data/work-beta04-clean/repo/build/lm/ailmzx48.ssx --tape /mnt/data/work-beta04-clean/repo/build/ZX-UX.tzx --output /mnt/data/work-beta04-clean/repo/build/logs/lm-native
 Exit: 0
 
 {
@@ -7,16 +7,16 @@ Exit: 0
   "frame": 263,
   "image_bytes": 17918,
   "required_bytes": 21202,
-  "kernel_free_before": 10118,
-  "kernel_free_after": 10118,
+  "kernel_free_before": 10114,
+  "kernel_free_after": 10114,
   "sha256": {
     "source": "c401a3fe1877033faef537449255faba075a0578d9fb7da0a5f4dbb113a4eea2",
     "rom": "d55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42",
-    "tape": "2d5e32d603cd55421d2ea169173f9505879635ac9e966cf3062cbf224c19f566",
-    "snapshot": "527679b9fb9fe095e9270ad036abc37ad257b4c45ef24eeea598d337a152da29",
+    "tape": "3eebd9f8097e4cdcb5e67b1b18e7708699d7fac498d86b5e5335b1afee0dc280",
+    "snapshot": "7052815e1f47aa73bf383ef439adfb850b2439db9133a0abf9f21b4d4a75ccd4",
     "native_image": "cd7f87df718faa0027a2bfb9f7a616eb2db64f3ed6a87b8884bf032085c0e3d6",
-    "screen": "70dc456f5a03790f23b24dcc9ee28275d4564a656002b71d5dab54f953bc207e",
-    "png": "fcd81b3329ee9463bc364cf5003e56a263af7a0d65e5a437e6d296a1ed037237"
+    "screen": "e51325d94a387c5ef56149b3e634a70ead12d60073dd9d81b972561f33427f84",
+    "png": "645b76b3f58ed26fa52a31a4504a8388ebf6a60996e872bcf6bf537c453fe185"
   }
 }
 

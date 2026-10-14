@@ -1,5 +1,5 @@
-Command: /opt/pyvenv/bin/python3 -B tools/gallery.py /mnt/data/ZX-UX-release-source/build/logs/c48-emulator.txt /mnt/data/ZX-UX-release-source/build/logs/c48-v1-bytecode.txt
+Command: /opt/pyvenv/bin/python3 -B tools/gallery.py /mnt/data/work-beta04-clean/repo/build/logs/c48-emulator.txt /mnt/data/work-beta04-clean/repo/build/logs/c48-v1-bytecode.txt
 Exit: 0
 
-/mnt/data/ZX-UX-release-source/build/gallery.html 59882
+/mnt/data/work-beta04-clean/repo/build/gallery.html 59882
 
