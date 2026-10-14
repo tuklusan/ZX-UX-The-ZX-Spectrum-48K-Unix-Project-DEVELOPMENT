@@ -3,14 +3,19 @@ Exit: 0
 
 arith        233 bytes
 console     1098 bytes
-crt0          33 bytes
-float        590 bytes
+crt0          32 bytes
+float        620 bytes
 frame         67 bytes
 io            36 bytes
 string       154 bytes
 sys          133 bytes
+unix         348 bytes
 vm          1232 bytes
+xheap       1284 bytes
+xudg         257 bytes
+xvm            0 bytes
+vmtab        288 bytes
 gfx          802 bytes
 heap         522 bytes
-244 members
+287 members
 

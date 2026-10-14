@@ -1,10 +1,10 @@
 {
   "result": "PASS",
   "machine": "ZX Spectrum 48K",
-  "emulator": "/mnt/data/zxux-tooling/fuse-packages/usr/bin/fuse-sdl",
+  "emulator": "/mnt/data/zxux-external/fuse-root/usr/bin/fuse-sdl",
   "rom_sha256": "d55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42",
-  "tape_sha256": "27471d1d37222ac77194fc1a08dfef4bd080dcfafd682c6d3148101d6ee4b95b",
-  "screen_sha256": "17df57187fff17cac3715a22a12731829cb2a692015833c7305dfe116ab9e764",
+  "tape_sha256": "2d5e32d603cd55421d2ea169173f9505879635ac9e966cf3062cbf224c19f566",
+  "screen_sha256": "98fed75d5d8360d83de01c4b2f0509c4c83f28eb5a2ba1a1bc056212b5408121",
   "expected_text": "ZX-UX login",
   "match_method": "checked ZX-UX login screen markers",
   "text_position": {
