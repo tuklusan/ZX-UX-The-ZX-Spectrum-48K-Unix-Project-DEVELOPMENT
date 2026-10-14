@@ -8,6 +8,8 @@ test_bad_case_mapping (release_c48_checks.C48ReleaseChecks.test_bad_case_mapping
 test_bad_reference (release_c48_checks.C48ReleaseChecks.test_bad_reference) ... ok
 test_launcher_calls_gate (release_c48_checks.C48ReleaseChecks.test_launcher_calls_gate) ... ok
 test_missing_required_stops_release (release_c48_checks.C48ReleaseChecks.test_missing_required_stops_release) ... ok
+test_c48_reports_and_env1_images_are_delivered (release_copy_checks.ReleaseDiagnosticCopyChecks.test_c48_reports_and_env1_images_are_delivered) ... ok
+test_missing_required_env1_capture_blocks_copy (release_copy_checks.ReleaseDiagnosticCopyChecks.test_missing_required_env1_capture_blocks_copy) ... ok
 test_nonempty_emulator_error_is_preserved (release_copy_checks.ReleaseDiagnosticCopyChecks.test_nonempty_emulator_error_is_preserved) ... ok
 test_only_empty_fuse_streams_are_excluded (release_copy_checks.ReleaseDiagnosticCopyChecks.test_only_empty_fuse_streams_are_excluded) ... ok
 test_bare_success_command_does_not_count (release_fuse_checks.FuseGateChecks.test_bare_success_command_does_not_count) ... ok
@@ -34,6 +36,7 @@ test_checker_argument_is_rejected (release_local_scope_checks.LocalReleaseChecks
 test_failing_local_command_blocks (release_local_scope_checks.LocalReleaseChecks.test_failing_local_command_blocks) ... ok
 test_fuse_argument_is_still_required (release_local_scope_checks.LocalReleaseChecks.test_fuse_argument_is_still_required) ... ok
 test_missing_empty_and_link_rejected (release_local_scope_checks.LocalReleaseChecks.test_missing_empty_and_link_rejected) ... ok
+test_native_and_bytecode_session_counts (release_local_scope_checks.LocalReleaseChecks.test_native_and_bytecode_session_counts) ... ok
 test_no_checker_required_for_local_help (release_local_scope_checks.LocalReleaseChecks.test_no_checker_required_for_local_help) ... ok
 test_no_private_checker_invocations_in_local_driver (release_local_scope_checks.LocalReleaseChecks.test_no_private_checker_invocations_in_local_driver) ... ok
 test_nonempty_file_has_correct_sha256 (release_local_scope_checks.LocalReleaseChecks.test_nonempty_file_has_correct_sha256) ... ok
@@ -51,6 +54,6 @@ test_appendix_inventory_is_exact (release_public_api_checks.PublicAPIReleaseChec
 test_header_and_library_match_current_appendix (release_public_api_checks.PublicAPIReleaseChecks.test_header_and_library_match_current_appendix) ... ok
 
 ----------------------------------------------------------------------
-Ran 47 tests in 2.920s
+Ran 50 tests in 2.620s
 
 OK

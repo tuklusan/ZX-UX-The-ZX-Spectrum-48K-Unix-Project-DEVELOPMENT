@@ -13,5 +13,5 @@ login banner                    PASS
 64-column font                  PASS
 boot success text               PASS
 tape names                      PASS
-Kernel 8191 bytes; free arena 12946 bytes; boot code 165 bytes
+Kernel 8186 bytes; free arena 12198 bytes; boot code 296 bytes
 

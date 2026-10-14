@@ -1,4 +1,4 @@
-Command: /opt/pyvenv/bin/python3 -B tests/ssxrun.py --png /mnt/data/zxux-release-repair/build/shots
+Command: /opt/pyvenv/bin/python3 -B tests/ssxrun.py --png /mnt/data/ZX-UX-release-source/build/shots
 Exit: 0
 
 gp82           PASS running (2s)
