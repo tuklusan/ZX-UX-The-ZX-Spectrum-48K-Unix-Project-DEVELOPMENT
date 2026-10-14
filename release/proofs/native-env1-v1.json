@@ -5,9 +5,9 @@
   "concurrent": {
     "capture": {
       "png_path": "build/c48-env1/proof/concurrent.png",
-      "png_sha256": "002921ed07f407120738930326e648c00c762d7ca24d32d0015e9d3de55857b3",
+      "png_sha256": "f8b17b20f55dd2c7a9ac738dbda56b8c9df18d44c3ae9284eab5a5299dd49fc3",
       "scr_path": "build/c48-env1/proof/concurrent.scr",
-      "scr_sha256": "f434a91f244ab6314a86e3814876dbdfdb482dd114a05b577386d1841bacba01"
+      "scr_sha256": "cb42b74d9ea492bb6587b220e0b4d03add15969a3a01bd06cda634c2a223375c"
     },
     "checked_program_pass": true,
     "holding_program_pass": true,
@@ -15,18 +15,18 @@
     "simultaneous_image_slots": {
       "check": [
         3,
-        52418,
+        52422,
         65
       ],
       "hold": [
         2,
-        50724,
+        50728,
         90
       ]
     }
   },
   "link": {
-    "archive_sha256": "db2d599c2b6093857470425e066169c8d3aa48575c7424deabc52f42b6907673",
+    "archive_sha256": "fff7801158cf3d2d940d2bd858137d55daa1fa2eef3fb1f76dc55a41739a7823",
     "bss": 31,
     "code": 1175,
     "env1_bss_offset": 1202,
@@ -59,14 +59,14 @@
     "stack": 384
   },
   "native_snapshot": {
-    "command_log_sha256": "62113c57847b6001a014fe7f79d95d334b9c33d7d4f664bc65d8310f40c94848",
+    "command_log_sha256": "5a93405aaebc138f019881686ef004b789cc4db60d3166f6f32824d28383667c",
     "rom_sha256": "d55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42",
-    "snapshot_sha256": "527679b9fb9fe095e9270ad036abc37ad257b4c45ef24eeea598d337a152da29",
+    "snapshot_sha256": "7052815e1f47aa73bf383ef439adfb850b2439db9133a0abf9f21b4d4a75ccd4",
     "tap2sna_sha256": "c754087b68897780211e60d062da4831f04e83a72dc15d88a6dab436e2150e8d",
-    "tape_boot_sha256": "2d5e32d603cd55421d2ea169173f9505879635ac9e966cf3062cbf224c19f566"
+    "tape_boot_sha256": "3eebd9f8097e4cdcb5e67b1b18e7708699d7fac498d86b5e5335b1afee0dc280"
   },
   "result": "PASS",
-  "runtime_build_log_sha256": "97e8cb2cae51ab8e9e4fc78627d7dbc8e666a15f57aa3d29c9ca4386b639e8a8",
+  "runtime_build_log_sha256": "4106b8f6659d4dd498e6f5550d730d513f2d4116e57b39c104c2fabcac6a2057",
   "sequential": [
     {
       "capture": {
@@ -75,7 +75,7 @@
         "scr_path": "build/c48-env1/proof/sequential-1.scr",
         "scr_sha256": "5e4ecfb8fad0f7b6f181ce516392d06493189cf650394af1e427debac7c5bd63"
       },
-      "free_bytes": 10118,
+      "free_bytes": 10114,
       "outcome": "PASS",
       "run": 1,
       "screen_sha256": "671e9d62bae1c99d9e81ace486d359e23088eda119183a898b8116da8f556923"
@@ -87,7 +87,7 @@
         "scr_path": "build/c48-env1/proof/sequential-2.scr",
         "scr_sha256": "5e4ecfb8fad0f7b6f181ce516392d06493189cf650394af1e427debac7c5bd63"
       },
-      "free_bytes": 10118,
+      "free_bytes": 10114,
       "outcome": "PASS",
       "run": 2,
       "screen_sha256": "671e9d62bae1c99d9e81ace486d359e23088eda119183a898b8116da8f556923"
@@ -95,17 +95,17 @@
   ],
   "source": {
     "files": {
-      "build/ZX-UX.tzx": "2d5e32d603cd55421d2ea169173f9505879635ac9e966cf3062cbf224c19f566",
+      "build/ZX-UX.tzx": "3eebd9f8097e4cdcb5e67b1b18e7708699d7fac498d86b5e5335b1afee0dc280",
       "sdk/bin/rcc": "7e45d3cbdbd05456c2a811ac1be7a38cb32ad4a121872a54a42b921ee337daf0",
       "sdk/lib/build.py": "3b51c5c08242d203f97a8a0b4aa4a852ca1ea19e07c8d27a478cac06f4d74f88",
       "sdk/lib/crt0.asm": "4cc8e6936bdcf1aa63d0e3199bd4aa14c5c3ead2fec2c3044363f08288c2bc9d",
       "sdk/rcc/driver.py": "10413e53ff128afc34db59c888f775f11067d96a83c53f22b24514ba1fd46765",
       "sdk/rld.py": "ce306ffad694a8478384f2ff76c244d9adab6fe719dfb138bd63c4f855c24c44",
-      "sdk/rtap.py": "20bcfa70706e09ad97593e0cbef68b48718c7f253f79a27bcf127fe3e3a47192",
+      "sdk/rtap.py": "dbe07558f8f903d3f882d220a3c4a185ab165b0a9fca6c764b33137406074a97",
       "tests/c48/native_env1_storage_lifetime.c": "382598fbf0240c258875db2143dce559a51c836ccf590f29603a49436d198818"
     },
-    "source_commit": "e72bcaee63df5e94242481b6487b51f9d013a4be",
-    "source_tree": "bc4c11ba33d3de38862374b17d7ab005964e4bd5"
+    "source_commit": "4adae86929832596ffce0f47eab1b8960b1a6fc7",
+    "source_tree": "8bbc5cf689c42ac0efc09c3856f40ca08179225b"
   },
   "target": "ZX-UX v1 native"
 }

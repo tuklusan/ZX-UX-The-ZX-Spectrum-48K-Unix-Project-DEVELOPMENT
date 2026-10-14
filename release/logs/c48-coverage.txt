@@ -1,4 +1,4 @@
-Command: /opt/pyvenv/bin/python3 -B tests/c48/coverage_gate.py --report /mnt/data/ZX-UX-release-source/build/logs/c48-conformance.json --ix-proof /mnt/data/ZX-UX-release-source/build/logs/ix-abi-proof.json --env1-proof /mnt/data/ZX-UX-release-source/build/logs/native-env1-v1.json
+Command: /opt/pyvenv/bin/python3 -B tests/c48/coverage_gate.py --report /mnt/data/work-beta04-clean/repo/build/logs/c48-conformance.json --ix-proof /mnt/data/work-beta04-clean/repo/build/logs/ix-abi-proof.json --env1-proof /mnt/data/work-beta04-clean/repo/build/logs/native-env1-v1.json
 Exit: 0
 
 C48 paragraphs: 759

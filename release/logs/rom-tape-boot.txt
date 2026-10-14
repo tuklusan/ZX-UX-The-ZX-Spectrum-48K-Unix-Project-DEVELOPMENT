@@ -1,12 +1,12 @@
-Command: /opt/pyvenv/bin/python3 -B /mnt/data/zxux-external/ZX-UX-48K-toolbox/bin/tap2sna.py build/ZX-UX.tzx build/test.z80
+Command: /opt/pyvenv/bin/python3 -B /mnt/data/ZX-UX-48K-toolbox/ZX-UX-48K-toolbox/bin/tap2sna.py build/ZX-UX.tzx build/test.z80
 Exit: 0
 
 Program: ZX-UX     
 Fast loading data block: 23755,80
 Bytes: unix      
-Fast loading data block: 24576,21608
+Fast loading data block: 24576,21702
 Bytes: fs        
-Fast loading data block: 46184,3062
+Fast loading data block: 46278,3100
 Tape finished
 Simulation stopped (PC in RAM): PC=24576
 Writing build/test.z80
