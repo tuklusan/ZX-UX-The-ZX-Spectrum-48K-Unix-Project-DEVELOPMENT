@@ -4,7 +4,7 @@ on:
     branches:
       - main
     paths:
-      - .github/workflows/one-time-beta-0.0.5.yml
+      - docs/BETA-0.0.5-SIGNOFF-2026-10-14.md
 permissions:
   contents: write
 jobs:
@@ -13,32 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Check signoff commit and create new immutable tag
+      - name: Verify release signoff and create immutable tag
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project
-          EXPECTED_SIGNOFF_COMMIT: 603a40667a25bf66549da8dab2cca2b28a73f669
-          EXPECTED_SIGNOFF_TREE: adeed289f2d3ccede748f886f03b5bd28edfe97f
-          EXPECTED_SIGNOFF_BLOB: e124c39bcd2a6773037c72ec5b18fcd3d4f9727d
+          EXPECTED_SIGNOFF_BLOB: ba3f4562a440384f28fb9c9a978659e00b0e9295
           TAG_NAME: beta-0.0.5
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = "$REPOSITORY"
           test "$GITHUB_REF" = 'refs/heads/main'
-          trigger="$GITHUB_SHA"
-          test -n "$trigger"
-          commit="$EXPECTED_SIGNOFF_COMMIT"
-          parent="$(gh api "repos/$REPOSITORY/commits/$trigger" --jq '.parents[0].sha')"
-          test "$parent" = "$commit"
-          tree="$(gh api "repos/$REPOSITORY/git/commits/$commit" --jq '.tree.sha')"
-          test "$tree" = "$EXPECTED_SIGNOFF_TREE"
+          commit="$GITHUB_SHA"
+          test -n "$commit"
           file_sha="$(gh api "repos/$REPOSITORY/contents/docs/BETA-0.0.5-SIGNOFF-2026-10-14.md?ref=$commit" --jq '.sha')"
           test "$file_sha" = "$EXPECTED_SIGNOFF_BLOB"
           msg="$(gh api "repos/$REPOSITORY/commits/$commit" --jq '.commit.message')"
-          test "$msg" = 'Sign off private beta-0.0.5'
+          test "$msg" = 'Sign off private beta-0.0.5 release'
           head="$(gh api "repos/$REPOSITORY/branches/main" --jq '.commit.sha')"
-          test "$head" = "$trigger"
+          test "$head" = "$commit"
           if gh api "repos/$REPOSITORY/git/ref/tags/$TAG_NAME" >/dev/null 2>&1; then
             echo 'This tag already exists; refusing to change it.' >&2
             exit 1
