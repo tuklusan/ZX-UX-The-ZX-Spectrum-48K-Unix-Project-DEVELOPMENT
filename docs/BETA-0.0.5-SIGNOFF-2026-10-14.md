@@ -23,3 +23,5 @@ No physical ZX Spectrum 48K was used for this verification. The existing release
 ## Decision
 
 **Approved for private beta-0.0.5 tagging of the signoff commit.** The one-time tag must be created only when the tag name is unused, at exactly the commit recording this signoff, without rewriting any existing tag or branch history. No public publication is authorized.
+
+This updated signoff is the tag target. No build products or program sources were changed during signoff.
