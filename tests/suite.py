@@ -306,31 +306,61 @@ def idle_pack(s):
 
 @test
 def pack_under_pressure(s):
-    """an unpack that runs out of blocks packs other files meanwhile"""
+    """an unpack that runs out of room packs other files meanwhile.
+
+    The arena is brought to a state where the doc's 1293 raw bytes do not
+    fit but packing one closed 1293-byte copy can still start (zpack's
+    workspace halves down to 646 bytes) and gives enough back.  Copies
+    and packs move the free space in measured steps (a copy costs about
+    1297 bytes, packing one gives about 709 back, so the two together
+    move it by about 588, less than the window's width), so the window
+    is reached whatever the system's size; the first version filled
+    greedily and passed or failed with the resident size (a change of a
+    few dozen bytes could flip it)."""
+    LOW, HIGH = 660, 1290
     s.login()
-    s.sh('cp /usr/doc/zxpack /tmp/a')          # raw 11 blocks, packable
+    s.sh('cp /usr/doc/zxpack /tmp/a')          # raw 1293 bytes, packable
     s.expect('zxpack /usr/doc/zxpack', '1293 -> 584 bytes', frames=60000)
     sum_a = s.sh('sum /tmp/a', frames=20000)
-    def free():
-        out = s.sh('df')
-        return int(re.search(r'(\d+) bytes free', '\n'.join(out)).group(1))
-    # fill the arena until the 1293 raw bytes of the doc no longer fit
-    n = 0
-    while free() > 1300 and n < 5:
-        s.sh('cp /tmp/a /tmp/f%d' % n, frames=20000)
-        n += 1
-    if free() > 1300:
-        s.sh('cp /usr/doc/tar /tmp/g', frames=20000)
-    s.expect('wc /usr/doc/zxpack', re.compile(r'38 +213 +1293 /usr/doc/zxpack'),
-             frames=200000)
-    s.sh('rm /tmp/g')
+    copies, raw = [], []
+
+    def copy():
+        name = '/tmp/f%d' % len(copies)
+        before = df_free(s)
+        s.sh('cp /tmp/a ' + name, frames=20000)
+        copies.append(name)
+        raw.append(name)
+        return before - df_free(s)
+    step = 1300                                # a copy costs 1293 bytes and
+    while df_free(s) - step > HIGH:            # its arena block's header
+        copy()
+    while df_free(s) > HIGH:                   # pack one, copy one
+        if not raw or len(copies) > 12:
+            raise Fail('cannot reach %d bytes free:\n%s' % (HIGH, s.screen()))
+        s.sh('zxpack ' + raw.pop(0), frames=60000)
+        copy()
+    free = df_free(s)
+    if not LOW <= free <= HIGH:
+        raise Fail('could not bring the arena to %d..%d bytes free: %d' % (LOW, HIGH, free))
+
+    # the room has to come from packing closed files during the unpack:
+    # zpress called by the allocator (zidlem 0), not by the idle packer
+    def packed():
+        return len(re.findall(r'^z', '\n'.join(s.sh('ls -l /tmp')), re.M))
+    before = packed()
+    pressed = []
+    zidlem = ksym('zidlem')
+    with watching(s, ksym('zpress'), lambda: pressed.append(s.zx.mem[zidlem])):
+        s.expect('wc /usr/doc/zxpack', re.compile(r'38 +213 +1293 /usr/doc/zxpack'),
+                 frames=200000)
+    if 0 not in pressed or packed() <= before:
+        raise Fail('the unpack (%d bytes free) did not pack another file to make room '
+                   '(zpress calls: %s; packed files %d -> %d)'
+                   % (free, pressed, before, packed()))
     s.expect('ls -l /usr/doc/zxpack', re.compile(r's.rw.. 1 +1293 '))
-    # the blocks came from packing closed files during the unpack
-    s.expect('ls -l /tmp', re.compile(r'^z', re.M))
     s.expect('sum /tmp/a', *sum_a, frames=60000)
-    for i in range(n):
-        s.expect('cmp /tmp/a /tmp/f%d' % i, absent=('differ', 'EOF'),
-                 frames=60000)
+    for f in copies:
+        s.expect('cmp /tmp/a ' + f, absent=('differ', 'EOF'), frames=60000)
 
 
 @test
@@ -548,6 +578,106 @@ def shell_below_picture(s):
     if m[top] != 0:
         raise Fail('ttop %d after the program' % m[top])
     s.expect('ps', 'init', 'sh', absent=('mtleft',))
+
+
+@test
+def pair_after_prompt(s):
+    """the release's multitask snapshot (tools/mtsnap.py): hanoi in the
+    background, a prompt below its picture, then queens8 - both run"""
+    import rtap
+    s.login()
+    own = ksym('scrown')
+    for n, count in (('hanoi', 1), ('queens8', 2)):
+        f = os.path.join(ROOT, 'build', 'c48', n + '-mt.ssx')
+        if not os.path.exists(f):
+            raise Fail('%s missing: run tools/mktapes.py' % f)
+        s.zx.type('/dev/cassette/%s &\n' % n)
+        s.zx.tr.edges = zxrun.tape_pulses(rtap.records(open(f, 'rb').read(), n),
+                                          s.zx.sim.registers[25] + 350000)
+        for _ in range(500):
+            if bin(s.zx.mem[own]).count('1') == count:
+                break
+            s.wait(10)
+        else:
+            raise Fail('%s did not start:\n%s' % (n, s.screen()))
+        if n == 'hanoi':
+            s.wait(100)
+            s.zx.type('\n')                # a prompt below the picture
+            s.wait(100)
+
+
+class watching:
+    """with watching(s, addr, on_stop): s.zx.run stops before every
+    instruction at addr and calls on_stop() (the kernel at a routine).
+    Not nestable: leaving the block restores the class's run."""
+    def __init__(self, s, addr, on_stop):
+        self.zx, self.addr, self.on_stop = s.zx, addr, on_stop
+
+    def __enter__(self):
+        from skoolkit.simutils import PC, T
+        zx, addr, on_stop = self.zx, self.addr, self.on_stop
+
+        def run(frames):
+            regs = zx.sim.registers
+            for _ in range(frames):
+                end = regs[T] + zxrun.FRAME
+                while regs[T] < end:
+                    if regs[PC] == addr:
+                        on_stop()
+                        zx.sim.trace(regs[PC], -1, 1, end, 1, None, None, None, None, None)
+                        continue
+                    zx.sim.trace(regs[PC], addr, 0, end, 1, None, None, None, None, None)
+                zx.frames += 1
+        zx.run = run
+        return self
+
+    def __exit__(self, *exc):
+        del self.zx.run                 # the class's run again
+
+
+def saves_watched(s, frames, before=None):
+    """before() (e.g. typing a command), then frames, stopping at each
+    window save (wsave): the deepest stack (CORETOP - saved SP) per
+    program name.  The typing is watched too: a fork saves the shell's
+    window as the ENTER is pressed."""
+    from skoolkit.simutils import A
+    coretop, p_sp, stline = ksym('CORETOP'), ksym('p_sp'), ksym('stline')
+    regs, m = s.zx.sim.registers, s.zx.mem
+    deep = {}
+
+    def saved():
+        slot = regs[A]
+        sp = m[p_sp + 2 * slot] | m[p_sp + 2 * slot + 1] << 8
+        name = bytes(m[stline + 8 * slot:stline + 8 * slot + 8]).split(b'\0')[0]
+        name = name.decode('latin-1').strip()
+        deep[name] = max(deep.get(name, 0), coretop - sp)
+    with watching(s, ksym('wsave'), saved):
+        if before:
+            before()
+        s.zx.run(frames)
+    return deep
+
+
+@test
+def shell_save_depth(s):
+    """the shell's stack stays well inside its reserve (STK_SH, t_sys.asm)
+    when its window image is saved: a resident job in the background takes
+    the window while the shell globs, redirects and runs a script"""
+    s.login()
+    s.sh('echo echo $1 $2 > /tmp/s')
+    s.sh('echo ls /bin/c* >> /tmp/s')
+    deep = {}
+    for cmd in ('sleep 2 &', 'ls -l /bin/c* > /tmp/l', 'sh /tmp/s a b', 'sleep 1 &',
+                'echo a b c d e f g h i j k l m n o p > /tmp/m', 'cat /tmp/m /tmp/l'):
+        for k, v in saves_watched(s, 400, lambda: s.zx.type(cmd + '\n')).items():
+            deep[k] = max(deep.get(k, 0), v)
+    reserve = 256                       # STK_SH
+    if 'sh' not in deep:
+        raise Fail('the shell was never saved: %s' % deep)
+    if deep['sh'] > reserve // 2:
+        raise Fail('the shell saved %d bytes of stack; its reserve is %d' % (deep['sh'], reserve))
+    s.wait_prompt()
+    s.expect('echo alive', 'alive')
 
 
 @test
@@ -809,7 +939,9 @@ def vi_big_file(s):
     s.zx.type(':q')
     s.key('ENTER')
     s.wait_prompt(3000)
-    s.expect('ls -l /tmp/big', ' 3275 ')
+    size = sum(os.path.getsize(os.path.join(ROOT, 'src', d + '.doc'))
+               for d in ('zxpack', 'tar', 'more'))
+    s.expect('ls -l /tmp/big', ' %d ' % size)
     s.expect('sum /tmp/big', *ref, frames=60000)
 
 
@@ -846,6 +978,200 @@ def beep_pitch(s):
     if not (46 <= n1 <= 56 and 98 <= n2 <= 110):
         raise Fail('half periods: %d of C4, %d of C5; want about 51 and 104' % (n1, n2))
     s.wait_prompt(3000)
+
+
+@test
+def border_kept(s):
+    """border() sets BORDCR as well as the border, so the key click and
+    BEEP (which put the border back from BORDCR) keep the colour; bad
+    colours change neither; when the screen goes back to the console the
+    border is black again and BORDCR is 07h, as the ROM's BORDER 0 leaves
+    it (or the next key click would bring the colour back)"""
+    s.login()
+    m = s.zx.mem
+    tr = s.zx.tr
+
+    def want(what, border, bordcr):
+        if (tr.border, m[0x5C48]) != (border, bordcr):
+            raise Fail('%s: border %d BORDCR %02X, want %d %02X\n%s'
+                       % (what, tr.border, m[0x5C48], border, bordcr, s.screen()))
+    want('at login', 0, 0x07)
+    s.expect('beep', absent=('usage',))         # BEEP with BORDCR black
+    want('beep at the shell', 0, 0x07)
+    run_cassette(s, 'bordck')
+    s.until('border 2', 6000)
+    s.zx.run(5)
+    want('border(2)', 2, 0x17)                  # 2*8 + white lower ink
+    s.zx.type('x')                              # key click
+    s.until('after beep', 3000)
+    s.zx.run(5)
+    want('after the key click and BEEP', 2, 0x17)
+    s.until('bad refused', 3000)
+    want('border(8), border(-1), border(256)', 2, 0x17)
+    s.zx.type('x')
+    s.until('border 5', 3000)
+    s.zx.run(5)
+    want('border(5)', 5, 0x28)                  # light colours: black ink
+    s.zx.type('x')                              # the program ends
+    s.wait_prompt(3000)
+    want('after the program', 0, 0x07)       # as BORDER 0 leaves it
+    s.expect('echo still', 'still')             # key clicks at the shell
+    want('typing at the shell', 0, 0x07)
+
+
+def mixed_tape(s):
+    """tar sets made on ZX-UX (one named, one not) between two programs, the system tape's
+    BASIC and CODE headers, and two blocks that are not headers to list:
+    a header with a bad parity byte, and a 17-byte data block"""
+    import rtap
+    s.sh('mkdir /tmp/t')
+    s.sh('echo one > /tmp/t/one')
+    s.sh('tar cf /dev/cassette/demo /tmp/t', frames=60000)
+    arch = zxrun.decode_mic(s.zx.tr.mic)
+    if len(arch) != 6:
+        raise Fail('tar wrote %d blocks, want 6' % len(arch))
+    s.sh('tar cf /dev/cassette /tmp/t/one', frames=60000)    # no name
+    anon = zxrun.decode_mic(s.zx.tr.mic)[6:]
+    if len(anon) != 4:
+        raise Fail('tar wrote %d blocks for the unnamed set, want 4' % len(anon))
+    prog = ssx_tape('ssxargs')
+    data = open(os.path.join(ROOT, 'build', 'ZX-UX.tap'), 'rb').read()
+    sysb, p = [], 0
+    while p < len(data):
+        n = data[p] | data[p + 1] << 8
+        sysb.append(data[p + 2:p + 2 + n])
+        p += 2 + n
+    bad = bytearray(rtap.tap_block(0, bytes([3]) + b'badparity ' + bytes(4) + b'SS'))
+    bad[-1] ^= 0x55
+    fake = rtap.tap_block(0xFF, bytes([3]) + b'notahdr   ' + bytes(4) + b'SS')
+    zz9 = rtap.records(open(os.path.join(ROOT, 'build', 'ssx', 'ssxargs.ssx'), 'rb').read(), 'zz9')
+    return prog + arch + sysb[:4] + [bytes(bad), fake] + anon + zz9
+
+
+def listing(s, cmd):
+    """the lines after the last prompt line that holds cmd (a held BREAK
+    can leave spaces before it: the ROM repeats the SPACE)"""
+    rows = s.rows()
+    hit = [i for i, l in enumerate(rows) if re.match(r'#\s+' + re.escape(cmd) + r'$', l.rstrip())]
+    if not hit:
+        raise Fail('%r not on the screen:\n%s' % (cmd, s.screen()))
+    return [l.rstrip() for l in rows[hit[-1] + 1:] if l.strip() and l.strip() != '#']
+
+
+def list_until(s, cmd, last, frames=80000):
+    for _ in range(frames // 50):
+        got = listing(s, cmd)
+        if got and got[-1] == last:
+            s.zx.run(100)
+            return listing(s, cmd)
+        s.zx.run(50)
+    raise Fail('%s: %r not listed:\n%s' % (cmd, last, s.screen()))
+
+
+@test
+def tap_t_whole_tape(s):
+    """tap t (tar t without a name) lists the whole tape - each program
+    as /dev/cassette/NAME, each tar set as /dev/cassette/LABEL: and its
+    members - and skips everything else, loading and running nothing,
+    until BREAK (held as a user would: the ROM loader waits about a
+    second after an edge without looking at BREAK)"""
+    s.login()
+    tape = mixed_tape(s)
+    free = df_free(s)
+    s.zx.type('tap t\n')
+    s.zx.tr.edges = zxrun.tape_pulses(tape, s.zx.sim.registers[25] + 3500000)
+    list_until(s, 'tap t', '/dev/cassette/zz9')
+    # (tap lists in the long form, as v1's did)
+    want = ['/dev/cassette/ssxargs', '/dev/cassette/demo:', 'd    30 /tmp/t',
+            '-     4 /tmp/t/one', '/dev/cassette:', '-     4 /tmp/t/one', '/dev/cassette/zz9']
+    got = listing(s, 'tap t')
+    if got != want:
+        raise Fail('tap t listed %s, want %s' % (got, want))
+    # the SDK's rtap --list says the same of these blocks (and more: the
+    # BASIC and CODE files, the blocks that are not records)
+    import rtap
+    host = [' '.join(l.split()) for l in rtap.list_blocks(tape)]
+    for item in (' '.join(g.split()) for g in got):
+        if not any(h == item or h.startswith('program ' + item + ' ')
+                   or h == 'archive ' + item for h in host):
+            raise Fail('rtap --list does not show %r:\n%s' % (item, '\n'.join(host)))
+    for word in ('badparity', 'notahdr', 'ZX-UX', 'unix', 'ssx args:'):
+        if word in '\n'.join(got):
+            raise Fail('%r listed' % word)
+    s.zx.tr.pressed = {'CS', 'SPACE'}           # hold BREAK 1.5 seconds
+    s.zx.run(75)
+    s.zx.tr.pressed = set()
+    s.wait_prompt(3000)
+    procs = [m.group(1) for m in (re.match(r'\s*\d+\s+\d+\s+\S\s+\S+\s+(\S+)$', l)
+                                  for l in s.sh('ps')) if m]
+    if procs != ['init', 'sh', 'ps']:
+        raise Fail('processes after BREAK: %s' % procs)
+    if df_free(s) != free:
+        raise Fail('memory changed: %d -> %d bytes free' % (free, df_free(s)))
+    # tar tf /dev/cassette: the same, members by path only
+    s.zx.type('tar tf /dev/cassette\n')
+    s.zx.tr.edges = zxrun.tape_pulses(tape, s.zx.sim.registers[25] + 3500000)
+    list_until(s, 'tar tf /dev/cassette', '/dev/cassette/zz9')
+    want = ['/dev/cassette/ssxargs', '/dev/cassette/demo:', '/tmp/t', '/tmp/t/one',
+            '/dev/cassette:', '/tmp/t/one', '/dev/cassette/zz9']
+    got = listing(s, 'tar tf /dev/cassette')
+    if got != want:
+        raise Fail('tar tf /dev/cassette listed %s, want %s' % (got, want))
+    s.zx.tr.pressed = {'CS', 'SPACE'}
+    s.zx.run(75)
+    s.zx.tr.pressed = set()
+    s.wait_prompt(3000)
+
+
+@test
+def tar_t_named(s):
+    """with an archive name, t lists that archive only - no programs, no
+    other headers - and ends by itself at the archive's end; x without a
+    name still takes the first archive"""
+    s.login()
+    tape = mixed_tape(s)
+    s.zx.type('tar tf /dev/cassette/demo\n')
+    s.zx.tr.edges = zxrun.tape_pulses(tape, s.zx.sim.registers[25] + 3500000)
+    s.wait_prompt(80000)
+    got = listing(s, 'tar tf /dev/cassette/demo')
+    if got != ['/tmp/t', '/tmp/t/one']:
+        raise Fail('tar tf /dev/cassette/demo listed %s' % got)
+    s.sh('rm /tmp/t/one')
+    s.zx.type('tap x\n')
+    s.zx.tr.edges = zxrun.tape_pulses(tape, s.zx.sim.registers[25] + 3500000)
+    s.wait_prompt(80000)
+    s.expect('cat /tmp/t/one', 'one')
+
+
+@test
+def boot_figures(s):
+    """line 3 of the boot banner: the kernel's size is the resident
+    kernel (kend - 6000h, the 8K limit's measure), the free figure is
+    what the kernel itself counts free in the arena (afreeb) when it
+    prints the banner - before init, getty and the shell take their
+    share, so df after login shows less - and procs is NPROC"""
+    from skoolkit.simutils import H, L, PC, SP, T
+    zx = s.zx
+    r = zx.sim.registers
+    zx.sim.trace(r[PC], ksym('kinit'), 0, r[T] + zxrun.FRAME * 600, 1,
+                 None, None, None, None, None)
+    if r[PC] != ksym('kinit'):
+        raise Fail('the boot did not reach kinit')
+    line = [l for l in zx.screen().splitlines() if 'kernel' in l]
+    m = re.search(r'kernel (\d+)B free=(\d+)B procs=(\d+) ok', line[0] if line else '')
+    if not m:
+        raise Fail('no boot figures:\n' + zx.screen())
+    sp = (r[SP] - 2) & 0xFFFF                     # call afreeb, return to kinit
+    zx.mem[sp], zx.mem[sp + 1] = ksym('kinit') & 255, ksym('kinit') >> 8
+    r[SP] = sp
+    zx.sim.trace(ksym('afreeb'), ksym('kinit'), 0, r[T] + 1000000, 0,
+                 None, None, None, None, None)
+    free = r[H] * 256 + r[L]
+    want = (ksym('kend') - 0x6000, free, ksym('NPROC'))
+    got = tuple(int(x) for x in m.groups())
+    if got != want:
+        raise Fail('banner says kernel %d, free %d, procs %d; the kernel has %d, %d, %d'
+                   % (got + want))
 
 
 TESTS_BY_NAME = {f.__name__: f for f in TESTS}
