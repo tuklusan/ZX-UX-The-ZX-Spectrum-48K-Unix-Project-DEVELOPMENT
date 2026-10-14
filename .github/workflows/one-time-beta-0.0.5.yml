@@ -1,0 +1,49 @@
+name: Create beta-0.0.5 private tag
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/one-time-beta-0.0.5.yml
+permissions:
+  contents: write
+jobs:
+  create-tag:
+    if: github.repository == 'tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check signoff commit and create new immutable tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project
+          EXPECTED_PARENT: 41392d4ea6c2ae4280c9224d1281e8f79ed88ef9
+          EXPECTED_PARENT_TREE: f5111afad8c7f990609640b9afa29c5eee8bdd36
+          EXPECTED_SIGNOFF_BLOB: e124c39bcd2a6773037c72ec5b18fcd3d4f9727d
+          TAG_NAME: beta-0.0.5
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "$REPOSITORY"
+          test "$GITHUB_REF" = 'refs/heads/main'
+          commit="$GITHUB_SHA"
+          test -n "$commit"
+          parent="$(gh api "repos/$REPOSITORY/commits/$commit" --jq '.parents[0].sha')"
+          test "$parent" = "$EXPECTED_PARENT"
+          tree="$(gh api "repos/$REPOSITORY/git/commits/$parent" --jq '.tree.sha')"
+          test "$tree" = "$EXPECTED_PARENT_TREE"
+          file_sha="$(gh api "repos/$REPOSITORY/contents/docs/BETA-0.0.5-SIGNOFF-2026-10-14.md?ref=$commit" --jq '.sha')"
+          test "$file_sha" = "$EXPECTED_SIGNOFF_BLOB"
+          msg="$(gh api "repos/$REPOSITORY/commits/$commit" --jq '.commit.message')"
+          test "$msg" = 'Sign off private beta-0.0.5'
+          head="$(gh api "repos/$REPOSITORY/branches/main" --jq '.commit.sha')"
+          test "$head" = "$commit"
+          if gh api "repos/$REPOSITORY/git/ref/tags/$TAG_NAME" >/dev/null 2>&1; then
+            echo 'This tag already exists; refusing to change it.' >&2
+            exit 1
+          fi
+          gh api -X POST "repos/$REPOSITORY/git/refs" \
+            -f "ref=refs/tags/$TAG_NAME" -f "sha=$commit" >/dev/null
+          actual="$(gh api "repos/$REPOSITORY/git/ref/tags/$TAG_NAME" --jq '.object.sha')"
+          test "$actual" = "$commit"
+          echo "Created and verified $TAG_NAME at $actual"
