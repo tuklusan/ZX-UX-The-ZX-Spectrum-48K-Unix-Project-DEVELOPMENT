@@ -10,23 +10,23 @@ demos     dizzy4k      6037 bytes, needs  6037
 demos     firework     3761 bytes, needs  3761
 demos     forest       3633 bytes, needs  4268
 demos     galaxy       4815 bytes, needs  4815
-demos     goblet       5561 bytes, needs  5561
+demos     goblet       5563 bytes, needs  5563
 demos     hanoi        7010 bytes, needs  7550
-demos     julia        2977 bytes, needs  3156
+demos     julia        2979 bytes, needs  3158
 demos     kaleido      3738 bytes, needs  3738
-demos     mandel       2686 bytes, needs  2884
-demos     mobius       5552 bytes, needs  5552
+demos     mandel       2688 bytes, needs  2886
+demos     mobius       5554 bytes, needs  5554
 demos     moire        3834 bytes, needs  3834
-demos     morph3d      5905 bytes, needs  5905
-demos     ocean        5059 bytes, needs  5059
+demos     morph3d      5907 bytes, needs  5907
+demos     ocean        5061 bytes, needs  5061
 demos     orrery       5229 bytes, needs  5229
 demos     plasma       2390 bytes, needs  2788
 demos     queens8      6487 bytes, needs  7244
 demos     raymaze      3678 bytes, needs  3678
 demos     spriteanim   2458 bytes, needs  2864
 demos     sprites      2811 bytes, needs  3172
-demos     terrain      5121 bytes, needs  5121
-demos     torus        5591 bytes, needs  5591
+demos     terrain      5123 bytes, needs  5123
+demos     torus        5593 bytes, needs  5593
 demos     tunnel       3693 bytes, needs  3693
 demos     warp         3432 bytes, needs  3634
 examples  argv         2674 bytes, needs  2908
@@ -57,6 +57,6 @@ security  secloop       835 bytes, needs  1141
 security  secoob        911 bytes, needs  1220
 security  secrecur      934 bytes, needs  1873
 security  secuaf       1513 bytes, needs  3022
-sound     tune         1727 bytes, needs  2054
+sound     tune         1729 bytes, needs  2056
 57 programs
 

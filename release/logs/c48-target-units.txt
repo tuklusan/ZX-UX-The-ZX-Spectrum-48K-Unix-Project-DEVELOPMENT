@@ -9,6 +9,6 @@ test_status_change_cannot_replace_env1_proof (target_gate_tests.TargetGateChecks
 test_unsupported_case_does_not_pass (target_gate_tests.TargetGateChecks.test_unsupported_case_does_not_pass) ... ok
 
 ----------------------------------------------------------------------
-Ran 5 tests in 0.004s
+Ran 5 tests in 0.009s
 
 OK

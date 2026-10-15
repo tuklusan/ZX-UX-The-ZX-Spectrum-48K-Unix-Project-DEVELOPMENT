@@ -1,22 +1,22 @@
-Command: /opt/pyvenv/bin/python3 -B tests/lm_native_memory.py --snapshot /mnt/data/work-beta04-clean/repo/build/test.z80 --image /mnt/data/work-beta04-clean/repo/build/lm/ailmzx48.ssx --tape /mnt/data/work-beta04-clean/repo/build/ZX-UX.tzx --output /mnt/data/work-beta04-clean/repo/build/logs/lm-native
+Command: /opt/pyvenv/bin/python3 -B tests/lm_native_memory.py --snapshot /mnt/data/rev5-work/release-final-source/build/test.z80 --image /mnt/data/rev5-work/release-final-source/build/lm/ailmzx48.ssx --tape /mnt/data/rev5-work/release-final-source/build/ZX-UX.tzx --output /mnt/data/rev5-work/release-final-source/build/logs/lm-native
 Exit: 0
 
 {
   "result": "PASS_MEMORY_BOUND_REJECTION",
   "scope": "loader rejection only; LM program was not executed",
-  "frame": 263,
-  "image_bytes": 17918,
-  "required_bytes": 21202,
-  "kernel_free_before": 10114,
-  "kernel_free_after": 10114,
+  "frame": 267,
+  "image_bytes": 17920,
+  "required_bytes": 21204,
+  "kernel_free_before": 10084,
+  "kernel_free_after": 10084,
   "sha256": {
     "source": "c401a3fe1877033faef537449255faba075a0578d9fb7da0a5f4dbb113a4eea2",
     "rom": "d55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42",
-    "tape": "3eebd9f8097e4cdcb5e67b1b18e7708699d7fac498d86b5e5335b1afee0dc280",
-    "snapshot": "7052815e1f47aa73bf383ef439adfb850b2439db9133a0abf9f21b4d4a75ccd4",
-    "native_image": "cd7f87df718faa0027a2bfb9f7a616eb2db64f3ed6a87b8884bf032085c0e3d6",
-    "screen": "e51325d94a387c5ef56149b3e634a70ead12d60073dd9d81b972561f33427f84",
-    "png": "645b76b3f58ed26fa52a31a4504a8388ebf6a60996e872bcf6bf537c453fe185"
+    "tape": "84dcbb47ba0ac33efc079e35622cd543302f5569c305d04181528f7df93f3771",
+    "snapshot": "705fe87c47b1e48cdb2c6b91c329e7b38300f7572529a849e86041ce59c1df16",
+    "native_image": "1793cae0d0d69da337df19c8e98c2c0843272f01b09c59a95c3948ff75426305",
+    "screen": "25992d6e918d95be48f54aa8fc4b42bd09e73fbff81375f1247c610410cf9628",
+    "png": "4d7a1dbccd445d822028d69e4f0e2fd67a03c21c0c4a52703c6f6f03e9ffae12"
   }
 }
 
