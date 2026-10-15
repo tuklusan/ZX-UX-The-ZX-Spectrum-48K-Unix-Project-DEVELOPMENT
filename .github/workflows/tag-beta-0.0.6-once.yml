@@ -1,0 +1,62 @@
+name: Create beta-0.0.6 private release tag once
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/BETA-0.0.6-SIGNOFF-2026-10-15.md
+      - .github/workflows/tag-beta-0.0.6-once.yml
+permissions:
+  contents: write
+jobs:
+  verify-and-tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Verify immutable private signoff and trigger identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT'
+          test "$GITHUB_REPOSITORY_ID" = '1412173246'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD^)" = 'f85ce0cb9853d3928bc52a90eb0abc12c9249c10'
+          test "$(git rev-parse 'f85ce0cb9853d3928bc52a90eb0abc12c9249c10^{tree}')" = '57d01769037fbaf1f4e965083ea4a8852339f716'
+          test "$(git show -s --format=%s HEAD)" = 'docs: sign off private beta-0.0.6 release'
+          test "$(git rev-parse HEAD:docs/BETA-0.0.6-SIGNOFF-2026-10-15.md)" = 'ad42dec513900944c52102de5c06e71e25c0a09b'
+          test "$(git cat-file -t 'HEAD:.github/workflows/tag-beta-0.0.6-once.yml')" = 'blob'
+          test "$(git show HEAD:release/manifest.txt | sha256sum | cut -f1 -d' ')" = '2be4409a32937383d207828b53cb0c2efbd277d876251319a279381612326693'
+          test "$(git ls-tree -r --name-only HEAD release/ | wc -l)" = '321'
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          test -z "$(git ls-remote origin refs/tags/beta-0.0.6)"
+          echo TAG_PREFLIGHT_PASS
+      - name: Create tag once and verify remote target
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -z "$(git ls-remote origin refs/tags/beta-0.0.6)"
+          printf '{"ref":"refs/tags/beta-0.0.6","sha":"%s"}\n' "$GITHUB_SHA" > /tmp/zxux-tag-payload.json
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'Content-Type: application/json' \
+            -X POST \
+            --data-binary @/tmp/zxux-tag-payload.json \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs" \
+            -o /tmp/zxux-tag-response.json
+          python3 - <<'PYCODE'
+          import json, os
+          from pathlib import Path
+          value = json.loads(Path('/tmp/zxux-tag-response.json').read_text())
+          assert value['ref'] == 'refs/tags/beta-0.0.6'
+          assert value['object']['sha'] == os.environ['GITHUB_SHA']
+          print('TAG_CREATE_RESPONSE_SHA_PASS', flush=True)
+          PYCODE
+          test "$(git ls-remote origin refs/tags/beta-0.0.6 | cut -f1)" = "$GITHUB_SHA"
+          echo BETA_0_0_6_TAG_REMOTE_PASS
