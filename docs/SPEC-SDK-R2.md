@@ -116,6 +116,16 @@ ROM error reports ("Number too big", "Invalid argument") come back through the t
 Integer conversions use the ROM's `truncate` and `FP-TO-BC`. `beep` stacks its two numbers and jumps
 into ROM `BEEP` (03F8h), which ends in `BEEPER`.
 
+**After every note `beep` lets one frame interrupt in (`EI`, `HALT`).**
+`BEEPER` runs with interrupts off, and a program that calls it again at once never lets the frame
+interrupt in: the keyboard, the clock, BREAK and the scheduler all stop until it ends, so the
+shell cannot be typed to and no other process runs. With the break, the kernel's interrupt routine
+runs after every note: keys are read, the clock and BREAK work, and the scheduler can switch to
+another process when the beeper's time slice (4 frames) is up. It costs a gap of up to 20 ms
+between notes. (A program built with an earlier library still holds everything up: rebuild it, as
+`tools/mktapes.py` does.) `beep` still saves and restores MEMBOT's first five bytes, where kernels
+before rev 5 kept their clock; the kernel keeps it elsewhere now (`tod_h` … in the printer buffer).
+
 Results are the ROM's, bit for bit, as C48 requires. The kernel stays within 8 KB, and the C
 extensions cost it only `ticks` and `screen` (about 100 bytes).
 
@@ -326,14 +336,20 @@ screen sharing and multitasking.
   described.
 - **Typing:** characters become keys as ZX-UX's L mode types them (SYMBOL SHIFT symbols, the
   tty's keyword tokens for `~ | \ { } [ ]`, `` ` `` as SYMBOL SHIFT + X). They are held two
-  frames, three apart. A key is only pressed again once the ROM's KEYBOARD routine has let it go
-  (five frames), and a third key only once one of its two KSTATE sets is free.
+  scans, three apart. A key is only pressed again once the ROM's KEYBOARD routine has let it go
+  (five scans), and a third key only once one of its two KSTATE sets is free.
   `--compat-keys` types as the ZX-UX tests do (4 held, 7 apart).
+  The keyboard counts the frame interrupts the machine has taken, the scans of ZX-UX's
+  interrupt routine, not frames: while interrupts are off (a BEEP, a tape transfer) a key stays
+  held until the system has seen it, as a person holds a key until the Spectrum answers. Counted
+  in frames, keys typed while a background program beeped were lost.
 
 **The window (`sdk/rvmgui.py`, Tk).**
-- **Frames:** the machine runs in a thread and hands each frame through a two-deep queue; the
-  window paints at most one every 20 ms. If the host paints more slowly the machine waits: no
-  frame is dropped, and a frame is painted when it differs from the one before.
+- **Frames:** the machine runs in a thread at the Spectrum's own rate, 50.08 frames a second
+  (69,888 T-states a frame), paced by the sound stream, or by a wall clock when there is no sound.
+  It hands each frame through a two-deep queue and the window paints it as it comes. If the host
+  is slower the machine waits: no frame is dropped, and a frame is painted when it differs from
+  the one before.
 - **Picture:** FLASH follows the frame count (16 frames a phase); the border is drawn line by line
   from the colour each scan line started with; the scale is the largest that fits.
 - **Keys:** the host's characters, Enter, Backspace (DELETE), the arrows and Esc (EDIT).
@@ -344,9 +360,18 @@ screen sharing and multitasking.
 
 **Sound (`sdk/rvmsound.py`).** The beeper edges become 44.1 kHz samples by integrating the
 speaker level over each sample period. A BEEP's period is the ROM's own (8 × HL + 236 T-states,
-HL = INT(437500 / f − 30.125 + 0.5)), exact to the T-state. The window plays it in bursts of at
-most 10 frames (winsound on Windows, afplay, paplay or aplay elsewhere); `--wav F` writes the
-run's sound.
+HL = INT(437500 / f − 30.125 + 0.5)), exact to the T-state. `--wav F` writes these samples.
+The window plays them as one continuous stream, every frame's samples back to back: the Windows
+waveOut API (winmm, through `ctypes`), or one `paplay` / `aplay` process fed raw samples through a
+pipe (Linux; `paplay`, or `aplay` if `paplay` fails). The stream is also the clock: the machine
+waits while 80 ms of sound is queued, so it runs at the rate the sound card plays. The picture
+leads the sound by up to 80 ms with waveOut, and by about 125 ms through a pipe (its 4 KB of
+sound come on top of the player's own 80 ms). What
+is played passes a 20 Hz DC blocker, as the Spectrum's output does, so a tone starting or stopping
+does not click. On a host too slow for 50 frames a second the sound has gaps; the picture does
+not lose frames. With no sound device, `--mute`, or macOS (whose `afplay` only plays files, so it
+gets short files, with gaps) a wall clock keeps the rate. `--verbose` says which output was used,
+and on Windows how many times the speaker ran dry.
 
 **Headless:** `--png`, `--scr`, `--text` (the program's last picture; `--final` for the screen as
 ZX-UX left it), `--wav`, `--tape-out` (blocks saved to cassette), `--keys` (typed once the program

@@ -21,13 +21,16 @@ Type `/dev/cassette/hello` in ZX-UX, then play `hello.tzx`.
 
 Or run it on your host: `rvm` is a ZX Spectrum 48K that boots the real
 ZX-UX from `build/ZX-UX.tap`, logs in, and runs the program from the
-cassette exactly as above, in a window (every frame shown, Shift+Space
-is BREAK, and once the program has ended it closes the window):
+cassette exactly as above, in a window (every frame shown, the beeper
+heard as one continuous stream, Shift+Space is BREAK, and once the
+program has ended it closes the window):
 
 ```sh
 sdk/bin/rvm hello.ssx                    # in a window
 sdk/bin/rvm hello.ssx --text --png p.png # headless: the program's last picture
 sdk/bin/rvm --bg left.ssx right.ssx      # two programs, as "left &" then "right"
+sdk/bin/rvm --bg build/c48/hanoi-mt.ssx build/c48/queens8-mt.ssx   # the multitask demo
+sdk/bin/rvm --bg build/c48/mobius-mt.ssx build/c48/torus-mt.ssx    # two more, sharing the screen
 sdk/bin/rvm --shell                      # ZX-UX at the shell prompt
 sdk/bin/rtap --list game.tzx             # what a tape file holds
 ```
@@ -74,12 +77,16 @@ python3 tools/mktapes.py
 
 The script writes compiled programs and tapes into `build/c48/`.
 It also writes group tapes in `build/`.
-Two programs can share the screen with `build/c48-multitask.tzx`.
+`build/c48-multitask.tzx` holds two pairs built to run together in the
+background (bytecode, smaller): `hanoi` and `queens8`, which each draw
+half of the screen, and `mobius` and `torus`, which share the whole of it.
+Each run is a full rebuild; `python3 tools/mktapes.py --check` reports
+any file in `build/` that a rebuild would change.
 
 The test settings are in `sdk/tests/runs.json`.
 The collection has 56 named programs and 17 extra test cases.
 Use `sdk/tests/vm_checks.py` for independent native and bytecode VM checks.
-`sdk/tests/test_rvm.py`, `test_rtap.py`, and the repository's
+`sdk/tests/test_rvm.py`, `test_rvmsound.py`, `test_rtap.py`, and the repository's
 `tests/rvm_corpus.py`, `tests/rvm_machine.py` and `tests/rvm_gui.py`
 check `rvm` and `rtap --list` (SPEC-SDK-R2 §7 and §8).
 `sdk/tests/test_z80fast.py` checks that the fast Z80 handlers equal the
