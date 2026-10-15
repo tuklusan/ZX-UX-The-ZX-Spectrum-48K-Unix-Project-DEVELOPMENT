@@ -1,4 +1,4 @@
-Command: /opt/pyvenv/bin/python3 -B tests/c48/conformance.py --backend both --report /mnt/data/work-beta04-clean/repo/build/logs/c48-conformance.json
+Command: /opt/pyvenv/bin/python3 -B tests/c48/conformance.py --backend both --report /mnt/data/rev5-work/release-final-source/build/logs/c48-conformance.json
 Exit: 0
 
 PASS  lex_ok_decimal_zero                            native   assembly bytes=161
@@ -893,11 +893,11 @@ PASS  spec9_default_executable                       native   status=0, src-unch
 PASS  spec9_default_object                           native   status=0, src-unchanged=True, output=fixture.sso, stderr=
 PASS  spec9_default_assembly                         native   status=0, src-unchanged=True, output=fixture.s, stderr=
 PASS  spec9_custom_output                            native   status=0, src-unchanged=True, output=custom.ssx, stderr=
-PASS  spec9_source_output_guard                      native   status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-_z3q_x8c/native/spec9_source_output_guard/fixture.c would overwrite the source
+PASS  spec9_source_output_guard                      native   status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-0tzpfnc7/native/spec9_source_output_guard/fixture.c would overwrite the source
 
-PASS  spec9_source_alias_guard                       native   status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-_z3q_x8c/native/spec9_source_alias_guard/input-alias.c would overwrite the source
+PASS  spec9_source_alias_guard                       native   status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-0tzpfnc7/native/spec9_source_alias_guard/input-alias.c would overwrite the source
 
-PASS  spec9_source_default_collision                 native   status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-_z3q_x8c/native/spec9_source_default_collision/fixture.ssx would overwrite the sourc
+PASS  spec9_source_default_collision                 native   status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-0tzpfnc7/native/spec9_source_default_collision/fixture.ssx would overwrite the sourc
 PASS  spec9_no_inputs                                native   status=2, src-unchanged=True, output=(none), stderr=usage: rcc [-S|-c] [-o out] [--bytecode|--native] [--max BYTES] [--stack N] [--heap N] [--udgs N] file.c
 
 PASS  spec9_missing_output_value                     native   status=2, src-unchanged=True, output=(none), stderr=rcc: missing value for -o
@@ -912,7 +912,7 @@ PASS  spec9_conflicting_output_modes                 native   status=2, src-unch
 
 PASS  spec9_conflicting_backends                     native   status=2, src-unchanged=True, output=(none), stderr=rcc: conflicting backends
 
-PASS  spec9_write_error                              native   status=1, src-unchanged=True, output=(none), stderr=rcc: cannot write /tmp/zxux-c48-_z3q_x8c/native/spec9_write_error/nonexistent/program.ssx: No such file or dir
+PASS  spec9_write_error                              native   status=1, src-unchanged=True, output=(none), stderr=rcc: cannot write /tmp/zxux-c48-0tzpfnc7/native/spec9_write_error/nonexistent/program.ssx: No such file or dir
 PASS  spec9_invalid_source                           native   status=1, src-unchanged=True, output=(none), stderr=rcc: fixture.c:1: declaration: undeclared identifier missing_symbol
 
 PASS  spec9_include_error                            native   status=1, src-unchanged=True, output=(none), stderr=rcc: fixture.c:1: io: include not found: not-a-valid-local-header.h

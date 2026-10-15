@@ -54,6 +54,6 @@ test_appendix_inventory_is_exact (release_public_api_checks.PublicAPIReleaseChec
 test_header_and_library_match_current_appendix (release_public_api_checks.PublicAPIReleaseChecks.test_header_and_library_match_current_appendix) ... ok
 
 ----------------------------------------------------------------------
-Ran 50 tests in 2.993s
+Ran 50 tests in 3.748s
 
 OK

@@ -13,5 +13,9 @@ login banner                    PASS
 64-column font                  PASS
 boot success text               PASS
 tape names                      PASS
-Kernel 8189 bytes; free arena 12066 bytes; boot code 286 bytes
+low kernel on the tape          PASS
+low kernel below the kernel stack PASS
+low kernel above the loader while it loads PASS
+tape preserves low kernel by loading it last PASS
+Kernel 8161 bytes; free arena 12036 bytes; boot code 286 bytes
 

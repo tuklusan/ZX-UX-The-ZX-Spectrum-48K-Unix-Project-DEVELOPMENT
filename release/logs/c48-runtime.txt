@@ -4,7 +4,7 @@ Exit: 0
 arith        233 bytes
 console     1110 bytes
 crt0          32 bytes
-float        620 bytes
+float        622 bytes
 frame         67 bytes
 io            36 bytes
 string       154 bytes

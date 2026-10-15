@@ -8958,7 +8958,7 @@
     },
     {
       "backend": "native",
-      "detail": "status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-_z3q_x8c/native/spec9_source_output_guard/fixture.c would overwrite the source\n",
+      "detail": "status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-0tzpfnc7/native/spec9_source_output_guard/fixture.c would overwrite the source\n",
       "id": "spec9_source_output_guard",
       "kind": "cli",
       "paragraphs": [
@@ -8968,7 +8968,7 @@
     },
     {
       "backend": "native",
-      "detail": "status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-_z3q_x8c/native/spec9_source_alias_guard/input-alias.c would overwrite the source\n",
+      "detail": "status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-0tzpfnc7/native/spec9_source_alias_guard/input-alias.c would overwrite the source\n",
       "id": "spec9_source_alias_guard",
       "kind": "cli",
       "paragraphs": [
@@ -8978,7 +8978,7 @@
     },
     {
       "backend": "native",
-      "detail": "status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-_z3q_x8c/native/spec9_source_default_collision/fixture.ssx would overwrite the sourc",
+      "detail": "status=2, src-unchanged=True, output=(none), stderr=rcc: output /tmp/zxux-c48-0tzpfnc7/native/spec9_source_default_collision/fixture.ssx would overwrite the sourc",
       "id": "spec9_source_default_collision",
       "kind": "cli",
       "paragraphs": [
@@ -9060,7 +9060,7 @@
     },
     {
       "backend": "native",
-      "detail": "status=1, src-unchanged=True, output=(none), stderr=rcc: cannot write /tmp/zxux-c48-_z3q_x8c/native/spec9_write_error/nonexistent/program.ssx: No such file or dir",
+      "detail": "status=1, src-unchanged=True, output=(none), stderr=rcc: cannot write /tmp/zxux-c48-0tzpfnc7/native/spec9_write_error/nonexistent/program.ssx: No such file or dir",
       "id": "spec9_write_error",
       "kind": "cli",
       "paragraphs": [

@@ -1,7 +1,7 @@
 Command: /opt/pyvenv/bin/python3 -B tools/lm_v1.py
 Exit: 0
 
-PASS LM current SDK: SSX1 file 17918 bytes, need 21202 bytes, v1 limit 14000 bytes
+PASS LM current SDK: SSX1 file 17920 bytes, need 21204 bytes, v1 limit 14000 bytes
 LM exceeds the configured v1 loader memory budget; native execution not claimed
 
-rcc: /mnt/data/work-beta04-clean/repo/programs/c48/ailmzx48/ailmzx48.c needs 21202 bytes of memory (limit 14000)
+rcc: /mnt/data/rev5-work/release-final-source/programs/c48/ailmzx48/ailmzx48.c needs 21204 bytes of memory (limit 14000)

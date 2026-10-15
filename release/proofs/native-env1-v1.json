@@ -5,9 +5,9 @@
   "concurrent": {
     "capture": {
       "png_path": "build/c48-env1/proof/concurrent.png",
-      "png_sha256": "f8b17b20f55dd2c7a9ac738dbda56b8c9df18d44c3ae9284eab5a5299dd49fc3",
+      "png_sha256": "ad0bcc2588441948b4c864b1f64b6a9534540d61fe19c4db9fc1ce399cc5feec",
       "scr_path": "build/c48-env1/proof/concurrent.scr",
-      "scr_sha256": "cb42b74d9ea492bb6587b220e0b4d03add15969a3a01bd06cda634c2a223375c"
+      "scr_sha256": "d44dcaad870362c09fe8952c6c9803dda255133706e4928ee9557fc588cc28fd"
     },
     "checked_program_pass": true,
     "holding_program_pass": true,
@@ -15,18 +15,18 @@
     "simultaneous_image_slots": {
       "check": [
         3,
-        52422,
+        52452,
         65
       ],
       "hold": [
         2,
-        50728,
+        50758,
         90
       ]
     }
   },
   "link": {
-    "archive_sha256": "fff7801158cf3d2d940d2bd858137d55daa1fa2eef3fb1f76dc55a41739a7823",
+    "archive_sha256": "796ff952ab59ac62c625968ec0b12bfe5df7b759f8922682f17e96a5497ce58b",
     "bss": 31,
     "code": 1175,
     "env1_bss_offset": 1202,
@@ -59,14 +59,14 @@
     "stack": 384
   },
   "native_snapshot": {
-    "command_log_sha256": "5a93405aaebc138f019881686ef004b789cc4db60d3166f6f32824d28383667c",
+    "command_log_sha256": "46e6ae5b1f503b3423e418ba5c16d6348abf13b1b5eb697008033d1843e02710",
     "rom_sha256": "d55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42",
-    "snapshot_sha256": "7052815e1f47aa73bf383ef439adfb850b2439db9133a0abf9f21b4d4a75ccd4",
+    "snapshot_sha256": "705fe87c47b1e48cdb2c6b91c329e7b38300f7572529a849e86041ce59c1df16",
     "tap2sna_sha256": "c754087b68897780211e60d062da4831f04e83a72dc15d88a6dab436e2150e8d",
-    "tape_boot_sha256": "3eebd9f8097e4cdcb5e67b1b18e7708699d7fac498d86b5e5335b1afee0dc280"
+    "tape_boot_sha256": "84dcbb47ba0ac33efc079e35622cd543302f5569c305d04181528f7df93f3771"
   },
   "result": "PASS",
-  "runtime_build_log_sha256": "4106b8f6659d4dd498e6f5550d730d513f2d4116e57b39c104c2fabcac6a2057",
+  "runtime_build_log_sha256": "225032610ca1faff0ee33fd45121740e599c52b46cfbea2a7f64b99ac25f4aae",
   "sequential": [
     {
       "capture": {
@@ -75,7 +75,7 @@
         "scr_path": "build/c48-env1/proof/sequential-1.scr",
         "scr_sha256": "5e4ecfb8fad0f7b6f181ce516392d06493189cf650394af1e427debac7c5bd63"
       },
-      "free_bytes": 10114,
+      "free_bytes": 10084,
       "outcome": "PASS",
       "run": 1,
       "screen_sha256": "671e9d62bae1c99d9e81ace486d359e23088eda119183a898b8116da8f556923"
@@ -87,7 +87,7 @@
         "scr_path": "build/c48-env1/proof/sequential-2.scr",
         "scr_sha256": "5e4ecfb8fad0f7b6f181ce516392d06493189cf650394af1e427debac7c5bd63"
       },
-      "free_bytes": 10114,
+      "free_bytes": 10084,
       "outcome": "PASS",
       "run": 2,
       "screen_sha256": "671e9d62bae1c99d9e81ace486d359e23088eda119183a898b8116da8f556923"
@@ -95,7 +95,7 @@
   ],
   "source": {
     "files": {
-      "build/ZX-UX.tzx": "3eebd9f8097e4cdcb5e67b1b18e7708699d7fac498d86b5e5335b1afee0dc280",
+      "build/ZX-UX.tzx": "84dcbb47ba0ac33efc079e35622cd543302f5569c305d04181528f7df93f3771",
       "sdk/bin/rcc": "7e45d3cbdbd05456c2a811ac1be7a38cb32ad4a121872a54a42b921ee337daf0",
       "sdk/lib/build.py": "3b51c5c08242d203f97a8a0b4aa4a852ca1ea19e07c8d27a478cac06f4d74f88",
       "sdk/lib/crt0.asm": "4cc8e6936bdcf1aa63d0e3199bd4aa14c5c3ead2fec2c3044363f08288c2bc9d",
@@ -104,8 +104,8 @@
       "sdk/rtap.py": "dbe07558f8f903d3f882d220a3c4a185ab165b0a9fca6c764b33137406074a97",
       "tests/c48/native_env1_storage_lifetime.c": "382598fbf0240c258875db2143dce559a51c836ccf590f29603a49436d198818"
     },
-    "source_commit": "4adae86929832596ffce0f47eab1b8960b1a6fc7",
-    "source_tree": "8bbc5cf689c42ac0efc09c3856f40ca08179225b"
+    "source_commit": "b97872136651732c6bc7651240937ae8c62ed9e3",
+    "source_tree": "d65d62da08a56c1ad53cfaaa69ca279980d025cc"
   },
   "target": "ZX-UX v1 native"
 }
