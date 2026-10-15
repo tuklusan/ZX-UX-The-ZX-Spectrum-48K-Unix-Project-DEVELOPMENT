@@ -201,9 +201,9 @@ def basic_loader():
             b'\xfb:' +                         # CLS
             b'\xfd' + num(KBASE - 1) + b':' +  # CLEAR VAL "24575"
             b'\xf5"ZX-UX UNIX v1 loading":' +   # PRINT "..."
-            b'\xef""\xaf:' +                   # LOAD ""CODE  (lowk)
             b'\xef""\xaf:' +                   # LOAD ""CODE  (unix)
             b'\xef""\xaf:' +                   # LOAD ""CODE  (fs)
+            b'\xef""\xaf:' +                   # LOAD ""CODE  (lowk, last)
             b'\xf9\xc0' + num(KBASE) +         # RANDOMIZE USR VAL "24576"
             b'\r')
     return struct.pack('>H', 10) + struct.pack('<H', len(line)) + line
@@ -299,12 +299,14 @@ def main():
     blocks = [
         (header(0, 'ZX-UX', len(bas), 10, len(bas)), 1000),
         (tap_block(0xFF, bas), 1000),
-        (header(3, 'lowk', len(low), syms['LOWK'], 32768), 1000),
-        (tap_block(0xFF, low), 1000),
         (header(3, 'unix', len(kern), KBASE, 32768), 1000),
         (tap_block(0xFF, kern), 1000),
         (header(3, 'fs', len(rd0), RD0, 32768), 1000),
-        (tap_block(0xFF, rd0), 2000),
+        (tap_block(0xFF, rd0), 1000),
+        # Load lowk just before the BASIC USR call: no following ROM
+        # tape operation may reuse its below-RAMTOP workspace.
+        (header(3, 'lowk', len(low), syms['LOWK'], 32768), 1000),
+        (tap_block(0xFF, low), 2000),
     ]
     open(os.path.join(OUT, 'ZX-UX.tzx'), 'wb').write(
         tzx(blocks, 'ZX-UX v1 - ZX Spectrum 48K'))

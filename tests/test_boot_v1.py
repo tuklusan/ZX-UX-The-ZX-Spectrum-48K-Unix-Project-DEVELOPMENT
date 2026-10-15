@@ -25,6 +25,26 @@ def loader_end():
     return 0x5CCB + basic + 1 + 5 + 34
 
 
+def tape_header_order(tape):
+    # The low block must be loaded last: earlier ROM loads may reuse
+    # the BASIC work area at its address and damage the resident bytes.
+    data = tape.read_bytes()
+    cursor = 0
+    names = []
+    while cursor < len(data):
+        if cursor + 2 > len(data):
+            return []
+        length = int.from_bytes(data[cursor:cursor + 2], 'little')
+        cursor += 2
+        block = data[cursor:cursor + length]
+        if len(block) != length or length < 2:
+            return []
+        cursor += length
+        if block[0] == 0 and len(block) == 19:
+            names.append(block[2:12].rstrip(b' '))
+    return names
+
+
 def main():
     values = {}
     for line in (ROOT / 'src/unix.sym').read_text().splitlines():
@@ -69,6 +89,9 @@ def main():
          values['LOWK'] + len(low) <= values['KSTACK'] - 180),
         ('low kernel above the loader while it loads',
          values['LOWK'] > loader_end()),
+        ('tape preserves low kernel by loading it last',
+         tape_header_order(ROOT / 'build/ZX-UX.tap') ==
+         [b'ZX-UX', b'unix', b'fs', b'lowk']),
     ]
     for name, good in check:
         print(('%s ' % name).ljust(32) + ('PASS' if good else 'FAIL'))
