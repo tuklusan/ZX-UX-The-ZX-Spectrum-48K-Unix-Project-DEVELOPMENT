@@ -1,0 +1,39 @@
+name: ZXUX sealed byte-reassembly probe
+on:
+  push:
+    branches:
+      - zxux-chunk-probe-20261015
+    paths:
+      - .github/workflows/zxux-chunk-probe.yml
+      - .zxux-transfer/**
+permissions:
+  contents: write
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify and reconstruct complete binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYCODE'
+          import base64, hashlib
+          from pathlib import Path
+          parts = sorted(Path('.zxux-transfer').glob('hello.part[0-9][0-9]'))
+          assert len(parts) == 7, 'Expected seven transferred chunks'
+          data = b''.join(base64.b64decode(p.read_text().strip(), validate=True) for p in parts)
+          assert len(data) == 773, 'Wrong reconstructed size'
+          expected = '9c70aba06b7c640c546dbe3e03b6482519502647'
+          actual = hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+          assert actual == expected, 'Reconstructed SHA differs from tested local source'
+          target = Path('.zxux-transfer/reassembled-hello.ssx')
+          target.write_bytes(data)
+          print('REASSEMBLY_PASS', actual, len(data))
+          PYCODE
+          git config user.name 'ZXUX transfer probe'
+          git config user.email 'zxux-transfer@users.noreply.github.com'
+          git add .zxux-transfer/reassembled-hello.ssx
+          git commit -m 'test: record verified complete chunk reconstruction'
+          git push origin HEAD:refs/heads/zxux-chunk-probe-20261015
