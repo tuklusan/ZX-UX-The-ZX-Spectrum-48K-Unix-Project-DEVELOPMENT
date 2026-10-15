@@ -51,13 +51,13 @@ jobs:
               tracked_paths.add(filename)
           required = {
               'docs/04-C48 Language Specification Rev 0.11.docx',
-              'programs/c48/demos/hanoi.c',
-              'programs/c48/demos/queens8.c',
-              'programs/c48/ailmzx48/ailmzx48.c',
-              'sdk/rcc/driver.py',
-              'sdk/tests/runs.json',
-              'sdk/tests/v1-screens.json',
-              'tools/release_v1.py',
+              'release/src/assets/c48-src/demos/hanoi.c',
+              'release/src/assets/c48-src/demos/queens8.c',
+              'release/src/assets/c48-src/ailmzx48/ailmzx48.c',
+              'release/src/zx-ux-sdk/rcc/driver.py',
+              'release/src/assets/c48-src/runs.json',
+              'tests/sdk/v1-screens.json',
+              'release/build/build.py',
               'tests/fuse_boot.py',
           }
           assert required <= tracked_paths, 'Missing required v1 checkout files'

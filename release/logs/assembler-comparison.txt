@@ -1,5 +1,0 @@
-Command: /opt/pyvenv/bin/python3 -B sdk/tests/test_ras.py
-Exit: 0
-
-ras: 692 instructions match sjasmplus (1408 bytes)
-

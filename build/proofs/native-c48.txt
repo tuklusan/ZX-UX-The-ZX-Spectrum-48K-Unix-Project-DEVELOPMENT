@@ -1,6 +1,0 @@
-city           PASS exited (1s)
-hello          PASS exited (0s)
-fortune        PASS running (2s)
-secforge       PASS exited (1s)
-fortune:play   PASS exited (1s)
-5/5 ran on ZX-UX

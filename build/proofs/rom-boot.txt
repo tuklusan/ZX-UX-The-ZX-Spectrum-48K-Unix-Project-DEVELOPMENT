@@ -1,9 +1,0 @@
-Program: ZX-UX     
-Fast loading data block: 23755,80
-Bytes: unix      
-Fast loading data block: 24576,21031
-Bytes: fs        
-Fast loading data block: 45698,2800
-Tape finished
-Simulation stopped (PC in RAM): PC=24576
-Writing build/test.z80

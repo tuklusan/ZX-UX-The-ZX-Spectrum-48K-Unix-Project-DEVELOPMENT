@@ -1,3 +1,7 @@
 # Python byte code (never tracked)
 __pycache__/
 *.pyc
+# Retained offline staging is generated, not a second source tree.
+/release/build/tmp/*
+!/release/build/tmp/.gitkeep
+/release/manifest.json

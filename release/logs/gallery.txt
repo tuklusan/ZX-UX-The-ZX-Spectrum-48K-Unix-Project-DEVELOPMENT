@@ -1,5 +1,0 @@
-Command: /opt/pyvenv/bin/python3 -B tools/gallery.py /mnt/data/rev5-work/release-final-source/build/logs/c48-emulator.txt /mnt/data/rev5-work/release-final-source/build/logs/c48-v1-bytecode.txt
-Exit: 0
-
-/mnt/data/rev5-work/release-final-source/build/gallery.html 59882
-

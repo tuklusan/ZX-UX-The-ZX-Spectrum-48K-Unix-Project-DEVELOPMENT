@@ -1,5 +1,0 @@
-Command: /opt/pyvenv/bin/python3 -B tests/c48/native_env1_v1.py --tap2sna /mnt/data/rev5-work/ZX-UX-48K-toolbox/bin/tap2sna.py --report /mnt/data/rev5-work/release-final-source/build/logs/native-env1-v1.json
-Exit: 0
-
-PASS
-

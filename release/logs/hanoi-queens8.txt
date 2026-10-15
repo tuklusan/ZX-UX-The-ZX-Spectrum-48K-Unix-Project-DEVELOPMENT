@@ -1,5 +1,0 @@
-Command: /opt/pyvenv/bin/python3 -B tools/mtsnap.py
-Exit: 0
-
-/mnt/data/rev5-work/release-final-source/build/ZX-UX-multitask.z80 39249 scrown 0b1100
-
