@@ -1,0 +1,99 @@
+name: ZXUX beta 0.0.6 direct-blob verified publication
+on:
+  push:
+    branches:
+      - zxux-chunk-probe-20261015
+    paths:
+      - .github/workflows/zxux-direct-bundle-publish.yml
+permissions:
+  contents: write
+jobs:
+  verified-delivery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Retrieve and independently validate exact approved Git bundle
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT'
+          test "$GITHUB_REPOSITORY_ID" = '1412173246'
+          EXPECTED_BLOB=b572026b59d797627a80c840717889a2186c659b
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/blobs/${EXPECTED_BLOB}" \
+            -o /tmp/zxux-release-blob.json
+          python3 - <<'PYCODE'
+          import base64, hashlib, json
+          from pathlib import Path
+          obj = json.loads(Path('/tmp/zxux-release-blob.json').read_text())
+          sha = 'b572026b59d797627a80c840717889a2186c659b'
+          expected = 'fd915f5721038307d563ed0d613f6b0dafbc882630e3fa830c568f27df00248d'
+          assert obj.get('sha') == sha and obj.get('encoding') == 'base64'
+          assert obj.get('size') == 511734
+          binary = base64.b64decode(obj['content'], validate=False)
+          assert len(binary) == 511734
+          assert hashlib.sha256(binary).hexdigest() == expected
+          assert hashlib.sha1(b'blob ' + str(len(binary)).encode() + b'\0' + binary).hexdigest() == sha
+          Path('/tmp/zxux-release-exact.bundle').write_bytes(binary)
+          print('COMPLETE_BUNDLE_BLOB_SHA256_PASS', len(binary), expected, flush=True)
+          PYCODE
+          git fetch --no-tags origin main
+          git bundle verify /tmp/zxux-release-exact.bundle
+          git fetch --no-tags /tmp/zxux-release-exact.bundle \
+            refs/heads/beta-0.0.6-staged:refs/heads/verified-beta006
+          python3 - <<'PYCODE'
+          import hashlib, re, subprocess
+          source = 'f06f260e790d361190924d77c24badefaa4d7c3d'
+          release = 'f85ce0cb9853d3928bc52a90eb0abc12c9249c10'
+          base = 'fddebdb053774de054ce47bb177684c6e0c8f165'
+          def git(*args): return subprocess.check_output(['git', *args])
+          assert git('rev-parse', 'verified-beta006').decode().strip() == release
+          assert git('rev-parse', source+'^{tree}').decode().strip() == 'd65d62da08a56c1ad53cfaaa69ca279980d025cc'
+          assert git('rev-parse', release+'^{tree}').decode().strip() == '57d01769037fbaf1f4e965083ea4a8852339f716'
+          assert git('rev-parse', release+'^').decode().strip() == source
+          parents = git('rev-list','--parents','-n','1',source).decode().split()
+          assert len(parents) == 3 and base in parents[1:]
+          subprocess.run(['git','merge-base','--is-ancestor',base,source],check=True)
+          manifest = git('show',release+':release/manifest.txt').decode('utf-8')
+          entries = []
+          for line in manifest.splitlines():
+              match = re.fullmatch(r'([0-9a-f]{64})\s+(\d+)\s+(\S.*)',line)
+              if match:
+                  digest,length,path = match.groups()
+                  assert not path.startswith('/') and '..' not in path.split('/')
+                  entries.append((digest,int(length),path))
+          assert len(entries) == 320
+          files = set(git('ls-tree','-r','--name-only',release,'release/').decode().splitlines())
+          assert files == {'release/manifest.txt'} | {'release/'+t[2] for t in entries}
+          for digest,length,path in entries:
+              raw=git('show',release+':release/'+path)
+              assert len(raw)==length and hashlib.sha256(raw).hexdigest()==digest, path
+          print('EXACT_RELEASE_HISTORY_AND_320_FILE_MANIFEST_PASS', flush=True)
+          PYCODE
+      - name: Publish exact source and regenerated release without force
+        shell: bash
+        run: |
+          set -euo pipefail
+          START=fddebdb053774de054ce47bb177684c6e0c8f165
+          SOURCE=f06f260e790d361190924d77c24badefaa4d7c3d
+          RELEASE=f85ce0cb9853d3928bc52a90eb0abc12c9249c10
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$START"
+          test -z "$(git ls-remote origin refs/tags/beta-0.0.6)"
+          git push origin "$SOURCE:refs/heads/main"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$SOURCE"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$SOURCE"
+          git push origin "$RELEASE:refs/heads/main"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = '57d01769037fbaf1f4e965083ea4a8852339f716'
+          test -z "$(git ls-remote origin refs/tags/beta-0.0.6)"
+          echo ZXUX_BETA_006_SOURCE_AND_RELEASE_REMOTE_PASS
