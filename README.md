@@ -89,6 +89,7 @@ The SDK needs only Python 3.11 or later; `sdk/bin/rvm game.ssx` runs the
 program on an emulated Spectrum that boots this ZX-UX (see `sdk/README.md`).
 
 On ZX-UX, type `/dev/cassette/game` and play the program tape.
+`/dev/cassette/*` runs the first program on the tape, whatever its name.
 You can add program arguments after the name.
 Start some programs with `&` to keep the shell running.
 
@@ -98,11 +99,20 @@ To build the included C48 program collection, run:
 python3 tools/mktapes.py
 ```
 
+Every run is a full rebuild: all programs are compiled afresh and a
+file in `build/c48` that no program makes is removed (`build/c48` is
+the tool's output: keep your own programs elsewhere).
+`python3 tools/mktapes.py --check` changes nothing and fails if any
+C48 program or tape in `build/` is not what a rebuild makes; CI and
+`tools/mkrelease.py` run it, so stale programs are never committed or
+released.
+
 This writes the `c48/` program files and the following tapes:
 
 - `build/c48-apps.tzx`, `build/c48-games.tzx`
 - `build/c48-demos.tzx`, `build/c48-examples.tzx`
-- `build/c48-multitask.tzx`
+- `build/c48-multitask.tzx`: `hanoi` and `queens8`, then `mobius` and
+  `torus`, built to run two at a time in the background
 - `build/ZX-UX-c48.tzx`, which starts with the system boot tape
 
 The test collection has 56 programs and 17 further test cases.

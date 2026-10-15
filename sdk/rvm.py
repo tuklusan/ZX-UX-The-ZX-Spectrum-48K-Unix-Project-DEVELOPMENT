@@ -18,11 +18,14 @@ given): every emulated frame is shown, none is dropped; if the host is
 slow the program slows down instead.  Shift+Space is BREAK while the
 program runs; when it has ended, the footer says so and Shift+Space (or
 the close button) closes the window.  The beeper plays at its exact
-pitch.
+pitch, as one continuous stream that also keeps the Spectrum's 50.08
+frames a second (waveOut on Windows, paplay or aplay on Linux; --verbose
+says which).
 
 Options:
   --keys TEXT     keys typed once the program has started (see below)
-  --keygap N      frames waited before each of those keys (default 0)
+  --keygap N      frames waited before each of those keys (default 0;
+                  frames in which the system ran: see Keys)
   --frames N      stop after N frames from the program's start
                   (headless default 6000; the window has no limit)
   --png F         write the program's last picture as PNG (headless)
@@ -48,7 +51,10 @@ Options:
                   the program ends;  --verbose  report what happens
 
 Keys: \\n is ENTER, \\b DELETE; {BREAK} {EDIT} {DELETE} {UP} {DOWN}
-{LEFT} {RIGHT} {ENTER} {SPACE}; {WAIT n} waits n frames.
+{LEFT} {RIGHT} {ENTER} {SPACE}; {WAIT n} waits n frames.  Keys run on
+the frame interrupts ZX-UX takes (it scans the keyboard in them): while
+a program keeps interrupts off (a BEEP, a tape transfer) a key stays
+held and a wait stands still.
 
 Headless, rvm stops when the program ends, when it has waited for keys
 for 50 frames after the last one was typed ('input'), when the frame
@@ -222,7 +228,7 @@ class Runner:
         """Run one frame; return (Frame, pcm bytes, sounding)."""
         s = self.session
         f = s.step()
-        if self.pending_pulses is not None and not s.kb.busy():
+        if self.pending_pulses is not None and s.kb.typed():
             s.m.play_pulses(self.pending_pulses)    # PLAY: the command is typed
             self.pending_pulses = None
         fg = self.fg
