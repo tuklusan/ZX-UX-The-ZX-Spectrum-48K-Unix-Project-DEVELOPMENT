@@ -22,11 +22,13 @@ REQUIRED = frozenset((600, 608, 613, 615, 622, 625, 626, 751, 753, 759,
 
 # A P1080 pass must originate from the separately executed, approved rcc
 # runtime test. This verifies the report against current bytes rather than
-# accepting a rewritten ABI matrix row or a host-language test as native proof.
+# accepting a rewritten interface matrix row or a host-language test as native proof.
 ENV1_INPUTS = frozenset((
-    'tests/c48/native_env1_storage_lifetime.c', 'sdk/lib/crt0.asm',
-    'sdk/bin/rcc', 'sdk/lib/build.py', 'sdk/rld.py', 'sdk/rtap.py',
-    'sdk/rcc/driver.py', 'build/ZX-UX.tzx',
+    'tests/c48/native_env1_storage_lifetime.c', 'release/src/zx-ux-sdk/lib/crt0.asm',
+    'release/src/zx-ux-sdk/bin/rcc', 'release/src/zx-ux-sdk/lib/build.py',
+    'release/src/zx-ux-sdk/rld.py', 'release/src/zx-ux-sdk/rtap.py',
+    'release/src/zx-ux-sdk/rcc/driver.py',
+    'release/dist/zx-ux/ZX-UX.tzx', 'tests/c48/native_env1_v1.py',
 ))
 TAP2SNA_SHA256 = 'c754087b68897780211e60d062da4831f04e83a72dc15d88a6dab436e2150e8d'
 ROM_SHA256 = 'd55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42'
@@ -52,7 +54,7 @@ def verify_native_env1(proof, root=ROOT):
     ensure(isinstance(proof, dict), 'invalid native proof record')
     ensure(proof.get('result') == 'PASS' and
            proof.get('case_id') == 'native_env1_storage_lifetime' and
-           proof.get('compiler') == 'sdk/bin/rcc --native' and
+           proof.get('compiler') == 'release/build/tmp/sdk/bin/rcc --native' and
            proof.get('target') == 'ZX-UX v1 native',
            'incorrect execution identity or result')
     source = proof.get('source')
@@ -73,9 +75,9 @@ def verify_native_env1(proof, root=ROOT):
         sha_file(relative, digest)
     link = proof.get('link')
     ensure(isinstance(link, dict), 'invalid link record')
-    sha_file('build/c48-env1/env48.ssx', link.get('ssx_sha256'),
+    sha_file('release/build/tmp/build/c48-env1/env48.ssx', link.get('ssx_sha256'),
              link.get('ssx_bytes'))
-    sha_file('sdk/lib/libc48.ssa', link.get('archive_sha256'))
+    sha_file('release/build/tmp/sdk/lib/libc48.ssa', link.get('archive_sha256'))
     ensure(all(isinstance(link.get(k), int) for k in
                ('code', 'bss', 'env1_bss_offset', 'native_required_bytes')),
            'invalid native memory values')
@@ -89,9 +91,9 @@ def verify_native_env1(proof, root=ROOT):
     ensure(isinstance(snapshot, dict) and
            snapshot.get('tap2sna_sha256') == TAP2SNA_SHA256 and
            snapshot.get('rom_sha256') == ROM_SHA256 and
-           snapshot.get('tape_boot_sha256') == source_files['build/ZX-UX.tzx'],
+           snapshot.get('tape_boot_sha256') == source_files['release/dist/zx-ux/ZX-UX.tzx'],
            'ROM and tape identities differ')
-    sha_file('build/c48-env1/native-current-tape.z80',
+    sha_file('release/build/tmp/build/c48-env1/native-current-tape.z80',
              snapshot.get('snapshot_sha256'))
     for key in ('runtime_build_log_sha256', 'compiler_log_sha256'):
         ensure(isinstance(proof.get(key), str) and
@@ -101,7 +103,7 @@ def verify_native_env1(proof, root=ROOT):
     def check_capture(capture, name):
         ensure(isinstance(capture, dict), 'invalid capture record')
         for ext in ('scr', 'png'):
-            path = 'build/c48-env1/proof/' + name + '.' + ext
+            path = 'release/build/tmp/build/c48-env1/proof/' + name + '.' + ext
             ensure(capture.get(ext + '_path') == path, 'capture path differs')
             sha_file(path, capture.get(ext + '_sha256'), 6912 if ext == 'scr' else None)
         png = root / capture['png_path']
@@ -138,14 +140,37 @@ def verify_native_env1(proof, root=ROOT):
     return True
 
 
+
+def current_source_file(root, reference):
+    """Resolve reviewed pre-migration SDK references to the active source.
+
+    The C48 interface matrix is a reviewed historical inventory; its
+    `sdk/` names refer to source now held under release/src/zx-ux-sdk/.
+    Reject invalid or absent files rather than counting a nonexistent path.
+    """
+    if not isinstance(reference, str) or not reference or "\\" in reference:
+        raise ValueError('invalid source reference')
+    path = Path(reference)
+    if path.is_absolute() or '..' in path.parts or '.' in path.parts:
+        raise ValueError('invalid source reference')
+    if path.parts[0] == 'sdk':
+        if len(path.parts) < 2:
+            raise ValueError('invalid SDK source reference')
+        path = Path('release/src/zx-ux-sdk').joinpath(*path.parts[1:])
+    full = root / path
+    if not full.is_file() or full.is_symlink():
+        raise ValueError('target source reference not found: ' + reference)
+    return full
+
+
 def assess(matrix, verifier, ix_witness, root=ROOT, env1_proof=None):
     """Review actual recorded cases, source paths and mandatory target gaps."""
     if matrix.get('schema') != 1 or not isinstance(matrix.get('rows'), list):
-        raise ValueError('unsupported ABI matrix')
+        raise ValueError('unsupported interface matrix')
     rows = matrix['rows']
     indexes = [row.get('paragraph') for row in rows]
     if len(rows) != len(REQUIRED) or len(set(indexes)) != len(indexes) or set(indexes) != REQUIRED:
-        raise ValueError('ABI matrix inventory is missing or duplicated')
+        raise ValueError('interface matrix inventory is missing or duplicated')
     if verifier.get('backend') != 'both' or verifier.get('summary', {}).get('FAIL') != 0 or verifier.get('summary', {}).get('ERROR') != 0:
         raise ValueError('ZX-UX validation check failed.')
     cases = verifier.get('cases')
@@ -154,9 +179,12 @@ def assess(matrix, verifier, ix_witness, root=ROOT, env1_proof=None):
     passed = {case.get('id') for case in cases if case.get('status') == 'PASS'}
     if len(passed) == 0:
         raise ValueError('no passing verifier cases')
+    approved_states = {r['paragraph']: r['status'] for r in json.loads(MATRIX.read_text())['rows']}
     for row in rows:
-        if row.get('status') not in ('supported', 'contract', 'partial'):
-            raise ValueError('unknown target clause state')
+        # Use the locally reviewed matrix as a fixed status inventory.
+        # Arbitrary caller-supplied status changes are not accepted.
+        if row.get('status') != approved_states.get(row['paragraph']):
+            raise ValueError('target clause state differs from reviewed inventory')
         references = row.get('passing_cases')
         sources = row.get('source_paths')
         if (not isinstance(references, list) or not references or
@@ -165,16 +193,12 @@ def assess(matrix, verifier, ix_witness, root=ROOT, env1_proof=None):
         if not isinstance(sources, list) or not sources:
             raise ValueError('target row has no source references')
         for reference in sources:
-            if not isinstance(reference, str):
-                raise ValueError('invalid source reference')
-            path = Path(reference)
-            if path.is_absolute() or '..' in path.parts or not (root / path).is_file():
-                raise ValueError('target source reference not found')
+            current_source_file(root, reference)
         if not isinstance(row.get('finding'), str) or not row['finding'].strip():
             raise ValueError('ZX-UX validation check failed.')
     if not isinstance(ix_witness, dict) or ix_witness.get('name') != 'native_ix_register_preservation_8_cases':
         raise ValueError('independent IX witness is missing')
-    frame = root / 'sdk/lib/frame.asm'
+    frame = current_source_file(root, 'sdk/lib/frame.asm')
     if (ix_witness.get('result') != 'PASS' or ix_witness.get('count') != 8 or
             ix_witness.get('frame_sha256') != hashlib.sha256(frame.read_bytes()).hexdigest() or
             not isinstance(ix_witness.get('cases'), list) or len(ix_witness['cases']) != 8):
@@ -191,7 +215,7 @@ def assess(matrix, verifier, ix_witness, root=ROOT, env1_proof=None):
     else:
         verify_native_env1(env1_proof, root)
     return {'indexed': len(rows), 'supported': sum(row['status'] == 'supported' for row in rows),
-            'contracts': sum(row['status'] == 'contract' for row in rows),
+            'contracts': sum(row['status'] not in ('supported', 'partial') for row in rows),
             'unresolved': sorted(unresolved)}
 
 

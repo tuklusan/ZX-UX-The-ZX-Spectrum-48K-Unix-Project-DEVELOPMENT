@@ -142,7 +142,7 @@ class ZX:
         # the console's 4 x 8 font (two pixel rows a byte, 96 glyphs)
         import os
         fb = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               '..', 'src', 'font4x8.bin'), 'rb').read()[8:8 + 384]
+                               '..', 'release', 'src', 'zx-ux', 'font4x8.bin'), 'rb').read()[8:8 + 384]
         self.font = {}
         for c in range(32, 128):
             g = fb[(c - 32) * 4:(c - 32) * 4 + 4]

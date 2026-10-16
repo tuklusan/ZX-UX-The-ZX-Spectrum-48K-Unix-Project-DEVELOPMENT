@@ -44,11 +44,12 @@ class GateBehavior(unittest.TestCase):
 
     def test_no_lib_build_means_fail_not_pass(self):
         with tempfile.TemporaryDirectory() as t:
-            f=Path(t)/'build/logs/native-env1-v1.json'
+            f=Path(t).parent/('native-env1-unit-'+Path(t).name+'.json')
             with patch.object(gate,'ROOT',Path(t)):
                 self.assertEqual(gate.main(['--report',str(f),'--tap2sna','/tools/tap2sna.py']),1)
             data=json.loads(f.read_text())
             self.assertEqual(data['result'],'FAIL')
+            f.unlink(missing_ok=True)
             self.assertNotIn('native_env1_storage_lifetime',data)
 
     def test_report_refuses_source_path(self):
@@ -58,7 +59,7 @@ class GateBehavior(unittest.TestCase):
     def test_c48_approved_compiler_is_fixed(self):
         import inspect
         s=inspect.getsource(gate.full_run)
-        self.assertIn("'sdk/bin/rcc', '--native'",s)
+        self.assertIn("SDK_STAGE/'bin/rcc', '--native'",s)
         self.assertIn('archive_env1_symbol',s)
         self.assertIn('consecutive_processes',s)
         self.assertIn('simultaneous_processes',s)
@@ -151,14 +152,14 @@ class LinkerProofChecks(unittest.TestCase):
                 cli=b'NATIVE', symbol=True):
         import types
         with tempfile.TemporaryDirectory() as t:
-            root=Path(t);(root/'sdk/lib').mkdir(parents=True)
-            (root/'sdk/lib/libc48.ssa').write_bytes(b'ARCHIVE')
+            root=Path(t);(root/'release/build/tmp/sdk/lib').mkdir(parents=True)
+            (root/'release/build/tmp/sdk/lib/libc48.ssa').write_bytes(b'ARCHIVE')
             (root/'program.c').write_text('int main(void){return 0;}')
             out=root/'program.ssx';out.write_bytes(cli)
             rld=types.ModuleType('rld')
             rld.Obj=lambda data,name:types.SimpleNamespace(name=name)
             rld.read_archive=lambda data,name:[types.SimpleNamespace(name='member.sso')]
-            lookup={'start':(0,True)}
+            lookup={'start':(0,True), '@env1':(env_offset, True)}
             if symbol: lookup['__c48_env1']=(env_offset,True)
             rld.link=lambda objs,archives,entry,stack,heap: (
                 b'NATIVE',bss,0,lookup,[types.SimpleNamespace(name='crt0.0.sso')])
@@ -173,7 +174,7 @@ class LinkerProofChecks(unittest.TestCase):
             pkg.driver=drv
             with patch.dict(sys.modules,{'rld':rld,'ras':ras,'rtap':rtap,
                                         'rcc':pkg,'rcc.driver':drv}),\
-                 patch.object(gate,'ROOT',root):
+                 patch.object(gate,'ROOT',root), patch.object(gate,'SDK_STAGE',root/'release/build/tmp/sdk'):
                 return gate.archive_env1_symbol(root/'program.c',out)
 
     def test_linked_symbol_in_bss_accepts(self):
@@ -202,18 +203,20 @@ class FreshSnapshotChecks(unittest.TestCase):
         import hashlib
         with tempfile.TemporaryDirectory() as t:
             dir=Path(t);root=dir/'checkout';root.mkdir()
-            boot=root/'build/ZX-UX.tzx';boot.parent.mkdir();boot.write_bytes(b'TZX')
+            boot=root/'release/dist/zx-ux/ZX-UX.tzx';boot.parent.mkdir(parents=True);boot.write_bytes(b'TZX')
             tool=(root/'private-tap2sna.py') if inside else (dir/'private-tap2sna.py')
             tool.write_bytes(b'good checked tool' if not change_tool else b'wrong tool')
-            output=root/'build/c48-env1/native-current-tape.z80'
-            output.parent.mkdir()
+            output=root/'release/build/tmp/build/c48-env1/native-current-tape.z80'
+            output.parent.mkdir(parents=True)
             if stale:output.write_bytes(b'STALE OLD SNAPSHOT')
             def runner(cmd):
                 if save_output:output.write_bytes(b'new snapshot'*200)
                 return 'actual program load'
             with patch.object(gate,'ROOT',root),\
                  patch.object(gate,'TAP2SNA_SHA256',hashlib.sha256(b'good checked tool').hexdigest()),\
-                 patch.object(gate,'run',side_effect=runner):
+                 patch.object(gate,'run',side_effect=runner),\
+                 patch.object(gate,'BOOT_TZX',boot),\
+                 patch.object(gate,'TMP_BUILD',root/'release/build/tmp/build'):
                 return gate.fresh_snapshot(tool)
 
     def test_snapshot_tape_and_tool_hashes_are_recorded(self):

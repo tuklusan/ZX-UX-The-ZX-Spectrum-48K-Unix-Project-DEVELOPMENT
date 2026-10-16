@@ -6,7 +6,7 @@ applied. Requires fresh build/test.z80 (boot from checked current tape),
 checked native SDK, and installed SkoolKit/48K ROM. Records actual test
 executions, never source-only claims. No private checker (local-only gate).
 
-  python3 -B tests/c48/native_env1_v1.py --report build/logs/native-env1-v1.json
+  python3 -B tests/c48/native_env1_v1.py --report /private/native-env1-v1.json
 """
 import argparse
 import hashlib
@@ -19,10 +19,13 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / 'tests/c48/native_env1_storage_lifetime.c'
-CRT = ROOT / 'sdk/lib/crt0.asm'
+CRT = ROOT / 'release/src/zx-ux-sdk/lib/crt0.asm'
+SDK_SOURCE = ROOT / 'release/src/zx-ux-sdk'
+SDK_STAGE = ROOT / 'release/build/tmp/sdk'
+TMP_BUILD = ROOT / 'release/build/tmp/build'
+BOOT_TZX = ROOT / 'release/dist/zx-ux/ZX-UX.tzx'
 SSX_NAME = 'env48'
 ROM_HASH = 'd55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42'
-BASE_CRT_GIT_BLOB = 'dd100a8ce86ea9f5681dd073088df05f26035276'
 MAX_NATIVE_RAM = 14000
 TAP2SNA_SHA256 = 'c754087b68897780211e60d062da4831f04e83a72dc15d88a6dab436e2150e8d'
 ARG = '/dev/cassette/' + SSX_NAME
@@ -51,9 +54,10 @@ def run(cmd):
 
 
 def assess_sources():
-    paths = [FIXTURE, CRT, ROOT/'sdk/bin/rcc', ROOT/'sdk/lib/build.py',
-             ROOT/'sdk/rld.py', ROOT/'sdk/rtap.py', ROOT/'sdk/rcc/driver.py',
-             ROOT/'build/ZX-UX.tzx']
+    paths = [FIXTURE, CRT, SDK_SOURCE/'bin/rcc', SDK_SOURCE/'lib/build.py',
+             SDK_SOURCE/'rld.py', SDK_SOURCE/'rtap.py',
+             SDK_SOURCE/'rcc/driver.py', BOOT_TZX,
+             ROOT/'tests/c48/native_env1_v1.py']
     ensure(all(p.is_file() and not p.is_symlink() for p in paths),
            'SDK, fixture or v1 boot inputs missing; no native proof')
     candidate = CRT.read_text()
@@ -61,9 +65,8 @@ def assess_sources():
            'ld (@env1),a' in candidate and
            '        section bss\n        global __c48_env1\n@env1:\n__c48_env1: ds 1' in candidate,
            'current process-owned ENV1 bootstrap or exact diagnostic alias absent')
-    before = subprocess.check_output(['git', 'show', 'HEAD:sdk/lib/crt0.asm'], cwd=ROOT)
-    expected = hashlib.sha1(b'blob ' + str(len(before)).encode() + b'\0' + before).hexdigest()
-    ensure(expected == BASE_CRT_GIT_BLOB or before == CRT.read_bytes(),
+    before = subprocess.check_output(['git', 'show', 'HEAD:release/src/zx-ux-sdk/lib/crt0.asm'], cwd=ROOT)
+    ensure(before == CRT.read_bytes(),
            'unexpected source base; inspect before testing')
     ensure(b'_c48_env1' in FIXTURE.read_bytes(), 'expected C48 fixture missing')
     return {'source_commit': subprocess.check_output(
@@ -75,13 +78,13 @@ def assess_sources():
 
 def archive_env1_symbol(src, output):
     """Check the real rcc native linker selected the separate ENV1 BSS byte."""
-    sys.path.insert(0, str(ROOT/'sdk'))
+    sys.path.insert(0, str(SDK_STAGE))
     import rld
     from rcc import driver
     # This recompiles independently of the CLI and inspects actual link symbols.
     source, program, gen = driver.compile_to_asm(str(src), {'lib': False, 'heap': 1024, 'stack': None, 'udgs': None})
     obj = rld.Obj(__import__('ras').assemble_text(source, src.name + '.s'), src.name)
-    libpath = ROOT/'sdk/lib/libc48.ssa'
+    libpath = SDK_STAGE/'lib/libc48.ssa'
     lib = rld.read_archive(libpath.read_bytes(), str(libpath))
     native, bss, ent, gaddr, members = rld.link([obj], [lib], 'start',
                                                  driver.stack_estimate(gen), 0)
@@ -127,7 +130,7 @@ def validate_output(screen, expected):
 def save_capture(session, name):
     """Save only pixels actually reached during current native execution."""
     import rvm
-    d = ROOT / 'build/c48-env1/proof'
+    d = TMP_BUILD / 'c48-env1/proof'
     ensure(not d.is_symlink(), 'capture directory cannot be a symbolic link')
     d.mkdir(parents=True, exist_ok=True)
     scr = d / (name + '.scr')
@@ -233,33 +236,33 @@ def fresh_snapshot(tap2sna):
            'checked tap2sna must be a real tool outside Git')
     ensure(sha(p) == TAP2SNA_SHA256,
            'tape loader must match the owner-supplied checked toolbox')
-    out = ROOT / 'build/c48-env1/native-current-tape.z80'
+    out = TMP_BUILD / 'c48-env1/native-current-tape.z80'
     ensure(not out.is_symlink() and not out.parent.is_symlink(),
            'cannot write snapshot through a link')
     out.parent.mkdir(parents=True, exist_ok=True)
     out.unlink(missing_ok=True)
-    command = run([sys.executable, '-B', p, ROOT/'build/ZX-UX.tzx', out])
+    command = run([sys.executable, '-B', p, BOOT_TZX, out])
     ensure(out.is_file() and out.stat().st_size >= 1000,
            'new tape-driven native snapshot not produced')
     return out, {'tap2sna_sha256':sha(p), 'snapshot_sha256':sha(out),
                  'rom_sha256':sha(ROM48),
-                 'tape_boot_sha256':sha(ROOT/'build/ZX-UX.tzx'),
+                 'tape_boot_sha256':sha(BOOT_TZX),
                  'command_log_sha256':hashlib.sha256(command.encode()).hexdigest()}
 
 
 def full_run(report, tap2sna):
     source_hashes = assess_sources()
-    libpath = ROOT / 'sdk/lib/libc48.ssa'
+    libpath = SDK_STAGE / 'lib/libc48.ssa'
     ensure(not libpath.is_symlink(), 'SDK runtime archive cannot be a symbolic link')
-    buildlog = run([sys.executable, '-B', 'sdk/lib/build.py'])
-    out = ROOT/'build/c48-env1/env48.ssx'
+    buildlog = run([sys.executable, '-B', SDK_STAGE/'lib/build.py'])
+    out = TMP_BUILD/'c48-env1/env48.ssx'
     ensure(not out.parent.is_symlink() and not out.is_symlink(),
            'native output path cannot be a symbolic link')
     out.parent.mkdir(parents=True, exist_ok=True)
-    compilelog = run([sys.executable, '-B', 'sdk/bin/rcc', '--native',
+    compilelog = run([sys.executable, '-B', SDK_STAGE/'bin/rcc', '--native',
                       '-o', out, FIXTURE])
     link = archive_env1_symbol(FIXTURE, out)
-    sys.path.insert(0, str(ROOT/'sdk'))
+    sys.path.insert(0, str(SDK_STAGE))
     sys.path.insert(0, str(ROOT/'tests'))
     import rtap, suite
     snap, snapshot_proof = fresh_snapshot(tap2sna)
@@ -271,7 +274,7 @@ def full_run(report, tap2sna):
             'source': source_hashes, 'link': link,
             'sequential': sequential, 'concurrent': concurrent,
             'native_snapshot': snapshot_proof,
-            'compiler': 'sdk/bin/rcc --native', 'target':'ZX-UX v1 native',
+            'compiler': 'release/build/tmp/sdk/bin/rcc --native', 'target':'ZX-UX v1 native',
             'runtime_build_log_sha256':hashlib.sha256(buildlog.encode()).hexdigest(),
             'compiler_log_sha256':hashlib.sha256(compilelog.encode()).hexdigest()}
 
@@ -283,8 +286,8 @@ def main(argv=None):
                         help='checked SkoolKit 10.1 toolbox tap2sna.py, outside Git')
     args = parser.parse_args(argv)
     report = args.report.resolve()
-    ensure(ROOT / 'build/logs' in report.parents,
-           'report must remain inside build/logs (not source or Git)')
+    ensure(ROOT not in report.parents and report.suffix == '.json',
+           'report must remain outside the checkout and release')
     ensure(report != FIXTURE.resolve() and report != CRT.resolve(),
            'report must not overwrite source')
     result = {'result':'INCONCLUSIVE', 'source_sha': 'unknown'}
