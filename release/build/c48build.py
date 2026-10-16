@@ -23,20 +23,21 @@ def build(stage_sdk: pathlib.Path, programs: pathlib.Path, dest: pathlib.Path):
         if not path.is_file():
             raise RuntimeError('Selected source is missing: ' + str(path))
         choices[name] = (path, [])
+    # The regular program names are also the memory-fitted background jobs.
+    # Do not ship separate -mt binaries or tapes for the same C48 source.
     for name, flags in (
-        ('hanoi-mt', ['--bytecode', '--stack', '400', '--udgs', '16']),
-        ('queens8-mt', ['--bytecode', '--stack', '448']),
-        ('mobius-mt', ['--bytecode']),
-        ('torus-mt', ['--bytecode']),
+        ('hanoi', ['--fit', '--stack', '400', '--udgs', '16']),
+        ('queens8', ['--fit', '--stack', '448', '--udgs', '32']),
+        ('mobius', ['--bytecode']),
+        ('torus', ['--bytecode']),
     ):
-        source = name[:-3]
-        choices[name] = (programs / 'demos' / (source + '.c'), flags)
+        choices[name] = (programs / 'demos' / (name + '.c'), flags)
     for name, (source, flags) in sorted(choices.items()):
         ssx = ssxdir / (name + '.ssx')
         if driver.main([str(source), '-o', str(ssx)] + flags):
             raise RuntimeError('Compiler rejected selected program: ' + name)
         data = ssx.read_bytes()
-        tape_name = name.replace('-mt', 'mt')
+        tape_name = name
         if len(tape_name) > 10:
             raise RuntimeError('Tape filename exceeds 10-character header: ' + tape_name)
         hdr, code = rtap.records(data, tape_name)

@@ -31,13 +31,15 @@ class TurboPresentationTest(unittest.TestCase):
         self.assertIn(b'52991',data)
         self.assertIn(b'53248',data)
         self.assertLess(data.index(b'\xef""\xaf'),data.index(b'\xfb'))
-        self.assertLess(data.index(b'\xfb'),data.index(b'23292'))
-        for address,value in [(23292,16),(23293,48),(23294,32),(23295,40)]:
-            self.assertIn(str(address).encode(),data)
-            self.assertIn(b','+bytes([0xb0])+b'"'+str(value).encode()+b'"',data)
-        self.assertIn(b'20732',data)
-        self.assertIn(b'256',data)
-        self.assertIn(b'255',data)
+        self.assertLess(data.index(b'\xfb'),data.index(b'\xf5#'))
+        # Use a VAL stream number because BASIC has no hidden number token.
+        self.assertIn(b'\xf5#\xb0"1";\xac\xb0"1",\xb0"28";',data)
+        self.assertEqual(data.count(b'"\x83"'),4)
+        for paper in (2,6,4,5):
+            self.assertIn(b'\xda\xb0"'+str(paper).encode()+b'";"\x83";',data)
+        self.assertNotIn(b'23292',data)
+        self.assertNotIn(b'20732',data)
+
     def test_final_line_precedes_final_block_without_early_exec(self):
         # User-visible row 24 is painted before the last tape packet starts,
         # but ordinal, CRC, length and XOR still gate the execution jump.

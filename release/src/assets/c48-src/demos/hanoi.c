@@ -176,71 +176,37 @@ void h_clear_half(void)
         h_text(r, 0, blank);
 }
 
+int h_colors[7] = {6,3,5,4,2,7,3};
 int h_disc_color(int disc)
 {
-    int colors[7];
-    colors[0] = 6;
-    colors[1] = 3;
-    colors[2] = 5;
-    colors[3] = 4;
-    colors[4] = 2;
-    colors[5] = 7;
-    colors[6] = 3;
     if (disc < 1 || disc > 7)
         return 7;
-    return colors[disc - 1];
+    return h_colors[disc - 1];
 }
 
 void h_draw_disc(int disc, int row, int col)
 {
     int inkc;
+    int i;
+    if (disc < 1 || disc > 7) {
+        h_inv_fail++;
+        h_fail("DISC RANGE");
+        return;
+    }
     inkc = h_disc_color(disc);
     if (disc == 1) {
         h_draw(13, row, col, inkc);
         return;
     }
-    if (disc == 2) {
-        h_draw(4, row, col - 1, inkc);
+    if (disc < 6) {
+        h_draw(disc + 2, row, col - 1, inkc);
         h_draw(8, row, col, inkc);
-        h_draw(12, row, col + 1, inkc);
+        h_draw(14 - disc, row, col + 1, inkc);
         return;
     }
-    if (disc == 3) {
-        h_draw(5, row, col - 1, inkc);
-        h_draw(8, row, col, inkc);
-        h_draw(11, row, col + 1, inkc);
-        return;
-    }
-    if (disc == 4) {
-        h_draw(6, row, col - 1, inkc);
-        h_draw(8, row, col, inkc);
-        h_draw(10, row, col + 1, inkc);
-        return;
-    }
-    if (disc == 5) {
-        h_draw(7, row, col - 1, inkc);
-        h_draw(8, row, col, inkc);
-        h_draw(9, row, col + 1, inkc);
-        return;
-    }
-    if (disc == 6) {
-        h_draw(4, row, col - 2, inkc);
-        h_draw(8, row, col - 1, inkc);
-        h_draw(8, row, col, inkc);
-        h_draw(8, row, col + 1, inkc);
-        h_draw(12, row, col + 2, inkc);
-        return;
-    }
-    if (disc == 7) {
-        h_draw(5, row, col - 2, inkc);
-        h_draw(8, row, col - 1, inkc);
-        h_draw(8, row, col, inkc);
-        h_draw(8, row, col + 1, inkc);
-        h_draw(11, row, col + 2, inkc);
-        return;
-    }
-    h_inv_fail++;
-    h_fail("DISC RANGE");
+    h_draw(disc - 2, row, col - 2, inkc);
+    for (i=-1;i<=1;i++) h_draw(8,row,col+i,inkc);
+    h_draw(18 - disc, row, col + 2, inkc);
 }
 
 int h_pole_col(int pole)

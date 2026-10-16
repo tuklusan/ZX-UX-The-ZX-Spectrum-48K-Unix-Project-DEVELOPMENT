@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Specification-led, self-contained C48 acceptance and execution verifier.
 
-Contract: docs/04-C48 Language Specification Rev 0.11.docx (SHA-256 in
+Reference: docs/04-C48 Language Specification Rev 0.11.docx (SHA-256 in
 traceability.json). Does not use historical compiler, binaries or kernel.
 All generated cases and build outputs live in a temporary directory.
 
@@ -47,7 +47,7 @@ def runexpr(ident, p, expression, value=0):
     add(ident, p, 'run', 'int main(void) { return (' + expression + ') != (' + str(value) + '); }\n')
 def runprogram(ident, p, source, expected=0): add(ident, p, 'run', source, expected)
 
-# Lexical contract: positive and negative numeric, character, string and syntax.
+# Lexical test coverage: positive and negative numeric, character, string and syntax.
 for ident, val in [('decimal_zero','0'),('decimal_boundary','32767'),('unsigned_implicit','32768'),
                    ('decimal_max','65535'),('unsigned_suffix','65535u'),('octal','077'),
                    ('hex','0xff'),('hex_upper','0XABCDU'),('character','\'A\''),
@@ -520,7 +520,7 @@ def execute_cli(c, case_dir, src):
     elif operation == 'source_error':
         args, output, signature = [str(src)], None, None
     else:
-        raise ValueError('unexpected CLI contract case')
+        raise ValueError('unexpected CLI test case')
     proc = subprocess.run([sys.executable, str(RCC), *args], cwd=case_dir,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           timeout=35,
@@ -595,7 +595,7 @@ def execute(c, temp, backend):
         if c.note == 'tape':
             import rtap
             header, payload = rtap.records(data,'HELLO')
-            correct = (header[0] == 0 and header[1] == 3 and header[2:12] == b'HELLO     '
+            correct = (header[0] == 0 and header[1] == 4 and header[2:12] == b'HELLO     '
                        and payload[0] == 255 and payload[1:-1] == data
                        and int.from_bytes(header[12:14],'little') == len(data)
                        and int.from_bytes(header[14:16],'little') == rtap.need(data)

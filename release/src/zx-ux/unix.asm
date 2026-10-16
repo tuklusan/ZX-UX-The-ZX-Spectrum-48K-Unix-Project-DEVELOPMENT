@@ -302,6 +302,10 @@ stdraw:
         ld (stdirty),a
         ld a,23
         call clrrow
+        ld hl,03010h            ; red/yellow clock cells
+        ld (05AFCh),hl
+        ld hl,02820h            ; green/cyan clock cells
+        ld (05AFEh),hl
         xor a
         ld d,a                  ; column
         ld c,a                  ; slot: a 12 column cell each

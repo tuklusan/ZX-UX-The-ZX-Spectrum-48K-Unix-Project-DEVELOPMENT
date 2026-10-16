@@ -37,23 +37,12 @@ def progress_lines(size: int, syms: dict, kernel: int, free: int):
 def encode_basic():
     def val(n):
         return b'\xb0"' + str(n).encode() + b'"'
-    # BASIC clears the screen AFTER loading the D000 bootstrap, THEN draws
-    # the ribbon in the rightmost four character cells. The Z80 receiver does
-    # not erase the display; row 24 only draws 56 4-pixel characters and never
-    # writes the four final byte cells or attributes. Black ink, paper red,
-    # yellow, green and cyan; top four raster rows ink, bottom four paper.
-    # See 50FCh-57FFh (4 top-line bytes each row) and 5AFCh-5AFFh (attrs).
+    # Keep the four bottom-right attribute cells set during boot. The
+    # 64-column progress renderer leaves these four 32-column cells alone.
     line = (b'\xe7' + val(0) + b':' + b'\xda' + val(0) + b':' +
             b'\xd9' + val(7) + b':' + b'\xfd' + val(0xCEFF) + b':' +
             b'\xef""\xaf:' + b'\xfb:' +
-            b'\xeb i=' + val(0) + b'\xcc' + val(3) + b':' +
-            b'\xeb j=' + val(0) + b'\xcc' + val(3) + b':' +
-            b'\xf4' + val(20732) + b'+' + val(256) + b'*i+j,' + val(255) + b':' +
-            b'\xf3 j:' + b'\xf3 i:' +
-            b'\xf4' + val(23292) + b',' + val(16) + b':' +
-            b'\xf4' + val(23293) + b',' + val(48) + b':' +
-            b'\xf4' + val(23294) + b',' + val(32) + b':' +
-            b'\xf4' + val(23295) + b',' + val(40) + b':' +
+            osbuild.ribbon_print(val) + b':' +
             b'\xf9\xc0' + val(0xD000) + b'\r')
     return struct.pack('>H', 10) + struct.pack('<H', len(line)) + line
 

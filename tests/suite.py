@@ -585,15 +585,15 @@ def shell_below_picture(s):
 
 @test
 def pair_after_prompt(s):
-    """the release's multitask snapshot (tools/mtsnap.py): hanoi in the
+    """normal hanoi and queens8 tape programs: hanoi in the
     background, a prompt below its picture, then queens8 - both run"""
     import rtap
     s.login()
     own = ksym('scrown')
     for n, count in (('hanoi', 1), ('queens8', 2)):
-        f = os.path.join(ROOT, 'build', 'c48', n + '-mt.ssx')
+        f = os.path.join(ROOT, 'build', 'c48', n + '.ssx')
         if not os.path.exists(f):
-            raise Fail('%s missing: run tools/mktapes.py' % f)
+            raise Fail('%s missing from selected normal C48 programs' % f)
         s.zx.type('/dev/cassette/%s &\n' % n)
         s.zx.tr.edges = zxrun.tape_pulses(rtap.records(open(f, 'rb').read(), n),
                                           s.zx.sim.registers[25] + 350000)
@@ -685,15 +685,15 @@ def shell_save_depth(s):
 
 @test
 def pair_without_lending(s):
-    """hanoi and queens8 (tools/mktapes.py) both fit in the arena: the shell keeps running"""
+    """normal hanoi and queens8 both fit in the arena: the shell keeps running"""
     import rtap
     s.login()
     m = s.zx.mem
     own = ksym('scrown')
     for n, count in (('hanoi', 1), ('queens8', 2)):
-        f = os.path.join(ROOT, 'build', 'c48', n + '-mt.ssx')
+        f = os.path.join(ROOT, 'build', 'c48', n + '.ssx')
         if not os.path.exists(f):
-            raise Fail('%s missing: run tools/mktapes.py' % f)
+            raise Fail('%s missing from selected normal C48 programs' % f)
         s.zx.type('/dev/cassette/%s &\n' % n)
         s.zx.tr.edges = zxrun.tape_pulses(rtap.records(open(f, 'rb').read(), n),
                                           s.zx.sim.registers[25] + 350000)
@@ -1517,16 +1517,15 @@ def low_kernel(s):
 
 @test
 def mobius_torus_together(s):
-    """mobius and torus from build/c48-multitask.tzx (bytecode, tools/
-    mktapes.py) both load in the background - a background program
+    """normal mobius and torus tapes load in the background - a background program
     cannot borrow the window, so both must fit in the arena - and both
     run (each gets CPU time)"""
     import rtap
     s.login()
     for n in ('mobius', 'torus'):
-        f = os.path.join(ROOT, 'build', 'c48', n + '-mt.ssx')
+        f = os.path.join(ROOT, 'build', 'c48', n + '.ssx')
         if not os.path.exists(f):
-            raise Fail('%s missing: run tools/mktapes.py' % f)
+            raise Fail('%s missing from selected normal C48 programs' % f)
         s.zx.type('/dev/cassette/%s &\n' % n)
         run_past(s, play(s, rtap.records(open(f, 'rb').read(), n)), 200)
         if slot_named(s, n) is None:

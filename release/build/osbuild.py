@@ -193,6 +193,18 @@ def header(typ, name, length, p1, p2):
     return tap_block(0, bytes([typ]) + name.encode().ljust(10)[:10] +
                      struct.pack('<HHH', length, p1, p2))
 
+def ribbon_print(num):
+    """ROM BASIC prints graphic 131 with black upper halves and coloured paper.
+
+    Use VAL for stream/coordinates so no hidden BASIC floating-number bytes
+    are required. The trailing separator suppresses the print newline.
+    """
+    return (b'\xf5#' + num(1) + b';\xac' + num(1) + b',' + num(28) +
+            b';\xd9' + num(0) + b';' +
+            b''.join(b'\xda' + num(paper) + b';"\x83";'
+                     for paper in (2, 6, 4, 5)))
+
+
 def basic_loader(clear_address):
     def num(n):            # VAL "n" keeps the line short and exact
         return b'\xb0"' + str(n).encode() + b'"'
@@ -202,6 +214,7 @@ def basic_loader(clear_address):
             b'\xfb:' +                         # CLS
             b'\xfd' + num(clear_address) + b':' +  # CLEAR above merged image
             b'\xf5"ZX-UX UNIX v1 loading":' +   # PRINT "..."
+            ribbon_print(num) + b':' +       # bottom-right ribbon
             b'\xef""\xaf:' +                   # LOAD one merged CODE image
             b'\xf9\xc0' + num(KBASE) +         # RANDOMIZE USR VAL "24576"
             b'\r')

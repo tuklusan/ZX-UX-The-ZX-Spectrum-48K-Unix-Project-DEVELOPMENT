@@ -203,9 +203,7 @@ void q_clear_half(void)
 
 int q_square_paper(int row, int col)
 {
-    if ((row + col) & 1)
-        return 1;
-    return 0;
+    return (row + col) & 1;
 }
 
 void q_board_square(int row, int col)
@@ -213,6 +211,8 @@ void q_board_square(int row, int col)
     int gr;
     int gc;
     int p;
+    int dr;
+    int dc;
     if (row < 0 || row > 7 || col < 0 || col > 7) {
         q_inv_fail++;
         q_fail("BOARD RANGE");
@@ -221,10 +221,11 @@ void q_board_square(int row, int col)
     gr = 3 + row * 2;
     gc = 16 + col * 2;
     p = q_square_paper(row, col);
-    q_draw(28, gr, gc, 7, p);
-    q_draw(28, gr, gc + 1, 7, p);
-    q_draw(28, gr + 1, gc, 7, p);
-    q_draw(28, gr + 1, gc + 1, 7, p);
+    for (dr = 0; dr < 2; dr++) {
+        for (dc = 0; dc < 2; dc++) {
+            q_draw(28, gr + dr, gc + dc, 7, p);
+        }
+    }
 }
 
 void q_show_piece(int row, int col, int base, int inkc)
@@ -307,8 +308,6 @@ int q_validate(void)
             return 0;
         d = r - c + 7;
         u = r + c;
-        if (d < 0 || d > 14 || u < 0 || u > 14)
-            return 0;
         if (cs[c] || ds[d] || us[u])
             return 0;
         cs[c] = 1;
@@ -331,20 +330,12 @@ int q_validate(void)
     return 1;
 }
 
+int q_expected[8]={0,4,7,5,2,6,1,3};
 int q_check_final(void)
 {
-    int expected[8];
     int r;
     int c;
     int rr;
-    expected[0] = 0;
-    expected[1] = 4;
-    expected[2] = 7;
-    expected[3] = 5;
-    expected[4] = 2;
-    expected[5] = 6;
-    expected[6] = 1;
-    expected[7] = 3;
     if (!q_validate())
         return 0;
     if (q_placed_count != 8 || q_maximum_depth != 8)
@@ -358,7 +349,7 @@ int q_check_final(void)
     if (q_guard_fail != 0)
         return 0;
     for (r = 0; r < 8; r++) {
-        if (q_col[r] != expected[r])
+        if (q_col[r] != q_expected[r])
             return 0;
         for (rr = r + 1; rr < 8; rr++) {
             c = q_col[rr];
