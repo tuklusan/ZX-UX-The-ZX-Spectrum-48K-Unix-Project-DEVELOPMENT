@@ -132,7 +132,19 @@ class ActualLinkerImageContract(unittest.TestCase):
             self.assertEqual(sum_of_xor(packet), 0)
             rebuilt.extend(packet[8:-3])
         self.assertEqual(bytes(rebuilt), data)
-        tzx = t.pack_tzx(pairs[:2], pairs[2:], data, pause_ms=400)
+        # The second pair in the normal TAP is the *entire system image*,
+        # not the compact D000 bootstrap! Reusing it here would duplicate
+        # 25 KB and violate the strict size requirement.
+        prototype = root / 'release/build/tmp/build/ZX-UX-turbo-experimental.tzx'
+        if not prototype.exists():
+            self.skipTest('ROM bootstrap prototype has not been assembled')
+        forms, prior = independent_decode_tzx(prototype.read_bytes())
+        self.assertEqual(forms, [0x10]*4 + [0x11]*24)
+        compact_boot_pair = [prior[2][1], prior[3][1]]
+        with self.assertRaisesRegex(t.TurboFormatError, '30,000'):
+            t.pack_tzx(pairs[:2], pairs[2:], data, pause_ms=400)
+        tzx = t.pack_tzx([prior[0][1], prior[1][1]], compact_boot_pair, data, pause_ms=400)
+        self.assertLess(len(tzx), 30_000)
         forms, blocks = independent_decode_tzx(tzx)
         self.assertEqual(forms, [0x10]*4 + [0x11]*24)
         self.assertEqual([item[1] for item in blocks[4:]], list(packets))

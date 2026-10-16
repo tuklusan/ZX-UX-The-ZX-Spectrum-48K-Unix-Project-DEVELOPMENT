@@ -100,6 +100,22 @@ def build(sjasm: str):
     stage_inputs()
     run([sys.executable, HERE / 'osbuild.py', sjasm])
     os_output = TMP / 'build'
+    from turbo_boot_build import create_tzx
+    from turbo_verify import check_tzx
+    from osbuild import mkfs, program_list
+    import re
+    syms = {}
+    for line in (TMP / 'src/unix.sym').read_text().splitlines():
+        m = re.match(r'(\S+): EQU 0x([0-9A-Fa-f]+)', line)
+        if m:
+            syms[m.group(1)] = int(m.group(2), 16)
+    require('LOWK' in syms and 'kend' in syms, 'Missing final boot layout symbols')
+    fs_image, _, free, _ = mkfs(syms, program_list())
+    require(fs_image == (os_output/'fs.img').read_bytes(), 'Staged FS image not reproducible')
+    turbo, _, _ = create_tzx(sjasm, syms, syms['kend']-0x6000,
+                              free, output_name='ZX-UX.tzx')
+    check_tzx(turbo, (os_output/'merged-image.bin').read_bytes(),
+              (os_output/'turbo_boot.bin').read_bytes(), load_base=syms['LOWK'])
     from c48build import build as build_c48
     from sdkpack import pack as pack_sdk
     target = candidate / 'zx-ux'
@@ -123,7 +139,7 @@ def build(sjasm: str):
     # The completed candidate is only a provisional baseline, never a signed release.
     status = {'status': 'partial beta-0.0.7 development candidate',
               'program_count': n,
-              'boot_transport': 'single-CODE TAP, provisional legacy TZX',
+              'boot_transport': 'single-CODE TAP and compact turbo boot TZX; pending external release gates',
               'candidate_file_count': len(actual)}
     (RELEASE / 'manifest.json').write_text(json.dumps(status, indent=2) + '\n')
     old = TMP / 'dist-previous'
@@ -142,7 +158,7 @@ def build(sjasm: str):
     # distributions among intermediate build files after a successful build.
     if old.exists():
         shutil.rmtree(old)
-    print('INTERIM CANDIDATE: %d C48 programs; merged standard TAP and provisional TZX; not beta-0.0.7 release' % n)
+    print('BETA-0.0.7 DEVELOPMENT CANDIDATE: %d C48 pairs and two boot transports; external gates still required' % n)
 
 
 def main():

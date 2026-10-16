@@ -11,6 +11,8 @@ from dataclasses import dataclass
 import struct
 
 COUNT = 24
+# Strictly less than 30,000 decimal bytes, not a 30 KiB approximation.
+MAX_TZX_BYTES = 30_000
 LOAD_BASE = 0x5D98
 ENTRY = 0x6000
 MAGIC = b'ZX'
@@ -129,4 +131,7 @@ def pack_tzx(basic_pair, bootstrap_pair, image: bytes, *, pause_ms: int, load_ba
                zip((*basic_pair, *bootstrap_pair), (1000, 1000, 1000, 1500))]
     records.extend(pack_turbo_record(p, pause_ms=pause_ms) for p in
                    make_segments(image, load_base=load_base))
-    return b'ZXTape!\x1a\x01\x14' + b''.join(records)
+    tape = b'ZXTape!\x1a\x01\x14' + b''.join(records)
+    if len(tape) >= MAX_TZX_BYTES:
+        raise TurboFormatError('compact boot TZX must be smaller than 30,000 bytes')
+    return tape
