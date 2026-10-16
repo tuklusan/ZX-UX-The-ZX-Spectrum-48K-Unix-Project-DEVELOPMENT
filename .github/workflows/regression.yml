@@ -4,6 +4,7 @@ on:
     paths:
       - 'release/**'
       - 'tests/**'
+      - 'tools/**'
       - '.github/workflows/regression.yml'
   workflow_dispatch:
 permissions:
