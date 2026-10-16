@@ -40,19 +40,17 @@ class TurboPresentationTest(unittest.TestCase):
         self.assertNotIn(b'23292',data)
         self.assertNotIn(b'20732',data)
 
-    def test_final_line_precedes_final_block_without_early_exec(self):
-        # User-visible row 24 is painted before the last tape packet starts,
-        # but ordinal, CRC, length and XOR still gate the execution jump.
+    def test_final_line_only_after_validated_last_block(self):
+        # All 24 rows must follow verified CRC/XOR/index/length and copy.
+        # A premature row must never mask a failed final packet.
         src=(ROOT/'release/src/zx-ux/turbo_boot.asm').read_text()
-        segment=src.split('.next:',1)[1].split('.receive:',1)[0]
-        self.assertIn('cp 24',segment)
-        self.assertIn('call render_text_row',segment)
+        receiving=src.split('.next:',1)[1].split('.valid:',1)[0]
+        self.assertNotIn('call render_text_row',receiving)
         valid=src.split('.valid:',1)[1].split('; Read a transition',1)[0]
-        self.assertIn('call copy_payload',valid)
-        self.assertIn('cp 24',valid)
-        self.assertIn('jr z,.already_drawn',valid)
+        self.assertEqual(valid.count('call render_text_row'),1)
         self.assertIn('jp 06000h',valid)
-        self.assertLess(valid.index('call copy_payload'),valid.index('jp 06000h'))
+        self.assertLess(valid.index('call copy_payload'),valid.index('call render_text_row'))
+        self.assertLess(valid.index('call render_text_row'),valid.index('jp 06000h'))
 
     def test_tape_border_pattern_does_not_delay_bit_sampler(self):
         src=(ROOT/'release/src/zx-ux/turbo_boot.asm').read_text()

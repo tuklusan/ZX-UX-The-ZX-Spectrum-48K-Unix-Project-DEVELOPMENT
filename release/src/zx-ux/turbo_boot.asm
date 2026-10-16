@@ -21,14 +21,6 @@ start:  di
         ld (text_cursor),hl
 .next:  xor a
         ld (attempts),a
-        ; Before the LAST segment, draw the last progress line. The image
-        ; is NOT considered complete until its own CRC/XOR/offset checks pass.
-        ld a,(ordinal)
-        cp 24
-        jr nz,.receive
-        ld hl,(text_cursor)
-        call render_text_row
-        ld (text_cursor),hl
 .receive:
         ld a,1                   ; blue border during pilot search
         out (0FEh),a
@@ -59,15 +51,11 @@ start:  di
 .valid: ld a,0
         out (0FEh),a
         call copy_payload
-        ; The 24th line must be visible while the 24th tape block is still
-        ; arriving; it was drawn in .next. Earlier lines follow validation.
-        ld a,(ordinal)
-        cp 24
-        jr z,.already_drawn
+        ; Render every numbered row only after the corresponding packet has
+        ; passed the exact ordinal, offset, length, XOR and CRC checks.
         ld hl,(text_cursor)
         call render_text_row
         ld (text_cursor),hl
-.already_drawn:
         ld hl,(plan_cursor)
         ld de,4
         add hl,de
