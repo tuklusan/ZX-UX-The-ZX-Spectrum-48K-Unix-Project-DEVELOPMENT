@@ -420,7 +420,10 @@ def ssx_tape(name):
     from rcc import driver
     out = os.path.join(ROOT, 'build', 'ssx', name + '.ssx')
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    if driver.main([os.path.join(HERE, 'c', name + '.c'), '-o', out]):
+    # This oversized test fixture probes runtime rejection, not the
+    # independent host compiler's normal ZX-UX admission budget.
+    flags = ['--max', '30000'] if name == 'ssxhuge' else []
+    if driver.main([os.path.join(HERE, 'c', name + '.c'), '-o', out] + flags):
         raise Fail('rcc failed for ' + name)
     return rtap.records(open(out, 'rb').read(), name)
 
