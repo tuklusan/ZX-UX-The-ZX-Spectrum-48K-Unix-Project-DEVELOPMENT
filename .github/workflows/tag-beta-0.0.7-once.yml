@@ -1,0 +1,58 @@
+name: Set beta-0.0.7 tag once
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/tag-beta-0.0.7-once.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check source and create immutable tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_TARGET: 8d52b365ec767838bb401510562300334bda68b0
+          TARGET_TREE: 91ed76aedb0c32d6cb9e242fe4f99ce645b3fd2f
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.error
+          api = 'https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY']
+          headers = {'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                     'Accept': 'application/vnd.github+json',
+                     'X-GitHub-Api-Version': '2022-11-28'}
+          def call(path, method='GET', body=None):
+              payload = None if body is None else json.dumps(body).encode()
+              request = urllib.request.Request(api + path, data=payload, method=method,
+                                                headers=headers)
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          target = os.environ['TAG_TARGET']
+          assert os.environ['GITHUB_REPOSITORY'] == 'tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT'
+          assert os.environ['GITHUB_REF'] == 'refs/heads/main'
+          source = call('/git/commits/' + target)
+          assert source['tree']['sha'] == os.environ['TARGET_TREE']
+          trigger = call('/git/commits/' + os.environ['GITHUB_SHA'])
+          assert len(trigger['parents']) == 1 and trigger['parents'][0]['sha'] == target
+          comparison = call('/compare/' + target + '...' + os.environ['GITHUB_SHA'])
+          assert comparison['ahead_by'] == 1 and len(comparison['files']) == 1
+          assert comparison['files'][0]['filename'] == '.github/workflows/tag-beta-0.0.7-once.yml'
+          assert comparison['files'][0]['status'] == 'added'
+          workflow_runs = call('/actions/runs?head_sha=' + target + '&per_page=100')['workflow_runs']
+          for name in ('Verify complete ZX-UX checkout', 'Beta offline baseline regression'):
+              assert any(run['name'] == name and run['head_sha'] == target
+                         and run['status'] == 'completed' and run['conclusion'] == 'success'
+                         for run in workflow_runs), 'Missing successful source CI: ' + name
+          try:
+              call('/git/ref/tags/beta-0.0.7')
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+          else:
+              raise RuntimeError('Tag already exists; refusing replacement')
+          call('/git/refs', 'POST', {'ref': 'refs/tags/beta-0.0.7', 'sha': target})
+          tag = call('/git/ref/tags/beta-0.0.7')
+          assert tag['object']['sha'] == target and tag['object']['type'] == 'commit'
+          print('Verified immutable beta-0.0.7 tag at', target)
+          PY
