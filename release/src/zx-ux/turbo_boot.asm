@@ -9,17 +9,8 @@ start:  di
         ld iy,05C3Ah
         xor a
         out (0FEh),a
-        ld hl,04000h
-        ld de,04001h
-        ld (hl),a
-        ld bc,017FFh
-        ldir
-        ld hl,05800h
-        ld de,05801h
-        ld a,7
-        ld (hl),a
-        ld bc,02FFh
-        ldir
+        ; BASIC has just performed CLS and drawn the four ribbon cells;
+        ; preserve its bitmap and attributes during all 24 progress rows.
         ld a,1
         ld (ordinal),a
         xor a
@@ -31,6 +22,8 @@ start:  di
 .next:  xor a
         ld (attempts),a
 .receive:
+        ld a,1                   ; blue border during pilot search
+        out (0FEh),a
         call receive_frame
         jr nc,.valid
         ld a,2                    ; red border on failed segment
@@ -82,6 +75,9 @@ start:  di
         ld b,25
 .dwell: halt
         djnz .dwell
+        xor a
+        out (0FEh),a             ; black border at ZX-UX handover
+        ld (05C48h),a           ; BORDCR internal attribute must match black
         jp 06000h
 
 ; Read a transition from the EAR input on port FE. C bit 6 tracks phase.
@@ -207,6 +203,8 @@ receive_frame:
         ret c
         ld a,'D'
         ld (stage_code),a
+        xor a
+        out (0FEh),a             ; black border while decoding data
         xor a
         ld (bytes_ok),a
         ld (bytes_ok+1),a
@@ -425,7 +423,7 @@ render_error:
         ld hl,error_text
         call render_text_row
         ld a,023                 ; red paper, white ink
-        jr paint_attribute
+        jp paint_attribute
 
 print_hex_byte:
         push af
@@ -453,7 +451,9 @@ nibble_ascii:
         ret
 
 render_text_row:
-        ; HL -> 32-character text. Return HL advanced by exactly 32.
+        ; 64-column, 4x8 font from the existing ZX-UX SDK (96 glyphs).
+        ; The 32 source characters each have a 4-pixel blank spacer.
+        ; In row 24 keep the last 8 half-cells (4 Spectrum cells) intact.
         push hl
         pop ix
         ld a,(row_index)
@@ -465,34 +465,87 @@ render_text_row:
         ld e,(hl)
         inc hl
         ld d,(hl)
+        ld (screen_pos),de
+        ld a,(row_index)
+        cp 23
         ld c,32
-.char:  ld a,(ix+0)
+        jr nz,.pair
+        ld c,28                  ; preserve columns 29-32 (last 4 bytes)
+.pair:
+        push bc
+        ld a,(ix+0)
         inc ix
-        sub 32
-        ld l,a
-        ld h,0
-        add hl,hl
-        add hl,hl
-        add hl,hl
-        ld b,03Dh
-        ld a,h
-        add a,b
-        ld h,a
-        ld b,8
+        call glyph_address
+        push hl                  ; left glyph
+        ld a,(ix+0)
+        inc ix
+        call glyph_address
+        ex de,hl                 ; right glyph
+        pop hl                   ; left glyph
+        ld b,4                   ; two scanlines per packed font byte
+.scan:
+        ld a,(hl)
+        and 0F0h
+        ld c,a
+        ld a,(de)
+        rrca
+        rrca
+        rrca
+        rrca
+        and 00Fh
+        or c
         push de
-.scan:  ld a,(hl)
+        ld de,(screen_pos)
         ld (de),a
-        inc hl
-        inc d
-        djnz .scan
+        inc d                    ; ULA next pixel scanline
+        ld (screen_pos),de
         pop de
+        ld a,(hl)
+        and 00Fh
+        rlca
+        rlca
+        rlca
+        rlca
+        ld c,a
+        ld a,(de)
+        and 00Fh
+        or c
+        push de
+        ld de,(screen_pos)
+        ld (de),a
+        inc d
+        ld (screen_pos),de
+        pop de
+        inc hl
         inc de
+        djnz .scan
+        ld de,(screen_pos)
+        ld a,d
+        sub 8
+        ld d,a
+        inc de
+        ld (screen_pos),de
+        pop bc
         dec c
-        jr nz,.char
+        jr nz,.pair
+        ; Paint only columns 1..28 of the bottom row so ribbon survives.
         ld a,7
         call paint_attribute
         push ix
         pop hl
+        ret
+
+glyph_address:
+        sub 32
+        cp 96
+        jr c,.ok
+        xor a
+.ok:    ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld bc,font4x8
+        add hl,bc
         ret
 
 paint_attribute:
@@ -509,6 +562,13 @@ paint_attribute:
         add hl,de
         pop af
         ld b,32
+        push af
+        ld a,(row_index)
+        cp 23
+        jr nz,.attr_count
+        ld b,28
+.attr_count:
+        pop af
 .attr: ld (hl),a
         inc hl
         djnz .attr
@@ -525,6 +585,7 @@ validation_stage: db 0
 debug_crc: ds 4,0
 edge_width: db 0
 pilot_count: db 0
+screen_pos: dw 0
 plan_cursor: dw segment_plan
 text_cursor: dw progress_lines
 error_text: db '! REWIND / RETRY THIS SEGMENT  !'
@@ -536,6 +597,9 @@ segment_plan:
         include "turbo_plan.inc"
 progress_lines:
         include "turbo_lines.inc"
+        align 4
+font4x8:
+        incbin "font4x8.bin",8,384
 loader_end:
         assert loader_end < 0E000h
         assert 0E000h + 11 + MAX_SEG_LEN < 0F000h

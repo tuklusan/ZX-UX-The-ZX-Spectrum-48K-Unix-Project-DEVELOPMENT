@@ -105,9 +105,9 @@ class TurboBootstrapContract(unittest.TestCase):
         lines=b.progress_lines(len(self.image),syms,syms['kend']-0x6000,free)
         self.assertEqual(len(lines),24)
         self.assertEqual({len(line) for line in lines},{32})
-        self.assertIn(str(len(self.image)),''.join(lines))
-        self.assertIn(str(free),''.join(lines))
-        self.assertIn(b''.join(line.encode() for line in lines),
+        self.assertIn('kernel limit: 8192 bytes',''.join(lines))
+        self.assertIn('default time: 09:00:00',''.join(lines))
+        self.assertIn(''.join(b.expanded_line(line) for line in lines).encode(),
                       (self.output/'turbo_boot.bin').read_bytes())
 
     def test_single_compact_shipped_tzx(self):
