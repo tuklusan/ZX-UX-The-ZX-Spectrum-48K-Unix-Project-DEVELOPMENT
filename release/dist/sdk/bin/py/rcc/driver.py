@@ -4,6 +4,7 @@ import sys
 from .lex import preprocess, CError
 from .parse import parse
 from . import z80gen, bcgen
+from .fit import FitError, find_smallest
 
 SDK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SDK)
@@ -99,6 +100,7 @@ def main(argv):
     udgs = None
     heap = 1024
     mode = None
+    fit = False
     limit = ZXUX_MAX
     files = []
     i = 0
@@ -139,6 +141,8 @@ def main(argv):
                 return 2
             asm_only |= a == '-S'
             obj_only |= a == '-c'
+        elif a == '--fit':
+            fit = True
         elif a in ('--bytecode', '--native'):
             selected = 'all' if a == '--bytecode' else 'none'
             if mode is not None and mode != selected:
@@ -148,8 +152,11 @@ def main(argv):
         else:
             files.append(a)
         i += 1
+    if fit and (mode is not None or asm_only or obj_only):
+        print('rcc: --fit needs linked output and no forced backend', file=sys.stderr)
+        return 2
     if len(files) != 1:
-        print('usage: rcc [-S|-c] [-o out] [--bytecode|--native] [--max BYTES] [--stack N] [--heap N] [--udgs N] file.c',
+        print('usage: rcc [-S|-c] [-o out] [--bytecode|--native|--fit] [--max BYTES] [--stack N] [--heap N] [--udgs N] file.c',
               file=sys.stderr)
         return 2
     src = files[0]
@@ -171,13 +178,21 @@ def main(argv):
                 return write_out(target, text.encode())
             obj = ras.assemble_text(text, os.path.basename(base) + '.s')
             return write_out(target, obj)
-        data, g, text, obj, need = build(src, opts)
-        if mode is None and limit and need > limit:
+        if fit:
+            (data, g, text, obj, need), trials, chosen = find_smallest(src, opts, build)
+            print('rcc: --fit smallest found in %d linked trials: %d bytes' %
+                  (trials, need), file=sys.stderr)
+        else:
+            data, g, text, obj, need = build(src, opts)
+        if not fit and mode is None and limit and need > limit:
             # too big for native code: bytecode (SSB1) for what it can
             opts['bytecode'] = 'all'
             data2, g2, text2, obj2, need2 = build(src, opts)
             if need2 < need:
                 data, need = data2, need2
+    except FitError as e:
+        print('rcc: %s' % e, file=sys.stderr)
+        return 1
     except CError as e:
         print('rcc: %s' % e, file=sys.stderr)
         return 1
@@ -189,6 +204,7 @@ def main(argv):
         return 1
     if limit and need > limit:
         print('rcc: %s needs %d bytes of memory (limit %d)' % (src, need, limit), file=sys.stderr)
+        return 1
     return write_out(target, data)
 
 
