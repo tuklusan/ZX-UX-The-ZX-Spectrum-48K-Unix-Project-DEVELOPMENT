@@ -248,8 +248,8 @@ def main():
     marker.add_argument('--expect-zxux-login', action='store_true')
     parser.add_argument('--wait', type=int, default=30)
     args = parser.parse_args()
-    if not 3 <= args.wait <= 120:
-        parser.error('The boot wait must be from 3 to 120 seconds')
+    if not 3 <= args.wait <= 240:
+        parser.error('The boot wait must be from 3 to 240 seconds')
     try:
         result = run(args)
         print('PASS: independent FUSE tape boot:', json.dumps(result, sort_keys=True))

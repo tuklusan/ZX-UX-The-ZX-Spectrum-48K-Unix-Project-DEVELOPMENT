@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SPEC = ROOT / 'docs' / '04-C48 Language Specification Rev 0.11.docx'
 TRACE = Path(__file__).with_name('traceability.json')
 REVIEW = Path(__file__).with_name('original_220_dispositions.csv')
-REVIEW_SHA256 = '5c20f7503d5c64e849bc7484e6cc8c557be7b317d6635adca735bbb66ab2921d'
+REVIEW_SHA256 = '313bb5eed5dde3c109aab8309703e2e51395808dc5dae95339211e4d838fc477'
 REVIEW_KIND_SHA256 = '14f550d59006895eddbd43fc6b5e544e81e91caa96e97f8fdfea39ffdbaf6c4a'
 TARGET_PARAGRAPHS = frozenset((600, 608, 613, 615, 622, 625, 626, 751,
                                753, 759, 770, 776, 779, 924, 981, 982,
@@ -179,7 +179,7 @@ def main():
     if hashlib.sha256(SPEC.read_bytes()).hexdigest() != trace.get('spec_sha256'):
         raise ValueError('authoritative specification checksum differs')
     report = json.loads(args.report.read_text())
-    proof = args.ix_proof or args.report.parent / 'ix-abi-proof.json'
+    proof = args.ix_proof or args.report.parent / 'ix-frame-proof.json'
     # No proof, no target credit. A missing proof is a release blocker.
     if proof.is_file():
         outstanding = independent_target_status(report, proof, args.env1_proof)
@@ -193,7 +193,7 @@ def main():
     print('C48 paragraphs:', status['indexed'])
     print('Linked assertions:', status['exercised'])
     print('Verified non-executable dispositions:', status['reviewed_nonexecutable'])
-    print('Target/ABI obligations:', status['target_indexed'])
+    print('Target calling-rule checks:', status['target_indexed'])
     print('Unresolved target paragraphs:', status['target_unresolved'])
     print('Required C48 pending:', status['required_pending'])
     print('Undefined C48 pending:', status['undefined_pending'])

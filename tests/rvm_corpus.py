@@ -3,9 +3,9 @@
 
   python3 tests/rvm_corpus.py [--native|--bytecode] [--only a,b] [--png DIR]
 
-Each scripted session of sdk/tests/runs.json is compiled by rcc and run
+Each scripted session of tests/sdk/runs.json is compiled by rcc and run
 by rvm exactly as a user runs it (rvm.Runner, headless): ZX-UX booted
-from build/ZX-UX.tap (or rvm's cache of it), the program typed as
+from release/dist/zx-ux/ZX-UX.tap (or rvm's cache of it), the program typed as
 /dev/cassette/NAME and loaded through the tape trap, the session's keys
 typed once it has started.  A session passes when the program starts
 (the loader reaches sys ssxload), shows the text the session expects on
@@ -13,13 +13,10 @@ ZX-UX (zxux_text, else expect_text, as tests/ssxrun.py checks it), and,
 where the session gives an exit status and the outcome does not depend
 on the real clock (no zxux_note), ends with that status.
 
-Negative cases, also checked: security/seckern.c must not compile (a
-forged pointer into the kernel's memory), and the LM program (ailmzx48),
-which compiles to an SSX1 file bigger than ZX-UX can load, must be
-refused by ZX-UX's loader in rvm ("not enough memory", exit status 1)
-without starting.
+The negative security test checks that security/seckern.c cannot
+compile a program with a forged pointer into kernel memory.
 
-The 58 C48 sources other than LM are all covered: 57 by sessions,
+All 58 C48 sources in this selected collection are covered: 57 by sessions,
 seckern by its compile check.
 """
 import json
@@ -30,13 +27,13 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-sys.path[:0] = [os.path.join(ROOT, 'sdk')]
+sys.path[:0] = [os.path.join(ROOT, 'release', 'dist', 'sdk', 'bin', 'py')]
 import rvm                        # noqa: E402
 import zxscreen                   # noqa: E402
 from rcc import driver            # noqa: E402
 
-RUNS = json.load(open(os.path.join(ROOT, 'sdk', 'tests', 'runs.json')))
-CORPUS = os.path.join(ROOT, 'programs', 'c48')
+RUNS = json.load(open(os.path.join(ROOT, 'tests', 'sdk', 'runs.json')))
+CORPUS = os.path.join(ROOT, 'release', 'src', 'assets', 'c48-src')
 
 
 def compile_c(src, out, flags):
@@ -138,31 +135,12 @@ def main(argv):
               % ('seckern', 'PASS' if refused else 'FAIL'))
         ok += refused
         neg += 1
-    if not only or 'ailmzx48' in only:
-        total += 1
-        src = os.path.join(CORPUS, 'ailmzx48', 'ailmzx48.c')
-        out = os.path.join(tmp, 'ailmzx48.ssx')
-        good = False
-        why = 'did not compile'
-        if compile_c(src, out, flags):
-            import rtap
-            need = rtap.need(open(out, 'rb').read())
-            r = run_session(out, [], '', 0, 3000)
-            text = zxscreen.screen_text(r.session.m.screen())
-            good = (need > driver.ZXUX_MAX and r.fg.started is None and r.why == 'exit'
-                    and r.fg.status == 1 and 'not enough memory' in text)
-            why = 'needs %d bytes; ZX-UX: %s, %s' % (need, 'not enough memory' if
-                                                     'not enough memory' in text else '?',
-                                                     r.fg.describe())
-        print('%-14s %s %s' % ('ailmzx48', 'PASS' if good else 'FAIL', why))
-        ok += good
-        neg += 1
     if not only:
         allsrc = {os.path.normpath(os.path.join(dp, f)) for dp, _, fs in os.walk(CORPUS)
-                  for f in fs if f.endswith('.c') and 'ailmzx48' not in dp}
+                  for f in fs if f.endswith('.c')}
         missing = allsrc - sources
         total += 1
-        print('%-14s %s %d C48 sources besides LM, %d not covered%s'
+        print('%-14s %s %d C48 sources, %d not covered%s'
               % ('coverage', 'PASS' if not missing else 'FAIL', len(allsrc), len(missing),
                  ': ' + ', '.join(sorted(missing)) if missing else ''))
         ok += not missing

@@ -1,7 +1,7 @@
 """C48 Rev 0.11 SDK compiler regression programs in both modes.
 
 Test links describe checked behavior rather than complete coverage of a
-umbrella paragraph. External compilers and real target ABI remain separate.
+umbrella paragraph. External compilers and real target calling rules remain separate.
 """
 
 
@@ -66,9 +66,9 @@ def populate(add, accepted, rejected, runprogram):
          'int main(void){int a[3];int *p;int *q;p=&a[0];q=&a[2];return !(p<q); }'),
         ('operator_arithmetic_set', [121, 997],
          'int main(void){int a,b;a=7;b=3;'
-         'return a+b!=10||a-b!=4||a*b!=21||a/b!=2||a%b!=1||'
+         'return a+b!=10||a - b !=4||a * b !=21||a / b !=2||a % b !=1||'
          '(a<<1)!=14||(a>>1)!=3||(a&b)!=3||(a|b)!=7||'
-         '(a^b)!=4||(!0)!=1||(~0)!=-1;}'),
+         '(a ^ b) !=4||(!0)!=1||(~0)!=-1;}'),
         ('evaluation_precedence', [434, 1072],
          'int main(void){return 2+3*4!=14||(2+3)*4!=20||'
          '1+2<<3!=24||3<4&&5>4!=1;}'),

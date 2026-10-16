@@ -21,8 +21,8 @@ ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / 'tests/c48/native_env1_storage_lifetime.c'
 CRT = ROOT / 'release/src/zx-ux-sdk/lib/crt0.asm'
 SDK_SOURCE = ROOT / 'release/src/zx-ux-sdk'
-SDK_STAGE = ROOT / 'release/build/tmp/sdk'
-TMP_BUILD = ROOT / 'release/build/tmp/build'
+SDK_STAGE = ROOT / 'release/build/sdk'
+TMP_BUILD = ROOT / 'release/build/build'
 BOOT_TZX = ROOT / 'release/dist/zx-ux/ZX-UX.tzx'
 SSX_NAME = 'env48'
 ROM_HASH = 'd55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42'
@@ -274,7 +274,7 @@ def full_run(report, tap2sna):
             'source': source_hashes, 'link': link,
             'sequential': sequential, 'concurrent': concurrent,
             'native_snapshot': snapshot_proof,
-            'compiler': 'release/build/tmp/sdk/bin/rcc --native', 'target':'ZX-UX v1 native',
+            'compiler': 'release/build/sdk/bin/rcc --native', 'target':'ZX-UX v1 native',
             'runtime_build_log_sha256':hashlib.sha256(buildlog.encode()).hexdigest(),
             'compiler_log_sha256':hashlib.sha256(compilelog.encode()).hexdigest()}
 

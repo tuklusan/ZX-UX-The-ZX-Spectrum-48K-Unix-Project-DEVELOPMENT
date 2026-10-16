@@ -23,7 +23,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-sys.path.insert(0, os.path.join(ROOT, 'sdk'))
+sys.path.insert(0, os.path.join(ROOT, 'release', 'dist', 'sdk', 'bin', 'py'))
 CACHE = tempfile.mkdtemp(prefix='rvm-gui-cache-')
 os.environ['ZXUX_RVM_CACHE'] = CACHE
 import rvm          # noqa: E402
@@ -44,7 +44,7 @@ def check(what, cond, detail=''):
 def prog(name):
     out = os.path.join(TMP, name + '.ssx')
     if not os.path.exists(out):
-        if driver.main([os.path.join(ROOT, 'sdk', 'tests', 'rvm', name + '.c'), '-o', out]):
+        if driver.main([os.path.join(ROOT, 'tests', 'sdk', 'rvm', name + '.c'), '-o', out]):
             raise SystemExit('rcc failed for ' + name)
     return out
 

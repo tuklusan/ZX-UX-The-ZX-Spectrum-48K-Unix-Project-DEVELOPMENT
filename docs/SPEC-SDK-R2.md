@@ -17,7 +17,7 @@ are described in `SPEC-ELASTIC-R2.md`.
 | S3 | The SDK lives in the ZX-UX repository | `sdk/` |
 | S4 | The compiler's output runs in the ZX-UX VM and goes to tape | One file, SSX1, does both: `rvm` runs the same file that `rtap` writes to cassette |
 | S5 | Size strategy: (1) size-optimising native code, (2) SSB1 bytecode for what doesn't fit, (3) moving resident commands to tape in reserve | (1) and (2) done; the lever (3) was not needed (§9) |
-| S6 | Acceptance: the whole corpus compiles and runs in the VM and on ZX-UX from tape, `ailmzx48` exempt, `queens8`/`hanoi` best effort | All 56 programs, including `queens8`, `hanoi`, `chess` and `write48`, pass in the VM and run on ZX-UX from tape (§8) |
+| S6 | Acceptance: the whole corpus compiles and runs in the VM and on ZX-UX from tape, `queens8`/`hanoi` best effort | All 56 programs, including `queens8`, `hanoi`, `chess` and `write48`, pass in the VM and run on ZX-UX from tape (§8) |
 | S7 (new) | Floats and BEEP are computed by the program itself, through the ROM | R1's `sys fp` and `sys beep` are not in the kernel (§5) |
 | S8 (new) | A C program draws its own 64-column screen | R1's console colour codes are not in the kernel; the program claims the screen and draws into the display file (§5) |
 
@@ -42,7 +42,7 @@ compile-time and run-time results are bit-identical.
 - **`rtap`** writes SST1 cassette records (`SPEC-ELASTIC-R2` §6.2). `tools/mktapes.py` builds the corpus tapes. `rtap --list` shows what a `.tap`/`.tzx` holds: programs (as `/dev/cassette/NAME`, size, memory needed), tar archives and their members (kind, size, path), the Spectrum's own files, and blocks that are not well-formed records. On ZX-UX, `tap t` (or `tar t` without an archive name) lists the programs and archives of a cassette.
 - **`rvm`** (§7).
 
-## 3. The native code and the rcc ABI
+## 3. Native code and how functions pass values
 
 - **Arguments:** evaluated left to right. Arguments 1..n−1 are pushed in that order, argument n is passed in HL, and the callee removes the pushed words.
 - **Results:** in HL (a byte result has H = 0); a float result is left in `@fac`. Floats are passed as pointers; the callee copies.
@@ -139,7 +139,7 @@ extensions cost it only `ticks` and `screen` (about 100 bytes).
 
 ## 6. SSB1 — the bytecode
 
-A bytecode function keeps the native entry and the rcc ABI, so native and bytecode functions call
+A bytecode function follows the native calling rules, so both kinds of function can call
 each other freely:
 
     _f:   call @vm           ; enter the interpreter (sdk/lib/vm.asm)
@@ -265,7 +265,7 @@ n` in the assembly). The index below is the position in the full list:
 | 65 | `addgs` | byte, signed byte | word at @gs+b += s |
 | 66 | `addgsb` | byte, signed byte | byte at @gs+b += s |
 | 67 | `calli` | byte | call the function in @ct entry b |
-| 68 | `call` | address | call a (native rcc ABI) |
+| 68 | `call` | address | call a (native rcc calling rules) |
 | 69 | `ret` | byte | return, dropping b pushed arguments |
 | 6A | `ret0` | — | return (0 pushed arguments) |
 | 6B | `ret1` | — | return (1) |
@@ -419,10 +419,7 @@ The ZX-UX screen is saved as a PNG at the last frame the program owned it.
 **In rvm — `python3 tests/rvm_corpus.py [--native|--bytecode]`.** Every session of `runs.json` is run
 by `rvm` as a user runs it: ZX-UX booted, the program typed as `/dev/cassette/NAME`, loaded through
 the tape trap, keys typed once it runs. A session passes when the program runs, shows its expected
-ZX-UX text, and ends with its expected status where that does not depend on the clock. Two
-negative cases are checked as well: `security/seckern.c` must not compile, and the LM program
-(`ailmzx48`), whose SSX1 file is bigger than ZX-UX can load, must be refused by the loader ("not
-enough memory", status 1). All 58 C48 sources other than LM are covered. `tests/rvm_machine.py`
+ZX-UX text, and ends with its expected status where that does not depend on the clock. The negative security case checks that `security/seckern.c` does not compile. All selected C48 sources are covered. `tests/rvm_machine.py`
 (the machine against SkoolKit) and `tests/rvm_gui.py` (the window) complete the checks. Four scripted games are seeded from `ticks()`, which on ZX-UX is the real clock (`hangman`, `trek`, `snake`, `arith`). For them the ZX-UX check is that the keys were taken (`zxux_text` in `runs.json`), since a different seed plays a different game.
 
 ## 9. Sizes
@@ -490,7 +487,7 @@ and at least the file size. ZX-UX gives up to about 14,200 bytes after login.
 | `secuaf` | security | 535 | 1,313 | 3,016 | 1,538 | 3,239 | native |
 
 
-`ailmzx48` is exempt (S6). Since 2.2 only `chess` is built as bytecode by default. the largest
+Since 2.2 only `chess` is built as bytecode by default. The largest
 native program is `write48` (13,467 bytes). The reserve lever — moving resident commands to tape —
 was not needed.
 

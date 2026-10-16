@@ -116,9 +116,9 @@ complete proposed-tree inspection. The mandatory coverage gate returned
 status 1. No final release approval is recorded. The earlier ZX-UX native
 and FUSE runs remain checkpoints for the preceding source revision.
 
-## Host compiler command and output contract — 12 October 2026
+## Host compiler command and output rule — 12 October 2026
 
-The current SDK command driver had two reproducible contract defects:
+The current SDK command driver had two reproducible rule defects:
 `-o` could target its own source file and overwrite it with a compiled
 image, and an option missing its value could emit a Python traceback.
 `sdk/rcc/driver.py` now checks output aliases, including links, before
@@ -139,7 +139,7 @@ checks passed. The C48 coverage gate returned status 1. The current
 source has no final release approval.
 
 
-## Multiscalar ABI regression — 12 October 2026
+## Multiscalar calling rules regression — 12 October 2026
 
 The specification-led verifier now includes `tests/c48/spec_batch10.py`:
 conversion, evaluation order, stack argument passing, multiple float
@@ -211,9 +211,9 @@ the earlier 1,022-execution checkpoint. The checked clause inventory in
 | Review outcome | Number |
 | --- | ---: |
 | Newly linked to a passing assertion | 108 |
-| Documentation, contract policy, or verification-process requirements | 54 |
+| Documentation, rule policy, or verification-process requirements | 54 |
 | Requires genuinely independent host/cross-system validation | 34 |
-| Requires further target/runtime, ABI, or format proof | 20 |
+| Requires further target/runtime, calling rules, or format proof | 20 |
 | Broad compiler-corpus requirements still incomplete | 2 |
 | Outside defined portable pointer behavior | 1 |
 | Optional internal implementation method | 1 |
@@ -232,7 +232,7 @@ The new format probes parse actual SSO1 symbols, check the SSX1 20-byte
 header and checksum rejection, and check the SST1 cassette data against
 the compiler-generated executable. A generated-code probe checks that
 its tested native output does not use IY. These are narrow observations,
-not a complete ABI proof. No historical format adapter was introduced.
+not a complete calling rules proof. No historical format adapter was introduced.
 
 To regenerate the language report, the original-220 inventory, and the
 full release gate result from the checked SDK toolbox:
@@ -268,5 +268,5 @@ zero ERROR**. There are **647 linked paragraphs, 110 required pending,
 and two explicitly undefined entries**. The scoped host-compiler gate
 passes under the approved `rcc` architecture interpretation; the full
 release gate still stops on 110 required paragraphs. The separate target
-ABI matrix distinguishes 15 supported entries, 3 recorded contracts,
+calling rules matrix distinguishes 15 supported entries, 3 recorded rules,
 and 2 partial entries; no new target execution is implied here.

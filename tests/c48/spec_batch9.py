@@ -1,4 +1,4 @@
-"""C48 Rev 0.11 host-compiler command and output contract cases."""
+"""C48 Rev 0.11 host-compiler command and output rule cases."""
 
 
 def populate(add):

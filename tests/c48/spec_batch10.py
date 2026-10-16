@@ -1,7 +1,7 @@
 """Direct C48 Rev 0.11 call, conversion and evaluation-order assertions.
 
 These programs exercise observable SDK semantics in both backends. They do
-not claim to prove register-level ABI details from source-level results.
+not claim to prove register-level calling rules details from source-level results.
 """
 
 
@@ -39,7 +39,7 @@ def populate(rejected, runprogram):
         (604, 'float_parameters_have_value_semantics',
          'float combine(float a,float b){a=a+1.0;return a*10.0+b;}'
          'int main(void){float a,b;a=1.0;b=2.0;'
-         'return combine(a,b)!=22.0||a!=1.0||b!=2.0;}'),
+         'return combine(a, b) != 22.0||a!=1.0||b!=2.0;}'),
         (605, 'unsigned_char_argument_full_value',
          'int pick(int a,char b,int c){return b;}'
          'int main(void){char c;c=255;return pick(2,c,3)!=255;}'),

@@ -12,9 +12,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import zxpack
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
-SRC = os.path.join(ROOT, 'build', 'tmp', 'src')
-OUT = os.path.join(ROOT, 'build', 'tmp', 'build')
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
+SRC = os.path.join(ROOT, 'build', 'src')
+OUT = os.path.join(ROOT, 'build', 'out')
 
 KBASE = 0x6000
 BSIZE = 128

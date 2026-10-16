@@ -26,7 +26,7 @@ C48 behavior does not depend on the behavior of a host ISO C compiler;
 
 unsupported C features fail explicitly rather than acquiring accidental implementation-specific behavior.
 
-This specification states the C48 Version 1 language contract in full. It is the controlling definition of C48 language syntax and semantics for both native ZX-UX and independent host implementations.
+This specification states the C48 Version 1 language rule in full. It is the controlling definition of C48 language syntax and semantics for both native ZX-UX and independent host implementations.
 
 This text defines C48 Version 1 language requirements without relying on other documents for their meaning.
 
@@ -54,7 +54,7 @@ The absence of a rule from ISO C does not make that rule undefined in C48.
 
 Likewise, the presence of a feature in ISO C does not make that feature available in C48.
 
-C48 uses familiar C syntax but defines its own complete Version-1 language contract.
+C48 uses familiar C syntax but defines its own complete Version-1 language rule.
 
 Where this document freezes behavior more tightly than ISO C, C48 behavior governs.
 
@@ -441,7 +441,7 @@ Adjacent string literals separated only by whitespace or comments are concatenat
 
 An unescaped LF, end-of-file, unknown escape, or missing closing double quote is a lexical error.
 
-String literals have static storage duration. C48 source treats a string literal as nonmodifiable: a direct attempt to assign through the literal expression is rejected where the compiler can identify it, and modifying its bytes through an alias is outside the portable C48 contract. The stock 48K target has no memory protection, so this is a language rule rather than a hardware write-protection promise.
+String literals have static storage duration. C48 source treats a string literal as nonmodifiable: a direct attempt to assign through the literal expression is rejected where the compiler can identify it, and modifying its bytes through an alias is outside the portable C48 rule. The stock 48K target has no memory protection, so this is a language rule rather than a hardware write-protection promise.
 
 Each non-adjacent string-literal sequence occurrence denotes its own distinct static array object. The compiler MUST NOT merge two separate literal occurrences into one address. Re-evaluating the same literal occurrence yields the same object address for the process lifetime. This freezes pointer-identity behavior and prevents host string-pooling choices from leaking into C48.
 
@@ -680,7 +680,7 @@ C48 source type identity is stricter than representation size. `char`, `unsigned
 
 Two object-pointer types are exactly compatible only when their pointed-to types are exactly compatible recursively. `void *` implicit conversion does not make `void *` exactly compatible with another object-pointer type for declaration/prototype matching.
 
-Two function types match exactly only when return types match exactly and the fixed parameter count and each parameter type match exactly in order. Parameter names are not part of function type. ABI-equivalent widths do not make different source types interchangeable in a prototype/definition pair.
+Two function types match exactly only when return types match exactly and the fixed parameter count and each parameter type match exactly in order. Parameter names are not part of function type. calling convention-equivalent widths do not make different source types interchangeable in a prototype/definition pair.
 
 Two declarations of the same identifier in one scope must agree in entity kind and exact type. A function name and object name cannot coexist in the same scope. File-scope linkage declarations must not conflict: an identifier cannot switch between internal `static` linkage and external linkage within one translation unit.
 
@@ -710,7 +710,7 @@ A declaration after the first statement in the same block is unsupported.
 
 A `for` initializer is an expression, not a declaration. `for (int i = 0; ... )` is therefore unsupported; declare `i` before the `for` statement.
 
-An automatic local object without an initializer has unspecified stored bits. Reading it before the program has assigned a value is outside the portable C48 contract. The native compiler is not required to implement whole-function definite-assignment analysis, although host tooling SHOULD diagnose obvious uses where practical.
+An automatic local object without an initializer has unspecified stored bits. Reading it before the program has assigned a value is outside the portable C48 rule. The native compiler is not required to implement whole-function definite-assignment analysis, although host tooling SHOULD diagnose obvious uses where practical.
 
 25. Arrays
 
@@ -775,7 +775,7 @@ Equality comparison between an object pointer and void * is permitted after conv
 
 28.1 Pointer access, alignment, aliasing, and byte views
 
-A portable dereference must designate live storage large enough for the pointed-to object and must satisfy the pointed-to type's C48 alignment. Thus `short *`, `int *`, `unsigned short *`, `unsigned int *`, and pointer-to-pointer dereferences require an even logical address; `char *`, `unsigned char *`, and `float *` require only byte alignment. Null, one-past, freed, out-of-object, or misaligned dereferences are outside the portable C48 contract.
+A portable dereference must designate live storage large enough for the pointed-to object and must satisfy the pointed-to type's C48 alignment. Thus `short *`, `int *`, `unsigned short *`, `unsigned int *`, and pointer-to-pointer dereferences require an even logical address; `char *`, `unsigned char *`, and `float *` require only byte alignment. Null, one-past, freed, out-of-object, or misaligned dereferences are outside the portable C48 rule.
 
 C48 does not authorize strict-aliasing optimizations that assume differently typed pointers can never denote the same bytes. An object may always be inspected or modified bytewise through `char *` or `unsigned char *`. Access through another non-void pointer type is portable when that type is exactly compatible with the object's declared type. Converting through `void *` preserves the 16-bit address bits but does not by itself make an incompatible typed dereference portable.
 
@@ -849,7 +849,7 @@ int main(int argc, char **argv)
 
 A compatible prototype for `main`, either without a storage-class specifier or with `extern`, is permitted before its definition and does not by itself create program entry. The actual `main` definition MUST have external linkage and no storage-class specifier. `static int main(...)`, `extern` on the definition, a different return type, an empty `main()`, or any different parameter type/count is rejected.
 
-For the argument form, the validated ARG1 contract gives `argc` in 1..16. `argv` points to an `argc+1` pointer vector constructed by crt0, `argv[0]` is the exact invocation token, and `argv[argc]` is the null pointer.
+For the argument form, the validated ARG1 rule gives `argc` in 1..16. `argv` points to an `argc+1` pointer vector constructed by crt0, `argv[0]` is the exact invocation token, and `argv[argc]` is the null pointer.
 
 Each argument string is NUL-terminated, contains no embedded NUL, and resides in the read-only process-owned ARG1 allocation for the process lifetime. C48 declares `argv` as `char **` for compatibility, but portable C48 code MUST NOT modify argument-string bytes. The pointer vector is bootstrap stack data; portable code MUST likewise treat its entries as read-only interface data rather than rewrite `argv[i]`.
 
@@ -1065,13 +1065,13 @@ structure member expressions.
 
 40. Lvalues
 
-An lvalue designates a C48 object. A modifiable lvalue is an lvalue whose object is writable under the language contract.
+An lvalue designates a C48 object. A modifiable lvalue is an lvalue whose object is writable under the language rule.
 
 The left operand of assignment and the operand of prefix/postfix `++` or `--` MUST be a modifiable scalar lvalue. Arrays and functions are not modifiable lvalues. A string literal is a nonmodifiable array object.
 
 Dereferencing a valid non-void object pointer produces an lvalue of the pointed-to type. Unary address-of requires an object lvalue and produces a pointer to that exact object type, except that direct address-of of an array is rejected by Section 25. Address-of a function is rejected because function pointers do not exist.
 
-Dereferencing a null pointer, one-past pointer, pointer outside the live object, or otherwise invalid pointer is outside the portable C48 contract. The 48K machine has no memory protection; strict host execution SHOULD trap such invalid logical-pointer accesses where it can prove them.
+Dereferencing a null pointer, one-past pointer, pointer outside the live object, or otherwise invalid pointer is outside the portable C48 rule. The 48K machine has no memory protection; strict host execution SHOULD trap such invalid logical-pointer accesses where it can prove them.
 
 41. Integer promotions
 
@@ -1213,7 +1213,7 @@ any object pointer and a null-pointer constant.
 
 Relational pointer comparison is portable only for pointers into the same array/object.
 
-Ordering unrelated pointers is outside the portable C48 contract.
+Ordering unrelated pointers is outside the portable C48 rule.
 
 For permitted pointer equality/inequality, C48 compares the exact 16-bit logical address bits after any allowed `void *` or null conversion. Equal address bits compare equal; different address bits compare unequal. Relational pointer operators require exactly compatible non-void object-pointer types and are portable only when both values designate positions in the same live array/object, including its one-past position; they compare logical element position within that object.
 
@@ -1229,11 +1229,11 @@ Subtracting two compatible pointers into the same array/object yields a result o
 
 For two compatible pointers into the same live array/object (including its one-past position), C48 pointer subtraction is fully defined even when the mathematical element distance does not fit signed 16-bit magnitude. Compute the mathematical element-index difference in widened arithmetic, reduce it modulo 65536, then interpret those 16 result bits as two's-complement C48 `int`. Thus +32768 yields -32768 and -32769 yields +32767. No host undefined/implementation-defined pointer-difference overflow may leak into C48.
 
-Ordering or subtracting unrelated pointers is outside the portable C48 contract. Pointer arithmetic may produce the conventional one-past pointer for the same object, but that pointer MUST NOT be dereferenced.
+Ordering or subtracting unrelated pointers is outside the portable C48 rule. Pointer arithmetic may produce the conventional one-past pointer for the same object, but that pointer MUST NOT be dereferenced.
 
 Array indexing accepts only a pointer/array base on the left and integer index on the right; `base[index]` is `*(base + index)`. C48 intentionally rejects `index[base]`. Repeated indexing such as `argv[1][0]` is legal when an intermediate result is itself a pointer.
 
-Pointer subtraction computes the mathematical element-index difference, reduces it modulo 65536, and returns those low 16 bits interpreted as C48 signed `int`. This wrap is part of the C48 language contract for same-object compatible pointers, not undefined behavior.
+Pointer subtraction computes the mathematical element-index difference, reduces it modulo 65536, and returns those low 16 bits interpreted as C48 signed `int`. This wrap is part of the C48 language rule for same-object compatible pointers, not undefined behavior.
 
 51. Assignment
 
@@ -1273,7 +1273,7 @@ Integer increment/decrement adds/subtracts one using the exact destination type 
 
 Prefix form performs the update and yields the new value. Postfix form captures the old value, performs the update, and yields the captured value. Both expression results have the same source type as the operand and are not lvalues.
 
-Increment/decrement of `void *`, an invalid pointer, a string literal, an array, or a non-lvalue is rejected or outside the portable pointer-access contract as applicable.
+Increment/decrement of `void *`, an invalid pointer, a string literal, an array, or a non-lvalue is rejected or outside the portable pointer-access rule as applicable.
 
 53. Casts
 
@@ -1285,7 +1285,7 @@ Pointer casts, pointer-to-integer casts, integer-to-pointer casts, and float/poi
 
 Floating-to-integer conversion truncates toward zero. The underlying SYS_FP_TO_INT conversion accepts signed results only in -32768..32767 and unsigned results only in 0..65535. An invalid/out-of-range syscall conversion leaves its destination unchanged.
 
-When an error occurs in a compiler-generated language numeric operation or cast that has no C-level error-return channel -- including float arithmetic, float comparison, integer-to-float conversion, or float-to-integer conversion -- the standard C48 runtime terminates the process with status 1. Public library functions that explicitly return a ZX-UX error value, such as `beep`, retain their documented error-return contract instead of being converted into this language trap.
+When an error occurs in a compiler-generated language numeric operation or cast that has no C-level error-return channel -- including float arithmetic, float comparison, integer-to-float conversion, or float-to-integer conversion -- the standard C48 runtime terminates the process with status 1. Public library functions that explicitly return a ZX-UX error value, such as `beep`, retain their documented error-return rule instead of being converted into this language trap.
 
 A compile-time constant conversion that is provably invalid or out of range is a compile-time error.
 
@@ -1314,7 +1314,7 @@ C48 deliberately freezes evaluation order to prevent host/native divergence.
 
 Except where `sizeof` suppresses evaluation or `&&`/`||` short-circuit suppresses the right operand, operands are evaluated left-to-right and each operand's side effects are complete before evaluation advances to the next operand.
 
-Function arguments are evaluated and their argument values captured left-to-right. Later argument evaluation therefore cannot retroactively change an already captured earlier argument value. Physical placement of fourth-and-later ABI arguments on the stack right-to-left does not alter source evaluation order.
+Function arguments are evaluated and their argument values captured left-to-right. Later argument evaluation therefore cannot retroactively change an already captured earlier argument value. Physical placement of fourth-and-later calling convention arguments on the stack right-to-left does not alter source evaluation order.
 
 Array indexing evaluates the base first and index second. Binary operators evaluate left then right. Assignment evaluates the destination lvalue/address first, then the complete right operand, then conversion and store.
 
@@ -1330,7 +1330,7 @@ Argument count MUST exactly match the prototype. Arguments are processed strictl
 
 All C48 source parameters are pass-by-value. Assigning to a parameter variable inside the callee never changes the caller's argument object. Pointer parameters pass the pointer value by value, so the callee may still modify a caller object through a valid non-const C48 pointer.
 
-The float ABI does not change this language rule. Although C48_REGCALL physically passes a float argument as a 16-bit pointer to caller-owned five-byte value storage, generated code MUST preserve pass-by-value semantics: any callee assignment to its float parameter must affect only the callee's parameter value, not the caller's source float object. The compiler may satisfy this with caller temporaries, callee copies, or another ABI-equivalent implementation.
+The float calling convention does not change this language rule. Although C48_REGCALL physically passes a float argument as a 16-bit pointer to caller-owned five-byte value storage, generated code MUST preserve pass-by-value semantics: any callee assignment to its float parameter must affect only the callee's parameter value, not the caller's source float object. The compiler may satisfy this with caller temporaries, callee copies, or another calling convention-equivalent implementation.
 
 There are no variadic calls and calls to undeclared functions are errors.
 
@@ -1361,7 +1361,7 @@ There is no CDECL alternative.
 
 No source syntax exists for selecting another calling convention.
 
-58. Function return ABI
+58. Function return calling convention
 
 Return representation is:
 
@@ -1380,7 +1380,7 @@ stack
 
 The callee writes exactly five result bytes and returns the same result pointer in HL.
 
-For an 8-bit `char`/`unsigned char` return only register L is defined by C48_REGCALL; H is unspecified at the ABI boundary. A conforming C48 caller that needs the returned value in a 16-bit expression must zero-extend L according to the normal unsigned 8-bit promotion rule rather than relying on H.
+For an 8-bit `char`/`unsigned char` return only register L is defined by C48_REGCALL; H is unspecified at the calling convention boundary. A conforming C48 caller that needs the returned value in a 16-bit expression must zero-extend L according to the normal unsigned 8-bit promotion rule rather than relying on H.
 
 59. Register ownership
 
@@ -1614,7 +1614,7 @@ If a user declaration already exists for a header-provided function, the header 
 
 The only built-in angle-bracket header, `<c48.h>`, exposes the mandatory public runtime names enumerated in Appendix B. This specification freezes their names and the language-level rules for declarations; it does not assert unpublished prototypes, parameter types, constants, errno/flag values, or supporting records. Such absent interface definitions MUST be recorded as unresolved target-runtime details rather than invented language syntax.
 
-Appendix B records the mandatory public-name inventory. Explanatory ABI notation that uses an unsupported type modifier such as `const`, or an incomplete pseudo-prototype, is not valid C48 source syntax; see Sections 96-97.
+Appendix B records the mandatory public-name inventory. Explanatory calling convention notation that uses an unsupported type modifier such as `const`, or an incomplete pseudo-prototype, is not valid C48 source syntax; see Sections 96-97.
 
 75. Unsupported preprocessing
 
@@ -1710,7 +1710,7 @@ No language rule authorizes whole-source materialization or a whole-program AST.
 
 The native command is `cc`. It accepts exactly one C-typed input object.
 
-Default `cc hello.c` requires the exact lower-case final `.c`, removes only that suffix, and appends `.obj`; the derived name must fit the exact 10-byte ZX-UX namespace limit. Otherwise the explicit form is `cc -o out.obj source`, with an exact case-sensitive <=10-byte destination. In both forms, source and destination paths obey the following ZX-UX contract: normalization is performed before comparison or access; the normalized path is at most 31 bytes excluding the terminating NUL; each ordinary object basename is 1..10 portable name characters `A-Z a-z 0-9 _ - .`, with exact `.` and `..` reserved; and lookup is case-sensitive. Overlength normalized paths are rejected through the normal ZX-UX path/errno contract rather than truncated.
+Default `cc hello.c` requires the exact lower-case final `.c`, removes only that suffix, and appends `.obj`; the derived name must fit the exact 10-byte ZX-UX namespace limit. Otherwise the explicit form is `cc -o out.obj source`, with an exact case-sensitive <=10-byte destination. In both forms, source and destination paths obey the following ZX-UX rule: normalization is performed before comparison or access; the normalized path is at most 31 bytes excluding the terminating NUL; each ordinary object basename is 1..10 portable name characters `A-Z a-z 0-9 _ - .`, with exact `.` and `..` reserved; and lookup is case-sensitive. Overlength normalized paths are rejected through the normal ZX-UX path/errno rule rather than truncated.
 
 Output is explicitly OBJ/OBJ1; the kernel never infers object type from a suffix.
 
@@ -1762,13 +1762,13 @@ There are no vendor extensions.
 
 There is no host-language compatibility escape hatch.
 
-82. Host-side C48 development contract
+82. Host-side C48 development rule
 
 A Windows C48 implementation intended for portable ZX-UX development MUST implement the C48 abstract machine and parser rather than merely pass source to an ordinary Windows C compiler.
 
 At minimum it MUST reproduce the exact 8-bit unsigned plain-char, 16-bit short/int, 16-bit logical pointer, five-byte float, integer-promotion/conversion rules, the special unpromoted-left shift rule, modulo arithmetic, signed division/remainder, shift-count masking, pointer scaling, left-to-right evaluation, preprocessing, reserved words, 15-character identifier limit, and all unsupported-feature rejections.
 
-It MUST reproduce `sizeof` and alignment independent of the host ABI and must treat source `-32768` according to the C48 literal rules rather than host C intuition.
+It MUST reproduce `sizeof` and alignment independent of the host calling convention and must treat source `-32768` according to the C48 literal rules rather than host C intuition.
 
 A host implementation MUST NOT claim strict C48 portability merely because MSVC, GCC, Clang, or another host compiler compiled translated source successfully.
 
@@ -2070,7 +2070,7 @@ A host checker claiming portability to a particular native compiler release MUST
 
 This specification defines C48 tokens, grammar, preprocessing, types, declarations, expressions, statements, conversions, evaluation semantics, and the supported or forbidden language surface.
 
-Runtime service ABI behavior and public header signatures are target-interface details. Appendix B lists mandatory public names; where an exact prototype, parameter type, constant value, or supporting record is absent from this specification, it MUST NOT be guessed, and no new C48 syntax may be introduced to express it.
+Runtime service calling convention behavior and public header signatures are target-interface details. Appendix B lists mandatory public names; where an exact prototype, parameter type, constant value, or supporting record is absent from this specification, it MUST NOT be guessed, and no new C48 syntax may be introduced to express it.
 
 The public C48 function `beep` has the exact declaration `int beep(float duration, float pitch)`.
 
@@ -2078,19 +2078,19 @@ The following is explanatory floating bridge notation only, not a valid C48 prot
 
 int zx_fp_exec(op, const float *lhs, const float *rhs, float *out)
 
-That notation is not valid C48 source: `op` has no stated C48 type and `const` is unsupported. Any actual source-facing declaration MUST use only the language syntax defined here and the target runtime's independently verified ABI. This notation MUST NOT be copied into `<c48.h>` or used to extend C48.
+That notation is not valid C48 source: `op` has no stated C48 type and `const` is unsupported. Any actual source-facing declaration MUST use only the language syntax defined here and the target runtime's independently verified calling convention. This notation MUST NOT be copied into `<c48.h>` or used to extend C48.
 
 97. Important const distinction
 
-Read-only floating buffers may be described in explanatory ABI notation using `const float *`. C48 Version 1 itself does not support the `const` type modifier.
+Read-only floating buffers may be described in explanatory calling convention notation using `const float *`. C48 Version 1 itself does not support the `const` type modifier.
 
 Only the C48 source syntax in this document is valid for built-in declarations.
 
 This distinction also applies to every other modern-C spelling that appears only in explanatory host/pseudocode and is absent from the frozen C48 language.
 
-98. No silent contract invention
+98. No silent rule invention
 
-If a language or compiler behavior cannot be determined from the normative rules of this specification and its appendices, the implementer MUST identify the unresolved contract and stop that portion of the implementation.
+If a language or compiler behavior cannot be determined from the normative rules of this specification and its appendices, the implementer MUST identify the unresolved rule and stop that portion of the implementation.
 
 A target-specific runtime or OS integration detail not defined here MUST likewise be marked unresolved; it MUST NOT be used to invent a C48 language rule.
 
@@ -2152,7 +2152,7 @@ declarator restrictions, declarations, storage classes, scope, linkage, definiti
 
 arrays, pointers, null/void pointers, pointer access/alignment/aliasing, and object lifetimes;
 
-prototypes, function definitions, parameter pass-by-value behavior, main/argc/argv, and ABI-visible returns;
+prototypes, function definitions, parameter pass-by-value behavior, main/argc/argv, and calling convention-visible returns;
 
 initializers, initialization timing, pure constant expressions, and pointer constants;
 
@@ -2168,13 +2168,13 @@ preprocessing execution order, macro-definition/dependency/visibility rules, inc
 
 unsupported/deferred source-language surface;
 
-compiler command input/output/transaction/determinism/status/diagnostic contract;
+compiler command input/output/transaction/determinism/status/diagnostic rule;
 
 the distinction between language semantics, compiler resource limits, and target runtime API details;
 
 host/native source-portability and conformance criterion.
 
-No item above may be left to language-implementation inference. Internal code generation may use any method that preserves the exact semantics and ABI-visible requirements stated in this document.
+No item above may be left to language-implementation inference. Internal code generation may use any method that preserves the exact semantics and calling convention-visible requirements stated in this document.
 
 101. Standalone conformance verification
 
@@ -2303,7 +2303,7 @@ C48 shifts retain the unpromoted left operand width: 8-bit operands use the low 
 
 103. Developer directive
 
-Implementations SHALL use this document and its appendices as the standalone C48 Version-1 language definition. The native ZX-UX compiler and the independent Windows implementation MUST conform to the same language contract.
+Implementations SHALL use this document and its appendices as the standalone C48 Version-1 language definition. The native ZX-UX compiler and the independent Windows implementation MUST conform to the same language rule.
 
 The developer is not asked to "design a small C compiler."
 
@@ -2319,9 +2319,9 @@ and:
 
 ZX-UX native cc
 
-shall target the same language contract.
+shall target the same language rule.
 
-Their shared C48 language contract, not either compiler's incidental behavior, establishes source portability.
+Their shared C48 language rule, not either compiler's incidental behavior, establishes source portability.
 
 Appendix A. Complete Normative Grammar
 
@@ -2600,7 +2600,7 @@ unsigned division/remainder and negative masked shift counts follow Sections 45-
 
 float-to-char conversion uses unsigned 16-bit conversion then low-eight-bit narrowing, while a negative value fails conversion;
 
-a float parameter is pass-by-value even though its ABI transport is a pointer;
+a float parameter is pass-by-value even though its calling convention transport is a pointer;
 
 an 8-bit function return ignores H and is zero-extended from L when promoted;
 
@@ -2667,13 +2667,13 @@ File-scope objects have process lifetime. They are initialized before `main` beg
 
 Automatic local objects have the lifetime of each activation of their declaring block; named parameters have the lifetime of the function activation. Permitted automatic initializers are materialized on every block entry before statements. Their names obey Section-23 scope, including the outermost-body parameter redeclaration rule. A pointer to such an object becomes nonportable to dereference after that object's lifetime ends even if stale RAM bytes remain physically present.
 
-All parameters are source-language values. Integer and pointer values are copied into the callee parameter abstraction. Float arguments are also values despite pointer-backed ABI transport; assigning to a float parameter cannot mutate the caller's source float.
+All parameters are source-language values. Integer and pointer values are copied into the callee parameter abstraction. Float arguments are also values despite pointer-backed calling convention transport; assigning to a float parameter cannot mutate the caller's source float.
 
 Distinct simultaneously live nonzero-size C48 objects have nonoverlapping storage and therefore distinct addresses. An object's logical address remains stable for its lifetime. Storage reuse after a lifetime ends is permitted and does not make a stale pointer valid.
 
 ARG1 and ENV1 are separate read-only process-owned bootstrap allocations. `argv` pointers may refer directly to ARG1 strings for the process lifetime, but portable C48 treats those argument bytes as read-only. Exact `getenv`/environment service behavior requires an independently validated runtime interface and is not redefined by this language specification.
 
-Appendix F. Deterministic `cc` Command-Line Contract
+Appendix F. Deterministic `cc` Command-Line rule
 
 The only accepted invocation shapes are exactly `cc source` and `cc -o output source`. With one operand it is always the source operand even if its basename begins with `-`; with three operands the first must be exact lower-case `-o`. Any other argument count or option spelling is a usage error with status 1.
 

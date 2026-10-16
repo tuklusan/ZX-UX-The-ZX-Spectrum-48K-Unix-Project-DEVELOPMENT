@@ -152,8 +152,8 @@ class LinkerProofChecks(unittest.TestCase):
                 cli=b'NATIVE', symbol=True):
         import types
         with tempfile.TemporaryDirectory() as t:
-            root=Path(t);(root/'release/build/tmp/sdk/lib').mkdir(parents=True)
-            (root/'release/build/tmp/sdk/lib/libc48.ssa').write_bytes(b'ARCHIVE')
+            root=Path(t);(root/'release/build/sdk/lib').mkdir(parents=True)
+            (root/'release/build/sdk/lib/libc48.ssa').write_bytes(b'ARCHIVE')
             (root/'program.c').write_text('int main(void){return 0;}')
             out=root/'program.ssx';out.write_bytes(cli)
             rld=types.ModuleType('rld')
@@ -174,7 +174,7 @@ class LinkerProofChecks(unittest.TestCase):
             pkg.driver=drv
             with patch.dict(sys.modules,{'rld':rld,'ras':ras,'rtap':rtap,
                                         'rcc':pkg,'rcc.driver':drv}),\
-                 patch.object(gate,'ROOT',root), patch.object(gate,'SDK_STAGE',root/'release/build/tmp/sdk'):
+                 patch.object(gate,'ROOT',root), patch.object(gate,'SDK_STAGE',root/'release/build/sdk'):
                 return gate.archive_env1_symbol(root/'program.c',out)
 
     def test_linked_symbol_in_bss_accepts(self):
@@ -206,7 +206,7 @@ class FreshSnapshotChecks(unittest.TestCase):
             boot=root/'release/dist/zx-ux/ZX-UX.tzx';boot.parent.mkdir(parents=True);boot.write_bytes(b'TZX')
             tool=(root/'private-tap2sna.py') if inside else (dir/'private-tap2sna.py')
             tool.write_bytes(b'good checked tool' if not change_tool else b'wrong tool')
-            output=root/'release/build/tmp/build/c48-env1/native-current-tape.z80'
+            output=root/'release/build/build/c48-env1/native-current-tape.z80'
             output.parent.mkdir(parents=True)
             if stale:output.write_bytes(b'STALE OLD SNAPSHOT')
             def runner(cmd):
@@ -216,7 +216,7 @@ class FreshSnapshotChecks(unittest.TestCase):
                  patch.object(gate,'TAP2SNA_SHA256',hashlib.sha256(b'good checked tool').hexdigest()),\
                  patch.object(gate,'run',side_effect=runner),\
                  patch.object(gate,'BOOT_TZX',boot),\
-                 patch.object(gate,'TMP_BUILD',root/'release/build/tmp/build'):
+                 patch.object(gate,'TMP_BUILD',root/'release/build/out'):
                 return gate.fresh_snapshot(tool)
 
     def test_snapshot_tape_and_tool_hashes_are_recorded(self):

@@ -1,7 +1,14 @@
-# Python byte code (never tracked)
+# Python byte code
 __pycache__/
 *.pyc
-# Retained offline staging is generated, not a second source tree.
-/release/build/tmp/*
-!/release/build/tmp/.gitkeep
+# Disposable build intermediates
+/release/build/src/
+/release/build/sdk/
+/release/build/out/
+/release/build/dist-new/
+/release/build/dist-old/
+/release/build/build/
 /release/manifest.json
+
+# External regression workspace
+/tests/.work/

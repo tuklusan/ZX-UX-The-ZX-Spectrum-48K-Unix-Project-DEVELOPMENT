@@ -19,7 +19,7 @@ def category(item):
         return 'diagnostic'
     if any(w in heading for w in ('library', 'header', 'function', 'stdio')):
         return 'library'
-    if any(w in heading for w in ('runtime', 'target', 'memory', 'abi', 'startup', 'syscall', 'stack', 'process', 'link')):
+    if any(w in heading for w in ('runtime', 'target', 'memory', 'calling convention', 'startup', 'syscall', 'stack', 'process', 'link')):
         return 'target'
     if any(w in heading for w in ('purpose', 'terminology', 'conformance', 'appendix', 'scope')):
         return 'review'

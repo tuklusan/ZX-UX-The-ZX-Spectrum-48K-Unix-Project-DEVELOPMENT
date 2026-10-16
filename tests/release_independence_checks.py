@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
 CORPUS = ROOT / 'release/src/assets/c48-src'
-RUNS = CORPUS / 'runs.json'
+RUNS = ROOT / 'tests/sdk/runs.json'
 
 
 class IndependenceChecks(unittest.TestCase):
@@ -35,21 +35,21 @@ class IndependenceChecks(unittest.TestCase):
 
     def test_release_uses_only_checked_in_programs(self):
         runner = (ROOT / 'release/build/build.py').read_text(encoding='utf-8')
-        cassette = (ROOT / 'release/build/c48build.py').read_text(encoding='utf-8')
+        cassette = (ROOT / 'release/src/zx-ux-sdk/tools/c48build.py').read_text(encoding='utf-8')
         simulator = (ROOT / 'tests/ssxrun.py').read_text(encoding='utf-8')
         for text in (runner, cassette, simulator):
             self.assertNotIn('obsolete-sdk/', text)
             self.assertNotIn('C48SDK', text)
             self.assertNotIn('zx-ux-c48-sdk', text)
-        self.assertIn("source_assets = SOURCE / 'assets/c48-src'", runner)
-        self.assertIn('build_c48(TMP', runner)
-        self.assertIn('verify_tape_and_compiled_pairs(', runner)
-        self.assertIn('pack_sdk(', runner)
-        self.assertIn("choices[name] = (path, [])", cassette)
+        self.assertIn('c48build.build(', runner)
+        self.assertIn('shutil.copytree(', runner)
+        self.assertIn('turbo_boot_build.create_tzx(', runner)
+        self.assertIn('sdkpack.pack(', runner)
+        self.assertIn("programs.rglob('*.c')", cassette)
         self.assertIn('rtap.records(', cassette)
 
     def test_format_and_mandatory_gate(self):
-        self.assertTrue((CORPUS / 'ailmzx48/ailmzx48.c').is_file())
+        self.assertFalse((CORPUS / 'runs.json').exists())
         self.assertTrue((ROOT / 'tests/fuse_boot.py').is_file())
         self.assertTrue((ROOT / 'tools/fuse_release_gate.py').is_file())
         self.assertTrue((ROOT / 'release/build/build.py').is_file())

@@ -15,14 +15,14 @@ ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT/'release/build'
 
 import sys
-sys.path.insert(0,str(BUILD))
+sys.path.insert(0,str(ROOT/'release/src/zx-ux-sdk/tools'))
 import turbo_boot_build as b
 import turbo_segments as t
 
 class TurboBootstrapContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.output = BUILD/'tmp/build'
+        cls.output = BUILD/'out'
         cls.tzx_path = cls.output/'ZX-UX.tzx'
         if not cls.tzx_path.exists():
             raise unittest.SkipTest('fresh provisional Z80 build needed')
@@ -98,7 +98,7 @@ class TurboBootstrapContract(unittest.TestCase):
 
     def test_line_fact_width_and_independent_rom(self):
         syms={}
-        for line in (BUILD/'tmp/src/unix.sym').read_text().splitlines():
+        for line in (BUILD/'src/unix.sym').read_text().splitlines():
             m = re.match(r'(\S+): EQU 0x([0-9A-Fa-f]+)',line)
             if m:syms[m.group(1)]=int(m.group(2),16)
         _,_,free,_=b.osbuild.mkfs(syms,b.osbuild.program_list())

@@ -68,7 +68,7 @@ def check_integration_sources(report, target):
     passing={r['id'] for r in report['cases'] if r['status']=='PASS'}
     counts=Counter()
     for item in items:
-        if item['status'] not in ('supported','contract','partial'):
+        if item['status'] not in ('supported','documented','partial'):
             raise ValueError('unexpected record state')
         if not item['passing_cases'] or not item['source_paths']:
             raise ValueError('missing source or test reference')

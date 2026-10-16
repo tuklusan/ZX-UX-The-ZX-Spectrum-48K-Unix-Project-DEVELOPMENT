@@ -255,7 +255,7 @@ in from tape:
 - Exactly `relocation count` relocations follow, and every relocated word must lie entirely inside the image.
 - Typical cost is about 1.1 bytes per relocation.
 
-### 6.4 Loading and the entry contract
+### 6.4 Loading a program safely
 
 1. Read and check the header.
 2. Allocate the IMAGE block: image + bss + heap reserve + stack reserve + argument area. If this fails, `exec` returns `ENOMEM` to the caller.

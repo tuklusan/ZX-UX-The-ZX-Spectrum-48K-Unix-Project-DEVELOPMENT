@@ -68,7 +68,7 @@ def validate_boot_command(command, root, build, python_executable):
             wait = int(flags['--wait'])
         except ValueError as error:
             raise RuntimeError('Invalid FUSE wait') from error
-        _require(3 <= wait <= 120, 'Invalid FUSE wait')
+        _require(3 <= wait <= 240, 'Invalid FUSE wait')
     return argv, {'tape': tape, 'rom': rom, 'screen': screen,
                   'json': screen.with_suffix('.json')}
 

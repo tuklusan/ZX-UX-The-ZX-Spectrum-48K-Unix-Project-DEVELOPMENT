@@ -32,9 +32,9 @@ all_groups=list(chain.from_iterable(groups.values()))
 assert len(all_groups)==len(set(all_groups)), 'duplicate audit classification'
 assert unverified<=set(all_groups), 'unclassified pending clauses: %s'%sorted(unverified-set(all_groups))
 notes={
- 'documentation_or_governance':'Normative policy, explanatory example, contract hierarchy, or test-process instruction; no isolated compiler observation establishes the entire statement.',
+ 'documentation_or_governance':'Normative policy, explanatory example, rule hierarchy, or test-process instruction; no isolated compiler observation establishes the entire statement.',
  'host_rcc_architecture_accepted':'Owner-approved ZX-UX v1 interpretation: sdk/rcc is the host-side C48 compiler; no second Windows C48 compiler is needed for v1. This records implementation scope only; behavior and target checks have separate test records.',
- 'target_runtime_or_format':'Requires target ABI, loader, storage, runtime library, diagnostic-stage, or resource validation separate from host-source acceptance.',
+ 'target_runtime_or_format':'Requires target calling rules, loader, storage, runtime library, diagnostic-stage, or resource validation separate from host-source acceptance.',
  'additional_compiler_corpus':'Aggregate language coverage requirement; individual positive and negative cases pass but exhaustive coverage is not yet demonstrated.',
  'outside_portable_behavior':'Invalid pointer dereference is outside defined portable behavior; do not manufacture a runtime pass for an invalid access.',
  'optional_or_internal_mechanism':'Permitted implementation technique, not a mandatory semantic output; existing ROM golden tests cover observable values, not internal implementation method.',

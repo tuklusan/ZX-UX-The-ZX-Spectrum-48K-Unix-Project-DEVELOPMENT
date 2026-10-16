@@ -3,7 +3,7 @@
 
   python3 tests/rvm_machine.py [--only a,b] [--every N] [-v]
 
-For every scripted session of the C48 corpus (sdk/tests/runs.json, as
+For every scripted session of the C48 corpus (tests/sdk/runs.json, as
 tests/ssxrun.py runs them), both machines start from build/test.z80 and
 are driven by the same script, frame by frame: log in, type
 /dev/cassette/NAME, play the program's records as EAR pulses (so the ROM
@@ -45,14 +45,14 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-sys.path[:0] = [os.path.join(ROOT, 'tools'), os.path.join(ROOT, 'sdk'), HERE]
+sys.path[:0] = [os.path.join(ROOT, 'tools'), os.path.join(ROOT, 'release', 'dist', 'sdk', 'bin', 'py'), HERE]
 import zxrun                       # noqa: E402
 import zxmachine                   # noqa: E402
 import rtap                        # noqa: E402
 from rcc import driver             # noqa: E402
 from skoolkit.simutils import A, F, B, C, D, E, H, L, IXh, IXl, IYh, IYl, SP, I, PC, T  # noqa: E402
 
-RUNS = json.load(open(os.path.join(ROOT, 'sdk', 'tests', 'runs.json')))
+RUNS = json.load(open(os.path.join(ROOT, 'tests', 'sdk', 'runs.json')))
 SCROWN = 0x5B63
 FRAME = zxmachine.FRAME
 

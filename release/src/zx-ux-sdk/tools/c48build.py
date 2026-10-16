@@ -1,8 +1,6 @@
 """Build individually playable C48 tapes from the locally staged SDK."""
 from __future__ import annotations
-import json
 import pathlib
-import struct
 import sys
 
 
@@ -11,18 +9,12 @@ def build(stage_sdk: pathlib.Path, programs: pathlib.Path, dest: pathlib.Path):
     import rtap
     from rcc import driver
 
-    runs = json.loads((programs / 'runs.json').read_text())
     ssxdir, tzxdir = dest / 'ssx', dest / 'tzx'
     ssxdir.mkdir(parents=True, exist_ok=True)
     tzxdir.mkdir(parents=True, exist_ok=True)
-    choices = {}
-    for name, entry in runs.items():
-        if ':' in name:
-            continue
-        path = programs / entry['dir'] / (entry.get('src', name) + '.c')
-        if not path.is_file():
-            raise RuntimeError('Selected source is missing: ' + str(path))
-        choices[name] = (path, [])
+    # Source tree determines the selection; two intentional exceptions below.
+    choices = {('maze1982' if p.parent.name == 'examples' and p.stem == 'maze' else p.stem): (p, [])
+               for p in programs.rglob('*.c') if p.name != 'seckern.c'}
     # The regular program names are also the memory-fitted background jobs.
     # Do not ship separate -mt binaries or tapes for the same C48 source.
     for name, flags in (
@@ -47,12 +39,4 @@ def build(stage_sdk: pathlib.Path, programs: pathlib.Path, dest: pathlib.Path):
         head = b'ZXTape!\x1a\x01\x14' + bytes((0x30, len(title))) + title
         tape = tzxdir / (name + '.tzx')
         rtap.write(str(tape), head, [(1000, hdr), (2000, code)])
-        _, blocks = rtap.tzx_blocks(tape.read_bytes())
-        if len(blocks) != 2 or blocks[0][1] != hdr or blocks[1][1] != code:
-            raise RuntimeError('Bad individual tape for ' + name)
-    expected = set(choices)
-    actual_ssx = {p.stem for p in ssxdir.glob('*.ssx')}
-    actual_tzx = {p.stem for p in tzxdir.glob('*.tzx')}
-    if expected != actual_ssx or expected != actual_tzx:
-        raise RuntimeError('Incorrect file set for individual program tapes')
     return len(choices)

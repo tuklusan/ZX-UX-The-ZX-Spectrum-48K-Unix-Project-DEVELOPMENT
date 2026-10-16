@@ -4,7 +4,7 @@ import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT/'release/build'))
+sys.path.insert(0, str(ROOT/'release/src/zx-ux-sdk/tools'))
 from turbo_boot_build import encode_basic, progress_lines, expanded_line
 
 class TurboPresentationTest(unittest.TestCase):

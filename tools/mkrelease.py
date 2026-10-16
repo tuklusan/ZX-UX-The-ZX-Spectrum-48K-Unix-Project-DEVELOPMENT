@@ -56,7 +56,7 @@ def copy_fresh_proofs() -> None:
     Release/manifest.txt will hash these files alongside the executable
     images. Avoid copying older build/proofs/ items into a fresh release.
     """
-    for name in ('c48-conformance.json', 'ix-abi-proof.json',
+    for name in ('c48-conformance.json', 'ix-register-proof.json',
                  'native-env1-v1.json'):
         deliver(BUILD / 'logs' / name, f'proofs/{name}')
     for name in ('sequential-1.png', 'sequential-1.scr',

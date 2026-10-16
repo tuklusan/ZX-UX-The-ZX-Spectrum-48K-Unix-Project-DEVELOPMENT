@@ -54,7 +54,7 @@ def verify_native_env1(proof, root=ROOT):
     ensure(isinstance(proof, dict), 'invalid native proof record')
     ensure(proof.get('result') == 'PASS' and
            proof.get('case_id') == 'native_env1_storage_lifetime' and
-           proof.get('compiler') == 'release/build/tmp/sdk/bin/rcc --native' and
+           proof.get('compiler') == 'release/build/sdk/bin/rcc --native' and
            proof.get('target') == 'ZX-UX v1 native',
            'incorrect execution identity or result')
     source = proof.get('source')
@@ -75,9 +75,9 @@ def verify_native_env1(proof, root=ROOT):
         sha_file(relative, digest)
     link = proof.get('link')
     ensure(isinstance(link, dict), 'invalid link record')
-    sha_file('release/build/tmp/build/c48-env1/env48.ssx', link.get('ssx_sha256'),
+    sha_file('release/build/build/c48-env1/env48.ssx', link.get('ssx_sha256'),
              link.get('ssx_bytes'))
-    sha_file('release/build/tmp/sdk/lib/libc48.ssa', link.get('archive_sha256'))
+    sha_file('release/build/sdk/lib/libc48.ssa', link.get('archive_sha256'))
     ensure(all(isinstance(link.get(k), int) for k in
                ('code', 'bss', 'env1_bss_offset', 'native_required_bytes')),
            'invalid native memory values')
@@ -93,7 +93,7 @@ def verify_native_env1(proof, root=ROOT):
            snapshot.get('rom_sha256') == ROM_SHA256 and
            snapshot.get('tape_boot_sha256') == source_files['release/dist/zx-ux/ZX-UX.tzx'],
            'ROM and tape identities differ')
-    sha_file('release/build/tmp/build/c48-env1/native-current-tape.z80',
+    sha_file('release/build/build/c48-env1/native-current-tape.z80',
              snapshot.get('snapshot_sha256'))
     for key in ('runtime_build_log_sha256', 'compiler_log_sha256'):
         ensure(isinstance(proof.get(key), str) and
@@ -103,7 +103,7 @@ def verify_native_env1(proof, root=ROOT):
     def check_capture(capture, name):
         ensure(isinstance(capture, dict), 'invalid capture record')
         for ext in ('scr', 'png'):
-            path = 'release/build/tmp/build/c48-env1/proof/' + name + '.' + ext
+            path = 'release/build/build/c48-env1/proof/' + name + '.' + ext
             ensure(capture.get(ext + '_path') == path, 'capture path differs')
             sha_file(path, capture.get(ext + '_sha256'), 6912 if ext == 'scr' else None)
         png = root / capture['png_path']
@@ -215,7 +215,7 @@ def assess(matrix, verifier, ix_witness, root=ROOT, env1_proof=None):
     else:
         verify_native_env1(env1_proof, root)
     return {'indexed': len(rows), 'supported': sum(row['status'] == 'supported' for row in rows),
-            'contracts': sum(row['status'] not in ('supported', 'partial') for row in rows),
+            'rules': sum(row['status'] not in ('supported', 'partial') for row in rows),
             'unresolved': sorted(unresolved)}
 
 
@@ -231,7 +231,7 @@ def main():
                                 if args.env1_proof else None))
     print('C48 target rows:', result['indexed'])
     print('Supported:', result['supported'])
-    print('Documented contracts:', result['contracts'])
+    print('Documented rules:', result['rules'])
     print('Unresolved target paragraphs:', ', '.join(map(str, result['unresolved'])) or 'none')
     if result['unresolved']:
         print('ZX-UX gate status recorded.')

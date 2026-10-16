@@ -22,7 +22,7 @@ This is a record of tests actually executed, not a proposal or an earlier checkp
 - Checked toolbox: SJASMPlus 1.24.0, SkoolKit 10.1, compiled C simulator, and SHA-256-checked 48K ROM, all outside Git. FUSE SDL **1.6.0** and its Debian libraries were inspected and operated outside the repository.
 - **Release-driver tests: 47 PASS**, zero failures.
 - **C48 conformance: 1,146 PASS, 0 FAIL, 0 ERROR** (both backends and strict coverage checks).
-- **Kernel regression: 20 PASS**; ABI, independent IX and process-owned native ENV1 tests passed.
+- **Kernel regression: 20 PASS**; the independent IX and per-process environment tests passed.
 - **Native ZX-UX target cassette sessions: 74/74 PASS.** Independently, the new SDK VM passed **74/74 native** and **74/74 bytecode** runs. Program tape creation and screenshot gates also passed.
 - **Fresh real FUSE SDL tape boot: PASS.** Actual newly built `ZX-UX.tzx` loaded under the checked 48K ROM, with the ZX-UX banner, console title and `login:` marker verified from the real screenshot. `release/fuse-login.png` SHA-256 `17df57187fff17cac3715a22a12731829cb2a692015833c7305dfe116ab9e764`; proof JSON and hashes are under `release/`.
 - LM compiled successfully with the approved new C48 SDK into a 17,870-byte SSX1 file. The loader showed 10,322 bytes free and 21,151 bytes needed. The owner requires compilation only; LM was not executed and is not an outstanding release gate.

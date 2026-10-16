@@ -18,8 +18,8 @@ Full release output file count (including manifest.txt): 305.
 EXECUTED GATES AT THE SOURCE COMMIT
 - Release-driver unit tests: 41 passed, no failure.
 - C48 language compiler conformance: 1,146 PASS, 0 FAIL, 0 ERROR, both backends.
-- C48 clauses: 759 tracked; 647 linked to executed assertions, 90 independently reviewed non-executable dispositions, 20 target/ABI obligations, two undefined.
-- Strict clause and native target gates passed; target matrix: 16 directly supported, three documented contracts, P1080 native proof; no unresolved required target rows.
+- C48 clauses: 759 tracked; 647 linked to executed assertions, 90 independently reviewed non-executable dispositions, 20 target/calling rules obligations, two undefined.
+- Strict clause and native target gates passed; target matrix: 16 directly supported, three documented rules, P1080 native proof; no unresolved required target rows.
 - C48 Rev 0.11 DOCX Appendix B: 52 public C48 API declarations; checked header/runtime inventory test passed. The older standalone reference listing 73 was not used to override the authoritative DOCX.
 - Native ENV1 storage and lifetime: PASS (real compiled and linked C48 code, in the target emulation, separated from ARG1); direct IX proof: PASS.
 - System kernel regressions: 20 PASS, 0 FAIL.

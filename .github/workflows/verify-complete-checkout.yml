@@ -53,9 +53,7 @@ jobs:
               'docs/04-C48 Language Specification Rev 0.11.docx',
               'release/src/assets/c48-src/demos/hanoi.c',
               'release/src/assets/c48-src/demos/queens8.c',
-              'release/src/assets/c48-src/ailmzx48/ailmzx48.c',
               'release/src/zx-ux-sdk/rcc/driver.py',
-              'release/src/assets/c48-src/runs.json',
               'tests/sdk/v1-screens.json',
               'release/build/build.py',
               'tests/fuse_boot.py',
@@ -63,9 +61,9 @@ jobs:
           assert required <= tracked_paths, 'Missing required v1 checkout files'
           spec = root / 'docs/04-C48 Language Specification Rev 0.11.docx'
           data = spec.read_bytes()
-          assert len(data) == 1413709, 'Unexpected C48 specification size'
+          assert len(data) == 1413717, 'Unexpected C48 specification size'
           digest = hashlib.sha256(data).hexdigest()
-          assert digest == '0fa74eb904fce98bd095a2f6d8f4ef9b5bde1b082c5f89692e13e7a04f176f13'
+          assert digest == '88a9e5a144c11e1a828ebdd070a230125082d691468b6679e032c6c62120eace'
           assert not (root / 'c48-sdk').exists()
           print('CHECKOUT_COMPLETE')
           print('SOURCE_SHA', commit)

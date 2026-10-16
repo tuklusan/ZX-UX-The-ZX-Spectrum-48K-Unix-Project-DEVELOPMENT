@@ -14,7 +14,7 @@ from io import StringIO
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SDK_SOURCE = ROOT / 'release/src/zx-ux-sdk'
-SDK_STAGE = ROOT / 'release/build/tmp/sdk'
+SDK_STAGE = ROOT / 'release/build/sdk'
 # Tests consume the freshly staged self-contained SDK, which includes the ROM.
 if (SDK_STAGE / 'rcc/driver.py').read_bytes() != (SDK_SOURCE / 'rcc/driver.py').read_bytes():
     raise AssertionError('test requires a fresh, exact-source offline SDK staging')

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2026 SANYALnet Labs.
  * SANYALnet Labs Non-Commercial License; see repository LICENSE.
- * This C48 target fixture exercises the existing process bootstrap contract.
+ * This C48 target fixture exercises the existing process bootstrap rule.
  * The v1 process creates one private ENV1 byte in the C48 runtime BSS.
  * These deliberate internal writes are diagnostics, not portable ENV1 use.
  * Test actual v1-native process ownership, ARG1 separation and lifetime.

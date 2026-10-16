@@ -6,7 +6,7 @@ from pathlib import Path
 import shutil
 import struct
 
-EXCLUDE = {'__pycache__', 'tests'}
+EXCLUDE = {'__pycache__', 'tests', 'tools'}
 EXTRA_EXCLUDE = {'README.md', 'THIRD-PARTY.md'}
 
 def pack(sdk_source: Path, os_source: Path, os_build: Path, output: Path):
@@ -50,7 +50,7 @@ def pack(sdk_source: Path, os_source: Path, os_build: Path, output: Path):
         parts = line.split(': EQU 0x')
         if len(parts) == 2:
             syms[parts[0]] = int(parts[1], 16)
-    out = os_build / 'build'
+    out = os_build / 'out'
     image = (out / 'merged-image.bin').read_bytes()
     source = (support / 'zxux.py').read_text()
     (support / 'zxux.py').write_text(rewrite(

@@ -3,7 +3,7 @@
 
   python3 tests/ssxrun.py [--only a,b] [--png DIR] [--frames N] [-v]
 
-For each program in sdk/tests/runs.json, compile the checked-in v1
+For each program in tests/sdk/runs.json, compile the checked-in v1
 programs/c48 source using rcc. Make cassette records and boot ZX-UX from the ROM
 tape load (build/test.z80), log in, type /dev/cassette/NAME ARGS, play the
 records on the emulated tape, type the scripted keys and check that the
@@ -19,15 +19,15 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
-sys.path.insert(0, os.path.join(ROOT, 'sdk'))
+sys.path.insert(0, os.path.join(ROOT, 'release', 'dist', 'sdk', 'bin', 'py'))
 import zxrun                       # noqa: E402
 import rtap                        # noqa: E402
 from rcc import driver             # noqa: E402
 import rvm                         # noqa: E402
 import suite                       # noqa: E402
 
-RUNS = json.load(open(os.path.join(ROOT, 'sdk', 'tests', 'runs.json')))
-CORPUS = os.path.join(ROOT, 'programs', 'c48')
+RUNS = json.load(open(os.path.join(ROOT, 'tests', 'sdk', 'runs.json')))
+CORPUS = os.path.join(ROOT, 'release', 'src', 'assets', 'c48-src')
 OUT = os.path.join(ROOT, 'build', 'ssx')
 SCROWN = 0x5B63                    # kvars.inc: scrown = KV+99
 

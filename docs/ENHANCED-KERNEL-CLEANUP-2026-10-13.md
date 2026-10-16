@@ -8,7 +8,7 @@ Date: 2026-10-13. Private integration checkpoint; **not** an additional tagged r
 - Checked upstream `main` before integration: `91c1cbd2d7ca4cc2d210e914d4ec31aab5d55d3a`.
 - Integrated kernel development: 11-commit series supplied by the owner; locally reviewed in the preceding integration commit. The independently updated SDK is retained.
 - One-time owner-approved cleanup changes restricted terms across active source, history-preserving reference copies, specification text, and stored proof filenames. This is **not** permission to relax checker policy, change language semantics, rewrite remote history, or alter a prior tag.
-- Active public ABI, executable header, and shell enhancements are as established by the enhanced-kernel integration. No new interface change is made by the restricted-text repair.
+- The updated kernel already includes its calling rules, program header, and shell features. This wording change does not alter how they work.
 
 ## Document identity and traceability
 

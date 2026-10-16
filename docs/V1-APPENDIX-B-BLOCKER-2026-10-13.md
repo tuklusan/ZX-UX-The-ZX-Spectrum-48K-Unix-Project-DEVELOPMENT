@@ -6,7 +6,7 @@ Status: **UNRELEASED**. This is a source-identity and verification checkpoint, n
 
 The Git-tracked C48 Rev 0.11 DOCX has SHA-256 `6368abb4126c01f598f4b533a4e2a0a46a7ce4790cce02d3decbfba59e150d7e` at source commit `d90eba790b28d31fc94e622fcdb08eea7c7b1b42`. Its Appendix B lists **52 public names**. The DOCX directs readers to the checked C48 header for signatures and excludes omitted historical facilities from the v1 interface.
 
-The accompanying `docs/C48-Language-Spec-Rev011-Standalone.txt` has a different, 73-name Appendix B. That standalone text is not a faithful representation of the controlling DOCX for this section. The previous text-only 73-name gate would wrongly reject the amended DOCX contract. The corrected `tests/release_public_api_checks.py` reads the actual DOCX bytes and checks their current 52 names against declarations and runtime exports. It also tests a deliberately incomplete inventory and rejects changed specification bytes.
+The old text copy lists 73 names, but the current specification lists 52. The tests use the current specification and check those 52 names.
 
 Any proposal to expand the v1 public interface beyond the currently amended DOCX needs explicit specification approval and verified declarations, implementations, and tests. No historical interface is silently counted as a v1 implementation.
 

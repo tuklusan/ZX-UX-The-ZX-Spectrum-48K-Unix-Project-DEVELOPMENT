@@ -16,7 +16,7 @@ from zxux import Session
 
 TAPE = ROOT / 'release/dist/zx-ux/ZX-UX.tap'
 PROGRAMS = ROOT / 'release/dist/assets/c48-bin/ssx'
-SYMS = (ROOT / 'release/build/tmp/src/unix.sym').read_text()
+SYMS = (ROOT / 'release/build/src/unix.sym').read_text()
 def address(name):
     m = re.search(r'^' + re.escape(name) + r': EQU 0x([0-9A-Fa-f]+)$', SYMS, re.M)
     assert m, 'freshly linked symbol missing: ' + name

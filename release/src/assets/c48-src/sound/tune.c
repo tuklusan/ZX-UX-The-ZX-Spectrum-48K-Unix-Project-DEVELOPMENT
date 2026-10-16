@@ -3,7 +3,7 @@
 //
 // SANYALnet Labs Non-Commercial License, attribution to
 // SANYALnet Labs required, see LICENSE for more information
-#include "sndapi.h"
+#include <c48.h>
 
 int main(void) {
     int rc;

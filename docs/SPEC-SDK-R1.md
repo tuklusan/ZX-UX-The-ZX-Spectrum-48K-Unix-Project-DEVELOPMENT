@@ -17,7 +17,7 @@ formats. Larger programs can use bytecode.
 | S3 | The SDK lives in the ZX-UX repository (`sdk/`), next to the kernel and its tools. |
 | S4 | The compiler's output is consumed by the **ZX-UX VM** on the host and is also written as a **ZX-UX executable on tape** (SSX1 in SST1). |
 | S5 | Size strategy, in order: **(1)** a size-optimising native Z80 code generator; **(2)** a compact **bytecode mode** (SSB1, §6) for programs native code can't fit (`chess`, `write48`, the large apps); **(3)** in reserve, moving resident commands to tape to enlarge the arena (SPEC-ELASTIC-R1 §13). |
-| S6 | Acceptance: every C program in the SDK corpus compiles and runs, in the VM and on ZX-UX from tape, with results matching the SDK reference. Exempt: `ailmzx48`. Best effort: `queens8` and `hanoi`. |
+| S6 | Acceptance: every C program in the SDK corpus compiles and runs, in the VM and on ZX-UX from tape, with results matching the SDK reference. Best effort: `queens8` and `hanoi`. |
 
 ## 2. Measured starting point
 
@@ -208,7 +208,7 @@ These are compared with the SDK reference runner (`c48run`).
 
 ## 8. Acceptance
 
-For each corpus program (except `ailmzx48`):
+For each selected corpus program:
 
 1. `rcc` compiles it with no errors. Native mode is used unless it doesn't fit, in which case bytecode mode.
 2. In `rvm` it produces the same transcript and screen dumps at the same frames as `c48run`, given the same scripted input and the same frame budget as the SDK's verification gates.

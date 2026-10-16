@@ -60,13 +60,14 @@ def verify(raw, symbols, low, kernel, fs, merged):
 
 def main():
     symbols = {}
-    for line in (ROOT/'src/unix.sym').read_text().splitlines():
+    for line in (ROOT/'release/build/src/unix.sym').read_text().splitlines():
         m = re.match(r'(\S+): EQU 0x([0-9A-Fa-f]+)', line)
         if m:
             symbols[m.group(1)] = int(m.group(2), 16)
     args = [(ROOT/path).read_bytes() for path in (
-        'build/ZX-UX.tap', 'build/lowk.bin', 'build/unix.bin',
-        'build/fs.img', 'build/merged-image.bin')]
+        'release/build/out/ZX-UX.tap', 'release/build/out/lowk.bin',
+        'release/build/out/unix.bin', 'release/build/out/fs.img',
+        'release/build/out/merged-image.bin')]
     clear, end = verify(args[0], symbols, *args[1:])
     # Fail-closed checks on generated data, not stale historical snapshots.
     for label, blob in [('tampered CODE byte', lambda b: b.__setitem__(-31, b[-31] ^ 1)),

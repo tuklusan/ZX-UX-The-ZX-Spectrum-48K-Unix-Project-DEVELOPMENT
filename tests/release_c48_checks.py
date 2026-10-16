@@ -58,7 +58,7 @@ class C48ReleaseChecks(unittest.TestCase):
 
     def test_launcher_calls_gate(self):
         launcher = Path(__file__).resolve().parents[1] / 'tools/release_v1.py'
-        self.assertIn("step('c48-coverage'", launcher.read_text())
+        self.assertIn("tests/c48/coverage_gate.py", launcher.read_text())
 
     def test_backend_required(self):
         t, r = self.fixture()

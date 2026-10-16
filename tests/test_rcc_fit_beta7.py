@@ -14,7 +14,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'release/src/zx-ux-sdk'
-STAGED = ROOT / 'release/build/tmp/sdk'
+STAGED = ROOT / 'release/build/sdk'
 for name in ('rcc/driver.py', 'rcc/fit.py'):
     if (SOURCE / name).read_bytes() != (STAGED / name).read_bytes():
         raise AssertionError('offline SDK inputs are stale: ' + name)

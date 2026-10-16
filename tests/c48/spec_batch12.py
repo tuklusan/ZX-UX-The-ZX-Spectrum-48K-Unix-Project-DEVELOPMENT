@@ -1,7 +1,7 @@
 """Additional Rev 0.11 source-level conformance assertions.
 
 Each paragraph is linked only to the particular observable condition that
-its fixture checks. Target-internal ABI and historical-frame requirements
+its fixture checks. Target-internal calling rules and historical-frame requirements
 are deliberately excluded.
 """
 

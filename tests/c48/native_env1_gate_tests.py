@@ -28,9 +28,9 @@ class NativeProofChecks(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.write('release/build/tmp/sdk/lib/libc48.ssa', b'SSA1 synthetic unit file')
-        self.write('release/build/tmp/build/c48-env1/env48.ssx', b'SSX1 synthetic unit file')
-        self.write('release/build/tmp/build/c48-env1/native-current-tape.z80', b'fake snapshot')
+        self.write('release/build/sdk/lib/libc48.ssa', b'SSA1 synthetic unit file')
+        self.write('release/build/build/c48-env1/env48.ssx', b'SSX1 synthetic unit file')
+        self.write('release/build/build/c48-env1/native-current-tape.z80', b'fake snapshot')
         for name in gate.ENV1_INPUTS:
             self.write(name, ('fixture: ' + name + '\n').encode())
         subprocess.run(['git','init','-q'],cwd=self.root,check=True)
@@ -40,15 +40,15 @@ class NativeProofChecks(unittest.TestCase):
                         'commit','-q','-m','Local synthetic unit fixtures'],cwd=self.root,check=True)
         source = {'source_commit':self.git('HEAD'), 'source_tree':self.git('HEAD^{tree}'),
                   'files':{name:sha((self.root/name).read_bytes()) for name in gate.ENV1_INPUTS}}
-        link = {'ssx_sha256':sha((self.root/'release/build/tmp/build/c48-env1/env48.ssx').read_bytes()),
-                'ssx_bytes':len((self.root/'release/build/tmp/build/c48-env1/env48.ssx').read_bytes()),
-                'archive_sha256':sha((self.root/'release/build/tmp/sdk/lib/libc48.ssa').read_bytes()),
+        link = {'ssx_sha256':sha((self.root/'release/build/build/c48-env1/env48.ssx').read_bytes()),
+                'ssx_bytes':len((self.root/'release/build/build/c48-env1/env48.ssx').read_bytes()),
+                'archive_sha256':sha((self.root/'release/build/sdk/lib/libc48.ssa').read_bytes()),
                 'code':24,'bss':3,'env1_bss_offset':24,'native_required_bytes':8000,
                 'selected_archive_members':['crt0']}
         snapshot = {'tap2sna_sha256':gate.TAP2SNA_SHA256,
                     'rom_sha256':gate.ROM_SHA256,
                     'tape_boot_sha256':source['files']['release/dist/zx-ux/ZX-UX.tzx'],
-                    'snapshot_sha256':sha((self.root/'release/build/tmp/build/c48-env1/native-current-tape.z80').read_bytes())}
+                    'snapshot_sha256':sha((self.root/'release/build/build/c48-env1/native-current-tape.z80').read_bytes())}
         records = []
         for i in (1,2):
             records.append({'run':i,'outcome':'PASS','free_bytes':4000,
@@ -59,7 +59,7 @@ class NativeProofChecks(unittest.TestCase):
                       'simultaneous_image_slots':{'hold':[0,24576,90], 'check':[1,25000,65]},
                       'capture':self.capture('concurrent')}
         self.proof={'result':'PASS', 'case_id':'native_env1_storage_lifetime',
-                    'compiler':'release/build/tmp/sdk/bin/rcc --native', 'target':'ZX-UX v1 native',
+                    'compiler':'release/build/sdk/bin/rcc --native', 'target':'ZX-UX v1 native',
                     'source':source, 'link':link, 'native_snapshot':snapshot,
                     'sequential':records, 'concurrent':concurrent,
                     'runtime_build_log_sha256':sha(b'runtime output'),
@@ -74,8 +74,8 @@ class NativeProofChecks(unittest.TestCase):
         return subprocess.check_output(['git','rev-parse',spec],cwd=self.root,text=True).strip()
 
     def capture(self, basename):
-        scr='release/build/tmp/build/c48-env1/proof/'+basename+'.scr'
-        png='release/build/tmp/build/c48-env1/proof/'+basename+'.png'
+        scr='release/build/build/c48-env1/proof/'+basename+'.scr'
+        png='release/build/build/c48-env1/proof/'+basename+'.png'
         self.write(scr, bytes(6912))
         image_path=self.root/png
         image_path.parent.mkdir(parents=True,exist_ok=True)
@@ -127,7 +127,7 @@ class NativeProofChecks(unittest.TestCase):
         self.write('release/src/zx-ux-sdk/lib/crt0.asm',b'changed source');self.rejected(self.proof)
 
     def test_archived_runtime_mismatch_rejected(self):
-        self.write('release/build/tmp/sdk/lib/libc48.ssa',b'changed runtime');self.rejected(self.proof)
+        self.write('release/build/sdk/lib/libc48.ssa',b'changed runtime');self.rejected(self.proof)
 
     def test_boot_tape_not_current_rejected(self):
         self.write('release/dist/zx-ux/ZX-UX.tzx',b'changed tape');self.rejected(self.proof)
@@ -142,7 +142,7 @@ class NativeProofChecks(unittest.TestCase):
         x=copy.deepcopy(self.proof);x['concurrent']['checked_program_pass']=False;self.rejected(x)
 
     def test_missing_capture_rejected(self):
-        (self.root/'release/build/tmp/build/c48-env1/proof/concurrent.scr').unlink();self.rejected(self.proof)
+        (self.root/'release/build/build/c48-env1/proof/concurrent.scr').unlink();self.rejected(self.proof)
 
     def test_oversized_native_rejected(self):
         x=copy.deepcopy(self.proof);x['link']['native_required_bytes']=14001;self.rejected(x)
@@ -157,7 +157,7 @@ class NativeProofChecks(unittest.TestCase):
 
 
     def test_bad_screenshot_bytes_rejected(self):
-        self.write('release/build/tmp/build/c48-env1/proof/concurrent.png',b'not a PNG');self.rejected(self.proof)
+        self.write('release/build/build/c48-env1/proof/concurrent.png',b'not a PNG');self.rejected(self.proof)
 
 
 if __name__ == '__main__':

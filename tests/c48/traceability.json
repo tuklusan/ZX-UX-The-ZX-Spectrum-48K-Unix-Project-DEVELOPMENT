@@ -1,5 +1,5 @@
 {
-  "spec_sha256": "0fa74eb904fce98bd095a2f6d8f4ef9b5bde1b082c5f89692e13e7a04f176f13",
+  "spec_sha256": "88a9e5a144c11e1a828ebdd070a230125082d691468b6679e032c6c62120eace",
   "format_version": 1,
   "description": "Each prose clause individually traced; no section-level pass inference.",
   "sections": [
@@ -233,7 +233,7 @@
     ],
     [
       612,
-      "58. ZX-UX rcc return ABI"
+      "58. ZX-UX rcc return calling convention"
     ],
     [
       621,
@@ -329,7 +329,7 @@
     ],
     [
       792,
-      "82. Host-side C48 development contract"
+      "82. Host-side C48 development rule"
     ],
     [
       798,
@@ -437,7 +437,7 @@
     ],
     [
       1081,
-      "Appendix F. Current rcc command-line and output contract"
+      "Appendix F. Current rcc command-line and output rule"
     ],
     [
       1091,
@@ -514,8 +514,8 @@
       "section_title": "1. Purpose",
       "classification": "required",
       "style": "First Paragraph",
-      "text_prefix": "The language sections freeze C48 Rev 0.11 semantics. The target-specific chapters in this ZX-UX v1 edition use the current SDK architecture and file-format contracts.",
-      "text_sha256": "747bbe16f18f8bdce1ac608a3b078d21d0ce5cbc96945a97fc18b42583bac7d6"
+      "text_prefix": "The language sections freeze C48 Rev 0.11 semantics. The target-specific chapters in this ZX-UX v1 edition use the current SDK architecture and file-format rules.",
+      "text_sha256": "a3fcd382e40f3898554b74de3a0f4f13e9adde6a47b766481059ab2a8e651bc2"
     },
     {
       "paragraph_index": 20,
@@ -523,8 +523,8 @@
       "section_title": "1. Purpose",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "For object layouts, ABI, loader services, memory sizes and tape framing, the checked current ZX-UX R2 documents named above control. Historical Rev17/P11 material does not authorize a separate impleme",
-      "text_sha256": "cce8b6901afe2d71a73225f677947b00d7792a49888cab2f63d85b38d88d26e5"
+      "text_prefix": "For object layouts, calling convention, loader services, memory sizes and tape framing, the checked current ZX-UX R2 documents named above control. Historical Rev17/P11 material does not authorize a s",
+      "text_sha256": "000a06dff46e33e2e933830a996a89ec6298914ebdf6dd23430a92237fe1f529"
     },
     {
       "paragraph_index": 21,
@@ -533,7 +533,7 @@
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "If a source-language requirement in this document conflicts with an implemented compiler, record and test the discrepancy; the specification governs language semantics. If a toolchain-format statement",
-      "text_sha256": "24c52eedf0b74d7d61ab643d4e4518a2298db5c88469dc7640e4af2032b37f57"
+      "text_sha256": "dc1c932168e931b90a0bde1cd568e4b7ac955d1576a799934b26388a559fcc9b"
     },
     {
       "paragraph_index": 22,
@@ -622,8 +622,8 @@
       "section_title": "3. C48 is not ISO C",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "C48 uses familiar C syntax but defines its own complete Version-1 language contract.",
-      "text_sha256": "a3dfd363776baa78ae92d74b6ced259691d1c6d12df0104af07b978a60331522"
+      "text_prefix": "C48 uses familiar C syntax but defines its own complete Version-1 language rule.",
+      "text_sha256": "3459606913bea85314a112e61ba4e2986eab03bc713c06f8eea453c4ae3b10b3"
     },
     {
       "paragraph_index": 36,
@@ -1505,7 +1505,7 @@
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "String literals have static storage duration. C48 source treats a string literal as nonmodifiable: a direct attempt to assign through the literal expression is rejected where the compiler can identify",
-      "text_sha256": "39cbd979705965c06aa61a30712303f86d4f5e8db376c12ea6f40e83ec6f77fb"
+      "text_sha256": "fcea06c14584187d75bc4abe90dd838494883d56905f18eaf9154df316f0082b"
     },
     {
       "paragraph_index": 181,
@@ -2179,8 +2179,8 @@
       "section_title": "23. Scope",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "Two function types match exactly only when return types match exactly and the fixed parameter count and each parameter type match exactly in order. Parameter names are not part of function type. ABI-e",
-      "text_sha256": "2c67d277537260df33ddf90651db34011e8b668919b3a6f182fdf1519204e7a8"
+      "text_prefix": "Two function types match exactly only when return types match exactly and the fixed parameter count and each parameter type match exactly in order. Parameter names are not part of function type. calli",
+      "text_sha256": "ba594213f7fe5056106a8bfa8a497ec25f39001634a117f26823db39c3e02aab"
     },
     {
       "paragraph_index": 284,
@@ -2260,8 +2260,8 @@
       "section_title": "24. Local declarations",
       "classification": "undefined",
       "style": "Body Text",
-      "text_prefix": "An automatic local object without an initializer has unspecified stored bits. Reading it before the program has assigned a value is outside the portable C48 contract. The native compiler is not requir",
-      "text_sha256": "bf050bbea57b37324f45c9b278200e6a15123bf7f1c25d514e4272f81da02e9b"
+      "text_prefix": "An automatic local object without an initializer has unspecified stored bits. Reading it before the program has assigned a value is outside the portable C48 rule. The native compiler is not required t",
+      "text_sha256": "69456a79c6e8d3a7ce65816e4b6c15aacc941cbd18a173a2c7577bceea6a1f07"
     },
     {
       "paragraph_index": 298,
@@ -2468,7 +2468,7 @@
       "classification": "required",
       "style": "First Paragraph",
       "text_prefix": "A portable dereference must designate live storage large enough for the pointed-to object and must satisfy the pointed-to type's C48 alignment. Thus `short *`, `int *`, `unsigned short *`, `unsigned i",
-      "text_sha256": "13db15d673d6bef23b3783f0846aebf3574d013dd8ba70f0016f18b7b5ae3d4a"
+      "text_sha256": "61b51f176b3390f658c57d90996f4e5952d52533b4baec2fdc02bc6745f77aaf"
     },
     {
       "paragraph_index": 331,
@@ -2719,8 +2719,8 @@
       "section_title": "31. main",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "For the argument form, the validated ARG1 contract gives `argc` in 1..16. `argv` points to an `argc+1` pointer vector constructed by crt0, `argv[0]` is the exact invocation token, and `argv[argc]` is ",
-      "text_sha256": "e140904a4671c89d88b226b2941cbe0c2b992a9b77d1bde6e495ef7e60d4f941"
+      "text_prefix": "For the argument form, the validated ARG1 rule gives `argc` in 1..16. `argv` points to an `argc+1` pointer vector constructed by crt0, `argv[0]` is the exact invocation token, and `argv[argc]` is the ",
+      "text_sha256": "7be64b16aea0e7a4ec7e669cd0c2536c939ba36f410d1e83d1a029f1afff27ef"
     },
     {
       "paragraph_index": 370,
@@ -3241,8 +3241,8 @@
       "section_title": "40. Lvalues",
       "classification": "required",
       "style": "First Paragraph",
-      "text_prefix": "An lvalue designates a C48 object. A modifiable lvalue is an lvalue whose object is writable under the language contract.",
-      "text_sha256": "f98bf9ca5f4beaaab53e56d78e3aa40d9f94f5fdacfeffd508d298069b7bc6b1"
+      "text_prefix": "An lvalue designates a C48 object. A modifiable lvalue is an lvalue whose object is writable under the language rule.",
+      "text_sha256": "ffee7cde25e5a26bf4fc16ffb2b82f0922f78de9ee64bc7ca175bb45412785f0"
     },
     {
       "paragraph_index": 455,
@@ -3268,8 +3268,8 @@
       "section_title": "40. Lvalues",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "Dereferencing a null pointer, one-past pointer, pointer outside the live object, or otherwise invalid pointer is outside the portable C48 contract. The 48K machine has no memory protection; strict hos",
-      "text_sha256": "442e3d11acb9833557fec75c3d9d8d557fdcbefa8a9b9b9d4afac9f55f740b84"
+      "text_prefix": "Dereferencing a null pointer, one-past pointer, pointer outside the live object, or otherwise invalid pointer is outside the portable C48 rule. The 48K machine has no memory protection; strict host ex",
+      "text_sha256": "e6f49e5d9f1a1d6ee40eb7a3a72a1ca9b1a8cf07cfb9a27dca0e6bb9222421b7"
     },
     {
       "paragraph_index": 460,
@@ -3754,8 +3754,8 @@
       "section_title": "49. Comparisons",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "Ordering unrelated pointers is outside the portable C48 contract.",
-      "text_sha256": "6dff093c9b527c8dfbbe5a10d67fe73c6b0b9b1a831a11b7e369dab7904be9c0"
+      "text_prefix": "Ordering unrelated pointers is outside the portable C48 rule.",
+      "text_sha256": "d380f26f083e86f967ea1f69b5129d9eff5d4f78c4f2f3d6a3f1a7d2ab682f54"
     },
     {
       "paragraph_index": 535,
@@ -3799,8 +3799,8 @@
       "section_title": "50. Pointer arithmetic",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "Ordering or subtracting unrelated pointers is outside the portable C48 contract. Pointer arithmetic may produce the conventional one-past pointer for the same object, but that pointer MUST NOT be dere",
-      "text_sha256": "281f68103d6ef79c4cac6e44fcd9eca2610d76793e3103c25054cc6d47e4b974"
+      "text_prefix": "Ordering or subtracting unrelated pointers is outside the portable C48 rule. Pointer arithmetic may produce the conventional one-past pointer for the same object, but that pointer MUST NOT be derefere",
+      "text_sha256": "b63473fc14a8e8346cf1136b6cdb359841d40d19be832bae037161dff7ae1f59"
     },
     {
       "paragraph_index": 543,
@@ -3817,8 +3817,8 @@
       "section_title": "50. Pointer arithmetic",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "Pointer subtraction computes the mathematical element-index difference, reduces it modulo 65536, and returns those low 16 bits interpreted as C48 signed `int`. This wrap is part of the C48 language co",
-      "text_sha256": "239ec3f6895ad3093531213784db4007eecdf154d4b755b42c1da2699e78f916"
+      "text_prefix": "Pointer subtraction computes the mathematical element-index difference, reduces it modulo 65536, and returns those low 16 bits interpreted as C48 signed `int`. This wrap is part of the C48 language ru",
+      "text_sha256": "352d5a6c49241c4bb3a54d8bebbf92cb043b57fc9b022a036d1309c50248e558"
     },
     {
       "paragraph_index": 547,
@@ -3979,8 +3979,8 @@
       "section_title": "52. Increment and decrement",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "Increment/decrement of `void *`, an invalid pointer, a string literal, an array, or a non-lvalue is rejected or outside the portable pointer-access contract as applicable.",
-      "text_sha256": "cd6fa49a92d54bbb4dfc55cadfc5d2f285eac993a0e9bd3e517120459ab9f260"
+      "text_prefix": "Increment/decrement of `void *`, an invalid pointer, a string literal, an array, or a non-lvalue is rejected or outside the portable pointer-access rule as applicable.",
+      "text_sha256": "03d49a0c1bea1aad982cce20bda01f2777b6f5f23898432814c4ef9984e501a8"
     },
     {
       "paragraph_index": 569,
@@ -4016,7 +4016,7 @@
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "When an error occurs in a compiler-generated language numeric operation or cast that has no C-level error-return channel -- including float arithmetic, float comparison, integer-to-float conversion, o",
-      "text_sha256": "d28866a4d4ae3073703d8ee4077b4e9244a123624ab53cd18a71beda4acce658"
+      "text_sha256": "5733b7f9c61965b305974955f0ccee9e1b874eed7894da52dde85436be4f8733"
     },
     {
       "paragraph_index": 574,
@@ -4096,8 +4096,8 @@
       "section_title": "55. Evaluation order",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "Function arguments are evaluated and captured left-to-right. The current rcc ABI pushes all but the last argument in that order and passes the final argument in HL; physical stack placement does not c",
-      "text_sha256": "b764ede9945a77fecb20c3755d419920545904925ddfb232aaedd384601bdb4b"
+      "text_prefix": "Function arguments are evaluated and captured left-to-right. The current rcc calling convention pushes all but the last argument in that order and passes the final argument in HL; physical stack place",
+      "text_sha256": "d744a251e48639f2dd507baae33dec1863c03694a1af6130fdd5fbffba6fc7a9"
     },
     {
       "paragraph_index": 588,
@@ -4159,8 +4159,8 @@
       "section_title": "56. Function calls",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "Float parameters retain C48 pass-by-value semantics. The ZX-UX rcc ABI transports a float argument through a pointer to its five-byte value; generated code MUST preserve callee-local parameter assignm",
-      "text_sha256": "d360106b857f3229f43cc2f79a31ffde522a0ef3a5354b7d42263b3931a8f11a"
+      "text_prefix": "Float parameters retain C48 pass-by-value semantics. The ZX-UX rcc calling convention transports a float argument through a pointer to its five-byte value; generated code MUST preserve callee-local pa",
+      "text_sha256": "f430abd6fa1403170ddc39099ec9903ba5080be7c1deed0f903af9703648b5e6"
     },
     {
       "paragraph_index": 597,
@@ -4231,8 +4231,8 @@
       "section_title": "57. ZX-UX rcc native calling convention",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "The current native/SSB1 interoperation uses the same rcc ABI; the SSB1 dispatch and frame rules are defined by SPEC-SDK-R2 Section 6.",
-      "text_sha256": "f38871104f21d67b26ffce1d82f0939c641b1e93afb25678d80975aef3670f9f"
+      "text_prefix": "The current native/SSB1 interoperation uses the same rcc calling convention; the SSB1 dispatch and frame rules are defined by SPEC-SDK-R2 Section 6.",
+      "text_sha256": "a20a45861f61cadf336818cfa23c7f26cad6b5230993835892b3c2dbda97492e"
     },
     {
       "paragraph_index": 609,
@@ -4255,25 +4255,25 @@
     {
       "paragraph_index": 613,
       "section": "58",
-      "section_title": "58. ZX-UX rcc return ABI",
+      "section_title": "58. ZX-UX rcc return calling convention",
       "classification": "required",
       "style": "First Paragraph",
-      "text_prefix": "The current SDK returns ordinary scalar and pointer values in HL, with H=0 for an 8-bit result. Floating-point results are stored in the runtime @fac value area under the current SDK contract.",
-      "text_sha256": "e1c6b7fc12639d582c91b06833eea80be728dc259f0fdb825ae71a4fb3f814d6"
+      "text_prefix": "The current SDK returns ordinary scalar and pointer values in HL, with H=0 for an 8-bit result. Floating-point results are stored in the runtime @fac value area under the current SDK rule.",
+      "text_sha256": "63ed737bbe7d77b692c91a9cdb929ec25075bf402f911fe23037044ea32d8bad"
     },
     {
       "paragraph_index": 615,
       "section": "58",
-      "section_title": "58. ZX-UX rcc return ABI",
+      "section_title": "58. ZX-UX rcc return calling convention",
       "classification": "required",
       "style": "First Paragraph",
-      "text_prefix": "The current rcc float-return ABI uses the runtime five-byte @fac area, not a hidden first result-pointer argument.",
-      "text_sha256": "4e7823336ae0fc81412427bc3c59a14643ed9e8a470a43a4615c9245c7b32dd5"
+      "text_prefix": "The current rcc float-return calling convention uses the runtime five-byte @fac area, not a hidden first result-pointer argument.",
+      "text_sha256": "a79c0e487cdb754e2004c3a9052e0bfc5d5b2e40761919804aa2c8c3ed381a6a"
     },
     {
       "paragraph_index": 616,
       "section": "58",
-      "section_title": "58. ZX-UX rcc return ABI",
+      "section_title": "58. ZX-UX rcc return calling convention",
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "A float return does not shift the user argument registers or introduce an extra call slot.",
@@ -4282,7 +4282,7 @@
     {
       "paragraph_index": 618,
       "section": "58",
-      "section_title": "58. ZX-UX rcc return ABI",
+      "section_title": "58. ZX-UX rcc return calling convention",
       "classification": "required",
       "style": "First Paragraph",
       "text_prefix": "The returned five-byte float is consumed through the documented runtime @fac convention; generated code must preserve the source-level value before operations that overwrite @fac.",
@@ -4291,11 +4291,11 @@
     {
       "paragraph_index": 619,
       "section": "58",
-      "section_title": "58. ZX-UX rcc return ABI",
+      "section_title": "58. ZX-UX rcc return calling convention",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "An 8-bit char/unsigned char return uses HL with H=0 in the current ABI, allowing normal unsigned promotion. Generated callers must still implement the C48 source type and conversion rules.",
-      "text_sha256": "796685ddee235217c5be8b9f5a216fffd6c5979f1c1c228b1d21063facd6cc64"
+      "text_prefix": "An 8-bit char/unsigned char return uses HL with H=0 in the current calling convention, allowing normal unsigned promotion. Generated callers must still implement the C48 source type and conversion rul",
+      "text_sha256": "58afe36f2c81a6ba13f3c0a2adbbe4224fce934b0ae39ca2ef1d0bdc56f4a8fc"
     },
     {
       "paragraph_index": 622,
@@ -5005,8 +5005,8 @@
       "section_title": "77. Function-argument count and other resource limits",
       "classification": "required",
       "style": "First Paragraph",
-      "text_prefix": "The C48 grammar has no arbitrary three- or six-argument limit. Under the current rcc ABI, each argument except the last occupies a stack word, and the final argument is passed in HL. Actual memory lim",
-      "text_sha256": "0b2bb1b520c5075ed8dac975e7c8a8196e68e3a0024bc56433cf1bd7c4f6ab89"
+      "text_prefix": "The C48 grammar has no arbitrary three- or six-argument limit. Under the current rcc calling convention, each argument except the last occupies a stack word, and the final argument is passed in HL. Ac",
+      "text_sha256": "4d029f6d663739562cc87e3adb8b8740ac9d6cf0515487afbc0cc2e68ee018be"
     },
     {
       "paragraph_index": 751,
@@ -5167,8 +5167,8 @@
       "section_title": "80. Diagnostics and failures",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "Diagnostic reason wording and class prefixes from the historical resident cc compiler are not the current rcc command ABI. Source-language conformance still requires distinctions among lexical, prepro",
-      "text_sha256": "7bcf6ec48c0e7bc722e82cf24c2971b55da68a12662f4257130d789a5b3dbf3a"
+      "text_prefix": "Diagnostic reason wording and class prefixes from the historical resident cc compiler are not the current rcc command calling convention. Source-language conformance still requires distinctions among ",
+      "text_sha256": "278bf0c7e072660300dbdb6dbcb8a4112e40851b91020989a27e33a598d4f6aa"
     },
     {
       "paragraph_index": 776,
@@ -5203,8 +5203,8 @@
       "section_title": "80. Diagnostics and failures",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "Error source coordinates, when supplied, are source-line positions; tests must establish any claimed exact byte-column contract for the current lexer. Historical native-cc position rules are not silen",
-      "text_sha256": "fd446f441e0cf10d0430f14fbcb64f4dfe79ec3cd632d95cb46486eb321303b2"
+      "text_prefix": "Error source coordinates, when supplied, are source-line positions; tests must establish any claimed exact byte-column rule for the current lexer. Historical native-cc position rules are not silently ",
+      "text_sha256": "27fac3bf8bed244dff3a5fd355c4ad9e776a2992f9495188763cd85ad80db972"
     },
     {
       "paragraph_index": 780,
@@ -5281,7 +5281,7 @@
     {
       "paragraph_index": 793,
       "section": "82",
-      "section_title": "82. Host-side C48 development contract",
+      "section_title": "82. Host-side C48 development rule",
       "classification": "required",
       "style": "First Paragraph",
       "text_prefix": "A Windows C48 implementation intended for portable ZX-UX development MUST implement the C48 abstract machine and parser rather than merely pass source to an ordinary Windows C compiler.",
@@ -5290,7 +5290,7 @@
     {
       "paragraph_index": 794,
       "section": "82",
-      "section_title": "82. Host-side C48 development contract",
+      "section_title": "82. Host-side C48 development rule",
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "At minimum it MUST reproduce the exact 8-bit unsigned plain-char, 16-bit short/int, 16-bit logical pointer, five-byte float, integer-promotion/conversion rules, the special unpromoted-left shift rule,",
@@ -5299,16 +5299,16 @@
     {
       "paragraph_index": 795,
       "section": "82",
-      "section_title": "82. Host-side C48 development contract",
+      "section_title": "82. Host-side C48 development rule",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "It MUST reproduce `sizeof` and alignment independent of the host ABI and must treat source `-32768` according to the C48 literal rules rather than host C intuition.",
-      "text_sha256": "5fda0b46673bdae0fab4603708a8037a050dd4f8d75a8a937b1f7b55d5f8ddd0"
+      "text_prefix": "It MUST reproduce `sizeof` and alignment independent of the host calling convention and must treat source `-32768` according to the C48 literal rules rather than host C intuition.",
+      "text_sha256": "bfc291fd1fb1cbf3df0d4999d28bcc15d73fb52bbfd5a87b301042c10fc3c2f7"
     },
     {
       "paragraph_index": 796,
       "section": "82",
-      "section_title": "82. Host-side C48 development contract",
+      "section_title": "82. Host-side C48 development rule",
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "A host implementation MUST NOT claim strict C48 portability merely because MSVC, GCC, Clang, or another host compiler compiled translated source successfully.",
@@ -6121,8 +6121,8 @@
       "section_title": "95. Grammar freeze versus compiler-resource freeze",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "SPEC-SDK-R2 and SPEC-ELASTIC-R2 own the current compiler ABI, object/executable/tape formats and 48K resource limits.",
-      "text_sha256": "0eb6e1992e893a90cb8c64def6aec9478180e78d6642a437bd53133ed9f66f84"
+      "text_prefix": "SPEC-SDK-R2 and SPEC-ELASTIC-R2 own the current compiler calling convention, object/executable/tape formats and 48K resource limits.",
+      "text_sha256": "cfb0aaad9c18a7ddf0690cd1d9cd2e686d3a5d0c7ed6b271c1626ca7e94f8dc7"
     },
     {
       "paragraph_index": 918,
@@ -6157,8 +6157,8 @@
       "section_title": "96. Grammar freeze versus runtime API freeze",
       "classification": "required",
       "style": "First Paragraph",
-      "text_prefix": "This document owns source tokens, grammar, preprocessing semantics, types, conversions, expressions and statements. The current SDK and kernel documents own runtime, API and binary ABI implementation ",
-      "text_sha256": "a0d310c6a6640ae11872caf3b5d0cc30a7b14fd1e8f391b1547580c96d59ae00"
+      "text_prefix": "This document owns source tokens, grammar, preprocessing semantics, types, conversions, expressions and statements. The current SDK and kernel documents own runtime, API and binary calling convention ",
+      "text_sha256": "c877e6016403f69f202c1f1222476e6aba965205e2d1c36f5502c6663fa5966b"
     },
     {
       "paragraph_index": 924,
@@ -6274,8 +6274,8 @@
       "section_title": "98. No silent architecture extrapolation",
       "classification": "required",
       "style": "First Paragraph",
-      "text_prefix": "the developer MUST stop that portion of implementation and record the unresolved contract.",
-      "text_sha256": "9176e9eb4a6f32c6516aacd4c6cdacc101f5ca998515438b194181258787b5fc"
+      "text_prefix": "the developer MUST stop that portion of implementation and record the unresolved rule.",
+      "text_sha256": "219c65bda60e386062bc76882c0be8275ca7ab91fbac3f67779bd275c9df0a7e"
     },
     {
       "paragraph_index": 942,
@@ -6526,8 +6526,8 @@
       "section_title": "100. Current v1 conformance coverage requirement",
       "classification": "required",
       "style": "Compact",
-      "text_prefix": "prototypes, function definitions, parameter pass-by-value behavior, main/argc/argv, and ABI-visible returns;",
-      "text_sha256": "09c4c49a7221573dbe2140a688f812a34fdc33071f724ee096a75354529c308c"
+      "text_prefix": "prototypes, function definitions, parameter pass-by-value behavior, main/argc/argv, and calling convention-visible returns;",
+      "text_sha256": "08c84d252a80b1691edd6ac68b4f1889f668f3f79e578d34c0a6a080742c1d52"
     },
     {
       "paragraph_index": 974,
@@ -6625,8 +6625,8 @@
       "section_title": "100. Current v1 conformance coverage requirement",
       "classification": "required",
       "style": "First Paragraph",
-      "text_prefix": "No language rule may be left to unchecked implementation inference. Target ABI choices follow the current checked architecture, not retired native-compiler implementation plans.",
-      "text_sha256": "4187b7f01219ea84b04547a7a3b2ad266a597dfbbff34f92a565d7750eec28c3"
+      "text_prefix": "No language rule may be left to unchecked implementation inference. Target calling convention choices follow the current checked architecture, not retired native-compiler implementation plans.",
+      "text_sha256": "567db86f4f710fcb2815840021c5e6c21bc754c69624600d2145ea0d40691d99"
     },
     {
       "paragraph_index": 987,
@@ -6778,8 +6778,8 @@
       "section_title": "103. ZX-UX v1 developer directive",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "The same language contract applies to:",
-      "text_sha256": "740fbc244e15380dad645e9ffd0c5994376b81124c22dacd901c4b1734e43bbd"
+      "text_prefix": "The same language rule applies to:",
+      "text_sha256": "57e31f4ef6d15519fed798397bbf08ca2eceea9dcb9e4ede4ba63a86d8c45662"
     },
     {
       "paragraph_index": 1017,
@@ -6796,8 +6796,8 @@
       "section_title": "103. ZX-UX v1 developer directive",
       "classification": "required",
       "style": "First Paragraph",
-      "text_prefix": "shall target the same language contract.",
-      "text_sha256": "fff5025ffd607950f15005cc5f6cc4c6425a7374785349256ffefdf3ed4587a5"
+      "text_prefix": "shall target the same language rule.",
+      "text_sha256": "8abcd77c30c30e7efb38a106f07fa23f84a53c1809c0ecd3f9e07ef0936e970a"
     },
     {
       "paragraph_index": 1020,
@@ -6805,8 +6805,8 @@
       "section_title": "103. ZX-UX v1 developer directive",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "That common contract, rather than either compiler's incidental behavior, is the controlling reference for source portability.",
-      "text_sha256": "d72dca67659b7fdb0fe3fd9d213468a0a459e284d3a63c7190148da6a432357a"
+      "text_prefix": "That common rule, rather than either compiler's incidental behavior, is the controlling reference for source portability.",
+      "text_sha256": "d06b02f5400ad670ed6858863267ae44abd46aa7c8ac8b1db00ce2a00cfc113d"
     },
     {
       "paragraph_index": 1022,
@@ -6886,8 +6886,8 @@
       "section_title": "Appendix B. Required <c48.h> Public-Name Inventory",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "Implementation-owned arithmetic helpers are not source-level C48 header declarations. Their names and mechanisms are not part of the portable C48 source contract.",
-      "text_sha256": "f097d9a0f94013aad87eb322f422f968bc2d919e1bb3ebd2e9beaaac465f447e"
+      "text_prefix": "Implementation-owned arithmetic helpers are not source-level C48 header declarations. Their names and mechanisms are not part of the portable C48 source rule.",
+      "text_sha256": "988d33ee3211aaaf7ea5b43b236634eccfeb5746741829ffad0966c096e23599"
     },
     {
       "paragraph_index": 1046,
@@ -7030,8 +7030,8 @@
       "section_title": "Appendix C. Additional Mandatory Cross-Compiler Conformance Cases",
       "classification": "required",
       "style": "Compact",
-      "text_prefix": "a float parameter remains pass-by-value even when the current ABI passes a pointer to its five-byte value;",
-      "text_sha256": "7fae5b5ce72bba811290b9961c6d161c1fb8b3f4d517aa77be2450962ba1140f"
+      "text_prefix": "a float parameter remains pass-by-value even when the current calling convention passes a pointer to its five-byte value;",
+      "text_sha256": "6d4021559aade2446615cc39ebe491e5ac3e6b6ace588185e8fb400526680e07"
     },
     {
       "paragraph_index": 1062,
@@ -7156,8 +7156,8 @@
       "section_title": "Appendix E. Object Lifetime and Parameter Semantics",
       "classification": "required",
       "style": "Body Text",
-      "text_prefix": "All parameters are source-language values. Integer and pointer values are copied into the callee parameter abstraction. Float arguments are also values despite pointer-backed ABI transport; assigning ",
-      "text_sha256": "004297e139d0d42198beb807bada38e86b80905d5e78e249164e5233102835db"
+      "text_prefix": "All parameters are source-language values. Integer and pointer values are copied into the callee parameter abstraction. Float arguments are also values despite pointer-backed calling convention transp",
+      "text_sha256": "2c5e79207cf14c812751ab16a38f5dba5466427349f9b8104f042be23d231f13"
     },
     {
       "paragraph_index": 1079,
@@ -7180,7 +7180,7 @@
     {
       "paragraph_index": 1082,
       "section": "F",
-      "section_title": "Appendix F. Current rcc command-line and output contract",
+      "section_title": "Appendix F. Current rcc command-line and output rule",
       "classification": "required",
       "style": "First Paragraph",
       "text_prefix": "Host invocation: sdk/bin/rcc [-S|-c] [-o output] [--bytecode|--native] [--max BYTES] [--stack N] [--heap N] [--udgs N] file.c. One input file is required. -S emits assembly, -c emits an SSO1 object, a",
@@ -7189,7 +7189,7 @@
     {
       "paragraph_index": 1083,
       "section": "F",
-      "section_title": "Appendix F. Current rcc command-line and output contract",
+      "section_title": "Appendix F. Current rcc command-line and output rule",
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "With no -o, the compiler uses the input basename with suffix .s for -S, .sso for -c, or .ssx for an executable. -o selects the exact host output path; an obsolete target OBJ namespace or .obj suffix i",
@@ -7198,7 +7198,7 @@
     {
       "paragraph_index": 1084,
       "section": "F",
-      "section_title": "Appendix F. Current rcc command-line and output contract",
+      "section_title": "Appendix F. Current rcc command-line and output rule",
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "Host path checks apply to source/output names. A program destined for cassette must also use the loader naming rules in SPEC-ELASTIC-R2 Section 6.2; those are program tape names, not host compiler fil",
@@ -7207,7 +7207,7 @@
     {
       "paragraph_index": 1085,
       "section": "F",
-      "section_title": "Appendix F. Current rcc command-line and output contract",
+      "section_title": "Appendix F. Current rcc command-line and output rule",
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "The compiler must not overwrite its source as output. Output file integrity and failure behavior must be checked in sdk/rcc rather than assuming an old kernel atomic-rename protocol.",
@@ -7216,7 +7216,7 @@
     {
       "paragraph_index": 1086,
       "section": "F",
-      "section_title": "Appendix F. Current rcc command-line and output contract",
+      "section_title": "Appendix F. Current rcc command-line and output rule",
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "The current host rcc implementation does not use an on-device /tmp/.cc PID transaction or ZX-UX C/OBJ object type codes. Any future atomic-output guarantee requires a checked implementation and regres",
@@ -7225,7 +7225,7 @@
     {
       "paragraph_index": 1087,
       "section": "F",
-      "section_title": "Appendix F. Current rcc command-line and output contract",
+      "section_title": "Appendix F. Current rcc command-line and output rule",
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "Errors return nonzero status and are diagnosed via stderr. In the checked current driver, a C48 or linker error returns 1, command usage returns 2, and an internal assembler error returns 3. Cleanup a",
@@ -7234,7 +7234,7 @@
     {
       "paragraph_index": 1088,
       "section": "F",
-      "section_title": "Appendix F. Current rcc command-line and output contract",
+      "section_title": "Appendix F. Current rcc command-line and output rule",
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "Status 0 signifies that the requested compiler output has been written; it does not establish that an SSX1 program loads within 48K. The latter requires a linker memory check and actual v1 runtime exe",
@@ -7243,7 +7243,7 @@
     {
       "paragraph_index": 1089,
       "section": "F",
-      "section_title": "Appendix F. Current rcc command-line and output contract",
+      "section_title": "Appendix F. Current rcc command-line and output rule",
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "Current target format validation is done by sdk/rld for SSO1/SSA1/SSX1 and sdk/rtap for SST1 tapes, with header, bounds, relocation and checksum rules from the current specifications.",
@@ -7252,7 +7252,7 @@
     {
       "paragraph_index": 1090,
       "section": "F",
-      "section_title": "Appendix F. Current rcc command-line and output contract",
+      "section_title": "Appendix F. Current rcc command-line and output rule",
       "classification": "required",
       "style": "Body Text",
       "text_prefix": "On successful normal compilation the expected output is an SSX1 file. With -c the output is SSO1; with -S it is assembly. No OBJ1, MEX1 or M48O output is permitted from the v1 production toolchain.",

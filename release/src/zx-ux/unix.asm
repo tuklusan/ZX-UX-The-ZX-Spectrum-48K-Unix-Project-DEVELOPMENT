@@ -2029,7 +2029,7 @@ msg_boot:
         db 10,"ZX-UX UNIX v1 48K ZX Spectrum Z80 3.5Mhz",10
         db 127," 2026 SANYALnet Labs",10
         db "ZX-UX v1 kernel "
-        include "../build/bootinfo.inc"
+        include "../out/bootinfo.inc"
 msg_ok: db "ok",10,0
 msg_nofs: db "no root fs",0
 

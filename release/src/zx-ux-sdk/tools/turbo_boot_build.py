@@ -15,10 +15,10 @@ from turbo_segments import layout, pack_tzx, read_segments, make_segments, COUNT
 import osbuild
 
 HERE = Path(__file__).resolve().parent
-TMP = HERE / 'tmp'
+TMP = HERE.parents[2] / 'build'
 SRC = TMP / 'src'
-OUT = TMP / 'build'
-ORIGINAL = HERE.parent / 'src/zx-ux/turbo_boot.asm'
+OUT = TMP / 'out'
+ORIGINAL = HERE.parent.parent / 'zx-ux/turbo_boot.asm'
 
 
 def progress_lines(size: int, syms: dict, kernel: int, free: int):
@@ -28,7 +28,7 @@ def progress_lines(size: int, syms: dict, kernel: int, free: int):
     The 4x8 renderer places each glyph in a 64-column cell followed by a
     blank half-character for clear legibility, retaining the exact wording.
     """
-    source = (HERE.parent / 'src/zx-ux/turbo_lines.txt').read_text().splitlines()
+    source = (HERE.parent.parent / 'zx-ux/turbo_lines.txt').read_text().splitlines()
     if len(source) != COUNT or any(not s.isascii() or not s.isprintable() or len(s) > 32 for s in source):
         raise TurboFormatError('invalid 24-line canonical loader message file')
     return tuple(s.ljust(32) for s in source)
@@ -63,7 +63,7 @@ def create_tzx(sjasm: str, syms: dict, kernel: int, free: int, *, pause_ms=400, 
     (SRC/'turbo_lines.inc').write_text(
         ''.join(f'        db "{expanded_line(line)}"\n' for line in lines))
     shutil.copyfile(ORIGINAL, SRC/'turbo_boot.asm')
-    shutil.copyfile(HERE.parent / 'src/zx-ux/font4x8.bin', SRC/'font4x8.bin')
+    shutil.copyfile(HERE.parent.parent / 'zx-ux/font4x8.bin', SRC/'font4x8.bin')
     loader = OUT/'turbo_boot.bin'
     result = subprocess.run([sjasm, '--nologo', f'--raw={loader}', 'turbo_boot.asm'],
                             cwd=SRC, capture_output=True, text=True)

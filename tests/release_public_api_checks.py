@@ -13,7 +13,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = ROOT / 'docs/04-C48 Language Specification Rev 0.11.docx'
 HEADER = ROOT / 'release/src/zx-ux-sdk/include/c48.h'
-SPEC_DIGEST = '0fa74eb904fce98bd095a2f6d8f4ef9b5bde1b082c5f89692e13e7a04f176f13'
+SPEC_DIGEST = '88a9e5a144c11e1a828ebdd070a230125082d691468b6679e032c6c62120eace'
 TITLE = 'Appendix B. Required <c48.h> Public-Name Inventory'
 NS = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
 

@@ -68,14 +68,6 @@ An independent upstream SDK comparison was not performed because its
 compiler and reference VM were unavailable in the test environment.
 Independent FUSE boot testing was also not performed.
 
-## LM memory limit
-
-The checked `ailmzx48` source and the 8,566-byte cold model remain in
-the historical source collection. The current v1 LM source is in
-`programs/c48/ailmzx48/`. The previously measured compiled program
-requires 21,010 bytes, exceeding the 12,946-byte free arena of this
-build. No on-device execution of the complete LM has been verified.
-
 ## Reproduce the checked work
 
 Run from a clean checkout with SJASMPlus, SkoolKit 10.1, the checked

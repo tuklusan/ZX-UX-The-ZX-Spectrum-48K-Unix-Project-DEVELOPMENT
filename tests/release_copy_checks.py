@@ -33,7 +33,7 @@ class ReleaseDiagnosticCopyChecks(unittest.TestCase):
             build = root / 'build'
             (build / 'logs').mkdir(parents=True)
             (build / 'c48-env1' / 'proof').mkdir(parents=True)
-            for name in ('c48-conformance.json', 'ix-abi-proof.json',
+            for name in ('c48-conformance.json', 'ix-register-proof.json',
                          'native-env1-v1.json'):
                 (build / 'logs' / name).write_text('{"result":"PASS"}\n')
             for name in ('sequential-1.png', 'sequential-1.scr',
@@ -52,7 +52,7 @@ class ReleaseDiagnosticCopyChecks(unittest.TestCase):
             root = Path(temporary)
             build = root / 'build'
             (build / 'logs').mkdir(parents=True)
-            for name in ('c48-conformance.json', 'ix-abi-proof.json',
+            for name in ('c48-conformance.json', 'ix-register-proof.json',
                          'native-env1-v1.json'):
                 (build / 'logs' / name).write_text('{}\n')
             with patch.object(mkrelease, 'ROOT', root), patch.object(mkrelease, 'BUILD', build), patch.object(mkrelease, 'RELEASE', root / 'release'), redirect_stdout(StringIO()):

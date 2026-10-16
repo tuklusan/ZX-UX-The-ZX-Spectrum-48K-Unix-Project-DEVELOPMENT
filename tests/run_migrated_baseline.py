@@ -2,7 +2,7 @@
 """External regression adapter for the relocated beta-0.0.6-equivalent build.
 
 Reconstitutes only the legacy test harness's expected paths under retained
-release/build/tmp/test-workspace, never at repository root or in release/src.
+tests/.work/migrated, outside the release directory.
 It runs on byte-exact files produced by release/build/build.py.
 """
 from pathlib import Path
@@ -14,8 +14,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE = ROOT / 'release'
-TMP = RELEASE / 'build/tmp'
-WS = TMP / 'test-workspace'
+TMP = RELEASE / 'build'
+WS = ROOT / 'tests/.work/migrated'
 
 
 def main():
@@ -31,14 +31,15 @@ def main():
     WS.mkdir(parents=True)
     for source, dest in ((TMP / 'src', WS / 'src'),
                          (TMP / 'sdk', WS / 'sdk'),
-                         (TMP / 'build', WS / 'build'),
+                         (TMP / 'out', WS / 'build'),
                          (RELEASE / 'src/assets/c48-src', WS / 'programs/c48'),
                          (ROOT / 'tests', WS / 'tests'),
                          (ROOT / 'tools', WS / 'tools'),
                          (ROOT / 'docs', WS / 'docs')):
-        shutil.copytree(source, dest, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+        shutil.copytree(source, dest, ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '.work'))
     shutil.copytree(ROOT / 'tests/sdk', WS / 'sdk/tests')
-    shutil.copyfile(RELEASE / 'src/assets/c48-src/runs.json', WS / 'sdk/tests/runs.json')
+    # Tests alone keep the scripted input cases; build sources need none.
+    assert (WS / 'sdk/tests/runs.json').is_file()
     (WS / 'rom').mkdir()
     shutil.copyfile(RELEASE / 'src/zx-ux/rom/48.rom', WS / 'rom/48.rom')
     c48 = WS / 'build/c48'
@@ -57,7 +58,11 @@ def main():
     print('Generating fresh baseline snapshot', flush=True)
     subprocess.run(cmd, cwd=WS, env=env, check=True)
     print('Checking beta-0.0.7 merged boot layout from fresh symbols and tape', flush=True)
-    subprocess.run([sys.executable, 'tests/test_boot_beta7.py'], cwd=WS, env=env, check=True)
+    subprocess.run([sys.executable, str(ROOT / 'tests/test_boot_beta7.py')], cwd=ROOT, env=env, check=True)
+    # Some independent batches read this fixture before another test compiles it.
+    (WS / 'build/ssx').mkdir(exist_ok=True)
+    subprocess.run([sys.executable, 'sdk/bin/rcc', 'tests/c/ssxargs.c',
+                    '-o', 'build/ssx/ssxargs.ssx'], cwd=WS, env=env, check=True)
     cmd = [sys.executable, '-u', 'tests/suite.py']
     if args.only:
         cmd += ['-k', args.only]
