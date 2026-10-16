@@ -141,8 +141,13 @@ class ZX:
         self.sim.set_tracer(self.tr)
         # the console's 4 x 8 font (two pixel rows a byte, 96 glyphs)
         import os
-        fb = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               '..', 'release', 'src', 'zx-ux', 'font4x8.bin'), 'rb').read()[8:8 + 384]
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        font_path = os.path.join(root, 'src', 'font4x8.bin')
+        if not os.path.isfile(font_path):
+            font_path = os.path.join(root, 'release', 'src', 'zx-ux', 'font4x8.bin')
+        fb = open(font_path, 'rb').read()[8:8 + 384]
+        if len(fb) != 384:
+            raise ValueError('Incomplete console font')
         self.font = {}
         for c in range(32, 128):
             g = fb[(c - 32) * 4:(c - 32) * 4 + 4]
