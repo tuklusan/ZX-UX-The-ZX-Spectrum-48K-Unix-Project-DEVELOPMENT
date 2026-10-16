@@ -2,13 +2,17 @@
 import copy
 import csv
 import json
+import os
 from pathlib import Path
 import unittest
 
 import coverage_gate as gate
 
 HERE = Path(__file__).resolve().parent
-REPORT = HERE.parents[1] / 'build/logs/c48-conformance.json'
+# Each run must use its exact external verifier report, never stale build/logs.
+REPORT = Path(os.environ['ZXUX_C48_REPORT']).resolve()
+if HERE.parents[1] in REPORT.parents:
+    raise RuntimeError('C48 result file must be stored separately')
 
 
 class CoverageReviewChecks(unittest.TestCase):

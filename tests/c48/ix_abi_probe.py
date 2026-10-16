@@ -11,7 +11,7 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / 'sdk'))
+sys.path.insert(0, str(ROOT / 'release/src/zx-ux-sdk'))
 import ras
 import rld
 from skoolkit import CSimulator
@@ -19,7 +19,7 @@ from skoolkit.simutils import A, HALT, IXh, IXl, SP
 
 
 def run():
-    frame_file = ROOT / 'sdk/lib/frame.asm'
+    frame_file = ROOT / 'release/src/zx-ux-sdk/lib/frame.asm'
     frame = frame_file.read_bytes()
     frame_object = rld.Obj(ras.assemble_text(frame.decode('ascii'),
                                              'frame.asm'), 'frame.asm')

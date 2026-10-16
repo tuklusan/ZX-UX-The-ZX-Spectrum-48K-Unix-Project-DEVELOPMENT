@@ -22,7 +22,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = ROOT / 'docs' / '04-C48 Language Specification Rev 0.11.docx'
 TRACE = Path(__file__).with_name('traceability.json')
-RCC = ROOT / 'sdk' / 'bin' / 'rcc'
+RCC = ROOT / 'release' / 'dist' / 'sdk' / 'bin' / 'rcc'
 
 @dataclass(frozen=True)
 class Case:
@@ -560,7 +560,7 @@ def execute(c, temp, backend):
     if c.kind == 'cli':
         return execute_cli(c, case_dir, src)
     if c.kind == 'format':
-        sys.path.insert(0,str(ROOT/'sdk'))
+        sys.path.insert(0,str(ROOT/'release/dist/sdk/bin/py'))
         import rld
         from rcc import driver
         if c.note == 'symbols':
@@ -604,7 +604,7 @@ def execute(c, temp, backend):
         raise ValueError('unknown format assertion')
 
     if c.kind in ('accept','reject'):
-        sys.path.insert(0,str(ROOT/'sdk'))
+        sys.path.insert(0,str(ROOT/'release/dist/sdk/bin/py'))
         from rcc.driver import compile_to_asm
         from rcc.lex import CError
         try:
@@ -619,7 +619,7 @@ def execute(c, temp, backend):
         p=_rcc(src,out,'-c')
         okay=p.returncode==0 and out.exists() and out.read_bytes()[:4]==b'SSO1'
         return okay, f'rc={p.returncode}; header={out.read_bytes()[:4]!r}' if out.exists() else p.stderr.decode()[:150]
-    sys.path.insert(0,str(ROOT/'sdk'))
+    sys.path.insert(0,str(ROOT/'release/dist/sdk/bin/py'))
     from rcc import driver
     from rcc.lex import CError
     from ras import AsmError
