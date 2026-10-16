@@ -189,6 +189,7 @@ def main(argv):
         return 1
     if limit and need > limit:
         print('rcc: %s needs %d bytes of memory (limit %d)' % (src, need, limit), file=sys.stderr)
+        return 1
     return write_out(target, data)
 
 
