@@ -21,6 +21,14 @@ start:  di
         ld (text_cursor),hl
 .next:  xor a
         ld (attempts),a
+        ; Before the LAST segment, draw the last progress line. The image
+        ; is NOT considered complete until its own CRC/XOR/offset checks pass.
+        ld a,(ordinal)
+        cp 24
+        jr nz,.receive
+        ld hl,(text_cursor)
+        call render_text_row
+        ld (text_cursor),hl
 .receive:
         ld a,1                   ; blue border during pilot search
         out (0FEh),a
@@ -51,9 +59,15 @@ start:  di
 .valid: ld a,0
         out (0FEh),a
         call copy_payload
+        ; The 24th line must be visible while the 24th tape block is still
+        ; arriving; it was drawn in .next. Earlier lines follow validation.
+        ld a,(ordinal)
+        cp 24
+        jr z,.already_drawn
         ld hl,(text_cursor)
         call render_text_row
         ld (text_cursor),hl
+.already_drawn:
         ld hl,(plan_cursor)
         ld de,4
         add hl,de
@@ -114,6 +128,13 @@ find_pilot:
         ld (timeout_remaining),hl ; ROM CODE/boot inter-block gap can be 1.5s
 .pulse: call read_edge
         jr c,.timeout
+        ; Use the pilot's generous 2042 T-state pulses for authentic
+        ; blue/black edge stripes. Never slow the short data-bit sampler.
+        ld a,c
+        and 040h
+        rlca
+        rlca
+        out (0FEh),a
         ld a,b
         cp 28
         jr c,.short
@@ -224,6 +245,11 @@ receive_frame:
         pop de
         ret c
         ld (hl),a
+        ; Data border alternates once per VERIFIED raw byte reception;
+        ; do not issue OUT inside the time-critical bit edge sampler.
+        ld a,l
+        and 1
+        out (0FEh),a
         inc hl
         push hl
         ld hl,(bytes_ok)

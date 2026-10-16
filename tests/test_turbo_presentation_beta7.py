@@ -38,6 +38,33 @@ class TurboPresentationTest(unittest.TestCase):
         self.assertIn(b'20732',data)
         self.assertIn(b'256',data)
         self.assertIn(b'255',data)
+    def test_final_line_precedes_final_block_without_early_exec(self):
+        # User-visible row 24 is painted before the last tape packet starts,
+        # but ordinal, CRC, length and XOR still gate the execution jump.
+        src=(ROOT/'release/src/zx-ux/turbo_boot.asm').read_text()
+        segment=src.split('.next:',1)[1].split('.receive:',1)[0]
+        self.assertIn('cp 24',segment)
+        self.assertIn('call render_text_row',segment)
+        valid=src.split('.valid:',1)[1].split('; Read a transition',1)[0]
+        self.assertIn('call copy_payload',valid)
+        self.assertIn('cp 24',valid)
+        self.assertIn('jr z,.already_drawn',valid)
+        self.assertIn('jp 06000h',valid)
+        self.assertLess(valid.index('call copy_payload'),valid.index('jp 06000h'))
+
+    def test_tape_border_pattern_does_not_delay_bit_sampler(self):
+        src=(ROOT/'release/src/zx-ux/turbo_boot.asm').read_text()
+        edge=src.split('read_edge:',1)[1].split('find_pilot:',1)[0]
+        pilot=src.split('find_pilot:',1)[1].split('read_byte:',1)[0]
+        dat=src.split('receive_frame:',1)[1].split('validate_frame:',1)[0]
+        self.assertNotIn('out (0FEh),a',edge,
+                         'time-critical edge reader must not write border')
+        self.assertIn('out (0FEh),a',pilot,
+                      'pilot pulses should generate blue/black stripes')
+        self.assertIn('ld a,l\n        and 1\n        out (0FEh),a',dat,
+                      'data bytes should generate blue/black stripes')
+        self.assertIn('out (0FEh),a             ; black border at ZX-UX handover',src)
+
     def test_renderer_guards_last_four_8px_cells(self):
         source=(ROOT/'release/src/zx-ux/turbo_boot.asm').read_text()
         self.assertIn('ld c,28',source)
