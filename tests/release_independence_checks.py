@@ -7,8 +7,8 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
-CORPUS = ROOT / 'programs/c48'
-RUNS = ROOT / 'sdk/tests/runs.json'
+CORPUS = ROOT / 'release/src/assets/c48-src'
+RUNS = CORPUS / 'runs.json'
 
 
 class IndependenceChecks(unittest.TestCase):
@@ -25,7 +25,7 @@ class IndependenceChecks(unittest.TestCase):
 
     def test_v1_goldens_cover_all_sessions(self):
         runs = json.loads(RUNS.read_text(encoding='utf-8'))
-        expected = json.loads((ROOT / 'sdk/tests/v1-screens.json').read_text(encoding='utf-8'))
+        expected = json.loads((ROOT / 'tests/sdk/v1-screens.json').read_text(encoding='utf-8'))
         self.assertEqual(set(runs), set(expected))
         self.assertEqual(len(expected), 74)
         for name, proof in expected.items():
@@ -34,27 +34,27 @@ class IndependenceChecks(unittest.TestCase):
             self.assertIn(proof['state'].split(' ')[0], ('exit', 'input', 'frames'), name)
 
     def test_release_uses_only_checked_in_programs(self):
-        runner = (ROOT / 'tools/release_v1.py').read_text(encoding='utf-8')
-        cassette = (ROOT / 'tools/mktapes.py').read_text(encoding='utf-8')
+        runner = (ROOT / 'release/build/build.py').read_text(encoding='utf-8')
+        cassette = (ROOT / 'release/build/c48build.py').read_text(encoding='utf-8')
         simulator = (ROOT / 'tests/ssxrun.py').read_text(encoding='utf-8')
         for text in (runner, cassette, simulator):
             self.assertNotIn('obsolete-sdk/', text)
             self.assertNotIn('C48SDK', text)
             self.assertNotIn('zx-ux-c48-sdk', text)
-        self.assertNotIn("add_argument('--sdk'", runner)
-        self.assertIn('validate_boot_proof', runner)
-        self.assertIn('tools/lm_v1.py', runner)
-        self.assertIn('tools/mktapes.py', runner)
-        self.assertIn('sdk/tests/vm_checks.py', runner)
+        self.assertIn("source_assets = SOURCE / 'assets/c48-src'", runner)
+        self.assertIn('build_c48(TMP', runner)
+        self.assertIn('verify_tape_and_compiled_pairs(', runner)
+        self.assertIn('pack_sdk(', runner)
+        self.assertIn("choices[name] = (path, [])", cassette)
+        self.assertIn('rtap.records(', cassette)
 
     def test_format_and_mandatory_gate(self):
-        self.assertTrue((ROOT / 'programs/c48/ailmzx48/ailmzx48.c').is_file())
+        self.assertTrue((CORPUS / 'ailmzx48/ailmzx48.c').is_file())
         self.assertTrue((ROOT / 'tests/fuse_boot.py').is_file())
         self.assertTrue((ROOT / 'tools/fuse_release_gate.py').is_file())
-        self.assertTrue((ROOT / 'tools/mkrelease.py').is_file())
-        text = (ROOT / 'sdk/rcc/driver.py').read_text(encoding='utf-8')
-        # The CLI contract is exercised by the C48 verifier. Do not tie
-        # the release check to one spelling of the driver's output expression.
+        self.assertTrue((ROOT / 'release/build/build.py').is_file())
+        self.assertTrue((ROOT / 'release/src/zx-ux/rom/48.rom').is_file())
+        text = (ROOT / 'release/src/zx-ux-sdk/rcc/driver.py').read_text(encoding='utf-8')
         self.assertIn("'.ssx'", text)
         self.assertIn("'.sso'", text)
         self.assertTrue('os.path.samefile(src, target)' in text or
