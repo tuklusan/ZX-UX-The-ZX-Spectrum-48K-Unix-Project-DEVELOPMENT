@@ -17,7 +17,7 @@
 ;  Tape format: standard Spectrum blocks, so tape browsers show names.
 ;   archive  header "label", CODE, length 0, p1 = 'A', p2 = "RU"
 ;   member   header "basename", CODE, length n, p1 = 'F', p2 = "RU",
-;            then n bytes in data blocks of up to 512 (a 17 byte block
+;            then n bytes in data blocks of up to 1024 (older archives use 512; a 17 byte block
 ;            is sent as 18: 17 bytes are a header to the tape driver):
 ;              kind (1 packed, 2 directory), i-node flags (2),
 ;              size (2), stored bytes (2), mtime (4), path, 0, data
@@ -45,8 +45,10 @@ TP_E    equ TV+50               ; 10 directory entry (saving only)
 TP_P    equ TV+60               ; 80 path
 TP_SB   equ R_BUF               ; 128 staging block (saving only: the
                                 ; extract's mkdir1 is the R_BUF user)
-TP_B    equ TV+140              ; 512 tape block
-TPBSZ   equ 512
+TP_FMT  equ TV+140              ; active archive: 03h or 05h
+TP_OPEN equ TV+141              ; saw A, awaiting E
+TP_B    equ TV+142              ; largest supported tape block
+TPBSZ   equ 1024
 PRE     equ 11                  ; preamble before the path
 
 t_tar:  db 18h,6
@@ -195,7 +197,7 @@ tpsv:   ld hl,TP_P
         jr c,.skip              ; a device
         ld a,(U_STB+3)
         bit 3,a                 ; a resident program
-        jr z,.go
+        jp z,.go
 .skip:  ld hl,TP_P
         ld de,s_tpsk
         jp perr
@@ -288,7 +290,7 @@ tpobj:  ld hl,TP_PH
         call basenm
         ld a,(hl)
         or a
-        jr nz,.h
+        jp nz,.h
         ld hl,TP_P              ; "/"
 .h:     ld a,'F'
         call tphead
@@ -412,12 +414,14 @@ tp17:   ld a,b
         cp 17
         ret nz
         inc c
+        xor a
+        ld (TP_B+17),a          ; deterministic ignored padding byte
         ret
 
 ; tphead: A = kind, HL = name -> header block, length TP_N
 tphead: push hl
         ld hl,TP_HD
-        ld (hl),3               ; CODE
+        ld (hl),5               ; new RU archive header type
         inc hl
         ld b,10
 .s:     ld (hl),' '
@@ -508,6 +512,8 @@ tpget:  ld a,(TP_LB)             ; t and no archive name: the whole tape
         sub 't'
         or b
         ld (TP_ONE),a
+        xor a
+        ld (TP_OPEN),a
 .go:    xor a
         ld (TP_IN),a
 .h:     ld de,TP_HD             ; next header (other blocks are passed)
@@ -518,14 +524,33 @@ tpget:  ld a,(TP_LB)             ; t and no archive name: the whole tape
         ld a,(TP_ONE)
         or a
         call z,tpprg            ; whole tape: programs too
-        ld hl,(TP_HD+15)
+        ld a,(TP_HD)             ; accept both archive header versions
+        cp 3
+        jr z,.typ
+        cp 5
+        jp nz,.h
+.typ:   ld hl,(TP_HD+15)
         ld de,'R'+256*'U'
         or a
         sbc hl,de
-        jr nz,.h
+        jp nz,.h
+        ld a,(TP_HD+14)         ; p1 high byte must be 80h
+        cp 80h
+        jp nz,.h
         ld a,(TP_HD+13)
         cp 'A'
         jr nz,.f
+        ld hl,(TP_HD+11)
+        ld a,h
+        or l
+        jp nz,tperr             ; A has no following data
+        ld a,(TP_OPEN)
+        or a
+        jp nz,tperr             ; archive A before previous E
+        ld a,(TP_HD)
+        ld (TP_FMT),a
+        ld a,1
+        ld (TP_OPEN),a
         ld a,(TP_ONE)           ; whole tape: every archive, by name
         or a
         jr nz,.lb
@@ -542,24 +567,36 @@ tpget:  ld a,(TP_LB)             ; t and no archive name: the whole tape
         jr z,.in                ; no label asked for: the first one
 .lc:    ld a,(de)
         cp (hl)
-        jr nz,.h
+        jp nz,.h
         inc hl
         inc de
         djnz .lc
 .in:    ld a,1
         ld (TP_IN),a
-        jr .h
+        jp .h
 .f:     cp 'E'
         jr nz,.m
+        call tpcheck            ; E must use the current archive version
+        ld hl,(TP_HD+11)
+        ld a,h
+        or l
+        jp nz,tperr
+        xor a
+        ld (TP_OPEN),a
         ld a,(TP_ONE)           ; whole tape: on to the next one
         or a
-        jr z,.go
+        jp z,.go
         ld a,(TP_IN)
         or a
         jp nz,exit0
-        jr .h
+        jp .h
 .m:     cp 'F'
-        jr nz,.h
+        jp nz,.h
+        call tpcheck            ; reject orphan and mixed archive members
+        ld hl,(TP_HD+11)
+        ld a,h
+        or l
+        jp z,tperr
         ld hl,(TP_HD+11)
         ld (TP_N),hl
         call tpnext             ; the preamble: keep it
@@ -588,6 +625,17 @@ tpget:  ld a,(TP_LB)             ; t and no archive name: the whole tape
 .x:     call tpext
         jp .h
 
+; tpcheck: reject orphan F/E and mixed 03h/05h archives.
+tpcheck:
+        ld a,(TP_OPEN)
+        or a
+        jp z,tperr
+        ld a,(TP_FMT)
+        ld hl,TP_HD
+        cp (hl)
+        jp nz,tperr
+        ret
+
 ; tpprg: a program's header (CODE, p2 "SS", NC) -> /dev/cassette/NAME
 tpprg:  ld hl,(TP_HD+15)
         ld de,'S'+256*'S'
@@ -595,8 +643,10 @@ tpprg:  ld hl,(TP_HD+15)
         ret nz
         ld a,(TP_HD)
         cp 3
+        jr z,.pr
+        cp 4
         ret nz
-        call tpcas
+.pr:    call tpcas
         jp crlf
 
 ; tpcas: /dev/cassette/NAME, the name in the header in TP_HD
@@ -621,8 +671,12 @@ tpcas:  ld hl,s_cas
 ; tpnext: next data block of the member -> TP_B, BC = its length,
 ;   TP_W = its end
 tpnext: ld hl,(TP_N)
-        ld bc,TPBSZ
-        call tpmin
+        ld bc,512               ; legacy 03h/RU chunk
+        ld a,(TP_FMT)
+        cp 5
+        jr nz,.sz
+        ld bc,TPBSZ             ; current 05h/RU chunk
+.sz:    call tpmin
         ld hl,(TP_N)
         or a
         sbc hl,bc
@@ -634,7 +688,16 @@ tpnext: ld hl,(TP_N)
         call sc_read
         pop bc
         jp c,tperr
-        ld hl,TP_B
+        ld a,b
+        or a
+        jr nz,.padok
+        ld a,c
+        cp 17
+        jr nz,.padok
+        ld a,(TP_B+17)
+        or a
+        jp nz,tperr             ; ignored 18th byte must be zero
+.padok: ld hl,TP_B
         add hl,bc
         ld (TP_W),hl
         ret

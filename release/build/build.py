@@ -69,7 +69,10 @@ def verify_tape_and_compiled_pairs(boot: Path, entries: Path):
         pos += n
         require(not (__import__('functools').reduce(lambda x,y:x^y,data,0)), 'System TAP parity failure')
         parts.append(data)
-    require(len(parts) == 8, 'Baseline standard tape must contain 8 physical blocks')
+    require(len(parts) == 4, 'Merged TAP must contain BASIC and exactly one CODE block')
+    require(parts[2][1] == 3 and parts[2][2:7] == b'ZX-UX', 'Merged TAP CODE header missing')
+    expected_image = (TMP / 'build/merged-image.bin').read_bytes()
+    require(parts[3][1:-1] == expected_image, 'Merged TAP CODE differs from linked image')
     ssx = entries / 'ssx'
     tzx = entries / 'tzx'
     names = {p.stem for p in ssx.glob('*.ssx')}
@@ -118,9 +121,9 @@ def build(sjasm: str):
     require(len([p for p in actual if p.startswith('assets/c48-bin/')]) == expected_c48,
             'Missing executable/tape pair from dist')
     # The completed candidate is only a provisional baseline, never a signed release.
-    status = {'status': 'pre-feature baseline candidate',
+    status = {'status': 'partial beta-0.0.7 development candidate',
               'program_count': n,
-              'boot_transport': 'legacy multi-CODE normal-speed',
+              'boot_transport': 'single-CODE TAP, provisional legacy TZX',
               'candidate_file_count': len(actual)}
     (RELEASE / 'manifest.json').write_text(json.dumps(status, indent=2) + '\n')
     old = TMP / 'dist-previous'
@@ -139,7 +142,7 @@ def build(sjasm: str):
     # distributions among intermediate build files after a successful build.
     if old.exists():
         shutil.rmtree(old)
-    print('BASELINE CANDIDATE: %d C48 programs and 2 legacy boot tapes; not beta-0.0.7' % n)
+    print('INTERIM CANDIDATE: %d C48 programs; merged standard TAP and provisional TZX; not beta-0.0.7 release' % n)
 
 
 def main():

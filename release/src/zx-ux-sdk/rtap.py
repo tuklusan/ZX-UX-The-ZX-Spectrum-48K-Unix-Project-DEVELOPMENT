@@ -7,7 +7,7 @@
 Each program becomes one standard Spectrum CODE pair (header + data block)
 that ZX-UX's loader recognises (SPEC-SDK-R2 section 9):
 
-  header   type 3, name = the program name (1..10 characters, the name
+  header   type 4 (older tapes use type 3), name = the program name (1..10 characters, the name
            typed as /dev/cassette/NAME), length = SSX1 file size,
            parameter 1 = bytes of memory the program needs (image, bss,
            heap and stack; at least the file size), parameter 2 = 'SS'
@@ -56,30 +56,42 @@ def records(ssx, name):
     n = need(ssx)
     if n > 0xFFFF:
         raise SystemExit('rtap: %s needs %d bytes' % (name, n))
-    hdr = tap_block(0, bytes([3]) + name.encode().ljust(10) +
+    hdr = tap_block(0, bytes([4]) + name.encode().ljust(10) +
                     struct.pack('<HHH', len(ssx), n, 0x5353))
     return [hdr, tap_block(0xFF, ssx)]
 
 
 def tzx_blocks(data):
     """-> list of (pause, block) from a TZX (standard speed blocks only)."""
-    if data[:8] != b'ZXTape!\x1a':
-        raise SystemExit('rtap: not a TZX file')
+    if len(data) < 10 or data[:8] != b'ZXTape!\x1a':
+        raise SystemExit('rtap: not a complete TZX file')
     p = 10
     out = []
     head = bytearray(data[:10])
     while p < len(data):
         t = data[p]
         if t == 0x10:
+            if p + 5 > len(data):
+                raise SystemExit('rtap: truncated standard TZX header')
             pause, n = struct.unpack_from('<HH', data, p + 1)
+            if p + 5 + n > len(data):
+                raise SystemExit('rtap: truncated standard TZX payload')
             out.append((pause, data[p + 5:p + 5 + n]))
             p += 5 + n
         elif t == 0x30:
+            if p + 2 > len(data):
+                raise SystemExit('rtap: truncated TZX text header')
             n = data[p + 1]
+            if p + 2 + n > len(data):
+                raise SystemExit('rtap: truncated TZX text block')
             head += data[p:p + 2 + n]
             p += 2 + n
         elif t == 0x32:
+            if p + 3 > len(data):
+                raise SystemExit('rtap: truncated TZX archive header')
             n = struct.unpack_from('<H', data, p + 1)[0]
+            if p + 3 + n > len(data):
+                raise SystemExit('rtap: truncated TZX archive block')
             head += data[p:p + 3 + n]
             p += 3 + n
         else:
@@ -99,11 +111,15 @@ def _parity_ok(b):
 
 
 def list_blocks(blocks):
-    """Lines describing a tape's blocks (flag + data + parity each)."""
+    """Describe both versioned ZX-UX cassette formats, without trusting input.
+
+    An archive is A, zero or more F members, E, all of one version.
+    Invalid blocks are reported rather than silently regarded as programs.
+    """
     out = []
     i = 0
-    n = len(blocks)
-    while i < n:
+    active = None
+    while i < len(blocks):
         b = blocks[i]
         if len(b) < 2:
             out.append('?        block %d: %d bytes, too short' % (i, len(b)))
@@ -120,41 +136,74 @@ def list_blocks(blocks):
         kind = b[1]
         name = _name(b)
         length, p1, p2 = struct.unpack_from('<HHH', b, 12)
-        data = blocks[i + 1] if i + 1 < n and blocks[i + 1][:1] == b'\xff' else None
-        i += 1 + (data is not None)
-        if kind == 3 and b[16:18] == b'SS':
-            ok = data is not None and _parity_ok(data) and len(data) - 2 == length
+        i += 1
+        if kind in (3, 4) and p2 == 0x5353:
+            data = blocks[i] if i < len(blocks) and blocks[i][:1] == b'\xff' else None
+            if data is not None:
+                i += 1
+            ok = (data is not None and _parity_ok(data) and
+                  len(data) - 2 == length and p1 >= length and length >= 4 and
+                  data[1:5] == b'SSX1')
             out.append('program  /dev/cassette/%s  %d bytes, needs %d%s'
                        % (name, length, p1, '' if ok else '  (its data block is missing or bad)'))
-        elif kind == 3 and b[16:18] == b'RU' and b[14] in (0x41, 0x45, 0x46):
-            if b[14] == 0x41:
-                out.append('archive  /dev/cassette%s:' % ('/' + name if name else ''))
-                i -= data is not None          # an archive header has no data
-            elif b[14] == 0x45:
-                out.append('         end of archive')
-                i -= data is not None
-            else:
-                got = bytearray()              # the member's data blocks
-                bad = False
-                j = i - (data is not None)
-                while len(got) < length and j < n and blocks[j][:1] == b'\xff':
-                    bad = bad or not _parity_ok(blocks[j])
-                    blk = blocks[j][1:-1]
-                    if len(blk) == 18 and len(got) + 17 == length:
-                        blk = blk[:17]         # (17 bytes travel as 18)
-                    got += blk
-                    j += 1
-                i = j
-                if bad:
-                    out.append('  ? member %s: a data block has a parity error' % name)
+            continue
+        if kind in (3, 5) and p2 == 0x5552 and (p1 >> 8) == 0x80:
+            marker = p1 & 0xff
+            if marker == ord('A'):
+                if active is not None or length:
+                    out.append('?        invalid archive start: %s' % name)
+                else:
+                    active = kind
+                    out.append('archive  /dev/cassette%s:' % ('/' + name if name else ''))
+                continue  # An A header has no physical data block.
+            if marker == ord('E'):
+                if active != kind or length:
+                    out.append('?        invalid archive end: %s' % name)
+                else:
+                    out.append('         end of archive')
+                    active = None
+                continue  # An E header has no physical data block.
+            if marker == ord('F'):
+                if active != kind or length < 12:
+                    out.append('  ? member %s: invalid sequence, version or length' % name)
+                    continue
+                width = 512 if kind == 3 else 1024
+                got = bytearray()
+                error = None
+                while len(got) < length:
+                    expected = min(width, length - len(got))
+                    physical = 18 if expected == 17 else expected
+                    if i >= len(blocks) or blocks[i][:1] != b'\xff':
+                        error = 'missing data block'
+                        break
+                    block = blocks[i]
+                    i += 1
+                    if not _parity_ok(block):
+                        error = 'data block parity error'
+                        break
+                    data = block[1:-1]
+                    if len(data) != physical:
+                        error = 'wrong data block length'
+                        break
+                    if expected == 17:
+                        if data[-1] != 0:
+                            error = 'invalid 17-byte padding'
+                            break
+                        data = data[:17]
+                    got.extend(data)
+                if error:
+                    out.append('  ? member %s: %s' % (name, error))
                 elif len(got) >= 12 and 0 in got[11:]:
                     k, size = got[0], struct.unpack_from('<H', got, 3)[0]
                     path = got[11:got.index(0, 11)].decode('latin-1')
                     mark = 'd' if k & 2 else ('z' if k & 1 else '-')
                     out.append('  %s %6d %s' % (mark, size, path))
                 else:
-                    out.append('  ? member %s: its data is missing or short' % name)
-        elif kind == 0:
+                    out.append('  ? member %s: invalid or truncated preamble' % name)
+                continue
+            out.append('?        unknown archive marker %02X' % marker)
+            continue
+        if kind == 0:
             line = (' LINE %d' % p1) if p1 < 32768 else ''
             out.append('basic    "%s"  %d bytes%s' % (name, length, line))
         elif kind in (1, 2):
@@ -163,6 +212,8 @@ def list_blocks(blocks):
             out.append('code     "%s"  %d bytes at %d' % (name, length, p1))
         else:
             out.append('?        header type %d "%s"' % (kind, name))
+    if active is not None:
+        out.append('?        archive missing end marker')
     return out
 
 
@@ -176,7 +227,7 @@ def read_tape(path):
         if p + 2 > len(data):
             raise SystemExit('rtap: %s: truncated .tap file' % path)
         n = data[p] | data[p + 1] << 8
-        if p + 2 + n > len(data):
+        if n < 2 or p + 2 + n > len(data):
             raise SystemExit('rtap: %s: truncated .tap block at offset %d' % (path, p))
         blocks.append(data[p + 2:p + 2 + n])
         p += 2 + n

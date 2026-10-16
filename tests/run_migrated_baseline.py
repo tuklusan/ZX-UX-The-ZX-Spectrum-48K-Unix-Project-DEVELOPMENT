@@ -56,8 +56,8 @@ def main():
            str(WS / 'build/ZX-UX.tap'), 'test.z80']
     print('Generating fresh baseline snapshot', flush=True)
     subprocess.run(cmd, cwd=WS, env=env, check=True)
-    print('Checking historical boot layout from fresh symbols and tape', flush=True)
-    subprocess.run([sys.executable, 'tests/test_boot_v1.py'], cwd=WS, env=env, check=True)
+    print('Checking beta-0.0.7 merged boot layout from fresh symbols and tape', flush=True)
+    subprocess.run([sys.executable, 'tests/test_boot_beta7.py'], cwd=WS, env=env, check=True)
     cmd = [sys.executable, '-u', 'tests/suite.py']
     if args.only:
         cmd += ['-k', args.only]

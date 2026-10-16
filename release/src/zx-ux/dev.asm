@@ -41,9 +41,18 @@ memwr:  ld de,(u_off)
 ; ---------------------------------------------------------------------
 tapwr:
         call tapset
-        call ROM_SABYTES
+        call rom_save_short
         scf
         jr tapend
+; Exact 48K-ROM SA-BYTES internal entry: its normal header pilot is
+; 1F80h; the standard data leader 0C98h is ROM readable for either flag.
+; The build fingerprints the authorized 16K ROM before enabling this entry.
+rom_save_short:
+        ld hl,053Fh             ; normal SA-BYTES cleanup return
+        push hl
+        ld hl,0C98h             ; shorter but standard ROM pilot
+        jp 04D0h                ; resumes the unmodified ROM SAVE routine
+
 taprd:
         call tapset
         scf

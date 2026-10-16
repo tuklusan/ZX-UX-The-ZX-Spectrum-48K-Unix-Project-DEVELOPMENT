@@ -1148,6 +1148,52 @@ def tar_t_named(s):
 
 
 @test
+def cassette_legacy_formats(s):
+    """Real kernel TAR reader handles a 512-byte 03/RU archive and ldx
+    still accepts a 03/SS executable after the new 05/04 writer upgrade."""
+    import rtap
+    s.login()
+    s.sh('tar cf /dev/cassette/demo /usr/doc/zxpack', frames=60000)
+    tape = zxrun.decode_mic(s.zx.tr.mic)
+    if len(tape) != 4 or len(tape[2]) < 514:
+        raise Fail('test archive did not exceed 512 bytes')
+    blocks = []
+    for item in (tape[0], tape[1]):
+        h = bytearray(item[1:-1])
+        h[0] = 3
+        blocks.append(rtap.tap_block(0, bytes(h)))
+    data = tape[2][1:-1]
+    for offset in range(0, len(data), 512):
+        chunk = data[offset:offset+512]
+        if len(chunk) == 17:
+            chunk += b'\0'
+        blocks.append(rtap.tap_block(255, chunk))
+    h = bytearray(tape[-1][1:-1])
+    h[0] = 3
+    blocks.append(rtap.tap_block(0, bytes(h)))
+    listed = rtap.list_blocks(blocks)
+    if not any('/usr/doc/zxpack' in x and '?' not in x for x in listed):
+        raise Fail('legacy archive rejected by host listing: %s' % listed)
+
+    def play_legacy():
+        s.zx.tr.edges = zxrun.tape_pulses(blocks, s.zx.sim.registers[25] + 3500000)
+    s.expect('tar tf /dev/cassette/demo', '/usr/doc/zxpack',
+             frames=160000, after_typing=play_legacy)
+    s.expect('tar xvf /dev/cassette/demo', '/usr/doc/zxpack: replaced',
+             frames=160000, after_typing=play_legacy)
+
+    path = os.path.join(ROOT, 'build', 'c48', 'hello.ssx')
+    ssx = open(path, 'rb').read()
+    hh, dat = rtap.records(ssx, 'hello')
+    old = rtap.tap_block(0, b'\x03' + hh[2:-1])
+    if len(old) != len(hh):
+        raise Fail('legacy executable header length differs')
+    s.zx.type('/dev/cassette/hello\n')
+    s.zx.tr.edges = zxrun.tape_pulses([old, dat], s.zx.sim.registers[25] + 350000)
+    s.wait_prompt(12000)
+
+
+@test
 def boot_figures(s):
     """line 3 of the boot banner: the kernel's size is the resident
     kernel (kend - 6000h, the 8K limit's measure), the free figure is

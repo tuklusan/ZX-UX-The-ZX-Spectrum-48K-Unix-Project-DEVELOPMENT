@@ -39,9 +39,11 @@ ldx_m:  pop hl
         call sc_read
         jr c,.hdr
         ld a,(LX_H)             ; ... of a CODE block
-        cp 3
+        cp 3                    ; older CODE/SS tapes
+        jr z,.ss
+        cp 4                    ; versioned SSX1/SS tapes
         jr nz,.hdr
-        ld hl,(LX_H+15)         ; for an SSX1 program
+.ss:    ld hl,(LX_H+15)         ; for an SSX1 program
         ld de,'S'+256*'S'
         or a
         sbc hl,de

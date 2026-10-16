@@ -62,33 +62,46 @@ def read_tape(path):
 
 
 EXPECTED_SYSTEM_SYMBOLS = {'NPROC': 4, 'SFREE': 0, 'p_stat': 23296, 'p_pid': 23308, 'cur': 23546, 'scrown': 23395}
-EXPECTED_SYSTEM_LOADS = [('unix', 24576, 21732), ('fs', 46308, 3100), ('lowk', 23960, 177)]
+EXPECTED_SYSTEM_LOADS = [('lowk', 23960, 177), ('unix', 24576, 21880), ('fs', 46456, 3100)]
+EXPECTED_LOW_ADDR = 23960
+EXPECTED_IMAGE_LENGTH = 25596
+EXPECTED_GAP_START = 177
+EXPECTED_GAP_END = 616
 
 class SystemImage:
-    """The ZX-UX boot tape and its kernel.json, checked against each other."""
+    """Verified kernel sections decoded from the shipped merged boot tape."""
 
     def __init__(self, tape=None, kernel_json=None):
         if kernel_json is not None:
-            raise RvmError('This SDK uses source-derived system observation data')
+            raise RvmError('This SDK uses the self-contained shipped system image')
         self.tape = os.path.abspath(tape or DEFAULT_SYSTEM)
         if not os.path.isfile(self.tape):
             raise RvmError('No ZX-UX system tape: ' + self.tape)
         self.blocks = read_tape(self.tape)
-        if len(self.blocks) != 8:
-            raise RvmError('System tape: incorrect standard boot block count')
-        ordered = EXPECTED_SYSTEM_LOADS
-        for i, (name, addr, length) in enumerate(ordered, 1):
-            hdr, data = self.blocks[i * 2], self.blocks[i * 2 + 1]
-            if len(hdr) != 19 or hdr[0] != 0 or hdr[1] != 3 or hdr[2:12].rstrip(b' ') != name.encode():
-                raise RvmError('System tape: missing CODE header for ' + name)
-            if len(data) != length + 2 or data[0] != 255 or (int.from_bytes(hdr[12:14], 'little') != length) or (int.from_bytes(hdr[14:16], 'little') != addr):
-                raise RvmError('System tape: incorrect load span for ' + name)
+        if len(self.blocks) != 4:
+            raise RvmError('System tape must have one BASIC and one CODE pair')
+        basic, basic_data, hdr, data = self.blocks
+        if (len(basic) != 19 or basic[0] != 0 or basic[1] != 0 or
+                basic_data[0] != 255 or
+                len(hdr) != 19 or hdr[0] != 0 or hdr[1] != 3 or
+                hdr[2:12].rstrip(b' ') != b'ZX-UX' or
+                int.from_bytes(hdr[12:14], 'little') != EXPECTED_IMAGE_LENGTH or
+                int.from_bytes(hdr[14:16], 'little') != EXPECTED_LOW_ADDR or
+                len(data) != EXPECTED_IMAGE_LENGTH + 2 or data[0] != 255):
+            raise RvmError('System tape has an incorrect merged load span')
         for block in self.blocks:
+            if len(block) < 2:
+                raise RvmError('System tape has a bad block')
             parity = 0
-            for byte in block:
-                parity ^= byte
+            for octet in block:
+                parity ^= octet
             if parity:
-                raise RvmError('System tape: parity error')
+                raise RvmError('System tape has a parity error')
+        self.merged = bytes(data[1:-1])
+        if any(self.merged[EXPECTED_GAP_START:EXPECTED_GAP_END]):
+            raise RvmError('Merged image gap is not empty')
+        if self.merged[0x6000 - EXPECTED_LOW_ADDR] != 0xc3:
+            raise RvmError('Incorrect entry instruction in the system image')
         self.sym = EXPECTED_SYSTEM_SYMBOLS.copy()
         self.syscall = 0x6003
         self.info = {'format': 'zx-ux-kernel/1', 'symbols': self.sym, 'syscall': self.syscall}
@@ -98,12 +111,11 @@ class SystemImage:
         self.sha256 = digest.hexdigest()
 
     def _code_block(self, name):
-        b = self.blocks
-        for i in range(len(b) - 1):
-            if b[i][0] == 0 and len(b[i]) == 19 and b[i][1] == 3 \
-                    and b[i][2:12].rstrip(b' ') == name.encode() and b[i + 1][0] == 0xFF:
-                return b[i + 1][1:-1]
-        raise RvmError('%s: no "%s" code block' % (self.tape, name))
+        for label, address, length in EXPECTED_SYSTEM_LOADS:
+            if label == name:
+                offset = address - EXPECTED_LOW_ADDR
+                return self.merged[offset:offset + length]
+        raise RvmError('Unknown system section: ' + name)
 
 
 # ---------------------------------------------------------------- keyboard

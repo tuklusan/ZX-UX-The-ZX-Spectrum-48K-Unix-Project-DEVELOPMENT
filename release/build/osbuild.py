@@ -3,9 +3,10 @@
 
   build.py SJASMPLUS_PATH
 
-Outputs (in ../build): unix.bin, fs.img, ZX-UX.tzx, ZX-UX.tap, kernel.json
+Outputs (in ../build): unix.bin, fs.img, ZX-UX.tzx, ZX-UX.tap
 """
 import hashlib, json, os, re, struct, subprocess, sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import zxpack
@@ -192,21 +193,44 @@ def header(typ, name, length, p1, p2):
     return tap_block(0, bytes([typ]) + name.encode().ljust(10)[:10] +
                      struct.pack('<HHH', length, p1, p2))
 
-def basic_loader():
+def basic_loader(clear_address):
     def num(n):            # VAL "n" keeps the line short and exact
         return b'\xb0"' + str(n).encode() + b'"'
     line = (b'\xe7' + num(0) + b':' +          # BORDER VAL "0"
             b'\xda' + num(0) + b':' +          # PAPER VAL "0"
             b'\xd9' + num(7) + b':' +          # INK VAL "7"
             b'\xfb:' +                         # CLS
-            b'\xfd' + num(KBASE - 1) + b':' +  # CLEAR VAL "24575"
+            b'\xfd' + num(clear_address) + b':' +  # CLEAR above merged image
             b'\xf5"ZX-UX UNIX v1 loading":' +   # PRINT "..."
-            b'\xef""\xaf:' +                   # LOAD ""CODE  (unix)
-            b'\xef""\xaf:' +                   # LOAD ""CODE  (fs)
-            b'\xef""\xaf:' +                   # LOAD ""CODE  (lowk, last)
+            b'\xef""\xaf:' +                   # LOAD one merged CODE image
             b'\xf9\xc0' + num(KBASE) +         # RANDOMIZE USR VAL "24576"
             b'\r')
     return struct.pack('>H', 10) + struct.pack('<H', len(line)) + line
+
+def legacy_basic_loader():
+    """Temporary legacy TZX BASIC loader until boot-only turbo is installed."""
+    def num(n):
+        return b'\xb0"' + str(n).encode() + b'"'
+    line = (b'\xe7' + num(0) + b':' + b'\xda' + num(0) + b':' +
+            b'\xd9' + num(7) + b':' + b'\xfb:' +
+            b'\xfd' + num(KBASE - 1) + b':' +
+            b'\xf5"ZX-UX UNIX v1 loading":' +
+            b'\xef""\xaf:' * 3 + b'\xf9\xc0' + num(KBASE) + b'\r')
+    return struct.pack('>H', 10) + struct.pack('<H', len(line)) + line
+
+
+def merged_image(kern, fs, low, syms):
+    """The exact continuous LOWK...filesystems span, with a defined gap."""
+    lo = syms['LOWK']
+    gap = KBASE - lo - len(low)
+    if not (0x5b00 <= lo < KBASE and gap >= 0 and
+            syms['ITAB'] == KBASE + len(kern)):
+        raise SystemExit('invalid merged boot image linker layout')
+    image = low + bytes(gap) + kern + fs
+    if len(image) + 2 > 0xffff or lo + len(image) > 0x10000:
+        raise SystemExit('merged image exceeds Spectrum/TAP capacity')
+    return image
+
 
 def tzx(blocks, title):
     out = bytearray(b'ZXTape!\x1a\x01\x14')
@@ -246,28 +270,6 @@ def write_bootinfo(kernel_bytes, free_bytes, process_count):
     return True
 
 
-# The kernel addresses sdk/rvm reads (never writes) while it runs the
-# real system: which process is running, the pids, the screen owners.
-# rvm checks kernel_sha256 and lowk_sha256 against the "unix" and "lowk"
-# code blocks on the tape it boots.
-RVM_SYMBOLS = ('KV', 'NPROC', 'SFREE', 'SZOMB', 'p_stat', 'p_pid', 'cur', 'scrown')
-
-
-def write_kernel_json(kern, syms):
-    info = {
-        'format': 'zx-ux-kernel/1',
-        'note': 'Written by tools/build.py from the assembled kernel; read by sdk/rvm.',
-        'kernel_sha256': hashlib.sha256(kern).hexdigest(),
-        'lowk_sha256': hashlib.sha256(low_kernel()).hexdigest(),
-        'kernel_bytes': syms['kend'] - KBASE,
-        'syscall': KBASE + 3,
-        'symbols': {k: syms[k] for k in RVM_SYMBOLS},
-    }
-    with open(os.path.join(OUT, 'kernel.json'), 'w', newline='\n') as f:
-        json.dump(info, f, indent=1, sort_keys=True)
-        f.write('\n')
-
-
 def main():
     args = sys.argv[1:]
     while args and args[0] == '--add':
@@ -277,6 +279,13 @@ def main():
         ADDFILES.append((path, local, int(mode or '36', 8), z == 'z'))
         args = args[2:]
     sjasm = os.path.abspath(args[0]) if args else (os.path.join(HERE, 'bin', 'sjasmplus') if os.path.exists(os.path.join(HERE, 'bin', 'sjasmplus')) else 'sjasmplus')
+    # Internal ROM SA-BYTES entry may only be used with this exact ROM.
+    rom_path = os.path.join(SRC, 'rom', '48.rom')
+    rom = open(rom_path, 'rb').read()
+    if (len(rom) != 16384 or
+        hashlib.sha256(rom).hexdigest() != 'd55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42' or
+        rom[0x04c2:0x04d1] != bytes.fromhex('213f05e521801fcb7f280321980c08')):
+        raise SystemExit('build rejected unverified ROM SA-BYTES internal entry')
     os.makedirs(OUT, exist_ok=True)
     progs = program_list()
     write_ptab(progs)
@@ -292,13 +301,26 @@ def main():
     RD0 = syms['ITAB']
     open(os.path.join(OUT, 'unix.bin'), 'wb').write(kern)
     open(os.path.join(OUT, 'lowk.bin'), 'wb').write(low_kernel())
-    write_kernel_json(kern, syms)
+    # The final SDK carries fresh minimal observation symbols in its module.
+    # No retired per-section fingerprint manifest is written to tmp or dist.
+    (Path(OUT) / 'kernel.json').unlink(missing_ok=True)
     open(os.path.join(OUT, 'fs.img'), 'wb').write(rd0)
-    bas = basic_loader()
     low = low_kernel()
+    image = merged_image(kern, rd0, low, syms)
+    basic_clear = syms['WINDOW'] - 1
+    if basic_clear - (syms['LOWK'] + len(image)) < 512:
+        raise SystemExit('not enough protected BASIC stack above merged image')
+    bas = basic_loader(basic_clear)
     blocks = [
         (header(0, 'ZX-UX', len(bas), 10, len(bas)), 1000),
         (tap_block(0xFF, bas), 1000),
+        (header(3, 'ZX-UX', len(image), syms['LOWK'], 32768), 1000),
+        (tap_block(0xFF, image), 2000),
+    ]
+    legacy_bas = legacy_basic_loader()
+    legacy_blocks = [
+        (header(0, 'ZX-UX', len(legacy_bas), 10, len(legacy_bas)), 1000),
+        (tap_block(0xFF, legacy_bas), 1000),
         (header(3, 'unix', len(kern), KBASE, 32768), 1000),
         (tap_block(0xFF, kern), 1000),
         (header(3, 'fs', len(rd0), RD0, 32768), 1000),
@@ -309,8 +331,9 @@ def main():
         (tap_block(0xFF, low), 2000),
     ]
     open(os.path.join(OUT, 'ZX-UX.tzx'), 'wb').write(
-        tzx(blocks, 'ZX-UX v1 - ZX Spectrum 48K'))
+        tzx(legacy_blocks, 'ZX-UX v1 - provisional TZX pending turbo'))
     open(os.path.join(OUT, 'ZX-UX.tap'), 'wb').write(tap(blocks))
+    open(os.path.join(OUT, 'merged-image.bin'), 'wb').write(image)
     print('kernel %d bytes (6000-%04X), user text to %04X, image %d bytes'
           % (syms['kend'] - KBASE, syms['kend'] - 1, syms['utext_end'] - 1, len(kern)))
     print('boot code / zxpack model %04X-%04X, i-nodes %04X-%04X, arena %04X-%04X (%d bytes), '
