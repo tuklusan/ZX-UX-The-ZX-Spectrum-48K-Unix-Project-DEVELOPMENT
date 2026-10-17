@@ -1,0 +1,51 @@
+name: Create beta-0.0.8 release tag
+on:
+  push:
+    paths:
+      - '.github/beta-0.0.8.tag-request'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish-once:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify signed-off source and publish unused tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo='tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT'
+          source='3c234b53019916bfaa84ea181885caf704ff8765'
+          source_tree='5b1c5b03fd09c3b29f0eebb9c4285025f05d16bf'
+          marker_sha='98235529ef0f431a27ec92f449efcbf22ec02b4f'
+          test "$GITHUB_REPOSITORY" = "$repo"
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD^)" = "$source"
+          test "$(git rev-parse HEAD^'{tree}')" = "$source_tree"
+          test "$(git show -s --format=%s HEAD)" = 'release: sign off beta-0.0.8 source layout'
+          test "$(git hash-object .github/beta-0.0.8.tag-request)" = "$marker_sha"
+          test "$(cat .github/beta-0.0.8.tag-request)" = "$(printf 'beta-0.0.8\nsource=%s\nspec-upload=owner-followup' "$source")"
+          test "$(gh api "repos/$repo/git/ref/heads/main" --jq '.object.sha')" = "$GITHUB_SHA"
+          test "$(gh api "repos/$repo/actions/runs/39077624390" --jq '.conclusion')" = 'success'
+          test "$(gh api "repos/$repo/actions/runs/39077624390" --jq '.head_sha')" = "$source"
+          test "$(find release/dist/assets/c48-src -type f | wc -l)" -eq 64
+          test "$(find release/dist/assets/c48-bin/ssx -name '*.ssx' | wc -l)" -eq 57
+          test "$(find release/dist/assets/c48-bin/tzx -name '*.tzx' | wc -l)" -eq 57
+          test -f release/dist/zx-ux/ZX-UX.tap
+          test -f release/dist/zx-ux/ZX-UX.tzx
+          if gh api "repos/$repo/git/ref/tags/beta-0.0.8" >/dev/null 2>&1; then
+            echo 'Release tag already exists; refusing to replace it.' >&2
+            exit 1
+          fi
+          gh api --method POST "repos/$repo/git/refs" -f ref='refs/tags/beta-0.0.8' -f sha="$GITHUB_SHA" --jq '.object.sha'
+          test "$(gh api "repos/$repo/git/ref/tags/beta-0.0.8" --jq '.object.sha')" = "$GITHUB_SHA"
+          echo 'BETA_0_0_8_TAG_VERIFIED'
