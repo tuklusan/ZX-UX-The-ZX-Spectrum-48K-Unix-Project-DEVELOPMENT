@@ -1,4 +1,4 @@
 beta-0.0.8
 source=3c234b53019916bfaa84ea181885caf704ff8765
 spec-upload=owner-followup
-retry=parent-tree-check
+retry=full-history-check
