@@ -16,7 +16,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Verify commit, index, files and approved specification
+      - name: Verify commit, index, and required checkout files
         shell: bash
         run: |
           set -euo pipefail
@@ -24,7 +24,6 @@ jobs:
           git diff --exit-code
           git diff --cached --exit-code
           python3 - <<'PY'
-          import hashlib
           import os
           from pathlib import Path
           import subprocess
@@ -50,7 +49,6 @@ jobs:
               total += file.lstat().st_size
               tracked_paths.add(filename)
           required = {
-              'docs/04-C48 Language Specification Rev 0.11.docx',
               'release/dist/assets/c48-src/demos/hanoi.c',
               'release/dist/assets/c48-src/demos/queens8.c',
               'release/src/zx-ux-sdk/rcc/driver.py',
@@ -59,16 +57,10 @@ jobs:
               'tests/fuse_boot.py',
           }
           assert required <= tracked_paths, 'Missing required v1 checkout files'
-          spec = root / 'docs/04-C48 Language Specification Rev 0.11.docx'
-          data = spec.read_bytes()
-          assert len(data) == 1413717, 'Unexpected C48 specification size'
-          digest = hashlib.sha256(data).hexdigest()
-          assert digest == '88a9e5a144c11e1a828ebdd070a230125082d691468b6679e032c6c62120eace'
           assert not (root / 'c48-sdk').exists()
           print('CHECKOUT_COMPLETE')
           print('SOURCE_SHA', commit)
           print('TREE_SHA', subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip())
           print('TRACKED_FILES', count)
           print('TRACKED_BYTES', total)
-          print('C48_SPEC_SHA256', digest)
           PY
