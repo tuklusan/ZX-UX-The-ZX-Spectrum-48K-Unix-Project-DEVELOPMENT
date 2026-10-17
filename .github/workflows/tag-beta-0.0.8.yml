@@ -25,15 +25,21 @@ jobs:
           repo='tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT'
           source='3c234b53019916bfaa84ea181885caf704ff8765'
           source_tree='5b1c5b03fd09c3b29f0eebb9c4285025f05d16bf'
-          marker_sha='98235529ef0f431a27ec92f449efcbf22ec02b4f'
+          marker_sha='e189280e3bfdd41d7f79ef54b75d01fc4f5416f6'
+          echo CHECK_REPO
           test "$GITHUB_REPOSITORY" = "$repo"
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git rev-parse HEAD^)" = "$source"
-          test "$(git rev-parse HEAD^'{tree}')" = "$source_tree"
-          test "$(git show -s --format=%s HEAD)" = 'release: sign off beta-0.0.8 source layout'
+          echo CHECK_PARENT
+          test "$(git rev-parse HEAD^)" = '37820fae78ecea83e5e4d8c70e45cfa0e84ab254'
+          echo CHECK_SOURCE
+          test "$(git rev-parse HEAD~2)" = "$source"
+          test "$(git rev-parse "${source}^{tree}")" = "$source_tree"
+          test "$(git show -s --format=%s HEAD)" = 'release: repair beta-0.0.8 tag gate'
+          echo CHECK_MARKER
           test "$(git hash-object .github/beta-0.0.8.tag-request)" = "$marker_sha"
-          test "$(cat .github/beta-0.0.8.tag-request)" = "$(printf 'beta-0.0.8\nsource=%s\nspec-upload=owner-followup' "$source")"
+          test "$(cat .github/beta-0.0.8.tag-request)" = "$(printf 'beta-0.0.8\nsource=%s\nspec-upload=owner-followup\nretry=parent-tree-check' "$source")"
+          echo CHECK_REMOTE
           test "$(gh api "repos/$repo/git/ref/heads/main" --jq '.object.sha')" = "$GITHUB_SHA"
           test "$(gh api "repos/$repo/actions/runs/39077624390" --jq '.conclusion')" = 'success'
           test "$(gh api "repos/$repo/actions/runs/39077624390" --jq '.head_sha')" = "$source"
@@ -46,6 +52,7 @@ jobs:
             echo 'Release tag already exists; refusing to replace it.' >&2
             exit 1
           fi
+          echo CREATE_TAG
           gh api --method POST "repos/$repo/git/refs" -f ref='refs/tags/beta-0.0.8' -f sha="$GITHUB_SHA" --jq '.object.sha'
           test "$(gh api "repos/$repo/git/ref/tags/beta-0.0.8" --jq '.object.sha')" = "$GITHUB_SHA"
           echo 'BETA_0_0_8_TAG_VERIFIED'
