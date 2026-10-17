@@ -27,7 +27,7 @@ import rvm                         # noqa: E402
 import suite                       # noqa: E402
 
 RUNS = json.load(open(os.path.join(ROOT, 'tests', 'sdk', 'runs.json')))
-CORPUS = os.path.join(ROOT, 'release', 'src', 'assets', 'c48-src')
+CORPUS = os.path.join(ROOT, 'release', 'dist', 'assets', 'c48-src')
 OUT = os.path.join(ROOT, 'build', 'ssx')
 SCROWN = 0x5B63                    # kvars.inc: scrown = KV+99
 

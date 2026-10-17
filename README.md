@@ -8,9 +8,8 @@ to eight characters. This is a single-user system with no password.
 ## Boot and use
 
 The system boot tapes are in `release/dist/zx-ux/`. Load `ZX-UX.tap` or
-`ZX-UX.tzx` through the Spectrum's normal cassette loader. This development
-milestone still uses the beta-0.0.6 legacy multi-block boot. The planned
-beta-0.0.7 one-block TAP and fast boot TZX are **not yet implemented**.
+`ZX-UX.tzx` through the Spectrum's normal cassette loader. The TAP contains one standard CODE block; the turbo TZX boots the same
+system image through a separate fast loader.
 
 Commands include `ls`, `cat`, `ps`, `top`, `vi`, `tar`, `zxpack`, and `more`.
 The shell also handles `cd`, `kill`, `exec`, `sh`, `login`, `exit`, and
@@ -34,7 +33,8 @@ python3 release/build/build.py --sjasm /path/to/sjasmplus
 ```
 
 No network access, Git history, or checked-out sibling directory is used by
-the builder. Its inputs are under `release/src/`, current intermediate files
+the builder. The OS and SDK inputs are under `release/src/`; the C48 program inputs
+are under `release/dist/assets/c48-src/`. Current intermediate files
 under `release/build/tmp/`, and the complete finished candidate under
 `release/dist/`. An unsuccessful build leaves the previous `dist/` unchanged.
 The generated `release/manifest.json` records provisional status without
@@ -43,8 +43,9 @@ hashes. It is not shipped to users.
 Source layout: `release/src/zx-ux/` holds the OS and its ROM; the independent
 host compiler, assembler, linker, cassette utilities and VM are under
 `release/src/zx-ux-sdk/`; C48 program inputs are under
-`release/src/assets/c48-src/`. The builder never writes into any source
-folder. The kernel must remain no larger than 8,192 bytes.
+`release/dist/assets/c48-src/`. These distributed C48 sources are
+retained unchanged across successful and failed offline rebuilds. The builder
+never writes into a source folder. The kernel must remain no larger than 8,192 bytes.
 
 ## Development kit and programs
 
@@ -61,8 +62,7 @@ release/dist/sdk/bin/rvm --headless --text hello.ssx
 ```
 
 The selected example programs are under `release/dist/assets/c48-bin/`.
-Each SSX has its own TZX, including explicitly selected small multitask
-variants. No combined program tapes belong to the shipment. On ZX-UX, type
+Each SSX has its own TZX, including the compact builds selected for background use. No combined program tapes belong to the shipment. On ZX-UX, type
 `/dev/cassette/NAME` to run a program from its tape; `*` means the first
 program on the inserted cassette.
 
@@ -71,7 +71,7 @@ program on the inserted cassette.
 Tests, specifications, historical source material and detailed test records
 are maintained outside `release/`. The offline baseline adapter is
 `tests/run_migrated_baseline.py`. Authentic FUSE SDL and C48 regression
-results are required before any final beta-0.0.7 release. A provisional
+results are required before a final beta release. A provisional
 build passing its own checks is not a signed-off release.
 
 See the root `LICENSE` and the notices with each component. No rights to the

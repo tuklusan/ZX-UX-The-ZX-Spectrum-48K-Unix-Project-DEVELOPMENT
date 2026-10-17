@@ -28,6 +28,8 @@ jobs:
           /tmp/sjasmplus/sjasmplus --version
       - name: Offline candidate build (no downloads inside builder)
         run: python3 release/build/build.py --sjasm /tmp/sjasmplus/sjasmplus
+      - name: Distributed C48 source and output layout
+        run: python3 -m unittest -v tests.release_independence_checks tests.test_beta8_source_layout
       - name: Independently checked SkoolKit 10.1 test harness
         run: python3 -m pip install skoolkit==10.1 pillow
       - name: Four fresh source and boot regression batches

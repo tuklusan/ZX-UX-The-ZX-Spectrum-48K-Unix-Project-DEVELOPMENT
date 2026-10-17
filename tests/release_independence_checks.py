@@ -7,7 +7,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
-CORPUS = ROOT / 'release/src/assets/c48-src'
+CORPUS = ROOT / 'release/dist/assets/c48-src'
 RUNS = ROOT / 'tests/sdk/runs.json'
 
 

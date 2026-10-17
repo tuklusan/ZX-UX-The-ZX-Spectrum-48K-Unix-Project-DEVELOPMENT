@@ -32,7 +32,7 @@ def main():
     for source, dest in ((TMP / 'src', WS / 'src'),
                          (TMP / 'sdk', WS / 'sdk'),
                          (TMP / 'out', WS / 'build'),
-                         (RELEASE / 'src/assets/c48-src', WS / 'programs/c48'),
+                         (RELEASE / 'dist/assets/c48-src', WS / 'programs/c48'),
                          (ROOT / 'tests', WS / 'tests'),
                          (ROOT / 'tools', WS / 'tools'),
                          (ROOT / 'docs', WS / 'docs')):

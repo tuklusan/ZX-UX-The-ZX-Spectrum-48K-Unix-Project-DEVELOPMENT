@@ -33,7 +33,7 @@ import zxscreen                   # noqa: E402
 from rcc import driver            # noqa: E402
 
 RUNS = json.load(open(os.path.join(ROOT, 'tests', 'sdk', 'runs.json')))
-CORPUS = os.path.join(ROOT, 'release', 'src', 'assets', 'c48-src')
+CORPUS = os.path.join(ROOT, 'release', 'dist', 'assets', 'c48-src')
 
 
 def compile_c(src, out, flags):

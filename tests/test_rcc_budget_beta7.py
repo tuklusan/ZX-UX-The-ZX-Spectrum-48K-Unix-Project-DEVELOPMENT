@@ -24,7 +24,7 @@ from rcc import driver
 
 class RccBudgetAdmission(unittest.TestCase):
     def test_overlimit_denies_output_without_erasing_prior_binary(self):
-        source = ROOT / 'release/src/assets/c48-src/examples/hello.c'
+        source = ROOT / 'release/dist/assets/c48-src/examples/hello.c'
         self.assertTrue(source.is_file(), source)
         with tempfile.TemporaryDirectory() as temp:
             target = pathlib.Path(temp) / 'hello.ssx'
@@ -45,7 +45,7 @@ class RccBudgetAdmission(unittest.TestCase):
             self.assertEqual(target.read_bytes(), good, 'rejected build changed last good output')
 
     def test_explicit_native_overlimit_also_denied(self):
-        source = ROOT / 'release/src/assets/c48-src/examples/hello.c'
+        source = ROOT / 'release/dist/assets/c48-src/examples/hello.c'
         with tempfile.TemporaryDirectory() as temp:
             target = pathlib.Path(temp) / 'hello-native.ssx'
             code = driver.main([str(source), '--native', '--max', '1', '-o', str(target)])
