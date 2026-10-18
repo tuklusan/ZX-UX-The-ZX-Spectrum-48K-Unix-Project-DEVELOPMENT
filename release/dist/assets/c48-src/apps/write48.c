@@ -12,6 +12,7 @@
 #include "appapi.h"
 
 char wr_doc[1900];
+char wr_loadbuf[1900];
 char wr_prev[1140];
 char wr_next[1140];
 char wr_line[61];
@@ -53,7 +54,7 @@ void wr_seed(void)
     wr_append("EXPERIENCE\n");
     wr_append("SINCLAIR RESEARCH LTD, Cambridge\n");
     wr_append("Founder and Chairman, 1979-present\n");
-    wr_append("Led development and marketing of low-cost ");
+    wr_append("Led development of low-cost ");
     wr_append("home computers: ZX80 (1980), ZX81 (1981), ");
     wr_append("ZX Spectrum (1982) and Sinclair QL (1984).\n\n");
     wr_append("SINCLAIR RADIONICS LTD\n");
@@ -69,6 +70,54 @@ void wr_seed(void)
     wr_append("INTERESTS\n");
     wr_append("Miniaturisation, transport, electronics and ");
     wr_append("practical products for mass ownership.\n");
+}
+
+/* Plain ASCII text, compatible with vi and cat on ZX-UX. */
+void wr_save(void)
+{
+    if (!app_choose_file("SAVE>")) {
+        wr_stat = -1;
+        return;
+    }
+    if (app_save_file(wr_doc, (unsigned int)wr_len))
+        app_notice_set("SAVED TO RAM");
+    else
+        app_notice_set("SAVE FAILED");
+    wr_stat = -1;
+}
+
+void wr_load(void)
+{
+    int n;
+    int i;
+    if (!app_choose_file("LOAD>")) {
+        wr_stat = -1;
+        return;
+    }
+    n = app_load_file(wr_loadbuf, 1899u);
+    if (n < 0) {
+        app_notice_set("LOAD FAILED OR TOO LARGE");
+        wr_stat = -1;
+        return;
+    }
+    for (i = 0; i < n; i++) {
+        if ((wr_loadbuf[i] < 32 || wr_loadbuf[i] > 126) &&
+            wr_loadbuf[i] != 10) {
+            app_notice_set("BAD TEXT FILE");
+            wr_stat = -1;
+            return;
+        }
+    }
+    for (i = 0; i < n; i++)
+        wr_doc[i] = wr_loadbuf[i];
+    wr_doc[n] = 0;
+    wr_len = n;
+    wr_cur = 0;
+    wr_view = 0;
+    wr_insert = 0;
+    wr_drawn = 0;
+    wr_stat = -1;
+    app_notice_set("LOADED FROM RAM");
 }
 
 void wr_insert_char(int c)
@@ -293,12 +342,15 @@ void wr_status(void)
     app_clear_row(22);
     app_clear_row(23);
     if (wr_insert) {
-        print_at(21, 1, "INSERT: CAPS+1 CMD  BS DEL  ENTER NL");
+        print_at(21, 1, "INSERT: CAPS+1 CMD BS DEL ENTER NL");
     } else {
-        print_at(21, 1, "CMD: I INS  5/8 MOVE  7/6 PG  X DEL");
-        print_at(22, 1, "F FIND  G TOP  Q QUIT");
+        print_at(21, 1, "CMD: I INS 5/8 MOVE 7/6 PG X DEL");
+        print_at(22, 1, "F FIND G TOP S SAVE L LOAD Q QUIT");
     }
-    print_at(23, 1, "1992 DEMO CV - EDITABLE IN MEMORY");
+    if (app_notice[0] != 0)
+        print_at(23, 1, app_notice);
+    else
+        print_at(23, 1, "1992 DEMO CV - EDIT IN RAM");
     wr_stat = wr_insert;
 }
 
@@ -798,7 +850,7 @@ int wr_command(int key)
     int old_view;
     if (key == 'q')
         return -1;
-    if ((key == '8' || key == 'l') && wr_cur < wr_len) {
+    if ((key == '8') && wr_cur < wr_len) {
         if (wr_fmove(1))
             wr_fast = 1;
         else
@@ -831,6 +883,14 @@ int wr_command(int key)
         wr_delete_at(wr_cur);
         return 1;
     }
+    if (key == 's') {
+        wr_save();
+        return 1;
+    }
+    if (key == 'l') {
+        wr_load();
+        return 1;
+    }
     if (key == 'f') {
         wr_find();
         return 1;
@@ -848,6 +908,7 @@ int main(int argc, char **argv)
     int key;
     int changed;
     wr_seed();
+    app_setfile("/tmp/write48.txt");
     wr_cur = 0;
     wr_view = 0;
     wr_insert = 0;

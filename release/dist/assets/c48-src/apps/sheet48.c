@@ -12,6 +12,7 @@
 #include "appapi.h"
 
 char sh_cells[640];
+char sh_loadbuf[644];
 int sh_row;
 int sh_col;
 
@@ -31,6 +32,11 @@ void sh_set(int row, int col, char *text)
         i++;
     }
     p[i] = 0;
+    i++;
+    while (i < 20) {
+        p[i] = 0;
+        i++;
+    }
 }
 
 unsigned int sh_uint(char *s)
@@ -176,6 +182,60 @@ void sh_seed(void)
     sh_set(7, 3, "1992 SAMPLE");
 }
 
+/* A fixed-width local file: SH48 header and 32 x 20-byte cells. */
+void sh_save(void)
+{
+    int i;
+    if (!app_choose_file("SAVE>"))
+        return;
+    sh_loadbuf[0] = 'S';
+    sh_loadbuf[1] = 'H';
+    sh_loadbuf[2] = '4';
+    sh_loadbuf[3] = '8';
+    for (i = 0; i < 640; i++)
+        sh_loadbuf[i + 4] = sh_cells[i];
+    if (app_save_file(sh_loadbuf, 644u))
+        app_notice_set("SAVED TO RAM FILE");
+    else
+        app_notice_set("SAVE FAILED");
+}
+
+void sh_load(void)
+{
+    int n;
+    int i;
+    int j;
+    int ended;
+    if (!app_choose_file("LOAD>"))
+        return;
+    n = app_load_file(sh_loadbuf, 644u);
+    if (n != 644 || sh_loadbuf[0] != 'S' ||
+        sh_loadbuf[1] != 'H' || sh_loadbuf[2] != '4' ||
+        sh_loadbuf[3] != '8') {
+        app_notice_set("LOAD FAILED OR INVALID FILE");
+        return;
+    }
+    for (i = 0; i < 32; i++) {
+        ended = 0;
+        for (j = 0; j < 20; j++) {
+            n = (unsigned char)sh_loadbuf[4 + i * 20 + j];
+            if (n == 0)
+                ended = 1;
+            else if (n < 32 || n > 126 || ended) {
+                app_notice_set("INVALID SHEET FILE");
+                return;
+            }
+        }
+        if (!ended) {
+            app_notice_set("INVALID SHEET FILE");
+            return;
+        }
+    }
+    for (i = 0; i < 640; i++)
+        sh_cells[i] = sh_loadbuf[i + 4];
+    app_notice_set("LOADED FROM RAM FILE");
+}
+
 void sh_field(int row, int col, int width,
               int sr, int sc)
 {
@@ -235,9 +295,11 @@ void sh_render(void)
         sh_field(r + 4, 38, 20, r, 3);
     }
     print_at(15, 3, "1992 PERIOD TICKERS: XON WAS EXXON");
-    print_at(21, 1, "5/8 LR  7/6 UD  E EDIT  Q QUIT");
+    print_at(21, 1, "5/8 LR 7/6 UD E EDIT S SAVE L LOAD Q QUIT");
     print_at(22, 1, "FORMULAS: =A1+B1 OR =SUM(B1:B7)");
     sh_formula_bar();
+    if (app_notice[0] != 0)
+        print_at(20, 1, app_notice);
     yield();
 }
 
@@ -268,6 +330,7 @@ int main(int argc, char **argv)
     sh_row = 0;
     sh_col = 0;
     sh_seed();
+    app_setfile("/tmp/sheet48.sh48");
     sh_render();
     if (argc > 1 && strcmp(argv[1], "verify") == 0)
         return 0;
@@ -285,6 +348,10 @@ int main(int argc, char **argv)
             sh_row++;
         if (key == 'e')
             sh_edit();
+        if (key == 's')
+            sh_save();
+        if (key == 'l')
+            sh_load();
         sh_render();
     }
 }

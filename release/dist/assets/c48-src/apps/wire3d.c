@@ -27,6 +27,7 @@ int w_sel;
 int w_yaw;
 int w_pitch;
 int w_zoom;
+char w_filebuf[54];
 
 int w_sin(int a)
 {
@@ -106,6 +107,86 @@ void w_reset(void)
     w_yaw = 8;
     w_pitch = 7;
     w_zoom = 270;
+}
+
+/* Versioned 54-byte local model: 4-byte tag and 25 signed 16-bit words. */
+void w_store16(int pos, int value)
+{
+    w_filebuf[pos] = (char)(value & 255);
+    w_filebuf[pos + 1] = (char)((value >> 8) & 255);
+}
+
+int w_load16(int pos)
+{
+    unsigned int value;
+    value = (unsigned int)(unsigned char)w_filebuf[pos];
+    value = value | ((unsigned int)(unsigned char)w_filebuf[pos + 1] << 8);
+    return (int)value;
+}
+
+void w_save(void)
+{
+    int i;
+    if (!app_choose_file("SAVE>"))
+        return;
+    w_filebuf[0] = 'W';
+    w_filebuf[1] = '3';
+    w_filebuf[2] = 'D';
+    w_filebuf[3] = '1';
+    for (i = 0; i < 7; i++) {
+        w_store16(4 + i * 6, w_z[i]);
+        w_store16(6 + i * 6, w_w[i]);
+        w_store16(8 + i * 6, w_h[i]);
+    }
+    w_store16(46, w_sel);
+    w_store16(48, w_yaw);
+    w_store16(50, w_pitch);
+    w_store16(52, w_zoom);
+    if (app_save_file(w_filebuf, 54u))
+        app_notice_set("SAVED TO RAM FILE");
+    else
+        app_notice_set("SAVE FAILED");
+}
+
+void w_load(void)
+{
+    int n;
+    int i;
+    if (!app_choose_file("LOAD>"))
+        return;
+    n = app_load_file(w_filebuf, 54u);
+    if (n != 54 || w_filebuf[0] != 'W' ||
+        w_filebuf[1] != '3' || w_filebuf[2] != 'D' ||
+        w_filebuf[3] != '1') {
+        app_notice_set("LOAD FAILED OR INVALID FILE");
+        return;
+    }
+    for (i = 0; i < 7; i++) {
+        if (w_load16(4 + i * 6) < -110 ||
+            w_load16(4 + i * 6) > 110 ||
+            w_load16(6 + i * 6) < 2 ||
+            w_load16(6 + i * 6) > 78 ||
+            w_load16(8 + i * 6) < 2 ||
+            w_load16(8 + i * 6) > 30) {
+            app_notice_set("INVALID MODEL VALUES");
+            return;
+        }
+    }
+    if (w_load16(46) < 0 || w_load16(46) > 6 ||
+        w_load16(52) < 150 || w_load16(52) > 360) {
+        app_notice_set("INVALID MODEL VALUES");
+        return;
+    }
+    for (i = 0; i < 7; i++) {
+        w_z[i] = w_load16(4 + i * 6);
+        w_w[i] = w_load16(6 + i * 6);
+        w_h[i] = w_load16(8 + i * 6);
+    }
+    w_sel = w_load16(46);
+    w_yaw = w_load16(48);
+    w_pitch = w_load16(50);
+    w_zoom = w_load16(52);
+    app_notice_set("LOADED FROM RAM FILE");
 }
 
 void w_rot(int x, int y, int z,
@@ -300,9 +381,12 @@ void w_status(void)
     print_at(20, 34, "H=");
     app_uint_text(num, (unsigned int)w_h[w_sel]);
     print_at(20, 36, num);
-    print_at(21, 1, "N/P PLANE  A/D WIDTH  W/S HT  Z/X DEPTH");
-    print_at(22, 1, "5/8 YAW  7/6 PITCH  +/- ZOOM  R RESET  Q");
-    print_at(23, 1, "MODEL: IMPERIAL BATTLESHIP AURELIAN");
+    print_at(21, 1, "N/P PLANE  A/D WIDTH  E/W HT  Z/X DEPTH");
+    print_at(22, 1, "5/8 YAW 7/6 PITCH +/- ZOOM R RESET S SAVE L LOAD Q");
+    if (app_notice[0] != 0)
+        print_at(23, 1, app_notice);
+    else
+        print_at(23, 1, "MODEL: IMPERIAL BATTLESHIP AURELIAN");
 }
 
 void w_render(void)
@@ -338,7 +422,7 @@ void w_edit(int key)
         if (w_w[w_sel] > 78)
             w_w[w_sel] = 78;
     }
-    if (key == 's' && w_h[w_sel] > 2) {
+    if (key == 'e' && w_h[w_sel] > 2) {
         w_h[w_sel] = w_h[w_sel] - 2;
         if (w_h[w_sel] < 2)
             w_h[w_sel] = 2;
@@ -378,12 +462,17 @@ void w_edit(int key)
     }
     if (key == 'r')
         w_reset();
+    if (key == 's')
+        w_save();
+    if (key == 'l')
+        w_load();
 }
 
 int main(int argc, char **argv)
 {
     int key;
     w_reset();
+    app_setfile("/tmp/wire3d.w3d");
     w_render();
     if (argc > 1 && strcmp(argv[1], "verify") == 0)
         return 0;
