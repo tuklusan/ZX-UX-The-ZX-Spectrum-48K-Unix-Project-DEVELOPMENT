@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """rvm - the ZX-UX virtual machine: run C48 programs on the real ZX-UX.
 
+No standalone syscall simulator exists; all program executions boot ZX-UX.
+
 rvm emulates a 48K ZX Spectrum (zxmachine.py), boots the ZX-UX system tape
-built from this repository's src/ (build/ZX-UX.tap), logs in, and runs the
+built from this repository's src/ (build/ZX-UX.tzx), logs in, and runs the
 program from the cassette exactly as on a Spectrum: the shell types
 /dev/cassette/NAME, /etc/ldx loads it, the kernel schedules it.  The
 kernel is never reimplemented; rvm only plays the tape, presses keys and
@@ -10,8 +12,6 @@ watches the system calls (zxux.py).
 
   rvm [options] prog.ssx [args...]     run a program (a window if possible)
   rvm [options] --shell                ZX-UX at the shell prompt, in a window
-  rvm --syscall prog.ssx ...           the fast system-call-level VM
-                                       (rvmsys.py; its own options)
 
 Window (the default when a display is available and no output option is
 given): every emulated frame is shown, none is dropped; if the host is
@@ -34,12 +34,11 @@ Options:
   --final         use the final screen (with the shell) instead
   --wav F         write the sound of the run as a WAV file
   --bg P.ssx[:A,B]  run P in the background first (P A B &); repeatable
-  --tape F        more cassette blocks (.tap/.tzx) after the program's
-  --tape-out F    write the blocks the run saved to cassette (.tap)
+  --tape F        more cassette blocks (.tzx) after the program's
+  --tape-out F    write the blocks the run saved to cassette (.tzx)
   --real-tape     load from the cassette as EAR pulses through the ROM
                   (slow, as on a Spectrum) instead of the fast tape trap
-  --system F      the ZX-UX system tape (default ../build/ZX-UX.tap; its
-                  kernel.json must be next to it)
+  --system F      verified ZX-UX system tape (default: shipped ZX-UX.tzx)
   --snapshot F    start from this .z80 (taken anywhere before the login
                   prompt) instead of booting
   --user NAME     log in as NAME (default root)
@@ -72,9 +71,6 @@ if HERE not in sys.path:
 from zxscreen import font_bytes, screen_text, write_png   # noqa: E402,F401
 import zxux                                       # noqa: E402
 from zxux import RvmError                         # noqa: E402
-
-# the system-call-level VM, for the tools and tests that use it directly
-from rvmsys import VM, VFS, FSError, Stop        # noqa: E402,F401
 
 TAPE_WAIT = 100            # frames the loader may wait for an empty cassette
 
@@ -184,6 +180,8 @@ class Runner:
                                     snapshot=o.snapshot, keyboard=kb, log=self.log)
         self.keys = zxux.parse_keys(o.keys) if o.keys else []
         self.extra = zxux.read_tape(o.tape) if o.tape else []
+        if o.tape_out and not o.tape_out.lower().endswith('.tzx'):
+            raise RvmError('--tape-out requires a .tzx file')
         self.progs = [(read_ssx(p), zxux.program_name(p), a, True) for p, a in o.bg]
         if o.prog:
             self.progs.append((read_ssx(o.prog), zxux.program_name(o.prog), o.args, False))
@@ -309,8 +307,9 @@ class Runner:
             import rvmsound
             rvmsound.write_wav(o.wav, bytes(self.pcm))
         if o.tape_out:
-            import zxmachine
-            open(o.tape_out, 'wb').write(zxmachine.tap_file(self.session.m.saved))
+            import rtap
+            rtap.write(o.tape_out, b'ZXTape!\x1a\x01\x14',
+                       [(1000, block) for block in self.session.m.saved])
 
     def summary(self):
         s = self.session
@@ -343,6 +342,36 @@ def run_headless(o):
     return r.status_code()
 
 
+def run_kernel(program, args=(), keys='', frames=6000, system=None, cache=True):
+    """Headless test run *through ZX-UX*. Never substitutes a syscall model.
+
+    Caller inspects runner.why, runner.fg.status and runner.picture().
+    A program which never starts is an error, not a test pass.
+    """
+    o = Options()
+    o.prog = os.fspath(program)
+    o.args = list(args)
+    o.keys = keys
+    o.frames = frames
+    o.system = system
+    o.cache = cache
+    o.headless = True
+    runner = Runner(o)
+    runner.start()             # requires a verified ZX-UX system image
+    ceiling = frames + 3000   # include kernel login + cassette launch
+    for _ in range(ceiling):
+        runner.frame()
+        why = runner.check(frames)
+        if why:
+            runner.why = why
+            break
+    if runner.why is None:
+        runner.why = 'not started' if runner.fg.started is None else 'frames'
+    if runner.fg is None or runner.fg.started is None:
+        raise RvmError('ZX-UX did not start %s' % program)
+    return runner
+
+
 def want_window(o):
     if o.headless:
         return False
@@ -361,9 +390,6 @@ def want_window(o):
 
 
 def main(argv):
-    if argv and argv[0] == '--syscall':
-        import rvmsys
-        return rvmsys.main(argv[1:])
     if not argv or argv[0] in ('-h', '--help'):
         print(__doc__)
         return 0 if argv else 2

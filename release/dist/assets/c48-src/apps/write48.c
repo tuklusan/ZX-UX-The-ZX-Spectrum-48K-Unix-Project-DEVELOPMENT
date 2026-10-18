@@ -131,6 +131,25 @@ void wr_load(void)
     app_notice_set("LOADED FROM RAM");
 }
 
+void wr_new(void)
+{
+    if (!app_confirm_new()) {
+        app_notice_set("NEW CANCELLED");
+        wr_stat = -1;
+        return;
+    }
+    wr_doc[0] = 0;
+    wr_len = 0;
+    wr_cur = 0;
+    wr_view = 0;
+    wr_insert = 0;
+    wr_ncursor = -1;
+    wr_oldcursor = -1;
+    wr_drawview = -1;
+    wr_stat = -1;
+    app_notice_set("NEW BLANK DOCUMENT");
+}
+
 void wr_insert_char(int c)
 {
     int n;
@@ -302,7 +321,7 @@ void wr_status(void)
         print_at(21, 1, "INSERT: CAPS+1 CMD BS DEL ENTER NL");
     } else {
         print_at(21, 1, "CMD: I INS 5/8 MOVE 7/6 PG X DEL");
-        print_at(22, 1, "F FIND G TOP S SAVE L LOAD Q QUIT");
+        print_at(22, 1, "F FIND G TOP N NEW S SAVE L LOAD Q QUIT");
     }
     if (app_notice[0] != 0)
         print_at(23, 1, app_notice);
@@ -746,6 +765,10 @@ int wr_command(int key)
         wr_delete_at(wr_cur);
         return 1;
     }
+    if (key == 'n') {
+        wr_new();
+        return 1;
+    }
     if (key == 's') {
         wr_save();
         return 1;
@@ -794,7 +817,7 @@ int main(int argc, char **argv)
         if (!changed)
             continue;
         if (app_notice[0] != 0 &&
-            (wr_insert || (key != 's' && key != 'l'))) {
+            (wr_insert || (key != 's' && key != 'l' && key != 'n'))) {
             app_notice[0] = 0;
             wr_stat = -1;
         }

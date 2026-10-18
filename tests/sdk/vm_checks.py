@@ -69,10 +69,16 @@ def rcc_run(src, args, keys, ticks, frames):
         rc = driver.main([src, '-o', out] + RCCFLAGS)
         if rc:
             return None, 'compile failed', 0
-        data = open(out, 'rb').read()
-        vm = rvm.VM(data, args, keys, None, ticks)
-        why = vm.run(frames)
-        return vm.screen(), '%s %s' % (why, vm.status if why == 'exit' else ''), len(data)
+        size = os.path.getsize(out)
+        # The keys are bytes from the original corpus; the real ZX-UX
+        # keyboard mapper accepts an equivalent Latin-1 sequence.
+        try:
+            runner = rvm.run_kernel(out, args=args, keys=keys.decode('latin-1'), frames=frames)
+        except (rvm.RvmError, OSError) as exc:
+            return None, 'kernel run failed: %s' % exc, size
+        why = runner.why
+        status = runner.fg.status
+        return runner.picture()[0], '%s %s' % (why, status if why == 'exit' else ''), size
 
 
 def diff(a, b):

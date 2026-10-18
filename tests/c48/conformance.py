@@ -635,9 +635,16 @@ def execute(c, temp, backend):
     if c.kind=='repeat':
         data2, _, _, _, _ = driver.build(str(src), opts)
         return data==data2, f'{backend} repeatable: {len(data)} bytes'
-    vm=rvm.VM(data,fixed_ticks=1234)
-    why=vm.run(max_frames=200)
-    return why=='exit' and vm.status==c.expected, f'{backend}: {why}; status={vm.status}; SSX1 bytes={len(data)}; memory need={need}'
+    # The verifier cannot shortcut the loader/allocator/system calls.
+    run_image=src.with_suffix('.ssx')
+    run_image.write_bytes(data)
+    try:
+        runner=rvm.run_kernel(run_image,frames=5000)
+    except (rvm.RvmError, OSError) as exc:
+        return False, f'{backend}: kernel failed: {exc}'
+    why=runner.why
+    status=runner.fg.status
+    return why=='exit' and status==c.expected, f'{backend}: {why}; status={status}; SSX1 bytes={len(data)}; memory need={need}'
 
 
 def main(argv=None):

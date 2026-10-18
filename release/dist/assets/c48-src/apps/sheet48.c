@@ -146,6 +146,18 @@ unsigned int sh_value(int row, int col, int depth)
     return sh_uint(p);
 }
 
+void sh_new(void)
+{
+    if (!app_confirm_new()) {
+        app_notice_set("NEW CANCELLED");
+        return;
+    }
+    memset(sh_cells, 0, 640u);
+    sh_row = 0;
+    sh_col = 0;
+    app_notice_set("NEW BLANK SHEET");
+}
+
 void sh_seed(void)
 {
     sh_set(0, 0, "IBM");
@@ -295,7 +307,7 @@ void sh_render(void)
         sh_field(r + 4, 38, 20, r, 3);
     }
     print_at(15, 3, "1992 PERIOD TICKERS: XON WAS EXXON");
-    print_at(21, 1, "5/8 LR 7/6 UD E EDIT S SAVE L LOAD Q QUIT");
+    print_at(21, 1, "5/8 LR 7/6 UD E EDIT N NEW S SAVE L LOAD Q QUIT");
     print_at(22, 1, "FORMULAS: =A1+B1 OR =SUM(B1:B7)");
     sh_formula_bar();
     if (app_notice[0] != 0)
@@ -348,6 +360,8 @@ int main(int argc, char **argv)
             sh_row++;
         if (key == 'e')
             sh_edit();
+        if (key == 'n')
+            sh_new();
         if (key == 's')
             sh_save();
         if (key == 'l')

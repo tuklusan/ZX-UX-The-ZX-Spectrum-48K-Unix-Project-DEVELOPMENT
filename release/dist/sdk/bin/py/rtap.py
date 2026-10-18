@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """rtap - ZX-UX SDK tape writer: SSX1 programs -> SST1 cassette records.
 
-  rtap.py [-o out.tzx|out.tap] [--after ZX-UX.tzx] [--title T] prog.ssx[=NAME] ...
-  rtap.py --list tape.tzx|tape.tap ...
+  rtap.py [-o out.tzx] [--after ZX-UX.tzx] [--title T] prog.ssx[=NAME] ...
+  rtap.py --list tape.tzx ...
 
 Each program becomes one standard Spectrum CODE pair (header + data block)
 that ZX-UX's loader recognises (SPEC-SDK-R2 section 9):
@@ -62,7 +62,7 @@ def records(ssx, name):
 
 
 def tzx_blocks(data):
-    """-> list of (pause, block) from a TZX (standard speed blocks only)."""
+    """-> list of standard-speed records in a TZX, skipping turbo boot data."""
     if len(data) < 10 or data[:8] != b'ZXTape!\x1a':
         raise SystemExit('rtap: not a complete TZX file')
     p = 10
@@ -78,6 +78,16 @@ def tzx_blocks(data):
                 raise SystemExit('rtap: truncated standard TZX payload')
             out.append((pause, data[p + 5:p + 5 + n]))
             p += 5 + n
+        elif t == 0x11:
+            # ZX-UX boot uses TZX turbo records. Skip their data only after
+            # checking the exact three-byte length and the complete payload.
+            # The real system-image validator checks the turbo CRC and image.
+            if p + 19 > len(data):
+                raise SystemExit('rtap: truncated turbo TZX header')
+            n = int.from_bytes(data[p + 16:p + 19], 'little')
+            if p + 19 + n > len(data):
+                raise SystemExit('rtap: truncated turbo TZX payload')
+            p += 19 + n
         elif t == 0x30:
             if p + 2 > len(data):
                 raise SystemExit('rtap: truncated TZX text header')
@@ -218,30 +228,18 @@ def list_blocks(blocks):
 
 
 def read_tape(path):
-    data = open(path, 'rb').read()
-    if data[:8] == b'ZXTape!\x1a':
-        return [b for _, b in tzx_blocks(data)[1]]
-    blocks = []
-    p = 0
-    while p < len(data):
-        if p + 2 > len(data):
-            raise SystemExit('rtap: %s: truncated .tap file' % path)
-        n = data[p] | data[p + 1] << 8
-        if n < 2 or p + 2 + n > len(data):
-            raise SystemExit('rtap: %s: truncated .tap block at offset %d' % (path, p))
-        blocks.append(data[p + 2:p + 2 + n])
-        p += 2 + n
-    return blocks
+    if not str(path).lower().endswith('.tzx'):
+        raise SystemExit('rtap: TZX files only: %s' % path)
+    return [b for _,b in tzx_blocks(open(path,'rb').read())[1]]
 
 
 def write(out, head, blocks):
-    if out.lower().endswith('.tap'):
-        open(out, 'wb').write(b''.join(struct.pack('<H', len(b)) + b for _, b in blocks))
-    else:
-        body = bytearray(head)
-        for pause, b in blocks:
-            body += bytes([0x10]) + struct.pack('<HH', pause, len(b)) + b
-        open(out, 'wb').write(bytes(body))
+    if not str(out).lower().endswith('.tzx'):
+        raise SystemExit('rtap: TZX files only: %s' % out)
+    body=bytearray(head)
+    for pause,b in blocks:
+        body += bytes([0x10]) + struct.pack('<HH',pause,len(b)) + b
+    open(out,'wb').write(body)
 
 
 def main(argv):
@@ -278,7 +276,15 @@ def main(argv):
     head = b'ZXTape!\x1a\x01\x14'
     blocks = []
     if after:
-        head, blocks = tzx_blocks(open(after, 'rb').read())
+        if not after.lower().endswith('.tzx'):
+            raise SystemExit('rtap: --after requires a .tzx file')
+        head = open(after, 'rb').read()
+        if head[:10] != b'ZXTape!\x1a\x01\x14':
+            raise SystemExit('rtap: --after input is not a valid TZX')
+        tzx_blocks(head)  # reject truncated or unknown records before appending
+        # A boot tape can contain turbo 11h data records: keep them byte
+        # for byte and append standard ROM records, never reinterpret them.
+        # A standalone TZX is only a container here, not a kernel emulator.
     elif title:
         t = title.encode()
         head += bytes([0x30, len(t)]) + t

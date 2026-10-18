@@ -44,6 +44,15 @@ static int app_key(void)
     return c;
 }
 
+static void app_clear_row(int row);
+/* Destructive New requires an affirmative Y. All other keys cancel. */
+static int app_confirm_new(void)
+{
+    app_clear_row(23);
+    print_at(23, 1, "NEW: CLEAR DOCUMENT? Y YES / OTHER NO");
+    return app_key() == 'y';
+}
+
 static void app_putc(int row, int col, int c)
 {
     char s[2];

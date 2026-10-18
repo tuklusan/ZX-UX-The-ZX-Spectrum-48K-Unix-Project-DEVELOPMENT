@@ -5,7 +5,7 @@
 
 Each scripted session of tests/sdk/runs.json is compiled by rcc and run
 by rvm exactly as a user runs it (rvm.Runner, headless): ZX-UX booted
-from release/dist/zx-ux/ZX-UX.tap (or rvm's cache of it), the program typed as
+from release/dist/zx-ux/ZX-UX.tzx (or rvm's cache of it), the program typed as
 /dev/cassette/NAME and loaded through the tape trap, the session's keys
 typed once it has started.  A session passes when the program starts
 (the loader reaches sys ssxload), shows the text the session expects on

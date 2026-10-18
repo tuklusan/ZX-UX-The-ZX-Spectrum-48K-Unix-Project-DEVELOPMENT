@@ -276,7 +276,7 @@ def main():
           '(%d frames after the end)' % len(after), 'kept' in text and len(after) > 50)
 
     print('errors')
-    r = rvm.main(['--gui', '--system', os.path.join(TMP, 'none.tap'), prog('exit7')])
+    r = rvm.main(['--gui', '--system', os.path.join(TMP, 'none.tzx'), prog('exit7')])
     check('a missing system tape is an error before any window (status 2)', r == 2)
     print('%d failed' % len(FAILS))
     shutil.rmtree(CACHE, ignore_errors=True)

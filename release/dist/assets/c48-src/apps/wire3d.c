@@ -109,6 +109,33 @@ void w_reset(void)
     w_zoom = 270;
 }
 
+/* An empty model retains the editable seven-plane positions and
+   uses zero width/height for unused planes. Zero dimensions persist
+   through the existing 54-byte file format. */
+void w_new(void)
+{
+    int i;
+    if (!app_confirm_new()) {
+        app_notice_set("NEW CANCELLED");
+        return;
+    }
+    w_reset();
+    for (i = 0; i < 7; i++) {
+        w_w[i] = 0;
+        w_h[i] = 0;
+    }
+    app_notice_set("NEW EMPTY MODEL");
+}
+
+int w_has_shape(void)
+{
+    int i;
+    for (i = 0; i < 7; i++)
+        if (w_w[i] > 0 && w_h[i] > 0)
+            return 1;
+    return 0;
+}
+
 /* Versioned 54-byte local model: 4-byte tag and 25 signed 16-bit words. */
 void w_store16(int pos, int value)
 {
@@ -164,9 +191,9 @@ void w_load(void)
     for (i = 0; i < 7; i++) {
         if (w_load16(4 + i * 6) < -110 ||
             w_load16(4 + i * 6) > 110 ||
-            w_load16(6 + i * 6) < 2 ||
+            w_load16(6 + i * 6) < 0 ||
             w_load16(6 + i * 6) > 78 ||
-            w_load16(8 + i * 6) < 2 ||
+            w_load16(8 + i * 6) < 0 ||
             w_load16(8 + i * 6) > 30) {
             app_notice_set("INVALID MODEL VALUES");
             return;
@@ -313,6 +340,8 @@ void w_draw_plane(int p)
     int x2;
     int y2;
     int z2;
+    if (w_w[p] == 0 || w_h[p] == 0)
+        return;
     for (n = 0; n < 4; n++) {
         m = (n + 1) & 3;
         w_plane_point(p, n, &x1, &y1, &z1);
@@ -336,6 +365,9 @@ void w_draw_hull(void)
     for (p = 0; p < 7; p++)
         w_draw_plane(p);
     for (p = 0; p < 6; p++) {
+        if (w_w[p] == 0 || w_h[p] == 0 ||
+            w_w[p + 1] == 0 || w_h[p + 1] == 0)
+            continue;
         for (n = 0; n < 4; n++) {
             w_plane_point(p, n, &x1, &y1, &z1);
             w_plane_point(p + 1, n, &x2, &y2, &z2);
@@ -381,8 +413,8 @@ void w_status(void)
     print_at(20, 34, "H=");
     app_uint_text(num, (unsigned int)w_h[w_sel]);
     print_at(20, 36, num);
-    print_at(21, 1, "N/P PLANE  A/D WIDTH  E/W HT  Z/X DEPTH");
-    print_at(22, 1, "5/8 YAW 7/6 PITCH +/- ZOOM R RESET S SAVE L LOAD Q");
+    print_at(21, 1, "B/P PLANE  A/D WIDTH  E/W HT  Z/X DEPTH");
+    print_at(22, 1, "5/8 YAW 7/6 PITCH +/- ZOOM N NEW R RESET S SAVE L LOAD Q Quit");
     if (app_notice[0] != 0)
         print_at(23, 1, app_notice);
     else
@@ -397,8 +429,10 @@ void w_render(void)
     bright(1);
     print_at(0, 8, "WIRE3D - IMPERIAL CRUISER");
     w_grid();
-    w_draw_hull();
-    w_draw_tower();
+    if (w_has_shape())
+        w_draw_hull();
+    if (w_has_shape())
+        w_draw_tower();
     ink(2);
     bright(1);
     w_draw_plane(w_sel);
@@ -408,7 +442,7 @@ void w_render(void)
 
 void w_edit(int key)
 {
-    if (key == 'n' && w_sel < 6)
+    if (key == 'b' && w_sel < 6)
         w_sel++;
     if (key == 'p' && w_sel > 0)
         w_sel--;
@@ -460,6 +494,8 @@ void w_edit(int key)
         if (w_zoom < 150)
             w_zoom = 150;
     }
+    if (key == 'n')
+        w_new();
     if (key == 'r')
         w_reset();
     if (key == 's')

@@ -3,7 +3,7 @@
 
   python3 sdk/tests/test_rvm.py [-k NAME,...]
 
-Needs only the SDK and the ZX-UX build (build/ZX-UX.tap, kernel.json).
+Needs only the SDK and the ZX-UX build (build/ZX-UX.tzx, kernel.json).
 rvm keeps its login cache in a temporary directory for the run.  The
 machine's timing against an independent emulator is tests/rvm_machine.py
 (it needs SkoolKit); the C48 corpus is tests/rvm_corpus.py; the window
@@ -461,9 +461,9 @@ def tape_out():
           len(lines) == 3 and lines[0] == 'archive  /dev/cassette/x:'
           and lines[1].startswith('  - ') and lines[1].endswith(' /etc/motd')
           and lines[2].strip() == 'end of archive', '\n'.join(lines))
-    path = os.path.join(TMP, 'out.tap')
-    open(path, 'wb').write(zxmachine.tap_file(s.m.saved))
-    check('--tape-out writes them as a .tap that reads back', rtap.read_tape(path) == s.m.saved)
+    path = os.path.join(TMP, 'out.tzx')
+    rtap.write(path, b'ZXTape!\x1a\x01\x14',[(1000,b) for b in s.m.saved])
+    check('--tape-out writes TZX records that read back', rtap.read_tape(path) == s.m.saved)
 
 
 def short_z80():
@@ -486,14 +486,14 @@ def command_line():
                       (['--frames', 'x', prog('exit7')], 'needs a number'),
                       (['--bogus', prog('exit7')], 'unknown option'),
                       (['--shell'], 'needs the window'),
-                      (['--system', os.path.join(TMP, 'none.tap'), prog('exit7')],
-                       'no ZX-UX system tape'),
+                      (['--system', os.path.join(TMP, 'none.tzx'), prog('exit7')],
+                       'No such file or directory'),
                       ([prog('exit7'), 'a b'], 'cannot be typed'),
                       (['--snapshot', os.path.join(TMP, 'nope.z80'), prog('exit7')],
                        'No such file'),
                       (['--snapshot', short_z80(), prog('exit7')], 'truncated or damaged'),
                       ([prog('exit7'), '--keys', '\\x'], 'bad escape'),
-                      ([prog('exit7'), '--tape', short_z80()], 'not a usable tape'),
+                      ([prog('exit7'), '--tape', short_z80()], 'TZX required'),
                       ([prog('exit7'), '--png', os.path.join(TMP, 'no', 'dir', 'x.png')],
                        'No such file')):
         r = headless(args)
@@ -502,37 +502,38 @@ def command_line():
     # a kernel.json that does not describe the tape's kernel
     d = os.path.join(TMP, 'sys')
     os.makedirs(d, exist_ok=True)
-    shutil.copy(os.path.join(ROOT, 'build', 'ZX-UX.tap'), d)
+    shutil.copy(os.path.join(ROOT, 'build', 'ZX-UX.tzx'), d)
     import json
     k = json.load(open(os.path.join(ROOT, 'build', 'kernel.json')))
     k['kernel_sha256'] = '0' * 64
     json.dump(k, open(os.path.join(d, 'kernel.json'), 'w'))
-    r = headless(['--system', os.path.join(d, 'ZX-UX.tap'), prog('exit7')])
+    r = headless(['--system', os.path.join(d, 'ZX-UX.tzx'), prog('exit7')])
     check('rvm refuses a kernel.json made for another kernel',
-          r.returncode == 2 and 'does not describe' in r.stderr, r.stderr.strip())
+          r.returncode == 2 and 'does not match TZX' in r.stderr, r.stderr.strip())
     k = json.load(open(os.path.join(ROOT, 'build', 'kernel.json')))
     k['lowk_sha256'] = '0' * 64
     json.dump(k, open(os.path.join(d, 'kernel.json'), 'w'))
-    r = headless(['--system', os.path.join(d, 'ZX-UX.tap'), prog('exit7')])
+    r = headless(['--system', os.path.join(d, 'ZX-UX.tzx'), prog('exit7')])
     check('... or for another low kernel (block "lowk")',
           r.returncode == 2 and '"lowk"' in r.stderr, r.stderr.strip())
     open(os.path.join(d, 'kernel.json'), 'w').write('{"format": "zx-ux-kernel/1", ')
-    r = headless(['--system', os.path.join(d, 'ZX-UX.tap'), prog('exit7')])
+    r = headless(['--system', os.path.join(d, 'ZX-UX.tzx'), prog('exit7')])
     check('rvm refuses a kernel.json that is not JSON',
-          r.returncode == 2 and 'cannot be read' in r.stderr, r.stderr.strip())
+          r.returncode == 2 and 'cannot read' in r.stderr, r.stderr.strip())
     k = json.load(open(os.path.join(ROOT, 'build', 'kernel.json')))
     del k['symbols']['cur']
     json.dump(k, open(os.path.join(d, 'kernel.json'), 'w'))
-    r = headless(['--system', os.path.join(d, 'ZX-UX.tap'), prog('exit7')])
+    r = headless(['--system', os.path.join(d, 'ZX-UX.tzx'), prog('exit7')])
     check('rvm refuses a kernel.json without an address it needs',
-          r.returncode == 2 and 'missing or bad entry' in r.stderr, r.stderr.strip())
+          r.returncode == 2 and 'missing' in r.stderr, r.stderr.strip())
     r = headless(['--real-tape', prog('exit7')])
     check('--real-tape: the ROM loads the program from EAR pulses (status 7)',
           r.returncode == 7, r.stderr.strip())
     r = subprocess.run([sys.executable, os.path.join(SDK, 'bin', 'rvm'), '--syscall',
                         prog('exit7'), '--text'], capture_output=True, text=True, timeout=300)
-    check('rvm --syscall still runs the fast system-call VM', r.returncode == 7
-          and 'exit7 here' in r.stdout, r.stderr)
+    check('rvm rejects retired stand-alone syscall simulator mode',
+          r.returncode == 2 and 'unknown option --syscall' in r.stderr, r.stderr)
+
 
 
 @test

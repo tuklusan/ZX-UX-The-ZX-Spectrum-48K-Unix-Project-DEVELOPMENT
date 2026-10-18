@@ -43,7 +43,7 @@ def pack(sdk_source: Path, os_source: Path, os_build: Path, output: Path):
         target.write_text(body)
         target.chmod(0o755)
     # The packaged SDK has no duplicate image, no file outside dist/sdk/bin,
-    # and carries a self-checking decoder of the exact merged TAP.
+    # and carries a self-checking decoder of the exact turbo TZX.
     from merged_vm_pack import rewrite
     syms = {}
     for line in (os_build / 'src/unix.sym').read_text().splitlines():
@@ -57,5 +57,5 @@ def pack(sdk_source: Path, os_source: Path, os_build: Path, output: Path):
         source, syms, image,
         (out / 'lowk.bin').read_bytes(),
         (out / 'unix.bin').read_bytes(),
-        (out / 'fs.img').read_bytes()))
+        (out / 'fs.img').read_bytes(), (out / 'turbo_boot.bin').read_bytes()))
     return 3

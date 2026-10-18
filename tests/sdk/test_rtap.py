@@ -117,21 +117,21 @@ def main():
     check('an unknown header type and a 1-byte block are flagged',
           lines[0].startswith('?        header type 7') and 'too short' in lines[1])
 
-    # the command line: a .tap and a .tzx of the same blocks list the same;
-    # a truncated .tap is an error, not a partial listing
+    # TZX is the only file format accepted by the SDK tape tools.
     d = tempfile.mkdtemp()
     tap = os.path.join(d, 't.tap')
     tzx = os.path.join(d, 't.tzx')
-    rtap.write(tap, b'', [(0, b) for b in prog + arch])
-    rtap.write(tzx, b'ZXTape!\x1a\x01\x14', [(1000, b) for b in prog + arch])
-    rt = os.path.join(SDK, 'rtap.py')
-    a = subprocess.run([sys.executable, rt, '--list', tap], capture_output=True, text=True)
-    b = subprocess.run([sys.executable, rt, '--list', tzx], capture_output=True, text=True)
-    check('rtap --list reads .tap and .tzx alike', a.returncode == 0 and a.stdout == b.stdout
-          and a.stdout.startswith('program  /dev/cassette/hello'))
-    open(tap, 'ab').write(b'\x10\x00\x00')
-    c = subprocess.run([sys.executable, rt, '--list', tap], capture_output=True, text=True)
-    check('a truncated .tap is an error', c.returncode != 0 and 'truncated' in c.stderr + c.stdout)
+    rtap.write(tzx,b'ZXTape!\x1a\x01\x14', [(1000,b) for b in prog+arch])
+    rt = os.path.join(SDK,'rtap.py')
+    accepted = subprocess.run([sys.executable,rt,'--list',tzx],capture_output=True,text=True)
+    rejected = subprocess.run([sys.executable,rt,'--list',tap],capture_output=True,text=True)
+    check('TZX listing works, TAP input rejected',
+          accepted.returncode==0 and 'program  /dev/cassette/hello' in accepted.stdout and rejected.returncode!=0)
+    try:
+        rtap.write(tap,b'',[(1000,b) for b in prog])
+        check('TAP output cannot be created',False)
+    except SystemExit:
+        check('TAP output cannot be created',True)
     print('%d failed' % len(FAILS))
     return 1 if FAILS else 0
 

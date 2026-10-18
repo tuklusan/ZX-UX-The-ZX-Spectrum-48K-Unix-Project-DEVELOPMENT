@@ -50,11 +50,11 @@ def main():
     for old, name in (('legacy-c48-demos.tzx', 'c48-demos.tzx'),
                       ('legacy-c48-multitask.tzx', 'c48-multitask.tzx')):
         shutil.copyfile(ROOT / 'tests/fixtures' / old, WS / 'build' / name)
-    for name in ('ZX-UX.tap', 'ZX-UX.tzx'):
+    for name in ('ZX-UX.tzx',):
         shutil.copyfile(RELEASE / 'dist/zx-ux' / name, WS / 'build' / name)
     env = dict(os.environ, PYTHONPATH=args.skoolkit + os.pathsep + str(WS / 'sdk'))
     cmd = [sys.executable, args.tap2sna, '-c', 'fast-load=1', '-d', str(WS / 'build'),
-           str(WS / 'build/ZX-UX.tap'), 'test.z80']
+           str(WS / 'build/ZX-UX.tzx'), 'test.z80']
     print('Generating fresh baseline snapshot', flush=True)
     subprocess.run(cmd, cwd=WS, env=env, check=True)
     print('Checking beta-0.0.7 merged boot layout from fresh symbols and tape', flush=True)

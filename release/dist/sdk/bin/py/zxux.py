@@ -2,7 +2,7 @@
 programs from the cassette, and follow them through the system calls.
 
 Nothing of the kernel is reimplemented here.  The system tape built from
-src/ (build/ZX-UX.tap) is loaded by the 48K ROM, exactly as on a
+src/ (build/ZX-UX.tzx) is loaded by the 48K ROM, exactly as on a
 Spectrum, and the kernel, shell and loader do all the work.  rvm only
 types on the keyboard, plays the cassette, and observes:
 
@@ -33,8 +33,8 @@ import zxmachine                                   # noqa: E402
 from zxmachine import FRAME                        # noqa: E402
 import zxscreen                                    # noqa: E402
 
-MACHINE_VERSION = 'rvm-machine/1'
-DEFAULT_SYSTEM = os.path.normpath(os.path.join(HERE, '..', '..', '..', 'zx-ux', 'ZX-UX.tap'))
+MACHINE_VERSION = 'rvm-machine/2-tzx-kernel'
+DEFAULT_SYSTEM = os.path.normpath(os.path.join(HERE, '..', '..', '..', 'zx-ux', 'ZX-UX.tzx'))
 
 # system calls rvm follows (src/unix.asm systab)
 SYS_EXIT, SYS_FORK, SYS_READ, SYS_WAIT, SYS_SCREEN, SYS_SSXLOAD = 1, 2, 3, 7, 39, 40
@@ -48,74 +48,149 @@ class RvmError(Exception):
 
 # ------------------------------------------------------------------ system
 def read_tape(path):
-    """Blocks (flag + data + parity) of a .tap or standard-speed .tzx."""
+    """Read standard-speed records from a TZX user tape; TAP is unsupported."""
+    if not str(path).lower().endswith('.tzx'):
+        raise RvmError('TZX required: ' + str(path))
+    try:
+        import rtap
+        return [b for _, b in rtap.tzx_blocks(open(path, 'rb').read())[1]]
+    except (ValueError, IndexError, OSError, SystemExit) as exc:
+        raise RvmError('%s: invalid TZX (%s)' % (path, exc))
+
+
+def system_tzx(path):
+    """Verify the actual 4+24 boot TZX and return its ROM blocks and linked image.
+
+    All 24 turbo records must have the canonical timings, offset and length,
+    sequence number, CRC16-CCITT-FALSE and XOR. We do NOT reinterpret the
+    resulting Z80 kernel as host syscalls. Turbo loader timing itself is a
+    separate on-hardware/Fuse gate; rvm fast-transfers its checked payload.
+    """
+    import binascii
     try:
         data = open(path, 'rb').read()
-        if data[:8] == b'ZXTape!\x1a':
-            import rtap
-            return [b for _, b in rtap.tzx_blocks(data)[1]]
-        return zxmachine.tap_blocks(data)
-    except OSError as e:
-        raise RvmError('%s: %s' % (path, e.strerror))
-    except (ValueError, IndexError, SystemExit) as e:
-        raise RvmError('%s: not a usable tape (%s)' % (path, e))
+    except OSError as exc:
+        raise RvmError('%s: %s' % (path, exc))
+    def fail(message):
+        raise RvmError('%s: bad ZX-UX boot TZX: %s' % (path, message))
+    if not str(path).lower().endswith('.tzx') or not (10 < len(data) < 30000) \
+            or data[:10] != b'ZXTape!\x1a\x01\x14':
+        fail('TZX signature, version or size')
+    p, parts = 10, []
+    while p < len(data):
+        kind = data[p]
+        if kind == 0x10:
+            if p + 5 > len(data): fail('truncated ROM header')
+            pause, n = struct.unpack_from('<HH', data, p + 1)
+            q = p + 5
+        elif kind == 0x11:
+            if p + 19 > len(data): fail('truncated turbo header')
+            timing = struct.unpack_from('<6H', data, p + 1)
+            if timing != (2042,875,613,513,1025,247) or data[p+13] != 8:
+                fail('unexpected turbo timing')
+            pause = struct.unpack_from('<H',data,p+14)[0]
+            n = int.from_bytes(data[p+16:p+19], 'little')
+            if not 11 <= n <= 1200: fail('turbo payload length')
+            q = p + 19
+        else:
+            fail('unsupported record type %02X' % kind)
+        if q+n > len(data): fail('truncated record')
+        parts.append((kind, pause, bytes(data[q:q+n])))
+        p = q+n
+    if len(parts) != 28 or [t for t,_,_ in parts] != [0x10]*4+[0x11]*24:
+        fail('expected four ROM and 24 turbo records')
+    first = [b for _,_,b in parts[:4]]
+    for j, (t, pause, b) in enumerate(parts[:4]):
+        if pause != (1000,1000,1000,1500)[j] or len(b)<2 or \
+                b[0] != (0 if j%2==0 else 255) or \
+                _xor(b) != 0:
+            fail('ROM block %d invalid' % j)
+    if first[0][1] != 0 or first[2][1] != 3 or \
+            first[2][2:12].rstrip(b' ') != b'ZX-UX BOOT' or \
+            int.from_bytes(first[2][14:16], 'little') != 0xD000 or \
+            int.from_bytes(first[2][12:14], 'little') != len(first[3])-2:
+        fail('ROM bootstrap header')
+    raw = bytearray()
+    for j, (_, pause, packet) in enumerate(parts[4:],1):
+        if pause not in (0,400) or packet[:4] != b'ZX\x01'+bytes([j]) or \
+                _xor(packet) or struct.pack('<H',binascii.crc_hqx(packet[:-3],0xffff)) != packet[-3:-1]:
+            fail('segment %d checksum, ordinal or pause' % j)
+        off, n = struct.unpack_from('<HH', packet,4)
+        if off != len(raw) or n != len(packet)-11:
+            fail('segment %d offset/size' % j)
+        raw += packet[8:-3]
+    if not (0 < len(raw) <= 0xCE00-0x5D98) or raw[0x6000-0x5D98] != 0xC3:
+        fail('merged kernel image span or entry')
+    q,rem=divmod(len(raw),24)
+    if any(len(b)-11 != q+(i<rem) for i,(_,_,b) in enumerate(parts[4:])):
+        fail('noncanonical segment plan')
+    return first,bytes(raw)
+
+
+def _xor(data):
+    v = 0
+    for c in data: v ^= c
+    return v
 
 
 EXPECTED_SYSTEM_SYMBOLS = {'NPROC': 4, 'SFREE': 0, 'p_stat': 23296, 'p_pid': 23308, 'cur': 23546, 'scrown': 23395}
-EXPECTED_SYSTEM_LOADS = [('lowk', 23960, 177), ('unix', 24576, 21892), ('fs', 46468, 3100)]
+EXPECTED_SYSTEM_LOADS = [('lowk', 23960, 177), ('unix', 24576, 21892), ('fs', 46468, 3120)]
 EXPECTED_LOW_ADDR = 23960
-EXPECTED_IMAGE_LENGTH = 25608
+EXPECTED_IMAGE_LENGTH = 25628
+EXPECTED_IMAGE_SHA256 = '073ec0e95f168ca630bbf1dd9ce1c89f64d0ca490153645f7e675d7d3476787b'
+EXPECTED_BOOT_SHA256 = '572901f4a790facf1387a6be0f6a7a04dabe3728d50d6aa416f1d378024d8ed2'
 EXPECTED_GAP_START = 177
 EXPECTED_GAP_END = 616
 
 class SystemImage:
-    """Verified kernel sections decoded from the shipped merged boot tape."""
+    """The REAL linked ZX-UX kernel, reconstructed from a verified boot TZX."""
 
     def __init__(self, tape=None, kernel_json=None):
-        if kernel_json is not None:
-            raise RvmError('This SDK uses the self-contained shipped system image')
         self.tape = os.path.abspath(tape or DEFAULT_SYSTEM)
-        if not os.path.isfile(self.tape):
-            raise RvmError('No ZX-UX system tape: ' + self.tape)
-        self.blocks = read_tape(self.tape)
-        if len(self.blocks) != 4:
-            raise RvmError('System tape must have one BASIC and one CODE pair')
-        basic, basic_data, hdr, data = self.blocks
-        if (len(basic) != 19 or basic[0] != 0 or basic[1] != 0 or
-                basic_data[0] != 255 or
-                len(hdr) != 19 or hdr[0] != 0 or hdr[1] != 3 or
-                hdr[2:12].rstrip(b' ') != b'ZX-UX' or
-                int.from_bytes(hdr[12:14], 'little') != EXPECTED_IMAGE_LENGTH or
-                int.from_bytes(hdr[14:16], 'little') != EXPECTED_LOW_ADDR or
-                len(data) != EXPECTED_IMAGE_LENGTH + 2 or data[0] != 255):
-            raise RvmError('System tape has an incorrect merged load span')
-        for block in self.blocks:
-            if len(block) < 2:
-                raise RvmError('System tape has a bad block')
-            parity = 0
-            for octet in block:
-                parity ^= octet
-            if parity:
-                raise RvmError('System tape has a parity error')
-        self.merged = bytes(data[1:-1])
-        if any(self.merged[EXPECTED_GAP_START:EXPECTED_GAP_END]):
-            raise RvmError('Merged image gap is not empty')
-        if self.merged[0x6000 - EXPECTED_LOW_ADDR] != 0xc3:
-            raise RvmError('Incorrect entry instruction in the system image')
-        self.sym = EXPECTED_SYSTEM_SYMBOLS.copy()
-        self.syscall = 0x6003
-        self.info = {'format': 'zx-ux-kernel/1', 'symbols': self.sym, 'syscall': self.syscall}
-        digest = hashlib.sha256()
-        for block in self.blocks:
-            digest.update(struct.pack('<H', len(block)) + block)
-        self.sha256 = digest.hexdigest()
+        self.blocks, self.merged = system_tzx(self.tape)
+        low_addr = 0x5D98
+        if 'EXPECTED_SYSTEM_SYMBOLS' in globals():
+            self.sym = EXPECTED_SYSTEM_SYMBOLS.copy()
+            if 'EXPECTED_IMAGE_SHA256' in globals() and \
+                    hashlib.sha256(self.merged).hexdigest() != EXPECTED_IMAGE_SHA256:
+                raise RvmError('shipped TZX kernel image differs from compiled kernel')
+            if 'EXPECTED_BOOT_SHA256' in globals() and \
+                    hashlib.sha256(self.blocks[3][1:-1]).hexdigest() != EXPECTED_BOOT_SHA256:
+                raise RvmError('shipped TZX bootloader differs from compiled bootstrap')
+            if len(self.merged) != EXPECTED_IMAGE_LENGTH or \
+                    any(self.merged[EXPECTED_GAP_START:EXPECTED_GAP_END]):
+                raise RvmError('shipped boot image differs from linked layout')
+            for name, addr, length in EXPECTED_SYSTEM_LOADS:
+                if addr < low_addr or addr+length>low_addr+len(self.merged):
+                    raise RvmError('shipped linked kernel span invalid: '+name)
+            self.syscall=0x6003
+        else:
+            kj = kernel_json or os.path.join(os.path.dirname(self.tape),'kernel.json')
+            try:
+                with open(kj) as f: info=json.load(f)
+            except (OSError,ValueError) as exc:
+                raise RvmError('source SDK requires kernel.json next to TZX: %s' % exc)
+            if info.get('format') != 'zx-ux-kernel/1':
+                raise RvmError('bad kernel metadata format')
+            self.sym = {key:int(info['symbols'][key]) for key in ('NPROC','SFREE','p_stat','p_pid','cur','scrown')}
+            self.syscall=int(info['syscall'])
+            if 'image_sha256' not in info or \
+                    hashlib.sha256(self.merged).hexdigest()!=info['image_sha256']:
+                raise RvmError('kernel.json does not match TZX merged image')
+            for name, sha, start, stop in (("unix", "kernel_sha256", 0x6000-low_addr, int(info['symbols']['ITAB'])-low_addr),):
+                if sha in info and hashlib.sha256(self.merged[start:stop]).hexdigest()!=info[sha]:
+                    raise RvmError('kernel.json does not match TZX kernel')
+        self.info = {'format':'zx-ux-kernel/1','symbols':self.sym,'syscall':self.syscall}
+        self.sha256 = hashlib.sha256(open(self.tape,'rb').read()).hexdigest()
 
     def _code_block(self, name):
-        for label, address, length in EXPECTED_SYSTEM_LOADS:
-            if label == name:
-                offset = address - EXPECTED_LOW_ADDR
-                return self.merged[offset:offset + length]
-        raise RvmError('Unknown system section: ' + name)
+        if 'EXPECTED_SYSTEM_LOADS' not in globals():
+            raise RvmError('source SDK needs kernel section manifest')
+        for label,addr,length in EXPECTED_SYSTEM_LOADS:
+            if label==name:
+                off=addr-0x5D98
+                return self.merged[off:off+length]
+        raise RvmError('unknown image section '+name)
 
 
 # ---------------------------------------------------------------- keyboard
@@ -493,6 +568,9 @@ class Session:
                 self.m.load_z80(open(self.snapshot, 'rb').read())
             except (OSError, ValueError) as e:
                 raise RvmError('%s: %s' % (self.snapshot, getattr(e, 'strerror', None) or e))
+            lo = 0x6000-0x5D98
+            if self.m.mem[0x6000:0x6000+64] != self.system.merged[lo:lo+64]:
+                raise RvmError('snapshot lacks the verified ZX-UX kernel; load real TZX')
             self.cache_hit = False
             self._login()
             self.syscalls = 0
@@ -558,12 +636,31 @@ class Session:
             s += glyph.get(bytes(mem[a + (i << 8)] for i in range(8)), '?')
         return s
 
+    def _transfer_turbo(self, machine):
+        """Fast tape transport ONLY: Z80 runs the real extracted kernel.
+
+        The external FUSE boot gate, not this optimization, proves loader
+        waveform timing and progress rendering. RVM validates every packet.
+        """
+        machine.mem[0x5D98:0x5D98+len(self.system.merged)] = self.system.merged
+        c = machine.cpu
+        c.pc, c.sp, c.iy = 0x6000, 0xCEFF, 0x5C3A
+        c.iff1 = c.iff2 = True
+        c._ei_delay=0
+        machine.mem[0x5C48] = 0
+        machine.tnow = machine.t
+        machine._out(0xFE,0)
+        machine.hooks.pop(0xD000,None)
+        self.say('validated all 24 TZX segments; executing real ZX-UX kernel')
+        return True
+
     def _cold_boot(self):
         m = self.m
         m.reset()
-        self.say('cold boot: ROM, then LOAD "" from %s' % self.system.tape)
+        self.say('cold boot: ROM and TZX bootstrap; validated turbo transport from %s' % self.system.tape)
         self.run_until(lambda: 'Sinclair' in self._rom_row(23), 400, 'the ROM')
         m.cassette = list(self.system.blocks)
+        m.hooks[0xD000] = self._transfer_turbo
         m.trap_tape = True
         # K mode: J is LOAD; SYMBOL SHIFT + P is "
         self.kb.add([('keys', ('j',)), ('keys', ('SS', 'p')), ('keys', ('SS', 'p')),

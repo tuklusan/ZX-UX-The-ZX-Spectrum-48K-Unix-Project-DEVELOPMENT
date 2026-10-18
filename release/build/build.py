@@ -23,7 +23,7 @@ subprocess.run([sys.executable, str(S/'zx-ux-sdk/tools/osbuild.py'), sjasm], che
 syms = dict((m.group(1), int(m.group(2),16)) for line in (B/'src/unix.sym').read_text().splitlines() if (m := re.match(r'(\S+): EQU 0x([0-9A-Fa-f]+)', line)))
 _, _, free, _ = osbuild.mkfs(syms, osbuild.program_list()); turbo_boot_build.create_tzx(sjasm, syms, syms['kend']-0x6000, free, output_name='ZX-UX.tzx')
 (B/'dist-new/zx-ux').mkdir(parents=True)
-for name in ('ZX-UX.tap','ZX-UX.tzx'): shutil.copy2(B/'out'/name, B/'dist-new/zx-ux'/name)
+shutil.copy2(B/'out/ZX-UX.tzx', B/'dist-new/zx-ux/ZX-UX.tzx')
 c48build.build(B/'sdk', B/'dist-new/assets/c48-src', B/'dist-new/assets/c48-bin'); sdkpack.pack(S/'zx-ux-sdk', S/'zx-ux', B, B/'dist-new/sdk/bin')
 shutil.rmtree(B/'dist-old', ignore_errors=True)
 if D.exists(): D.rename(B/'dist-old')

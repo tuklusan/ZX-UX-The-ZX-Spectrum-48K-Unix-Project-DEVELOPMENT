@@ -14,7 +14,7 @@ SDK = ROOT / 'release/dist/sdk/bin/py'
 sys.path.insert(0, str(SDK))
 from zxux import Session
 
-TAPE = ROOT / 'release/dist/zx-ux/ZX-UX.tap'
+TAPE = ROOT / 'release/dist/zx-ux/ZX-UX.tzx'
 PROGRAMS = ROOT / 'release/dist/assets/c48-bin/ssx'
 SYMS = (ROOT / 'release/build/src/unix.sym').read_text()
 def address(name):

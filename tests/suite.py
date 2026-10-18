@@ -1042,12 +1042,17 @@ def mixed_tape(s):
     if len(anon) != 4:
         raise Fail('tar wrote %d blocks for the unnamed set, want 4' % len(anon))
     prog = ssx_tape('ssxargs')
-    data = open(os.path.join(ROOT, 'build', 'ZX-UX.tap'), 'rb').read()
-    sysb, p = [], 0
-    while p < len(data):
-        n = data[p] | data[p + 1] << 8
-        sysb.append(data[p + 2:p + 2 + n])
-        p += 2 + n
+    data = open(os.path.join(ROOT, 'build', 'ZX-UX.tzx'), 'rb').read()
+    # Use the ROM-standard header/data records at the start of the TZX;
+    # the remaining 24 boot records are turbo and not file headers.
+    sysb=[]
+    pos=10
+    for _ in range(4):
+        if data[pos]!=0x10:
+            raise Fail('unexpected TZX ROM record order')
+        n=int.from_bytes(data[pos+3:pos+5], 'little')
+        sysb.append(data[pos+5:pos+5+n])
+        pos += 5+n
     bad = bytearray(rtap.tap_block(0, bytes([3]) + b'badparity ' + bytes(4) + b'SS'))
     bad[-1] ^= 0x55
     fake = rtap.tap_block(0xFF, bytes([3]) + b'notahdr   ' + bytes(4) + b'SS')
@@ -1246,13 +1251,18 @@ def run_past(s, t, extra=50):
 def system_blocks():
     """the system tape's first four blocks: a BASIC program and a CODE
     file, neither of them a ZX-UX program"""
-    data = open(os.path.join(ROOT, 'build', 'ZX-UX.tap'), 'rb').read()
-    blocks, p = [], 0
-    while p < len(data):
-        n = data[p] | data[p + 1] << 8
-        blocks.append(data[p + 2:p + 2 + n])
-        p += 2 + n
-    return blocks[:4]
+    data = open(os.path.join(ROOT, 'build', 'ZX-UX.tzx'), 'rb').read()
+    # Use the ROM-standard header/data records at the start of the TZX;
+    # the remaining 24 boot records are turbo and not file headers.
+    sysb=[]
+    pos=10
+    for _ in range(4):
+        if data[pos]!=0x10:
+            raise Fail('unexpected TZX ROM record order')
+        n=int.from_bytes(data[pos+3:pos+5], 'little')
+        sysb.append(data[pos+5:pos+5+n])
+        pos += 5+n
+    return sysb
 
 
 def slot_named(s, name):

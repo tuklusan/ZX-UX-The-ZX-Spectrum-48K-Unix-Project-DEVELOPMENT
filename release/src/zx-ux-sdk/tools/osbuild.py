@@ -3,7 +3,7 @@
 
   build.py SJASMPLUS_PATH
 
-Outputs (in ../build): unix.bin, fs.img, ZX-UX.tzx, ZX-UX.tap
+Outputs (in ../build): unix.bin, fs.img, merged-image.bin (boot TZX via turbo_boot_build)
 """
 import hashlib, json, os, re, struct, subprocess, sys
 from pathlib import Path
@@ -324,29 +324,14 @@ def main():
     if basic_clear - (syms['LOWK'] + len(image)) < 512:
         raise SystemExit('not enough protected BASIC stack above merged image')
     bas = basic_loader(basic_clear)
-    blocks = [
-        (header(0, 'ZX-UX', len(bas), 10, len(bas)), 1000),
-        (tap_block(0xFF, bas), 1000),
-        (header(3, 'ZX-UX', len(image), syms['LOWK'], 32768), 1000),
-        (tap_block(0xFF, image), 2000),
-    ]
-    legacy_bas = legacy_basic_loader()
-    legacy_blocks = [
-        (header(0, 'ZX-UX', len(legacy_bas), 10, len(legacy_bas)), 1000),
-        (tap_block(0xFF, legacy_bas), 1000),
-        (header(3, 'unix', len(kern), KBASE, 32768), 1000),
-        (tap_block(0xFF, kern), 1000),
-        (header(3, 'fs', len(rd0), RD0, 32768), 1000),
-        (tap_block(0xFF, rd0), 1000),
-        # Load lowk just before the BASIC USR call: no following ROM
-        # tape operation may reuse its below-RAMTOP workspace.
-        (header(3, 'lowk', len(low), syms['LOWK'], 32768), 1000),
-        (tap_block(0xFF, low), 2000),
-    ]
-    open(os.path.join(OUT, 'ZX-UX.tzx'), 'wb').write(
-        tzx(legacy_blocks, 'ZX-UX v1 - provisional TZX pending turbo'))
-    open(os.path.join(OUT, 'ZX-UX.tap'), 'wb').write(tap(blocks))
     open(os.path.join(OUT, 'merged-image.bin'), 'wb').write(image)
+    import hashlib as _hashlib, json as _json
+    metadata={'format':'zx-ux-kernel/1','syscall':0x6003,
+              'symbols':{k:int(v) for k,v in syms.items()},
+              'image_sha256':_hashlib.sha256(image).hexdigest(),
+              'kernel_sha256':_hashlib.sha256(kern).hexdigest(),
+              'lowk_sha256':_hashlib.sha256(low).hexdigest()}
+    open(os.path.join(OUT,'kernel.json'),'w').write(_json.dumps(metadata,sort_keys=True))
     print('kernel %d bytes (6000-%04X), user text to %04X, image %d bytes'
           % (syms['kend'] - KBASE, syms['kend'] - 1, syms['utext_end'] - 1, len(kern)))
     print('boot code / zxpack model %04X-%04X, i-nodes %04X-%04X, arena %04X-%04X (%d bytes), '

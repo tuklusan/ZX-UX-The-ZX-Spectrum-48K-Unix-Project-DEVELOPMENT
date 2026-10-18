@@ -25,6 +25,25 @@ int gp_owner[16];
 int gp_edited;
 char gp_filebuf[16];
 
+void gp_rebuild_pie(void);
+
+void gp_new(void)
+{
+    int i;
+    if (!app_confirm_new()) {
+        app_notice_set("NEW CANCELLED");
+        return;
+    }
+    for (i = 0; i < 4; i++) {
+        gp_wins[i] = 0;
+        gp_podiums[i] = 0;
+        gp_poles[i] = 0;
+    }
+    gp_edited = 1;
+    gp_rebuild_pie();
+    app_notice_set("NEW BLANK STATISTICS");
+}
+
 void gp_seed(void)
 {
     gp_wins[0] = 3;
@@ -375,7 +394,7 @@ void gp_render(void)
     gp_team_stats(21, 1, "REN", 2);
     gp_team_stats(21, 33, "WIL", 3);
     print_at(22, 1, "W WINS  P PODIUMS  L POLES");
-    print_at(23, 1, "E EDIT S SAVE L LOAD Q QUIT R REDRAW");
+    print_at(23, 1, "E EDIT N NEW S SAVE L LOAD Q QUIT R REDRAW");
     if (app_notice[0] != 0)
         print_at(19, 35, app_notice);
     yield();
@@ -398,6 +417,10 @@ int main(int argc, char **argv)
             gp_render();
         if (key == 'e') {
             gp_edit();
+            gp_render();
+        }
+        if (key == 'n') {
+            gp_new();
             gp_render();
         }
         if (key == 's') {
