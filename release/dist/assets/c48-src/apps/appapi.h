@@ -144,7 +144,7 @@ static int app_readline(int row, int col,
             out[n] = 0;
             return 1;
         }
-        if (c == 8) {
+        if (c == 8 || c == 12) {
             if (n > 0) {
                 n--;
                 out[n] = 0;
