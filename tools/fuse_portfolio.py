@@ -57,8 +57,17 @@ class Keyboard:
     def key(self, symbol, pause=.20):
         names = {'\n': 'Return', ' ': 'space', '/': 'slash', '&': 'ampersand'}
         name = names.get(symbol, symbol)
-        # Shift+7 is the US layout ampersand. X11 translates other letters.
-        shifted = name == 'ampersand' or symbol.isupper()
+        # Fuse maps Control to Spectrum Symbol Shift. On the Spectrum,
+        # Symbol Shift + 6 types '&'; host Shift + 7 does not.
+        if name == 'ampersand':
+            self.event('Control_L', True)
+            self.event('6', True)
+            time.sleep(pause)
+            self.event('6', False)
+            self.event('Control_L', False)
+            time.sleep(pause)
+            return
+        shifted = symbol.isupper()
         if shifted:
             self.event('Shift_L', True)
         self.event('7' if name == 'ampersand' else ('Return' if name == 'Return' else name.lower()), True)
@@ -161,9 +170,13 @@ def run_case(names, destination, args, config=None):
                 bbox = changed.getbbox()
                 if not bbox:
                     continue
-                # Prefer maximum genuine nonblack picture coverage.
-                data = candidate.convert('L')
-                score = sum(v > 48 for v in data.resize((80, 60)).get_flattened_data())
+                # Judge actual program pixels, not Fuse's coloured border.
+                inner = candidate.crop((32, 24, 288, 216)).convert('L')
+                score = sum(v > 48 for v in inner.resize((80, 60)).get_flattened_data())
+                if len(names) > 1:
+                    # Prefer a legible shell/status row alongside both jobs.
+                    status = inner.crop((0, 160, 256, 192)).resize((80, 12))
+                    score += sum(v > 48 for v in status.get_flattened_data())
                 if score > best_score:
                     best, best_score = candidate, score
             if best is None:

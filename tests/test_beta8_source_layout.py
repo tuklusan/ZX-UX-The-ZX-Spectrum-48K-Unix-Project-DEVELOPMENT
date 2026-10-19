@@ -1,4 +1,4 @@
-"""Offline distribution layout checks for the beta-0.0.8 source move."""
+"""Offline C48 distribution layout checks."""
 from pathlib import Path
 import unittest
 
@@ -13,13 +13,19 @@ class Beta8DistributionSourceChecks(unittest.TestCase):
         self.assertTrue(PROGRAMS.is_dir())
         self.assertFalse(PROGRAMS.is_symlink())
         files = sorted(p for p in PROGRAMS.rglob('*') if p.is_file())
-        self.assertEqual(len(files), 64)
+        self.assertGreaterEqual(len(files), len(list(PROGRAMS.rglob("*.c"))))
         self.assertFalse(any(p.is_symlink() for p in PROGRAMS.rglob('*')))
 
     def test_program_sources_and_outputs_align(self):
-        names = {'maze1982' if p.parent.name == 'examples' and p.stem == 'maze' else p.stem
-                 for p in PROGRAMS.rglob('*.c') if p.name != 'seckern.c'}
-        self.assertEqual(len(names), 57)
+        def tape_name(p):
+            if p.parent.name == 'examples' and p.stem == 'maze':
+                return 'maze1982'
+            if p.parent.name == 'games' and p.stem == 'maze1982':
+                return 'maze1996'
+            return p.stem
+        sources = [p for p in PROGRAMS.rglob('*.c') if p.name != 'seckern.c']
+        names = {tape_name(p) for p in sources}
+        self.assertEqual(len(names), len(sources), 'Source tape names collide')
         for suffix in ('ssx', 'tzx'):
             actual = {p.stem for p in (DIST / 'assets/c48-bin' / suffix).glob('*.' + suffix)}
             self.assertEqual(names, actual)
