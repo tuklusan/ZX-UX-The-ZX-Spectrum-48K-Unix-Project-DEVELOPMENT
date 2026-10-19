@@ -124,7 +124,8 @@ def run_case(names, destination, args, config=None):
             if xvfb.poll() is not None:
                 raise RuntimeError('Xvfb could not start')
             command = [str(args.fuse), '--machine', '48', '--rom-48', str(args.rom),
-                       '--no-sound', '--tape', str(tape), '--auto-load']
+                       '--no-sound', '--speed', str(config.get('fuse_speed', args.speed)),
+                       '--tape', str(tape), '--auto-load']
             fuse = subprocess.Popen(command, env=env, cwd=args.assets,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             time.sleep(2.0)
@@ -155,12 +156,14 @@ def run_case(names, destination, args, config=None):
                 kb.type(command + (' &' if len(names) > 1 else ''))
                 kb.key('\n', pause=.8)
                 time.sleep(2.0)
+            if len(names) == 1 and names[0] == 'invaders':
+                kb.key('m', pause=.5)  # leave the intro for real gameplay
             if len(names) == 1 and names[0] == '3dpaint':
                 time.sleep(2)
                 kb.type('q')
             # Real emulator timing; choose developed frames without filling the
             # gallery with the same boot/login screen.
-            duration = args.multitask_wait if len(names) > 1 else args.wait
+            duration = args.multitask_wait if len(names) > 1 else config.get('fuse_wait', args.wait)
             best = None
             best_score = -1
             for _ in range(max(1, int(duration))):
@@ -177,10 +180,23 @@ def run_case(names, destination, args, config=None):
                     # Prefer a legible shell/status row alongside both jobs.
                     status = inner.crop((0, 160, 256, 192)).resize((80, 12))
                     score += sum(v > 48 for v in status.get_flattened_data())
+                if names == ('kaleido',):
+                    pixels = candidate.crop((32, 24, 288, 216)).convert('RGB').resize((80, 60))
+                    score += sum((max(p) - min(p)) > 60 for p in pixels.get_flattened_data())
                 if score > best_score:
                     best, best_score = candidate, score
+                if config.get('first_fractal'):
+                    # Spectrum PLOT draws from bottom to top; row 8 only
+                    # becomes active when the first 48-row scan is complete.
+                    top = candidate.crop((32, 32, 288, 36)).convert('RGB')
+                    if sum(max(v)>65 for v in top.get_flattened_data()) >= 12:
+                        best = candidate
+                        print('Fuse', names[0], 'first fractal completed', flush=True)
+                        break
             if best is None:
                 raise RuntimeError('screen unchanged from ZX-UX login')
+            if config.get('first_fractal') and not any(max(v)>65 for v in best.crop((32,32,288,36)).convert('RGB').get_flattened_data()):
+                raise RuntimeError('first fractal incomplete')
             destination.parent.mkdir(parents=True, exist_ok=True)
             best.save(destination)
             print('Fuse', '+'.join(names), '->', destination.relative_to(ROOT), flush=True)
@@ -207,6 +223,7 @@ def main():
     p.add_argument('--display', type=int, default=98)
     p.add_argument('--boot-wait', type=int, default=60)
     p.add_argument('--wait', type=int, default=4)
+    p.add_argument('--speed', type=int, default=100)
     p.add_argument('--multitask-wait', type=int, default=60)
     a = p.parse_args()
     a.fuse = a.fuse.resolve()

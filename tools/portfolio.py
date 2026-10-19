@@ -20,6 +20,20 @@ SOURCES = DIST / 'assets/c48-src'
 BIN = DIST / 'assets/c48-bin/ssx'
 OUT = DIST / 'screenshots/rvm'
 PAIRS = (('hanoi', 'queens8'), ('mobius', 'torus'))
+# Captures run graphics to completion rather than using the test suite's
+# short two-frame animation argument. Other programs retain test inputs.
+CAPTURE = {
+    'galaxy': {'args': [], 'frames': 3200, 'fuse_wait': 45, 'fuse_speed': 300},
+    'goblet': {'args': [], 'frames': 3200, 'fuse_wait': 45, 'fuse_speed': 300},
+    'julia': {'args': [], 'frames': 30000, 'fuse_wait': 270, 'fuse_speed': 300, 'first_fractal': True},
+    'mandel': {'args': [], 'frames': 30000, 'fuse_wait': 270, 'fuse_speed': 300, 'first_fractal': True},
+    'mobius': {'args': [], 'frames': 4200, 'fuse_wait': 55, 'fuse_speed': 300},
+    'torus': {'args': [], 'frames': 5500, 'fuse_wait': 55, 'fuse_speed': 300},
+    'kaleido': {'args': [], 'frames': 3600, 'fuse_wait': 20},
+    'ball': {'args': [], 'frames': 1100, 'fuse_wait': 12},
+    'invaders': {'args': [], 'keys': 'm', 'keygap': 160,
+                 'frames': 2200, 'fuse_wait': 15},
+}
 
 
 def captures():
@@ -37,7 +51,7 @@ def captures():
                 else source.stem)
         if name not in scenarios:
             scenarios[name] = {'dir': source.parent.name}
-        yield name, source.parent.name, scenarios[name]
+        yield name, source.parent.name, {**scenarios[name], **CAPTURE.get(name, {})}
 
 
 def run_one(name, category, config, max_frames):
@@ -51,11 +65,21 @@ def run_one(name, category, config, max_frames):
     opt.keygap = config.get('keygap', 100)
     opt.headless = True
     # Long-running games are sampled, not run to their final event.
-    budget = min(max_frames, int(config.get('zxux_frames', max_frames)))
+    budget = int(config.get('frames', min(max_frames, int(config.get('zxux_frames', max_frames)))))
     runner = rvm.Runner(opt)
     runner.start()
-    for _ in range(budget + 3000):
+    first_fractal = bool(config.get('first_fractal', False))
+    completed = False
+    for frame_index in range(budget + 3000):
         runner.frame()
+        if first_fractal and runner.fg.started is not None and frame_index % 25 == 0:
+            # The 48th scanline of the first fractal plots at screen y=8.
+            # Test the *raw Spectrum bitmap*, including ink-black pixels.
+            image = runner.session.m.screen()
+            if sum(bool(v) for v in image[32:64]) >= 10:
+                runner.why = 'first fractal completed'
+                completed = True
+                break
         reason = runner.check(limit=budget)
         if reason:
             runner.why = reason
@@ -64,6 +88,8 @@ def run_one(name, category, config, max_frames):
             raise RuntimeError(name + ': ZX-UX did not start application')
     if runner.fg.started is None:
         raise RuntimeError(name + ': loader never started application')
+    if first_fractal and not completed:
+        raise RuntimeError(name + ': first fractal was not completed')
     img, border = runner.picture()
     if len(img) != 6912:
         raise RuntimeError(name + ': invalid ZX Spectrum screen')

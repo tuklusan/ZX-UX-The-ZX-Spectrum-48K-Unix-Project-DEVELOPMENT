@@ -27,5 +27,5 @@ A failed build, test, emulator launch or missing screenshot makes the release
 command fail. It does not tag, publish, upload, or change Git history.
 
 Standalone TAP files, historical comparison requirements, duplicate release
-wrappers, checksum manifests, and external tool pinning are not part of this
+wrappers, checksum manifests, and external tool version locking are not part of this
 release workflow.

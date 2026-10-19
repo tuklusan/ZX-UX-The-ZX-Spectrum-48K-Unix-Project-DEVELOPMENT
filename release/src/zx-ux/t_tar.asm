@@ -622,7 +622,12 @@ tpget:  ld a,(TP_LB)             ; t and no archive name: the whole tape
 .tv:    call tpls
 .dr:    call tpdrain
         jp .h
-.x:     call tpext
+.x:     ld hl,s_tpextract
+        call puts
+        ld hl,TP_P            ; exact selected archive member name
+        call puts
+        call crlf
+        call tpext
         jp .h
 
 ; tpcheck: reject orphan F/E and mixed 03h/05h archives.
@@ -908,6 +913,7 @@ tpadopt:
 .xj1_17:
         jp sc_write
 
+s_tpextract: db "Extracting: ",0
 s_taru: db "tar [ctx][v]f /dev/cassette/name [file...]",0
 s_tap:  db "/dev/tap",0
 s_cas:  db "/dev/cassette",0

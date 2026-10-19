@@ -28,6 +28,9 @@ ldx_m:  pop hl
         call argn
         call basenm
         ld (LX_NM),hl
+        ld a,(hl)              ; a bare /dev/cassette/ has no program
+        or a                    ; unlike the explicit wildcard "*"
+        jp z,.nameerr           ; do not read the tape
         ld hl,s_tap
         ld de,0
         call sc_open
@@ -97,6 +100,19 @@ ldx_m:  pop hl
         ld (de),a
 .got:   ld hl,(LX_FD)
         call sc_close
+        ; Print the accepted header name before the executable body is loaded.
+        ; The screen belongs to the loader until _ssxload succeeds.
+        ld hl,s_lxload
+        call puts
+        ld hl,LX_H+1
+        ld b,10
+.lprint: ld a,(hl)
+        cp ' '
+        jr z,.ldone
+        call putc
+        inc hl
+        djnz .lprint
+.ldone: call crlf
         ; memory: the program's, and its arguments (strings and vector)
         ld hl,(LX_H+13)
         ld a,(U_ARGC)
@@ -128,6 +144,10 @@ ldx_m:  pop hl
         ld hl,(U_ARGV)          ; and our arguments, for the program
         ld a,_ssxload
         call SYS                ; returns only if it was refused
+        jr .ioe                ; preserve the failed-load error path
+.nameerr:
+        ld de,s_lxname
+        jr .err
 .ioe:   ld de,s_lxio
 .err:   xor a
         call argn
@@ -135,6 +155,8 @@ ldx_m:  pop hl
 .xj0_1:
         ld hl,1
         jp exitc
+s_lxload: db "Loading: /dev/cassette/",0
+s_lxname: db "missing cassette program name",0
 s_lxio: db "tape error",0
 s_lxmem: db "not enough memory",0
 e_ldx:
