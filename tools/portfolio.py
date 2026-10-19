@@ -6,7 +6,10 @@ No C48 programs are recompiled. The two multitasking scenes are included.
 """
 import argparse
 import json
+import os
 import sys
+from html import escape
+from urllib.parse import quote
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +17,7 @@ DIST = ROOT / 'release/dist'
 sys.path[:0] = [str(DIST / 'sdk/bin/py'), str(ROOT / 'tools')]
 import rvm
 import zxscreen
+import zxux
 from gallery import write_gallery
 
 SOURCES = DIST / 'assets/c48-src'
@@ -24,15 +28,22 @@ PAIRS = (('hanoi', 'queens8'), ('mobius', 'torus'))
 # short two-frame animation argument. Other programs retain test inputs.
 CAPTURE = {
     'galaxy': {'args': [], 'frames': 3200, 'fuse_wait': 45, 'fuse_speed': 300},
-    'goblet': {'args': [], 'frames': 3200, 'fuse_wait': 45, 'fuse_speed': 300},
+    # Render exactly one full scene and capture its real exit screen.
+    # A running multi-scene demo can be caught halfway through clearing/redrawing.
+    'goblet': {'args': ['1'], 'frames': 4400, 'require_exit': True},
     'julia': {'args': [], 'frames': 30000, 'fuse_wait': 270, 'fuse_speed': 300, 'first_fractal': True},
     'mandel': {'args': [], 'frames': 30000, 'fuse_wait': 270, 'fuse_speed': 300, 'first_fractal': True},
-    'mobius': {'args': [], 'frames': 4200, 'fuse_wait': 55, 'fuse_speed': 300},
+    'mobius': {'args': ['1'], 'frames': 4400, 'require_exit': True},
     'torus': {'args': [], 'frames': 5500, 'fuse_wait': 55, 'fuse_speed': 300},
     'kaleido': {'args': [], 'frames': 3600, 'fuse_wait': 20},
     'ball': {'args': [], 'frames': 1100, 'fuse_wait': 12},
     'invaders': {'args': [], 'keys': 'm', 'keygap': 160,
                  'frames': 2200, 'fuse_wait': 15},
+    # Override tests/sdk/runs.json quiz:play; do not answer all ten questions.
+    'quiz': {'keys': '', 'frames': 1200, 'expect_text': 'Question:'},
+    # The intro flushes keys. Press Q only after the displayed intro is idle.
+    '3dpaint': {'keys': '', 'frames': 3200, 'start_on_idle': 'q',
+                'expect_gameplay': True},
 }
 
 
@@ -70,8 +81,23 @@ def run_one(name, category, config, max_frames):
     runner.start()
     first_fractal = bool(config.get('first_fractal', False))
     completed = False
+    intro_previous = None
+    intro_idle_frames = 0
+    intro_started = False
     for frame_index in range(budget + 3000):
         runner.frame()
+        if config.get('start_on_idle') and not intro_started and runner.fg.started is not None:
+            # Wait for an unchanged, nonblank intro; no hard-coded boot frame.
+            # Inject keys only after the game's own input flush has finished.
+            screen, _ = runner.picture()
+            if screen == intro_previous and sum(bool(b) for b in screen[:6144]) > 160:
+                intro_idle_frames += 1
+            else:
+                intro_idle_frames = 0
+            intro_previous = screen
+            if intro_idle_frames >= 35:
+                runner.session.kb.add(zxux.parse_keys(config['start_on_idle']))
+                intro_started = True
         if first_fractal and runner.fg.started is not None and frame_index % 25 == 0:
             # The 48th scanline of the first fractal plots at screen y=8.
             # Test the *raw Spectrum bitmap*, including ink-black pixels.
@@ -90,9 +116,19 @@ def run_one(name, category, config, max_frames):
         raise RuntimeError(name + ': loader never started application')
     if first_fractal and not completed:
         raise RuntimeError(name + ': first fractal was not completed')
+    if config.get('require_exit') and runner.why != 'exit':
+        raise RuntimeError(name + ': complete scene was not reached (' + str(runner.why) + ')')
+    if config.get('start_on_idle') and not intro_started:
+        raise RuntimeError(name + ': intro was not ready for a scripted key')
     img, border = runner.picture()
     if len(img) != 6912:
         raise RuntimeError(name + ': invalid ZX Spectrum screen')
+    if config.get('expect_text') and config['expect_text'] not in zxscreen.screen_text(img):
+        raise RuntimeError(name + ': expected screen text missing: ' + config['expect_text'])
+    if config.get('expect_gameplay'):
+        # Gameplay tiles use colored paper; the instruction screen does not.
+        if not any(((a >> 3) & 7) in (3, 4, 5, 6) for a in img[6144:]):
+            raise RuntimeError(name + ': still on intro, not the game board')
     dest = OUT / category / (name + '.png')
     dest.parent.mkdir(parents=True, exist_ok=True)
     rvm.write_png(img, str(dest), border)
@@ -132,6 +168,37 @@ def run_pair(names, target=3000):
     print('RVM multitask', '+'.join(names), 'frame', selected[2], flush=True)
 
 
+def add_source_links():
+    """Write relative C source links into *RVM's* freshly built gallery only.
+
+    Recomputed every run: copying release/dist to another repository keeps
+    the links working without embedding a GitHub owner, branch, or SHA.
+    """
+    index = OUT / 'index.html'
+    lines = index.read_text(encoding='utf-8').splitlines(keepends=True)
+    sources = {}
+    for path in sorted(SOURCES.glob('*/*.c')):
+        name = ('maze1982' if path.parent.name == 'examples' and path.stem == 'maze'
+                else 'maze1996' if path.parent.name == 'games' and path.stem == 'maze1982'
+                else path.stem)
+        sources[f'{path.parent.name}/{name}.png'] = [path]
+    for a, b in PAIRS:
+        sources[f'multitask/{a}-{b}-shell.png'] = [SOURCES / 'demos' / (n + '.c') for n in (a, b)]
+    for i, line in enumerate(lines):
+        for png, paths in sources.items():
+            if f'<a href="{png}"' not in line:
+                continue
+            links = []
+            for source in paths:
+                if source.is_file():
+                    href = quote(os.path.relpath(source, OUT).replace(os.sep, '/'), safe='/')
+                    links.append(f'<a href="{escape(href, quote=True)}">C source: {escape(source.name)}</a>')
+            if links:
+                lines[i] = line.replace('</figcaption>', ' — ' + ', '.join(links) + '</figcaption>')
+            break
+    index.write_text(''.join(lines), encoding='utf-8')
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--only', default='')
@@ -160,6 +227,7 @@ def main():
     if only is not None and not only <= found | {'-'.join(p) for p in PAIRS}:
         failures.append('unknown program(s): ' + ','.join(sorted(only-found-{'-'.join(p) for p in PAIRS})))
     count = write_gallery(OUT, 'RVM — ZX-UX kernel')
+    add_source_links()
     if count != 63:
         failures.append('expected 63 RVM images, got %d' % count)
     print('RVM captured', count, 'images; failures:', len(failures))
