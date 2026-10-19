@@ -41,6 +41,7 @@ def main():
                     'test_turbo_segments_beta7.py'):
         run(py, '-B', '-m', 'unittest', 'discover', '-s', 'tests', '-p', pattern)
     run(py, '-B', 'tests/test_boot_beta7.py')
+    run(py, '-B', 'tests/test_beta010_release.py')
     run(py, '-B', 'tools/portfolio.py')
     cmd = [py, '-B', 'tools/fuse_portfolio.py', '--fuse', args.fuse,
            '--assets', args.fuse_assets]

@@ -160,6 +160,8 @@ def main():
     if only is not None and not only <= found | {'-'.join(p) for p in PAIRS}:
         failures.append('unknown program(s): ' + ','.join(sorted(only-found-{'-'.join(p) for p in PAIRS})))
     count = write_gallery(OUT, 'RVM — ZX-UX kernel')
+    if count != 63:
+        failures.append('expected 63 RVM images, got %d' % count)
     print('RVM captured', count, 'images; failures:', len(failures))
     return 1 if failures else 0
 

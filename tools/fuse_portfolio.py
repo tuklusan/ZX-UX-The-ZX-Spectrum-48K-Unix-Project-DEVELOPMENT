@@ -6,6 +6,7 @@ via the kernel's /dev/cassette path. No simulated system calls or image
 substitutions. Xvfb, Fuse SDL and Pillow must be installed externally.
 """
 import argparse
+import concurrent.futures
 import ctypes
 import os
 import re
@@ -213,6 +214,15 @@ def run_case(names, destination, args, config=None):
                         proc.wait(timeout=3)
 
 
+def _capture_task(task):
+    index, names, output, args, config = task
+    local = argparse.Namespace(**vars(args))
+    # Each process owns its own X display, SDL window and real Spectrum.
+    local.display = args.display + 1 + index
+    run_case(names, output, local, config)
+    return '+'.join(names)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--fuse', type=Path, required=True)
@@ -221,6 +231,7 @@ def main():
     p.add_argument('--libdir', type=Path, default=None)
     p.add_argument('--only', default='')
     p.add_argument('--display', type=int, default=98)
+    p.add_argument('--jobs', type=int, default=6)
     p.add_argument('--boot-wait', type=int, default=60)
     p.add_argument('--wait', type=int, default=4)
     p.add_argument('--speed', type=int, default=100)
@@ -232,29 +243,36 @@ def main():
     if a.libdir:
         a.libdir = a.libdir.resolve()
     only = set(a.only.split(',')) if a.only else None
-    errors = []
+    if not 1 <= a.jobs <= 16:
+        p.error('--jobs must be from 1 to 16')
+    tasks = []
     choices = list(captures())
     for name, category, config in choices:
         if only is not None and name not in only:
             continue
-        try:
-            run_case((name,), OUT / category / (name + '.png'), a, config)
-        except Exception as exc:
-            print('Fuse FAIL:', name, exc, file=sys.stderr)
-            errors.append(name)
+        tasks.append(((name,), OUT / category / (name + '.png'), config))
     for pair in PAIRS:
         name = '-'.join(pair)
         if only is None or name in only:
+            tasks.append((pair, OUT / 'multitask' / (name + '-shell.png'), {}))
+    errors = []
+    with concurrent.futures.ProcessPoolExecutor(max_workers=a.jobs) as pool:
+        pending = {pool.submit(_capture_task, (i, names, dest, a, config)): names
+                   for i, (names, dest, config) in enumerate(tasks)}
+        for future in concurrent.futures.as_completed(pending):
+            names = pending[future]
             try:
-                run_case(pair, OUT / 'multitask' / (name + '-shell.png'), a)
+                future.result()
             except Exception as exc:
-                print('Fuse FAIL:', name, exc, file=sys.stderr)
+                name = '+'.join(names)
+                print('Fuse FAIL:', name, exc, file=sys.stderr, flush=True)
                 errors.append(name)
     if only is not None:
         unknown = only - {n for n, _, _ in choices} - {'-'.join(p) for p in PAIRS}
-        if unknown:
-            errors += sorted(unknown)
+        errors += sorted(unknown)
     count = write_gallery(OUT, 'Fuse — ZX Spectrum 48K')
+    if count != 63:
+        errors.append('expected 63 Fuse images, got %d' % count)
     print('Fuse captured', count, 'images; failures:', len(errors))
     return 1 if errors else 0
 
