@@ -10,7 +10,7 @@ int main(void)
     char *p;
     char *q;
     unsigned char *u;
-    int r;
+    int r, outx;
     int passed;
     cls();
     passed = 0;
@@ -27,7 +27,9 @@ int main(void)
     if (p != 0) free(p);
 
     print_at(5, 0, "ATTEMPT: point outside 256x192 screen");
-    r = point(256, 0);
+    /* Deliberately dynamic: exercise the kernel-side guard at runtime. */
+    outx = 256;
+    r = point(outx, 0);
     if (r == 1) {
         print_at(6, 0, "MITIGATED: point returned E_INVAL");
         passed++;
@@ -37,7 +39,8 @@ int main(void)
 
     print_at(8, 0, "ATTEMPT: invalid print_at with NULL text");
     q = 0;
-    r = print_at(24, 0, q);
+    outx = 24;
+    r = print_at(outx, 0, q);
     if (r == 1) {
         print_at(9, 0, "MITIGATED: coordinates checked first");
         passed++;
@@ -47,7 +50,8 @@ int main(void)
 
     print_at(11, 0, "ATTEMPT: invalid UDG slot with NULL data");
     u = 0;
-    r = udg_define(32, u);
+    outx = 32;
+    r = udg_define(outx, u);
     if (r == 1) {
         print_at(12, 0, "MITIGATED: UDG slot checked first");
         passed++;

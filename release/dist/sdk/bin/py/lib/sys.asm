@@ -1,7 +1,7 @@
 ; rcc runtime: process and keyboard services                (ZX-UX SDK)
 SYS     equ 6003h
         section text
-        global _getchar,_ticks,_yield,_sleep,_exit,_getpid
+        global _getchar,_ticks,_yield,_sleep,_exit,_getpid,_kbdmatrix,_kbdpoll
 ; int getchar(void): next key (raw keyboard), -1 at end of input
 _getchar:
         ld a,(@israw)           ; the first time: keyboard raw, no echo
@@ -21,6 +21,40 @@ _getchar:
         ret
 .e:     ld hl,-1
         ret
+; 3DPAINT direct Q/Z/I/P/X matrix poll: 0 means no gameplay key.
+; This samples the Spectrum keyboard port without blocking ZX-UX.
+_kbdmatrix:
+        ld bc,0FBFEh           ; Q W E R T
+        in a,(c)
+        bit 0,a
+        jr z,.q
+        ld bc,0FEFEh           ; CAPS Z X C V
+        in a,(c)
+        bit 1,a
+        jr z,.z
+        bit 2,a
+        jr z,.x
+        ld bc,0DFFEh           ; Y U I O P
+        in a,(c)
+        bit 2,a
+        jr z,.i
+        bit 0,a
+        jr z,.p
+        ld hl,0
+        ret
+.q:     ld hl,'q'
+        ret
+.z:     ld hl,'z'
+        ret
+.x:     ld hl,'x'
+        ret
+.i:     ld hl,'i'
+        ret
+.p:     ld hl,'p'
+        ret
+; The same non-blocking matrix scan also serves the game menu/editor.
+_kbdpoll:
+        jp _kbdmatrix
 ; unsigned ticks(void): 50 Hz frame counter
 _ticks: ld a,38
         jp SYS

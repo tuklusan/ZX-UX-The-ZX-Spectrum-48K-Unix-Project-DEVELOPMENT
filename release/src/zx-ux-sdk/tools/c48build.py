@@ -13,8 +13,15 @@ def build(stage_sdk: pathlib.Path, programs: pathlib.Path, dest: pathlib.Path):
     ssxdir.mkdir(parents=True, exist_ok=True)
     tzxdir.mkdir(parents=True, exist_ok=True)
     # Source tree determines the selection; two intentional exceptions below.
-    choices = {('maze1982' if p.parent.name == 'examples' and p.stem == 'maze' else p.stem): (p, [])
-               for p in programs.rglob('*.c') if p.name != 'seckern.c'}
+    def tape_name(p):
+        if p.parent.name == 'examples' and p.stem == 'maze':
+            return 'maze1982'
+        if p.parent.name == 'games' and p.stem == 'maze1982':
+            return 'maze1996'  # distinct Mark Green game, not the C48 example
+        return p.stem
+
+    choices = {tape_name(p): (p, []) for p in programs.rglob('*.c')
+               if p.name != 'seckern.c'}
     # The regular program names are also the memory-fitted background jobs.
     # Do not ship separate -mt binaries or tapes for the same C48 source.
     for name, flags in (

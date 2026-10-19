@@ -819,6 +819,29 @@ class Parser:
         if len(args) != len(pts):
             raise CError('%s takes %d arguments' % (s.name, len(pts)), where, 'type')
         args = [self.convert(a, pt, 'argument', where) for a, pt in zip(args, pts)]
+        # ZX-UX screen/terminal calls have fixed numeric argument bounds.
+        # Reject only values proven constant after folding; runtime checks
+        # still handle variables and expressions not known at compile time.
+        if not s.defined:
+            bounds = {
+                'ink': ((0, 7),), 'paper': ((0, 7),),
+                'border': ((0, 7),), 'bright': ((0, 1),),
+                'flash': ((0, 1),), 'inverse': ((0, 1),),
+                'over': ((0, 1),), 'screen': ((0, 1),),
+                'print_at': ((0, 23), (0, 63)),
+                'plot': ((0, 255), (0, 175)),
+                'point': ((0, 255), (0, 175)),
+                'udg_define': ((0, 31),),
+                'udg_get': ((0, 31),),
+                'udg_clear': ((0, 31),),
+                'udg_draw': ((0, 31), (0, 23), (0, 31)),
+                'udg_draw_2x2': ((0, 28), (0, 22), (0, 30)),
+            }.get(s.name, ())
+            for i, ((low, high), arg) in enumerate(zip(bounds, args), 1):
+                if arg.op == 'num' and not low <= arg.v <= high:
+                    raise CError('%s argument %d constant outside %d..%d' %
+                                 (s.name, i, low, high), arg.where or where,
+                                 'constant-expression')
         s.used = True
         if self.fn:
             self.fn.calls[s] = None

@@ -7,9 +7,8 @@ to eight characters. This is a single-user system with no password.
 
 ## Boot and use
 
-The system boot tapes are in `release/dist/zx-ux/`. Load `ZX-UX.tap` or
-`ZX-UX.tzx` through the Spectrum's normal cassette loader. The TAP contains one standard CODE block; the turbo TZX boots the same
-system image through a separate fast loader.
+The system boot tape is `release/dist/zx-ux/ZX-UX.tzx`. Load it with the
+Spectrum's normal cassette loader. Standalone TAP output is retired.
 
 Commands include `ls`, `cat`, `ps`, `top`, `vi`, `tar`, `zxpack`, and `more`.
 The shell also handles `cd`, `kill`, `exec`, `sh`, `login`, `exit`, and
@@ -18,27 +17,23 @@ background tasks and `kill` to stop them. A new login starts after logout.
 
 ## Rebuild offline
 
-The only human-facing build command is:
+To build the kernel, SDK, tapes, and the two fresh screenshot galleries, run:
 
 ```sh
-python3 release/build/build.py
+python3 tools/release.py
 ```
 
-This needs Python 3.11+ and a locally installed or otherwise provided
-SJASMPlus 1.24.0 assembler (checked version). If it is not in your `PATH`,
-select it explicitly:
+This needs Python 3, SJASMPlus, Fuse SDL, Xvfb and Pillow. If the assembler
+or Fuse is not in your `PATH`, give its path explicitly:
 
 ```sh
-python3 release/build/build.py --sjasm /path/to/sjasmplus
+python3 tools/release.py --sjasm /path/to/sjasmplus --fuse /path/to/fuse-sdl --fuse-assets /path/to/fuse/assets
 ```
 
 No network access, Git history, or checked-out sibling directory is used by
 the builder. The OS and SDK inputs are under `release/src/`; the C48 program inputs
-are under `release/dist/assets/c48-src/`. Current intermediate files
-under `release/build/tmp/`, and the complete finished candidate under
-`release/dist/`. An unsuccessful build leaves the previous `dist/` unchanged.
-The generated `release/manifest.json` records provisional status without
-hashes. It is not shipped to users.
+are under `release/dist/assets/c48-src/`. Build intermediate files live under `release/build/`, and the complete
+distribution is under `release/dist/`. An unsuccessful build leaves the previous `dist/` unchanged.
 
 Source layout: `release/src/zx-ux/` holds the OS and its ROM; the independent
 host compiler, assembler, linker, cassette utilities and VM are under
