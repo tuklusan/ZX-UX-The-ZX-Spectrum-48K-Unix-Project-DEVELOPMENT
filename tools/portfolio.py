@@ -37,14 +37,40 @@ CAPTURE = {
     'torus': {'args': [], 'frames': 5500, 'fuse_wait': 55, 'fuse_speed': 300},
     'kaleido': {'args': [], 'frames': 3600, 'fuse_wait': 20},
     'ball': {'args': [], 'frames': 1100, 'fuse_wait': 12},
+    # Capture live gameplay while shields are still visible; waiting until the
+    # game has nearly finished can legitimately produce a monochrome screen.
     'invaders': {'args': [], 'keys': 'm', 'keygap': 160,
-                 'frames': 2200, 'fuse_wait': 15},
+                 'frames': 900, 'fuse_wait': 15},
     # Override tests/sdk/runs.json quiz:play; do not answer all ten questions.
     'quiz': {'keys': '', 'frames': 1200, 'expect_text': 'Question:'},
     # The intro flushes keys. Press Q only after the displayed intro is idle.
     '3dpaint': {'keys': '', 'frames': 3200, 'start_on_idle': 'q',
                 'expect_gameplay': True},
 }
+
+
+def invaders_live_score(scr):
+    """Prefer live gameplay with green shields and a visible alien formation."""
+    rows = zxscreen.rgb_rows(scr)
+    green = 0
+    red = 0
+    black = 0
+    for y in range(56, 184):
+        row = rows[y]
+        for x in range(56, 264):
+            i = x * 3
+            r, g, b = row[i], row[i + 1], row[i + 2]
+            if g > 120 and g > r + 40 and g > b + 40:
+                green += 1
+            elif r > 120 and r > g + 40 and r > b + 40:
+                red += 1
+            elif y < 150 and r < 32 and g < 32 and b < 32:
+                black += 1
+    # Ignore boot/blank/monochrome frames; live gameplay with intact shields
+    # has a conspicuous green pixel population.
+    if green < 1000:
+        return 0
+    return green * 8 + red * 4 + black
 
 
 def captures():
@@ -84,8 +110,16 @@ def run_one(name, category, config, max_frames):
     intro_previous = None
     intro_idle_frames = 0
     intro_started = False
+    live_capture = None
+    live_score = -1
     for frame_index in range(budget + 3000):
         runner.frame()
+        if name == 'invaders' and runner.fg.started is not None and frame_index % 5 == 0:
+            candidate, candidate_border = runner.picture()
+            score = invaders_live_score(candidate)
+            if score > live_score:
+                live_capture = (candidate, candidate_border)
+                live_score = score
         if config.get('start_on_idle') and not intro_started and runner.fg.started is not None:
             # Wait for an unchanged, nonblank intro; no hard-coded boot frame.
             # Inject keys only after the game's own input flush has finished.
@@ -120,7 +154,10 @@ def run_one(name, category, config, max_frames):
         raise RuntimeError(name + ': complete scene was not reached (' + str(runner.why) + ')')
     if config.get('start_on_idle') and not intro_started:
         raise RuntimeError(name + ': intro was not ready for a scripted key')
-    img, border = runner.picture()
+    if name == 'invaders' and live_capture is not None and live_score > 0:
+        img, border = live_capture
+    else:
+        img, border = runner.picture()
     if len(img) != 6912:
         raise RuntimeError(name + ': invalid ZX Spectrum screen')
     if config.get('expect_text') and config['expect_text'] not in zxscreen.screen_text(img):
