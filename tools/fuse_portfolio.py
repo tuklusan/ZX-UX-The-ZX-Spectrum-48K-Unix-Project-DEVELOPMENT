@@ -15,6 +15,8 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from html import escape
+from urllib.parse import quote
 from PIL import ImageGrab, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,10 +24,35 @@ sys.path[:0] = [str(ROOT / 'tests'), str(ROOT / 'release/dist/sdk/bin/py'), str(
 from fuse_boot import (SCREEN_WIDTH, SCREEN_HEIGHT, SPECTRUM_X, SPECTRUM_Y,
                        zxux_login_match, send_rom_load)
 from gallery import write_gallery
-from portfolio import captures, BIN, DIST, PAIRS
+from portfolio import captures, BIN, DIST, PAIRS, SOURCES
 import rtap
 
 OUT = DIST / 'screenshots/fuse'
+
+# Surgical Fuse-only overrides for screenshots that were being caught on
+# their greyed exit screens or with the wrong timing. The rest of the
+# release gallery stays on the established behaviour.
+FUSE_CAPTURE = {
+    'dizzy4k': {'args': ['24'], 'post_command_wait': .2, 'capture_delay': 4.5,
+                'fuse_wait': .7, 'sample_step': .10, 'prefer_color': True,
+                'fuse_speed': 300},
+    'firework': {'args': [], 'post_command_wait': .2, 'capture_delay': .2,
+                 'fuse_wait': 6.0, 'sample_step': .10, 'prefer_color': True},
+    'plasma': {'args': [], 'post_command_wait': .2, 'capture_delay': .2,
+               'fuse_wait': 4.0, 'sample_step': .10, 'prefer_color': True},
+    'sprites': {'args': [], 'post_command_wait': .2, 'capture_delay': .2,
+                'fuse_wait': 5.0, 'sample_step': .10, 'prefer_color': True},
+    'tunnel': {'args': [], 'post_command_wait': .2, 'capture_delay': .2,
+               'fuse_wait': 4.0, 'sample_step': .10, 'prefer_color': True},
+    'warp': {'args': [], 'post_command_wait': .2, 'capture_delay': .2,
+             'fuse_wait': 5.0, 'sample_step': .10, 'prefer_color': True},
+    'argv': {'post_command_wait': .0, 'capture_delay': .0,
+             'fuse_wait': .7, 'sample_step': .05, 'prefer_color': True,
+             'fuse_speed': 300},
+    'colors': {'post_command_wait': .0, 'capture_delay': .0,
+               'fuse_wait': 4.0, 'sample_step': .05, 'prefer_color': True,
+               'fuse_speed': 100, 'enter_pause': .20},
+}
 
 
 class Keyboard:
@@ -155,8 +182,8 @@ def run_case(names, destination, args, config=None):
                 values = [] if len(names) > 1 or name == 'hanoi' else config.get('args', [])
                 command = '/dev/cassette/' + name + ''.join(' ' + str(v) for v in values)
                 kb.type(command + (' &' if len(names) > 1 else ''))
-                kb.key('\n', pause=.8)
-                time.sleep(2.0)
+                kb.key('\n', pause=config.get('enter_pause', .8))
+                time.sleep(config.get('post_command_wait', 2.0))
             if len(names) == 1 and names[0] == 'invaders':
                 kb.key('m', pause=.5)  # leave the intro for real gameplay
             if len(names) == 1 and names[0] == '3dpaint':
@@ -164,11 +191,16 @@ def run_case(names, destination, args, config=None):
                 kb.type('q')
             # Real emulator timing; choose developed frames without filling the
             # gallery with the same boot/login screen.
-            duration = args.multitask_wait if len(names) > 1 else config.get('fuse_wait', args.wait)
+            duration = args.multitask_wait if len(names) > 1 else float(config.get('fuse_wait', args.wait))
+            sample_step = float(config.get('sample_step', 1.0))
+            capture_delay = float(config.get('capture_delay', 0.0))
+            if capture_delay > 0:
+                time.sleep(capture_delay)
+            loops = max(1, int(duration / sample_step + 0.999))
             best = None
             best_score = -1
-            for _ in range(max(1, int(duration))):
-                time.sleep(1)
+            for _ in range(loops):
+                time.sleep(sample_step)
                 candidate = screenshot(display)
                 changed = ImageChops.difference(candidate.convert('RGB'), login.convert('RGB'))
                 bbox = changed.getbbox()
@@ -177,6 +209,15 @@ def run_case(names, destination, args, config=None):
                 # Judge actual program pixels, not Fuse's coloured border.
                 inner = candidate.crop((32, 24, 288, 216)).convert('L')
                 score = sum(v > 48 for v in inner.resize((80, 60)).get_flattened_data())
+                if config.get('prefer_color'):
+                    pixels = candidate.crop((32, 24, 288, 216)).convert('RGB').resize((96, 72))
+                    color_score = 0
+                    for px in pixels.getdata():
+                        spread = max(px) - min(px)
+                        bright = max(px)
+                        if spread > 26 and bright > 40:
+                            color_score += spread + bright
+                    score += color_score * 3
                 if len(names) > 1:
                     # Prefer a legible shell/status row alongside both jobs.
                     status = inner.crop((0, 160, 256, 192)).resize((80, 12))
@@ -212,6 +253,33 @@ def run_case(names, destination, args, config=None):
                     except subprocess.TimeoutExpired:
                         proc.kill()
                         proc.wait(timeout=3)
+
+
+def add_source_links():
+    """Add portable relative C source links to the Fuse gallery."""
+    index = OUT / 'index.html'
+    lines = index.read_text(encoding='utf-8').splitlines(keepends=True)
+    sources = {}
+    for path in sorted(SOURCES.glob('*/*.c')):
+        name = ('maze1982' if path.parent.name == 'examples' and path.stem == 'maze'
+                else 'maze1996' if path.parent.name == 'games' and path.stem == 'maze1982'
+                else path.stem)
+        sources[f'{path.parent.name}/{name}.png'] = [path]
+    for a, b in PAIRS:
+        sources[f'multitask/{a}-{b}-shell.png'] = [SOURCES / 'demos' / (n + '.c') for n in (a, b)]
+    for i, line in enumerate(lines):
+        for png, paths in sources.items():
+            if f'<a href="{png}"' not in line:
+                continue
+            links = []
+            for source in paths:
+                if source.is_file():
+                    href = quote(os.path.relpath(source, OUT).replace(os.sep, '/'), safe='/')
+                    links.append(f'<a href="{escape(href, quote=True)}">C source: {escape(source.name)}</a>')
+            if links:
+                lines[i] = line.replace('</figcaption>', ' — ' + ', '.join(links) + '</figcaption>')
+            break
+    index.write_text(''.join(lines), encoding='utf-8')
 
 
 def _capture_task(task):
@@ -250,7 +318,7 @@ def main():
     for name, category, config in choices:
         if only is not None and name not in only:
             continue
-        tasks.append(((name,), OUT / category / (name + '.png'), config))
+        tasks.append(((name,), OUT / category / (name + '.png'), {**config, **FUSE_CAPTURE.get(name, {})}))
     for pair in PAIRS:
         name = '-'.join(pair)
         if only is None or name in only:
@@ -271,6 +339,7 @@ def main():
         unknown = only - {n for n, _, _ in choices} - {'-'.join(p) for p in PAIRS}
         errors += sorted(unknown)
     count = write_gallery(OUT, 'Fuse — ZX Spectrum 48K')
+    add_source_links()
     if count != 63:
         errors.append('expected 63 Fuse images, got %d' % count)
     print('Fuse captured', count, 'images; failures:', len(errors))
