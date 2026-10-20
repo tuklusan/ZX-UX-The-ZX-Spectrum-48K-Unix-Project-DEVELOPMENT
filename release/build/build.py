@@ -7,15 +7,25 @@ sys.path.insert(0, str(S/'zx-ux-sdk/tools'))
 import osbuild, turbo_boot_build, c48build, sdkpack
 argv = sys.argv[1:]; argv = argv[1:] if argv[:1] == ['--sjasm'] else argv
 sjasm = str(pathlib.Path(argv[0]).resolve()) if len(argv)==1 else shutil.which('sjasmplus') or 'sjasmplus'
-# C48 program sources are part of the distributed kit. Stage them before
-# replacing dist, so a failed build cannot discard its own input collection.
-corpus = D/'assets/c48-src'
-if not corpus.is_dir() or corpus.is_symlink():
-    raise RuntimeError('Missing distributed C48 program sources: ' + str(corpus))
-if any(p.is_symlink() for p in corpus.rglob('*')):
-    raise RuntimeError('Linked C48 source paths are not supported')
-for name in ('src', 'sdk', 'out', 'dist-new'): shutil.rmtree(B/name, ignore_errors=True)
-shutil.copytree(corpus, B/'dist-new/assets/c48-src')
+# Distributed inputs must survive replacement of dist, including the bonus
+# collection. Reject links rather than following them into unrelated files.
+inputs = (('assets/c48-src', True), ('bonus', False))
+for relative, required in inputs:
+    source = D / relative
+    if source.is_symlink() or (required and not source.is_dir()):
+        raise RuntimeError('Invalid distributed input directory: ' + str(source))
+    if not source.exists():
+        continue
+    if not source.is_dir() or any(item.is_symlink() for item in source.rglob('*')):
+        raise RuntimeError('Linked or invalid distributed input paths: ' + str(source))
+    if any(not (item.is_dir() or item.is_file()) for item in source.rglob('*')):
+        raise RuntimeError('Unsupported distributed input path: ' + str(source))
+for name in ('src', 'sdk', 'out', 'dist-new'):
+    shutil.rmtree(B/name, ignore_errors=True)
+for relative, _ in inputs:
+    source = D / relative
+    if source.is_dir():
+        shutil.copytree(source, B/'dist-new'/relative)
 shutil.copytree(S/'zx-ux', B/'src'); shutil.copytree(S/'zx-ux-sdk', B/'sdk')
 (B/'out').mkdir(); (B/'sdk/rom').mkdir(exist_ok=True)
 for name, folder in (('48.rom','rom'), ('font4x8.bin','')): shutil.copy2(S/'zx-ux'/folder/name, B/'sdk/rom'/name)
