@@ -1,0 +1,59 @@
+ASSET STRIPPER - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 41
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/41-asset-stripper/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-fuse/41-asset-stripper
+Emulator speed: 320%
+Recorded ordered script: L:SMITH|L:1|K:space
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Type SMITH and press Enter.
+  02. Type 1 and press Enter.
+  03. Tap space.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.123 s  j
+    3.364 s  Control_L
+    3.484 s  p
+    3.846 s  Control_L
+    3.966 s  p
+    4.331 s  Return
+    6.076 s  r
+    7.519 s  Return
+   15.969 s  Shift_L
+   16.090 s  s
+   16.451 s  Shift_L
+   16.572 s  m
+   16.933 s  Shift_L
+   17.053 s  i
+   17.415 s  Shift_L
+   17.535 s  t
+   17.896 s  Shift_L
+   18.017 s  h
+   18.382 s  Return
+   21.026 s  1
+   21.270 s  Return
+   23.914 s  space
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-ACCOUNT-REPORT.png
+      26.910 seconds; source v19-fuse/41-asset-stripper/93-step-03.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

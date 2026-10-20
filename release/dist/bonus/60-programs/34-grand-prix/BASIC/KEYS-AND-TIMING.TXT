@@ -1,0 +1,60 @@
+GRAND PRIX - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 34
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/34-grand-prix/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-fuse/34-grand-prix
+Emulator speed: 320%
+Recorded ordered script: L:2|L:1|L:2|L:2|K:7
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Type 2 and press Enter.
+  02. Type 1 and press Enter.
+  03. Type 2 and press Enter.
+  04. Type 2 and press Enter.
+  05. Tap 7.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.120 s  j
+    3.361 s  Control_L
+    3.481 s  p
+    3.843 s  Control_L
+    3.963 s  p
+    4.327 s  Return
+    6.072 s  r
+    7.519 s  Return
+   15.974 s  2
+   16.218 s  Return
+   18.862 s  1
+   19.106 s  Return
+   21.751 s  2
+   21.995 s  Return
+   24.639 s  2
+   24.883 s  Return
+   27.528 s  7
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      15.974 seconds; source v19-fuse/34-grand-prix/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      27.528 seconds; source v19-fuse/34-grand-prix/93-step-04.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      30.523 seconds; source v19-fuse/34-grand-prix/93-step-05.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

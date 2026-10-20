@@ -1,0 +1,53 @@
+SPACE TRAFFIC - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 30
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/30-space-traffic/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-targeted/30-space-traffic
+Emulator speed: 130%
+Recorded ordered script: H:Return:0.5|C:gamefield|H:x:0.5|C:after-right|H:m:0.4|C:after-fire
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Hold Return for 0.5 seconds.
+  02. Save a screen named gamefield.
+  03. Hold x for 0.5 seconds.
+  04. Save a screen named after-right.
+  05. Hold m for 0.4 seconds.
+  06. Save a screen named after-fire.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.121 s  j
+    3.363 s  Control_L
+    3.483 s  p
+    3.845 s  Control_L
+    3.965 s  p
+    4.330 s  Return
+    5.976 s  r
+    7.521 s  Return
+   13.072 s  Return
+   14.321 s  x
+   15.570 s  m
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      14.975 seconds; source v19-fuse/30-space-traffic/06-intro-settled.png
+  SCREENSHOTS/02-FLIGHT.png
+      16.717 seconds; source v19-targeted/30-space-traffic/90-after-fire.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

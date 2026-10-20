@@ -1,0 +1,50 @@
+SCUBA - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 14
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/14-scuba/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v18-scuba-settled
+Emulator speed: 300%
+Recorded ordered script: H:Return:1.2|H:f:0.6
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Hold Return for 1.2 seconds.
+  02. Hold f for 0.6 seconds.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.137 s  j
+    3.378 s  Control_L
+    3.499 s  p
+    3.860 s  Control_L
+    3.981 s  p
+    4.345 s  Return
+    5.892 s  r
+    7.136 s  Return
+   38.385 s  Return
+   41.829 s  f
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      35.970 seconds; source v19-fuse/14-scuba/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      41.829 seconds; source v18-scuba-settled/93-step-01.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      44.674 seconds; source v18-scuba-settled/93-step-02.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

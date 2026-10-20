@@ -1,0 +1,88 @@
+BATTLESHIPS - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 09
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/09-battleships/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-targeted/09-battleships
+Emulator speed: 310%
+Recorded ordered script: H:space:0.5|L:1|L:A1|L:B3|L:C5|L:D7|L:E9|L:F11|C:board-complete|H:8:0.6|H:9:0.6|C:after-fire
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Hold space for 0.5 seconds.
+  02. Type 1 and press Enter.
+  03. Type A1 and press Enter.
+  04. Type B3 and press Enter.
+  05. Type C5 and press Enter.
+  06. Type D7 and press Enter.
+  07. Type E9 and press Enter.
+  08. Type F11 and press Enter.
+  09. Save a screen named board-complete.
+  10. Hold 8 for 0.6 seconds.
+  11. Hold 9 for 0.6 seconds.
+  12. Save a screen named after-fire.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.122 s  j
+    3.363 s  Control_L
+    3.483 s  p
+    3.844 s  Control_L
+    3.965 s  p
+    4.330 s  Return
+    5.979 s  r
+    7.530 s  Return
+   16.079 s  space
+   18.825 s  1
+   19.068 s  Return
+   21.314 s  Shift_L
+   21.435 s  a
+   21.796 s  1
+   22.041 s  Return
+   24.286 s  Shift_L
+   24.406 s  b
+   24.767 s  3
+   25.016 s  Return
+   27.261 s  Shift_L
+   27.381 s  c
+   27.742 s  5
+   27.986 s  Return
+   30.230 s  Shift_L
+   30.351 s  d
+   30.712 s  7
+   30.958 s  Return
+   33.203 s  Shift_L
+   33.323 s  e
+   33.684 s  9
+   33.930 s  Return
+   36.180 s  Shift_L
+   36.300 s  f
+   36.675 s  1
+   36.917 s  1
+   37.165 s  Return
+   39.419 s  8
+   42.266 s  9
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      15.967 seconds; source v19-fuse/09-battleships/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      39.415 seconds; source v19-targeted/09-battleships/90-board-complete.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      45.116 seconds; source v19-targeted/09-battleships/90-after-fire.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

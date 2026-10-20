@@ -1,0 +1,50 @@
+HELI BOMBER - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 33
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/33-heli-bomber/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-fuse/33-heli-bomber
+Emulator speed: 320%
+Recorded ordered script: K:space|K:5|K:6
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Tap space.
+  02. Tap 5.
+  03. Tap 6.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.122 s  j
+    3.362 s  Control_L
+    3.483 s  p
+    3.844 s  Control_L
+    3.964 s  p
+    4.329 s  Return
+    6.073 s  r
+    7.518 s  Return
+   15.970 s  space
+   18.964 s  5
+   21.959 s  6
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-MAIN.png
+      21.959 seconds; source v19-fuse/33-heli-bomber/93-step-02.png
+  SCREENSHOTS/02-AFTER-INPUT.png
+      24.954 seconds; source v19-fuse/33-heli-bomber/93-step-03.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

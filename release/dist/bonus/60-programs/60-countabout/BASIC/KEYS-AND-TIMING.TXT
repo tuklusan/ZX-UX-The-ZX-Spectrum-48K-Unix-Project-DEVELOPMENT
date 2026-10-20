@@ -1,0 +1,56 @@
+COUNTABOUT - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 60
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/60-countabout/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-finish/60-countabout
+Emulator speed: 250%
+Recorded ordered script: K:space|W:2|K:space|W:5|C:counting-task|K:1|C:answer-response
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Tap space.
+  02. Wait 2 seconds.
+  03. Tap space.
+  04. Wait 5 seconds.
+  05. Save a screen named counting-task.
+  06. Tap 1.
+  07. Save a screen named answer-response.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.134 s  j
+    3.377 s  Control_L
+    3.498 s  p
+    3.859 s  Control_L
+    3.979 s  p
+    4.345 s  Return
+    5.993 s  r
+    7.238 s  Return
+   11.486 s  space
+   15.284 s  space
+   22.093 s  1
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      15.966 seconds; source v19-fuse/60-countabout/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      22.090 seconds; source v19-finish/60-countabout/90-counting-task.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      23.896 seconds; source v19-finish/60-countabout/90-answer-response.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

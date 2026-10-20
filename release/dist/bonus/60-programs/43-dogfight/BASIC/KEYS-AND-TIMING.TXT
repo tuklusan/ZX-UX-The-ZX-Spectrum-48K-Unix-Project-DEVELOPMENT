@@ -1,0 +1,52 @@
+DOGFIGHT - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 43
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/43-dogfight/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-fuse/43-dogfight
+Emulator speed: 320%
+Recorded ordered script: K:a|K:z|K:x|K:space
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Tap a.
+  02. Tap z.
+  03. Tap x.
+  04. Tap space.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.133 s  j
+    3.375 s  Control_L
+    3.495 s  p
+    3.857 s  Control_L
+    3.977 s  p
+    4.341 s  Return
+    6.086 s  r
+    7.530 s  Return
+   15.981 s  a
+   18.976 s  z
+   21.971 s  x
+   24.966 s  space
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-MAIN.png
+      24.966 seconds; source v19-fuse/43-dogfight/93-step-03.png
+  SCREENSHOTS/02-AFTER-INPUT.png
+      27.960 seconds; source v19-fuse/43-dogfight/93-step-04.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

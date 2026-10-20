@@ -1,0 +1,57 @@
+BULLS AND COWS - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 57
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/57-bulls-and-cows/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-fuse/57-bulls-and-cows
+Emulator speed: 320%
+Recorded ordered script: K:space|L:2|L:1234
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Tap space.
+  02. Type 2 and press Enter.
+  03. Type 1234 and press Enter.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.128 s  j
+    3.369 s  Control_L
+    3.489 s  p
+    3.850 s  Control_L
+    3.971 s  p
+    4.336 s  Return
+    6.079 s  r
+    7.523 s  Return
+   15.973 s  space
+   18.968 s  2
+   19.212 s  Return
+   21.856 s  1
+   22.097 s  2
+   22.337 s  3
+   22.578 s  4
+   22.822 s  Return
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      15.973 seconds; source v19-fuse/57-bulls-and-cows/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      21.856 seconds; source v19-fuse/57-bulls-and-cows/93-step-02.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      25.466 seconds; source v19-fuse/57-bulls-and-cows/93-step-03.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.
