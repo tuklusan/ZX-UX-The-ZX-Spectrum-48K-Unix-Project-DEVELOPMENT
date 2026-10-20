@@ -189,6 +189,11 @@ def run_case(names, destination, args, config=None):
             if len(names) == 1 and names[0] == '3dpaint':
                 time.sleep(2)
                 kb.type('q')
+            # Optional recorded keys for the separate bonus collection.
+            # Each step has a real-time delay and a literal key sequence.
+            for delay, keys in config.get('input_steps', ()):
+                time.sleep(float(delay))
+                kb.type(keys)
             # Real emulator timing; choose developed frames without filling the
             # gallery with the same boot/login screen.
             duration = args.multitask_wait if len(names) > 1 else float(config.get('fuse_wait', args.wait))
