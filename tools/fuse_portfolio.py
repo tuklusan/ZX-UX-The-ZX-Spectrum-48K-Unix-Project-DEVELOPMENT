@@ -202,11 +202,18 @@ def run_case(names, destination, args, config=None):
                     if len(key) != 1 or float(duration) <= 0:
                         raise ValueError('hold requires one key and positive seconds')
                     time.sleep(float(delay))
-                    kb.event(key, True)
+                    # Shift is part of an uppercase held key too: a held
+                    # Spectrum letter differs from tapping lowercase.
+                    shifted = key.isupper()
+                    if shifted:
+                        kb.event('Shift_L', True)
+                    kb.event(key.lower(), True)
                     try:
                         time.sleep(float(duration))
                     finally:
-                        kb.event(key, False)
+                        kb.event(key.lower(), False)
+                        if shifted:
+                            kb.event('Shift_L', False)
                 else:
                     raise ValueError('invalid input step')
             # Real emulator timing; choose developed frames without filling the
@@ -245,7 +252,7 @@ def run_case(names, destination, args, config=None):
                 if names == ('kaleido',):
                     pixels = candidate.crop((32, 24, 288, 216)).convert('RGB').resize((80, 60))
                     score += sum((max(p) - min(p)) > 60 for p in pixels.get_flattened_data())
-                if score > best_score:
+                if config.get('capture_last') or score > best_score:
                     best, best_score = candidate, score
                 if config.get('first_fractal'):
                     # Spectrum PLOT draws from bottom to top; row 8 only

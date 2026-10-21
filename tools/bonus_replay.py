@@ -55,10 +55,16 @@ def run_rvm(folder, alias, case):
     why = None
     for frame in range(case.get('frames', 1100) + 300):
         runner.frame()
+        if case.get('stop_when') and frame % 3 == 0:
+            partial, _ = runner.picture()
+            current = zxscreen.screen_text(partial)
+            if all(phrase in current for phrase in case['stop_when']):
+                why = 'checkpoint'
+                break
         why = runner.check(limit=case.get('frames', 1100))
         if why:
             break
-    if runner.fg.started is None or why not in ('exit', 'input', 'frames'):
+    if runner.fg.started is None or why not in ('exit', 'input', 'frames', 'checkpoint'):
         raise AssertionError(f'ZX-UX did not run {alias}: {why}')
     scr, border = runner.picture()
     text = zxscreen.screen_text(scr)
@@ -68,6 +74,13 @@ def run_rvm(folder, alias, case):
     for forbidden in case.get('forbid', []):
         if forbidden in text:
             raise AssertionError(f'forbidden {forbidden!r} in {case["name"]}:\n{text}')
+    if 'underscore_counts' in case:
+        count = text.count('_')
+        if count not in case['underscore_counts']:
+            raise AssertionError(f'word slot count {count} not in {case["underscore_counts"]}')
+    for phrase, minimum in case.get('expect_min_count', {}).items():
+        if text.count(phrase) < minimum:
+            raise AssertionError(f'{phrase!r} occurred fewer than {minimum} times')
     if 'capture' in case:
         output = folder / 'C48/screenshots/rvm' / case['capture']
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -97,7 +110,8 @@ def run_fuse(folder, alias, case, args):
                sample_step=.2,
                input_key_pause=float(case.get("fuse_key_pause", .05)),
                input_steps=steps,
-               prefer_color=bool(case.get("fuse_prefer_color", False)))
+               prefer_color=bool(case.get("fuse_prefer_color", False)),
+               capture_last=bool(case.get("fuse_capture_last", False)))
     output = folder / 'C48/screenshots/fuse' / case['capture']
     fuse_portfolio.run_case((alias,), output, namespace, cfg)
     # Assertions use the untouched emulator capture. The inner display is
@@ -113,7 +127,17 @@ def run_fuse(folder, alias, case, args):
             if not (0 <= left < right <= 320 and 0 <= top < bottom <= 240):
                 raise ValueError('invalid native image test region')
             pixels = image.crop((left, top, right, bottom)).getdata()
-            lit = sum(min(rgb) > int(assertion.get('brightness', 100)) for rgb in pixels)
+            mode = assertion.get('mode', 'light')
+            if mode == 'non_gray':
+                lit = sum(max(rgb) - min(rgb) > 25 for rgb in pixels)
+            elif mode == 'ink':
+                background = image.getpixel(tuple(assertion.get('background_point', [278, 105])))
+                lit = sum(max(abs(rgb[i]-background[i]) for i in range(3)) > 32
+                          for rgb in pixels)
+            elif mode == 'light':
+                lit = sum(min(rgb) > int(assertion.get('brightness', 100)) for rgb in pixels)
+            else:
+                raise ValueError('unsupported native pixel test mode')
             if lit < int(assertion['min']) or lit > int(assertion['max']):
                 raise AssertionError(
                     f'native state mismatch in {case["name"]}: '
@@ -141,6 +165,27 @@ def geometry(original, candidate, box, minimum):
     return intersection / union
 
 
+def color_geometry(first, second, box, minimum):
+    from PIL import Image
+    a = Image.open(first).convert('RGB')
+    b = Image.open(second).convert('RGB')
+    if a.size != (320, 240) or b.size != (320, 240):
+        raise AssertionError('expected unchanged native Spectrum display')
+    fa = a.crop(tuple(box)).getdata()
+    fb = b.crop(tuple(box)).getdata()
+    colored_a = (max(rgb) - min(rgb) > 25 for rgb in fa)
+    colored_b = (max(rgb) - min(rgb) > 25 for rgb in fb)
+    matches = 0
+    union = 0
+    for x, y in zip(colored_a, colored_b):
+        matches += int(x and y)
+        union += int(x or y)
+    score = matches / union if union else 0.0
+    if score < minimum:
+        raise AssertionError(f'color graphics mismatch: {score:.3f} < {minimum:.3f}')
+    return score
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--program', required=True)
@@ -166,6 +211,13 @@ def main():
             ref = folder / 'BASIC/SCREENSHOTS' / check['reference']
             score = geometry(ref, candidate, check['box'], check['threshold'])
             print(args.host, check['capture'], f'pixel-overlap={score:.3f}')
+    if args.host == 'fuse':
+        for check in data.get('rvm_geometry', []):
+            native = folder / 'C48/screenshots/fuse' / check['capture']
+            virtual = folder / 'C48/screenshots/rvm' / check['capture']
+            if native.is_file() and virtual.is_file():
+                score = color_geometry(virtual, native, check['box'], check['threshold'])
+                print('RVM/FUSE', check['capture'], f'color-overlap={score:.3f}')
 
 
 if __name__ == '__main__':
