@@ -17,8 +17,13 @@ start:  di
         ld (row_index),a
         ld hl,segment_plan
         ld (plan_cursor),hl
+        ; Show the heading before turbo block 1.  This leaves the final
+        ; information line visible while turbo block 24 is still loading.
         ld hl,progress_lines
+        call render_text_row
         ld (text_cursor),hl
+        ld a,1
+        ld (row_index),a
 .next:  xor a
         ld (attempts),a
 .receive:
@@ -51,18 +56,23 @@ start:  di
 .valid: ld a,0
         out (0FEh),a
         call copy_payload
-        ; Render every numbered row only after the corresponding packet has
-        ; passed the exact ordinal, offset, length, XOR and CRC checks.
+        ; The heading was drawn before block 1.  After verified blocks
+        ; 1..23, draw rows 2..24.  Never delay the final handover to draw
+        ; a line after block 24: it must already be visible while loading.
+        ld a,(ordinal)
+        cp 24
+        jr z,.skip_row
         ld hl,(text_cursor)
         call render_text_row
         ld (text_cursor),hl
+        ld a,(row_index)
+        inc a
+        ld (row_index),a
+.skip_row:
         ld hl,(plan_cursor)
         ld de,4
         add hl,de
         ld (plan_cursor),hl
-        ld a,(row_index)
-        inc a
-        ld (row_index),a
         ld a,(ordinal)
         inc a
         ld (ordinal),a
