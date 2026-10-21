@@ -1,0 +1,26 @@
+name: Tag beta 0.1.1
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  tag:
+    if: github.event.head_commit.message == 'Add yolo cassette shortcut (beta-0.1.1)'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create tag for the verified commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          remote_head="$(gh api "repos/$repo/git/ref/heads/main" --jq '.object.sha')"
+          test "$remote_head" = "$GITHUB_SHA"
+          if gh api "repos/$repo/git/ref/tags/beta-0.1.1" >/dev/null 2>&1; then
+            echo 'Tag already exists; refusing to replace it'
+            exit 1
+          fi
+          gh api --method POST "repos/$repo/git/refs" -f ref='refs/tags/beta-0.1.1' -f sha="$GITHUB_SHA"
+          target="$(gh api "repos/$repo/git/ref/tags/beta-0.1.1" --jq '.object.sha')"
+          test "$target" = "$GITHUB_SHA"

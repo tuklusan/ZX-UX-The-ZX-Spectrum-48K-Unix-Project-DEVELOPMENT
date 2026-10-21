@@ -459,8 +459,18 @@ sherr:  call eputs
 
 adda    equ addhla              ; (kernel text: pure helpers are shared)
 
-; sh_exec: run SH_ARGV
+; sh_exec: run SH_ARGV.  yolo uses the ordinary cassette wildcard path,
+; including the existing glob and SSX loader, without a separate reader.
 sh_exec:
+        ld hl,(SH_ARGV)
+        ld de,s_yolo
+        call strcmp
+        jr nz,.dispatch
+        ld hl,s_yolopath
+        ld (SH_ARGV),hl
+        ld a,1
+        ld (SH_GLOB),a
+.dispatch:
         ld hl,(SH_ARGV)
         ld de,s_chdir
         call strcmp
@@ -742,6 +752,8 @@ execp:  ld (SH_SAVN),hl
         ld de,(SH_SAVA)
         jp gexecp.xj0_52  ; (shared tail)
 
+s_yolo: db "yolo",0
+s_yolopath: db "/dev/cassette/*",0
 s_prompt: db "@ ",0
 s_rprompt: db "# ",0
 s_chdir: db "chdir",0
