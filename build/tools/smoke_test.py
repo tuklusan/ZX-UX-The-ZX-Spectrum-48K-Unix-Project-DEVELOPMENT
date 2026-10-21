@@ -103,7 +103,7 @@ def pack(*args):
             (cache / 'stale.pyc').write_bytes(b'ignored')
         self.run_builder()
         self.assertFalse(any(p.name == '__pycache__' or p.suffix == '.pyc'
-                             for p in self.dist.rglob('*'))
+                             for p in self.dist.rglob('*')))
 
 
 if __name__ == '__main__':

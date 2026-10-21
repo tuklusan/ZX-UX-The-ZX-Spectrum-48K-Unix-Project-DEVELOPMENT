@@ -37,10 +37,7 @@ PROGRAMS = [
 EXTRA = os.path.join(SRC, 'programs.txt')   # more programs, one per line
 ADDFILES = []
 
-MOTD = ("\n"
-        "  Welcome to ZX-UX UNIX v1 for the ZX Spectrum 48K.\n"
-        "  Read /usr/doc/zxpack about packed files.\n"
-        "\n")
+MOTD = ("\n  Welcome to ZX-UX UNIX v1.\n\n")
 
 # ---------------------------------------------------------------- assembler
 def assemble(sjasm):

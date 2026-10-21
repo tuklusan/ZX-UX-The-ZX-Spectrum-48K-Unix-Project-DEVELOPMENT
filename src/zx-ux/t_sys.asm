@@ -240,6 +240,9 @@ shrun:
 .loop:  ld a,(SH_INT)
         or a
         jr z,.np
+        ; Recover cooked, echoed input if a killed child left raw tty mode.
+        ld a,TT_ECHO
+        call gstty
         SC _getuid
         ld a,h
         or a
@@ -575,13 +578,20 @@ sh_child:
         ld l,a
         ld h,0
         call sc_intr
+        ; Background jobs without redirection do not share shell stdin.
+        ld hl,(SH_IN)
+        ld a,h
+        or l
+        jr nz,.stdin
+        ld a,(SH_BG)
+        or a
+        jr z,.o
+.stdin: ld hl,0
+        call sc_close
         ld hl,(SH_IN)
         ld a,h
         or l
         jr z,.o
-        ld hl,0
-        call sc_close
-        ld hl,(SH_IN)
         ld de,0
         call sc_open
         jr nc,.o

@@ -5,6 +5,7 @@
 // SANYALnet Labs required, see LICENSE for more information
 /* Local game declarations for the C48 Host Game API profile. */
 int getchar(void);
+int kbd_down(int key);
 int putchar(int c);
 int cls(void);
 int print_at(int row, int col, char *text);
@@ -25,6 +26,27 @@ static int game_key(void)
 {
     int c;
     c = getchar();
+    if (c == -1) {
+        /* Background tty stdin is closed by the shell. Scan physical keys
+         * without taking any characters from the shell keyboard queue. */
+        char *keys;
+        int i;
+        keys = "abcdefghijklmnopqrstuvwxyz0123456789 \r";
+        for (;;) {
+            i = 0;
+            while (keys[i] != 0) {
+                if (kbd_down(keys[i])) {
+                    c = keys[i];
+                    do {
+                        yield();
+                    } while (kbd_down(c));
+                    return c;
+                }
+                i++;
+            }
+            yield();
+        }
+    }
     if (c >= 'A' && c <= 'Z')
         c = c + 32;
     return c;
