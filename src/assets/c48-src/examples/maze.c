@@ -11,6 +11,20 @@
 // ============================================================
 #include "exapi.h"
 
+void farewell_tune(void)
+{
+    beep(0.45, 9.0);
+    beep(0.45, 7.0);
+    beep(0.45, 5.0);
+    beep(0.45, 4.0);
+    beep(0.45, 2.0);
+    beep(0.45, 0.0);
+    beep(0.45, -3.0);
+    beep(0.45, 0.0);
+    beep(0.70, 4.0);
+    beep(0.70, 0.0);
+}
+
 int main(void)
 {
     unsigned int s;
@@ -26,5 +40,6 @@ int main(void)
         }
     }
     print_at(0, 2, "1982 called. it wants its maze back.");
+    farewell_tune();
     return 0;
 }

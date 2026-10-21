@@ -339,20 +339,6 @@ int play(void)
     }
 }
 
-void farewell_tune(void)
-{
-    beep(0.45, 9.0);
-    beep(0.45, 7.0);
-    beep(0.45, 5.0);
-    beep(0.45, 4.0);
-    beep(0.45, 2.0);
-    beep(0.45, 0.0);
-    beep(0.45, -3.0);
-    beep(0.45, 0.0);
-    beep(0.70, 4.0);
-    beep(0.70, 0.0);
-}
-
 int main(void)
 {
     udg_define(0, pawn);
@@ -361,6 +347,5 @@ int main(void)
     while (postgame(play())) {
         /* R starts another game directly. */
     }
-    farewell_tune();
     return 0;
 }
