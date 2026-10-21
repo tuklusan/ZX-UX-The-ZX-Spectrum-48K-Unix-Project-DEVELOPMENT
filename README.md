@@ -28,7 +28,7 @@ replaces `dist/` only after the whole build succeeds. A missing `dist/` is norma
 before the first build. Deleting `dist/` is safe because it contains generated
 outputs only. A failed build keeps the previous `dist/` intact.
 
-Recovered project documentation is stored under `src/docs/`. After the kernel,
+The technical reference index lives in `src/docs/README.md`. After the kernel,
 SDK, and C48 programs are built, `build.py` copies `src/docs/` to the staged
 `dist/docs/` as its final content step, before publishing the complete
 `dist/` directory. Python bytecode caches are not included in output.

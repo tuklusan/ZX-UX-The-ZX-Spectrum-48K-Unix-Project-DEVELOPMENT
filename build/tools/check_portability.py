@@ -14,7 +14,7 @@ def main():
     required = (ROOT / 'build/build.py', ROOT / 'src/zx-ux',
                 ROOT / 'src/zx-ux-sdk', ROOT / 'src/assets/c48-src',
                 ROOT / 'src/bonus/60-programs',
-                ROOT / 'src/docs')
+                ROOT / 'src/docs/README.md')
     for item in required:
         if not item.exists():
             raise RuntimeError('Missing portable component: ' + str(item))
