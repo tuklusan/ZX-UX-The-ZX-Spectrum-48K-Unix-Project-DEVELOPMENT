@@ -38,6 +38,7 @@ def run_rvm(folder, alias, case):
         raise AssertionError('TZX does not contain the matching SSX')
     options = rvm.Options()
     options.prog = str(binary)
+    options.args = case.get("argv", [])
     options.headless = True
     runner = rvm.Runner(options)
     actions = zxux.parse_keys(case.get('keys', ''))
@@ -111,7 +112,9 @@ def run_fuse(folder, alias, case, args):
                input_key_pause=float(case.get("fuse_key_pause", .05)),
                input_steps=steps,
                prefer_color=bool(case.get("fuse_prefer_color", False)),
-               capture_last=bool(case.get("fuse_capture_last", False)))
+               capture_last=bool(case.get("fuse_capture_last", False)),
+               stop_when_ink=case.get("fuse_stop_when_ink"),
+               args=case.get("argv", []))
     output = folder / 'C48/screenshots/fuse' / case['capture']
     fuse_portfolio.run_case((alias,), output, namespace, cfg)
     # Assertions use the untouched emulator capture. The inner display is
@@ -148,18 +151,27 @@ def run_fuse(folder, alias, case, args):
 
 
 def geometry(original, candidate, box, minimum):
+    """Compare genuine occupied pixels, excluding each Spectrum's background.
+
+    Comparing (RGB > 95) counts the blue paper as foreground and produces
+    false 100% matches for mismatched games. Use each capture's own paper
+    color from a quiet right margin pixel instead.
+    """
     from PIL import Image
-    from PIL import ImageChops
     a = Image.open(original).convert('RGB')
     b = Image.open(candidate).convert('RGB')
     if a.size != (320, 240) or b.size != (320, 240):
         raise AssertionError('expected 320x240 genuine Spectrum display')
-    ap = a.crop(tuple(box)).getdata()
-    bp = b.crop(tuple(box)).getdata()
-    p = [max(v) > 95 for v in ap]
-    q = [max(v) > 95 for v in bp]
-    intersection = sum(x and y for x, y in zip(p, q))
-    union = sum(x or y for x, y in zip(p, q))
+    bg_a = a.getpixel((278, 105))
+    bg_b = b.getpixel((278, 105))
+    ap = a.crop(tuple(box)).get_flattened_data()
+    bp = b.crop(tuple(box)).get_flattened_data()
+    active_a = (max(abs(rgb[i]-bg_a[i]) for i in range(3)) > 50 for rgb in ap)
+    active_b = (max(abs(rgb[i]-bg_b[i]) for i in range(3)) > 50 for rgb in bp)
+    intersection = union = 0
+    for x, y in zip(active_a, active_b):
+        intersection += int(x and y)
+        union += int(x or y)
     if not union or intersection / union < minimum:
         raise AssertionError(f'pixel mismatch: {intersection}/{union} (< {minimum})')
     return intersection / union

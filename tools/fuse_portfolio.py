@@ -191,6 +191,8 @@ def run_case(names, destination, args, config=None):
                 kb.type('q')
             # Reusable replay controls. Two values type text; three values
             # hold one actual Spectrum key across multiple emulator scans.
+            reached_checkpoint = False
+            stop_region = config.get('stop_when_ink')
             for step in config.get('input_steps', ()):
                 if len(step) == 2:
                     delay, keys = step
@@ -216,6 +218,24 @@ def run_case(names, destination, args, config=None):
                             kb.event('Shift_L', False)
                 else:
                     raise ValueError('invalid input step')
+                if stop_region:
+                    # Inspect genuine Fuse pixels after each input. Stop before
+                    # the next key can accidentally restart a finished game.
+                    time.sleep(float(stop_region.get('settle', .8)))
+                    candidate = screenshot(display).convert('RGB')
+                    box = tuple(stop_region['box'])
+                    if len(box) != 4 or not (0 <= box[0] < box[2] <= 320
+                                                and 0 <= box[1] < box[3] <= 240):
+                        raise ValueError('invalid native stop region')
+                    bg = candidate.getpixel(tuple(stop_region.get('background_point', [278,105])))
+                    count = sum(max(abs(px[i]-bg[i]) for i in range(3)) > 60
+                                for px in candidate.crop(box).get_flattened_data())
+                    if count >= int(stop_region['min']):
+                        reached_checkpoint = True
+                        print('Fuse input checkpoint reached:', names[0], count, flush=True)
+                        break
+            if stop_region and not reached_checkpoint:
+                raise RuntimeError('native input checkpoint was never reached')
             # Real emulator timing; choose developed frames without filling the
             # gallery with the same boot/login screen.
             duration = args.multitask_wait if len(names) > 1 else float(config.get('fuse_wait', args.wait))

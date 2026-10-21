@@ -1,0 +1,3 @@
+RVM: python3 -B tools/bonus_replay.py --program 29-oxo
+FUSE: python3 -B tools/bonus_replay.py --program 29-oxo --host fuse --fuse /path/to/fuse-sdl --assets /path/to/fuse-data --libdir /path/to/fuse-libs
+Result: PASS. RVM verifies machine win, score, new round, occupied square, valid input and held-number rejection. Native FUSE verifies board, moves, occupied square, held key and round result. All three BASIC reference screenshots compared with true foreground geometry and genuine native color pixels.
