@@ -4,10 +4,12 @@
  * has a function here (the kernel's call number is in the comment). */
 #define NULL 0
 int getchar(void);
+int kbd_down(int key); /* 1 while held, 0 when released; no blocking */
 int putchar(int c);
 int puts(char *s);
 int cls(void);
 int print_at(int row, int col, char *text);
+int cursor_at(int row, int col); /* move 64-column print cursor without writing */
 int ink(int c);
 int paper(int c);
 int bright(int on);

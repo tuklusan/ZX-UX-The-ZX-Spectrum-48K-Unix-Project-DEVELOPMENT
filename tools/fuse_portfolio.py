@@ -189,11 +189,26 @@ def run_case(names, destination, args, config=None):
             if len(names) == 1 and names[0] == '3dpaint':
                 time.sleep(2)
                 kb.type('q')
-            # Optional recorded keys for the separate bonus collection.
-            # Each step has a real-time delay and a literal key sequence.
-            for delay, keys in config.get('input_steps', ()):
-                time.sleep(float(delay))
-                kb.type(keys)
+            # Reusable replay controls. Two values type text; three values
+            # hold one actual Spectrum key across multiple emulator scans.
+            for step in config.get('input_steps', ()):
+                if len(step) == 2:
+                    delay, keys = step
+                    time.sleep(float(delay))
+                    for ch in keys:
+                        kb.key(ch, pause=float(config.get('input_key_pause', .20)))
+                elif len(step) == 3:
+                    delay, key, duration = step
+                    if len(key) != 1 or float(duration) <= 0:
+                        raise ValueError('hold requires one key and positive seconds')
+                    time.sleep(float(delay))
+                    kb.event(key, True)
+                    try:
+                        time.sleep(float(duration))
+                    finally:
+                        kb.event(key, False)
+                else:
+                    raise ValueError('invalid input step')
             # Real emulator timing; choose developed frames without filling the
             # gallery with the same boot/login screen.
             duration = args.multitask_wait if len(names) > 1 else float(config.get('fuse_wait', args.wait))

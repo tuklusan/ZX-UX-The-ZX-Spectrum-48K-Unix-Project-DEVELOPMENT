@@ -1,0 +1,3 @@
+RVM: python3 -B tools/bonus_replay.py --program 51-anagrammatic
+FUSE: python3 -B tools/bonus_replay.py --program 51-anagrammatic --host fuse --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse
+Result: RVM input, scrolling, permutations, patterns, invalid input and restart passed. Native FUSE intro, input and completed enumeration captured. Screens compared with original BASIC, allowing font64 text reflow.
