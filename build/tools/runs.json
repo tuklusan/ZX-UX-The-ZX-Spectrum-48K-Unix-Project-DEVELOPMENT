@@ -278,8 +278,8 @@
  },
  "tune": {
   "dir": "sound",
-  "note": "the SDK host had no audio backend (beep -> 14); ZX-UX beeps and prints BEEP COMPLETE",
-  "expect_text": "BEEP COMPLETE",
+  "note": "plays the Spectrum ROM beeper and prints MELODY COMPLETE",
+  "expect_text": "MELODY COMPLETE",
   "nosdk": true
  },
  "advent:play": {
