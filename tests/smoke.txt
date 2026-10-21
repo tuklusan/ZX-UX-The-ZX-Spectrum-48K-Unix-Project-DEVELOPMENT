@@ -1,6 +1,0 @@
-until login: 2000
-type root\n
-until # 1000
-type ls -l /bin\n
-wait 300
-screen
