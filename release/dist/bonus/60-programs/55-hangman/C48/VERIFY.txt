@@ -1,3 +1,3 @@
 RVM: python3 -B tools/bonus_replay.py --program 55-hangman
-FUSE: python3 -B tools/bonus_replay.py --program 55-hangman --host fuse --fuse /path/to/fuse-sdl --assets /path/to/fuse-data --libdir /path/to/fuse-libs
-Result: PASS. RVM checks six word subjects, correct, incorrect, repeated and held letters, victory, loss, and restart. Native FUSE checks menu, puzzle, entered letter, repeated held key and complete gallows. Stable colored gallows match RVM at full pixel-mask overlap. All three original BASIC screenshots reviewed; font64 and random word differences allowed.
+FUSE: python3 -B tools/bonus_replay.py --program 55-hangman --host fuse --fuse /path/to/fuse-sdl --assets /path/to/fuse-assets --libdir /path/to/fuse-libs
+PASS: 16 RVM scenarios, including unshifted lowercase Q, category choice, win, loss, repeated and held keys. Native ZX-UX/FUSE: intro, main, E input, lowercase Q input, 11-miss loss and held Q verified on real key events. Lowercase raw keys now behave as uppercase BASIC letters. Three BASIC reference states checked; allowed differences are font64 text and random word choice. RVM win uses the repeatable current-binary word selection.

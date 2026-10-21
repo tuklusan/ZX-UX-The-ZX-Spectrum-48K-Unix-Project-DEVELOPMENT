@@ -200,6 +200,9 @@ static void play(int category) {
     show_word();
     for (;;) {
         key = getchar();
+        /* ZX-UX raw console returns lowercase on an ordinary Spectrum key.
+           BASIC enables capitals (POKE 23658,10); accept both cases. */
+        if (key >= 'a' && key <= 'z') key = key - ('a' - 'A');
         if (key < 'A' || key > 'Z') continue;
         hits = 0;
         letter[0]=(char)key;letter[1]=0;

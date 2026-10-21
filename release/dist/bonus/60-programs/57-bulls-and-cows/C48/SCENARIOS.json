@@ -106,6 +106,41 @@
           ],
           "min": 15,
           "max": 120
+        },
+        {
+          "box": [
+            202,
+            39,
+            225,
+            49
+          ],
+          "mode": "ink",
+          "min": 0,
+          "max": 0
+        }
+      ],
+      "rvm_pixels": [
+        {
+          "box": [
+            175,
+            39,
+            187,
+            49
+          ],
+          "mode": "ink",
+          "min": 12,
+          "max": 60
+        },
+        {
+          "box": [
+            202,
+            39,
+            225,
+            49
+          ],
+          "mode": "ink",
+          "min": 0,
+          "max": 0
         }
       ]
     },
@@ -183,15 +218,93 @@
     },
     {
       "name": "win",
-      "keys": "{WAIT 80}{SPACE}1\\n9532\\n",
+      "keys": "{WAIT 80}{SPACE}1\n8953\n",
       "frames": 700,
       "expect": [
         "YOU ARE CORRECT",
         "I CHOSE WAS",
-        "9532",
+        "8953",
         "PRESS ANY KEY TO RESTART"
       ],
       "capture": "05-win.png"
+    },
+    {
+      "name": "guaranteed-visible-bulls",
+      "keys": "{WAIT 80}{SPACE}12\n1111\n2222\n3333\n4444\n5555\n6666\n7777\n8888\n9999\n",
+      "frames": 1800,
+      "expect": [
+        "GUESSES",
+        "BULLS",
+        "COWS"
+      ],
+      "capture": "06-visible-bulls.png",
+      "fuse_steps": [
+        [
+          0.3,
+          " "
+        ],
+        [
+          0.4,
+          "12\n"
+        ],
+        [
+          3.0,
+          "1111\n2222\n3333\n4444\n5555\n6666\n7777\n8888\n9999\n"
+        ]
+      ],
+      "fuse_capture_delay": 0.5,
+      "fuse_wait": 2.0,
+      "fuse_prefer_color": true,
+      "fuse_key_pause": 0.14,
+      "fuse_capture_last": true,
+      "fuse_pixels": [
+        {
+          "box": [
+            103,
+            40,
+            136,
+            116
+          ],
+          "mode": "yellow",
+          "min": 15,
+          "max": 1500
+        },
+        {
+          "box": [
+            136,
+            40,
+            160,
+            116
+          ],
+          "mode": "yellow",
+          "min": 0,
+          "max": 0
+        }
+      ],
+      "rvm_pixels": [
+        {
+          "box": [
+            103,
+            40,
+            136,
+            116
+          ],
+          "mode": "yellow",
+          "min": 15,
+          "max": 1500
+        },
+        {
+          "box": [
+            136,
+            40,
+            160,
+            116
+          ],
+          "mode": "yellow",
+          "min": 0,
+          "max": 0
+        }
+      ]
     }
   ],
   "geometry": []

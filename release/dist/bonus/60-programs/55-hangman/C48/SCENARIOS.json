@@ -188,14 +188,14 @@
     },
     {
       "name": "win",
-      "keys": "{WAIT 500}1ROBIN",
+      "keys": "{WAIT 500}1SALMON",
       "frames": 1600,
       "stop_when": [
-        "WELL DONE! YOU CORRECTLY GOT"
+        "GUESSES"
       ],
       "expect": [
         "WELL DONE! YOU CORRECTLY GOT",
-        "ROBIN",
+        "SALMON",
         "GUESSES"
       ],
       "capture": "06-win.png"
@@ -337,6 +337,58 @@
           "mode": "non_gray",
           "min": 1200,
           "max": 2500
+        }
+      ]
+    },
+    {
+      "name": "physical-lowercase-q",
+      "keys": "{WAIT 500}1q",
+      "frames": 1150,
+      "expect": [
+        "Guess a letter",
+        "Your guesses:"
+      ],
+      "expect_min_count": {
+        "Q": 1
+      },
+      "capture": "07-lowercase-q.png",
+      "fuse_steps": [
+        [
+          7.0,
+          "1"
+        ],
+        [
+          2.0,
+          "q"
+        ]
+      ],
+      "fuse_capture_delay": 0.6,
+      "fuse_wait": 1.5,
+      "fuse_prefer_color": true,
+      "fuse_pixels": [
+        {
+          "box": [
+            150,
+            126,
+            170,
+            140
+          ],
+          "mode": "ink",
+          "min": 8,
+          "max": 230
+        }
+      ],
+      "rvm_pixels": [
+        {
+          "box": [
+            150,
+            126,
+            170,
+            140
+          ],
+          "mode": "ink",
+          "min": 8,
+          "max": 230
         }
       ]
     }

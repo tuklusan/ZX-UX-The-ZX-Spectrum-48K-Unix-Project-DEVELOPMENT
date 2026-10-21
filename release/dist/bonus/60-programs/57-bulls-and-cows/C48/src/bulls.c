@@ -114,17 +114,19 @@ static void clues(void) {
     int j;
     print_at(turn_row, 0, typed);
     for (j = 0; j < black; ++j) {
-        ink(0); udg_draw(0, turn_row, 13+j); beep(.1,25);
+        /* UDG columns are 8 pixels, print_at headings use 4-pixel columns.
+           Put black bulls on yellow cells so they remain visible on blue. */
+        paper(6); ink(0); udg_draw(0, turn_row, 9+j); beep(.1,25);
     }
     for (j = 0; j < white; ++j) {
-        ink(7); udg_draw(1, turn_row, 22+j); beep(.1,25);
+        paper(1); ink(7); udg_draw(1, turn_row, 18+j); beep(.1,25);
     }
     if (turn_row < 21) turn_row++;
     else {
         cursor_at(21,0);
         putchar('\n');
     }
-    ink(7);
+    paper(1); ink(7);
 }
 
 static void result(void) {

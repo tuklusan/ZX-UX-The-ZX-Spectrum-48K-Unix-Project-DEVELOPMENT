@@ -100,6 +100,8 @@ def run_rvm(folder, alias, case):
         output.parent.mkdir(parents=True, exist_ok=True)
         rows = zxscreen.rgb_rows(scr, [border] * zxscreen.H)
         output.write_bytes(zxscreen.png_bytes(rows))
+        if case.get('rvm_pixels'):
+            assert_picture_pixels(output, case['rvm_pixels'], case['name'])
         print('RVM', alias, case['name'], why, output.relative_to(ROOT))
     else:
         print('RVM', alias, case['name'], why)
@@ -130,35 +132,9 @@ def run_fuse(folder, alias, case, args):
                args=case.get("argv", []))
     output = folder / 'C48/screenshots/fuse' / case['capture']
     fuse_portfolio.run_case((alias,), output, namespace, cfg)
-    # Assertions use the untouched emulator capture. The inner display is
-    # inspected, never painted, and no "best looking" state is accepted if
-    # its mandatory pixels are missing.
+    # Check genuine emulator pixels, never generated or altered picture data.
     if case.get('fuse_pixels'):
-        from PIL import Image
-        image = Image.open(output).convert('RGB')
-        if image.size != (320, 240):
-            raise AssertionError('native capture is not a full Spectrum display')
-        for assertion in case['fuse_pixels']:
-            left, top, right, bottom = assertion['box']
-            if not (0 <= left < right <= 320 and 0 <= top < bottom <= 240):
-                raise ValueError('invalid native image test region')
-            pixels = image.crop((left, top, right, bottom)).getdata()
-            mode = assertion.get('mode', 'light')
-            if mode == 'non_gray':
-                lit = sum(max(rgb) - min(rgb) > 25 for rgb in pixels)
-            elif mode == 'ink':
-                background = image.getpixel(tuple(assertion.get('background_point', [278, 105])))
-                lit = sum(max(abs(rgb[i]-background[i]) for i in range(3)) > 32
-                          for rgb in pixels)
-            elif mode == 'light':
-                lit = sum(min(rgb) > int(assertion.get('brightness', 100)) for rgb in pixels)
-            else:
-                raise ValueError('unsupported native pixel test mode')
-            if lit < int(assertion['min']) or lit > int(assertion['max']):
-                raise AssertionError(
-                    f'native state mismatch in {case["name"]}: '
-                    f'{lit} lit pixels in {assertion["box"]}, '
-                    f'expected {assertion["min"]}..{assertion["max"]}')
+        assert_picture_pixels(output, case['fuse_pixels'], case['name'])
         print('Fuse state checked:', alias, case['name'])
     change = case.get('fuse_difference')
     if change:
@@ -166,6 +142,38 @@ def run_fuse(folder, alias, case, args):
         count = frame_difference(earlier, output, change['box'], change['min'])
         print('Fuse changed pixels:', alias, case['name'], count)
     return output
+
+
+
+def assert_picture_pixels(output, assertions, name):
+    """RVM/FUSE state assertions using the real 320x240 Spectrum capture."""
+    from PIL import Image
+    image = Image.open(output).convert('RGB')
+    if image.size != (320, 240):
+        raise AssertionError('expected actual 320x240 Spectrum display')
+    for assertion in assertions:
+        left, top, right, bottom = assertion['box']
+        if not (0 <= left < right <= 320 and 0 <= top < bottom <= 240):
+            raise ValueError('invalid image test region')
+        pixels = image.crop((left, top, right, bottom)).get_flattened_data()
+        mode = assertion.get('mode', 'light')
+        if mode == 'non_gray':
+            lit = sum(max(rgb) - min(rgb) > 25 for rgb in pixels)
+        elif mode == 'ink':
+            background = image.getpixel(tuple(assertion.get('background_point', [278, 105])))
+            lit = sum(max(abs(rgb[i] - background[i]) for i in range(3)) > 32
+                      for rgb in pixels)
+        elif mode == 'light':
+            lit = sum(min(rgb) > int(assertion.get('brightness', 100)) for rgb in pixels)
+        elif mode == 'yellow':
+            lit = sum(rgb[0] > 130 and rgb[1] > 130 and rgb[2] < 110
+                      for rgb in pixels)
+        else:
+            raise ValueError('unsupported Spectrum pixel test mode')
+        if lit < int(assertion['min']) or lit > int(assertion['max']):
+            raise AssertionError(
+                f'picture mismatch in {name}: {lit} lit pixels in '
+                f'{assertion["box"]}; expected {assertion["min"]}..{assertion["max"]}')
 
 
 def frame_difference(first, second, box, minimum):
