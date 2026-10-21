@@ -1,0 +1,56 @@
+NEWMARKET - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 18
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/18-newmarket/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-targeted/18-newmarket
+Emulator speed: 280%
+Recorded ordered script: H:space:0.55|L:1|H:7:0.55|H:6:0.55|C:horse-moving
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Hold space for 0.55 seconds.
+  02. Type 1 and press Enter.
+  03. Hold 7 for 0.55 seconds.
+  04. Hold 6 for 0.55 seconds.
+  05. Save a screen named horse-moving.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.125 s  j
+    3.368 s  Control_L
+    3.488 s  p
+    3.849 s  Control_L
+    3.969 s  p
+    4.336 s  Return
+    5.981 s  r
+    7.525 s  Return
+   13.076 s  space
+   15.670 s  1
+   15.914 s  Return
+   17.958 s  7
+   20.555 s  6
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      15.973 seconds; source v19-fuse/18-newmarket/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      15.670 seconds; source v19-targeted/18-newmarket/93-step-01.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      23.154 seconds; source v19-targeted/18-newmarket/90-horse-moving.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

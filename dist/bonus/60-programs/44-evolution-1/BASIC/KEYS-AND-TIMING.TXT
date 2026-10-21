@@ -1,0 +1,54 @@
+EVOLUTION 1 - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 44
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/44-evolution-1/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-fuse/44-evolution-1
+Emulator speed: 320%
+Recorded ordered script: K:Return|K:Return|K:6|K:7
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Tap Return.
+  02. Tap Return.
+  03. Tap 6.
+  04. Tap 7.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.126 s  j
+    3.367 s  Control_L
+    3.487 s  p
+    3.848 s  Control_L
+    3.969 s  p
+    4.333 s  Return
+    6.078 s  r
+    7.522 s  Return
+   15.970 s  Return
+   18.963 s  Return
+   21.958 s  6
+   24.951 s  7
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      15.970 seconds; source v19-fuse/44-evolution-1/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      21.958 seconds; source v19-fuse/44-evolution-1/93-step-02.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      27.946 seconds; source v19-fuse/44-evolution-1/93-step-04.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

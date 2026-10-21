@@ -1,0 +1,95 @@
+RADIO POWER - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 13
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/13-radio-power/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-targeted/13-radio-power
+Emulator speed: 300%
+Recorded ordered script: H:Return:0.5|H:y:0.45|L:AL|L:RADIO|L:SOUTHAMPTON|C:station-view|H:space:0.5
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Hold Return for 0.5 seconds.
+  02. Hold y for 0.45 seconds.
+  03. Type AL and press Enter.
+  04. Type RADIO and press Enter.
+  05. Type SOUTHAMPTON and press Enter.
+  06. Save a screen named station-view.
+  07. Hold space for 0.5 seconds.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.118 s  j
+    3.359 s  Control_L
+    3.479 s  p
+    3.841 s  Control_L
+    3.961 s  p
+    4.325 s  Return
+    5.970 s  r
+    7.517 s  Return
+   14.075 s  Return
+   16.522 s  y
+   18.920 s  Shift_L
+   19.040 s  a
+   19.402 s  Shift_L
+   19.522 s  l
+   19.888 s  Return
+   21.835 s  Shift_L
+   21.955 s  r
+   22.317 s  Shift_L
+   22.437 s  a
+   22.798 s  Shift_L
+   22.919 s  d
+   23.280 s  Shift_L
+   23.400 s  i
+   23.761 s  Shift_L
+   23.882 s  o
+   24.248 s  Return
+   26.194 s  Shift_L
+   26.315 s  s
+   26.682 s  Shift_L
+   26.802 s  o
+   27.163 s  Shift_L
+   27.283 s  u
+   27.645 s  Shift_L
+   27.765 s  t
+   28.126 s  Shift_L
+   28.246 s  h
+   28.607 s  Shift_L
+   28.728 s  a
+   29.089 s  Shift_L
+   29.209 s  m
+   29.570 s  Shift_L
+   29.691 s  p
+   30.052 s  Shift_L
+   30.172 s  t
+   30.533 s  Shift_L
+   30.654 s  o
+   31.015 s  Shift_L
+   31.135 s  n
+   31.500 s  Return
+   33.458 s  space
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      15.976 seconds; source v19-fuse/13-radio-power/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      26.194 seconds; source v19-targeted/13-radio-power/93-step-04.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      33.455 seconds; source v19-targeted/13-radio-power/90-station-view.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

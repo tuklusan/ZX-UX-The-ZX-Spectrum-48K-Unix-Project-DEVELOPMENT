@@ -1,0 +1,61 @@
+ANAGRAMMATIC - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 51
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/51-anagrammatic/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v20-final3/51-anagrammatic
+Emulator speed: 150%
+Recorded ordered script: H:space:0.6|L:AE|S:n|L:2|C:anagrams-output
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Hold space for 0.6 seconds.
+  02. Type AE and press Enter.
+  03. Type shifted n.
+  04. Type 2 and press Enter.
+  05. Save a screen named anagrams-output.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.124 s  j
+    3.368 s  Control_L
+    3.489 s  p
+    3.850 s  Control_L
+    3.970 s  p
+    4.335 s  Return
+    5.979 s  r
+    7.425 s  Return
+   14.880 s  space
+   17.726 s  Shift_L
+   17.846 s  a
+   18.207 s  Shift_L
+   18.327 s  e
+   18.693 s  Return
+   20.938 s  Shift_L
+   21.058 s  n
+   23.584 s  2
+   23.828 s  Return
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      15.991 seconds; source v19-fuse/51-anagrammatic/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      23.584 seconds; source v20-final3/51-anagrammatic/93-step-03.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      26.077 seconds; source v20-final3/51-anagrammatic/90-anagrams-output.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

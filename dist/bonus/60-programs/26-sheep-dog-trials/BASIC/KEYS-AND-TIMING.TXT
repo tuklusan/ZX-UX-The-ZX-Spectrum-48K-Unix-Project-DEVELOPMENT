@@ -1,0 +1,55 @@
+SHEEP DOG TRIALS - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 26
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/26-sheep-dog-trials/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-fuse/26-sheep-dog-trials
+Emulator speed: 320%
+Recorded ordered script: K:space|L:1|K:5|K:8
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Tap space.
+  02. Type 1 and press Enter.
+  03. Tap 5.
+  04. Tap 8.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.121 s  j
+    3.362 s  Control_L
+    3.483 s  p
+    3.844 s  Control_L
+    3.965 s  p
+    4.329 s  Return
+    6.073 s  r
+    7.517 s  Return
+   15.966 s  space
+   18.962 s  1
+   19.207 s  Return
+   21.850 s  5
+   24.845 s  8
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      15.966 seconds; source v19-fuse/26-sheep-dog-trials/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      24.844 seconds; source v19-fuse/26-sheep-dog-trials/93-step-03.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      27.839 seconds; source v19-fuse/26-sheep-dog-trials/93-step-04.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

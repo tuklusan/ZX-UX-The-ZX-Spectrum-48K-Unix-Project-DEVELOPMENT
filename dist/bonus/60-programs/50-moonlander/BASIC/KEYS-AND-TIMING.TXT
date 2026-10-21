@@ -1,0 +1,50 @@
+MOONLANDER - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 50
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/50-moonlander/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-fuse/50-moonlander
+Emulator speed: 330%
+Recorded ordered script: H:space:0.6|H:x:0.6|H:i:0.6
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Hold space for 0.6 seconds.
+  02. Hold x for 0.6 seconds.
+  03. Hold i for 0.6 seconds.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.127 s  j
+    3.368 s  Control_L
+    3.488 s  p
+    3.852 s  Control_L
+    3.972 s  p
+    4.341 s  Return
+    6.087 s  r
+    7.532 s  Return
+   13.981 s  space
+   17.225 s  x
+   20.470 s  i
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-MAIN.png
+      20.470 seconds; source v19-fuse/50-moonlander/93-step-02.png
+  SCREENSHOTS/02-AFTER-INPUT.png
+      23.714 seconds; source v19-fuse/50-moonlander/93-step-03.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

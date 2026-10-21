@@ -1,0 +1,4 @@
+# Large reference manuals and future documents use Git LFS.
+src/docs/** filter=lfs diff=lfs merge=lfs -text
+# Keep the short reference index as a normal Git text file.
+src/docs/README.md -filter -diff -merge text

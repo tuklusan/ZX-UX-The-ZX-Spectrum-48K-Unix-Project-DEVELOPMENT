@@ -1,0 +1,54 @@
+HANGMAN - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 55
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/55-hangman/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-last2/55-hangman
+Emulator speed: 320%
+Recorded ordered script: H:1:0.7|W:3|C:guess-screen|S:e|C:after-e
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Hold 1 for 0.7 seconds.
+  02. Wait 3 seconds.
+  03. Save a screen named guess-screen.
+  04. Type shifted e.
+  05. Save a screen named after-e.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.121 s  j
+    3.362 s  Control_L
+    3.483 s  p
+    3.844 s  Control_L
+    3.964 s  p
+    4.329 s  Return
+    5.973 s  r
+    7.319 s  Return
+   16.668 s  1
+   22.420 s  Shift_L
+   22.540 s  e
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      15.975 seconds; source v19-fuse/55-hangman/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      22.417 seconds; source v19-last2/55-hangman/90-guess-screen.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      24.757 seconds; source v19-last2/55-hangman/90-after-e.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

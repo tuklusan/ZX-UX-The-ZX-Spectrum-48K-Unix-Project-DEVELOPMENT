@@ -1,0 +1,50 @@
+MOTOCROSS - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 06
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/06-motocross/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-finish/06-motocross
+Emulator speed: 200%
+Recorded ordered script: K:1|C:playfield|K:j|C:after-jump
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Tap 1.
+  02. Save a screen named playfield.
+  03. Tap j.
+  04. Save a screen named after-jump.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.124 s  j
+    3.365 s  Control_L
+    3.485 s  p
+    3.847 s  Control_L
+    3.967 s  p
+    4.332 s  Return
+    5.976 s  r
+    7.220 s  Return
+   21.486 s  1
+   22.138 s  j
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      29.970 seconds; source v19-fuse/06-motocross/06-intro-settled.png
+  SCREENSHOTS/02-AFTER-INPUT.png
+      22.785 seconds; source v19-finish/06-motocross/90-after-jump.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

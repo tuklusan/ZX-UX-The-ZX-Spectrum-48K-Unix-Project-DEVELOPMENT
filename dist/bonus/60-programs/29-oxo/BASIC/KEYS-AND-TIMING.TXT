@@ -1,0 +1,56 @@
+OXO - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 29
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/29-oxo/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-fuse/29-oxo
+Emulator speed: 320%
+Recorded ordered script: K:1|K:1|K:2|K:3|K:4
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Tap 1.
+  02. Tap 1.
+  03. Tap 2.
+  04. Tap 3.
+  05. Tap 4.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.118 s  j
+    3.359 s  Control_L
+    3.480 s  p
+    3.841 s  Control_L
+    3.961 s  p
+    4.325 s  Return
+    6.070 s  r
+    7.514 s  Return
+   15.962 s  1
+   18.956 s  1
+   21.951 s  2
+   24.947 s  3
+   27.942 s  4
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      15.962 seconds; source v19-fuse/29-oxo/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      27.942 seconds; source v19-fuse/29-oxo/93-step-04.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      30.937 seconds; source v19-fuse/29-oxo/93-step-05.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

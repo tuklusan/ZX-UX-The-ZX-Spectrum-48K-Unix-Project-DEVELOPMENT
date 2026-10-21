@@ -1,0 +1,65 @@
+FALL GUY - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 02
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/02-fall-guy/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-targeted/02-fall-guy
+Emulator speed: 300%
+Recorded ordered script: H:space:0.5|L:AL|L:BO|W:10|C:main-settled|H:a:0.7|C:after-a
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Hold space for 0.5 seconds.
+  02. Type AL and press Enter.
+  03. Type BO and press Enter.
+  04. Wait 10 seconds.
+  05. Save a screen named main-settled.
+  06. Hold a for 0.7 seconds.
+  07. Save a screen named after-a.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.128 s  j
+    3.369 s  Control_L
+    3.489 s  p
+    3.851 s  Control_L
+    3.971 s  p
+    4.336 s  Return
+    5.980 s  r
+    7.525 s  Return
+   20.078 s  space
+   22.323 s  Shift_L
+   22.444 s  a
+   22.805 s  Shift_L
+   22.926 s  l
+   23.290 s  Return
+   25.035 s  Shift_L
+   25.158 s  b
+   25.519 s  Shift_L
+   25.640 s  o
+   26.005 s  Return
+   37.764 s  a
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-INTRO.png
+      25.971 seconds; source v19-fuse/02-fall-guy/06-intro-settled.png
+  SCREENSHOTS/02-MAIN.png
+      37.761 seconds; source v19-targeted/02-fall-guy/90-main-settled.png
+  SCREENSHOTS/03-AFTER-INPUT.png
+      40.214 seconds; source v19-targeted/02-fall-guy/90-after-a.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.

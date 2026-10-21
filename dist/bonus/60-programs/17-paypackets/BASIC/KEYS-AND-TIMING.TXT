@@ -1,0 +1,59 @@
+PAYPACKETS - REPLAY KEYS AND TIMING
+SANYALnet Labs  |  Spectrum 60  |  Program 17
+
+We recorded these input events during a real FUSE demonstration.
+The times are measured from the start of the FUSE runner, in seconds.
+They are not timings from the Spectrum's internal clock. That little
+computer has enough to do without keeping our stopwatch.
+
+REPRODUCE THE RUN
+From this program folder, enter: sh ./REPLAY.sh.
+On a Linux host, the package runner uses FUSE, Xvfb, Python 3,
+python-xlib, and Pillow. New pictures go to REPLAYS/17-paypackets/ at the
+collection root; they do not replace the selected images automatically.
+
+Main capture session: v19-targeted/17-paypackets
+Emulator speed: 310%
+Recorded ordered script: H:Return:0.6|L:10.00|L:2|C:packet-count|H:space:0.5
+
+SCRIPT ACTIONS IN PLAIN ENGLISH
+  01. Hold Return for 0.6 seconds.
+  02. Type 10.00 and press Enter.
+  03. Type 2 and press Enter.
+  04. Save a screen named packet-count.
+  05. Hold space for 0.5 seconds.
+
+EXACT INPUT EVENTS
+The following events preserve the X11 key names and timings recorded
+in the session, including keys needed to type LOAD and RUN. These events
+are listed to make the session repeatable, not as game instructions.
+    3.122 s  j
+    3.364 s  Control_L
+    3.484 s  p
+    3.847 s  Control_L
+    3.967 s  p
+    4.335 s  Return
+    5.980 s  r
+    7.525 s  Return
+   14.074 s  Return
+   17.321 s  1
+   17.562 s  0
+   17.803 s  .
+   18.044 s  0
+   18.285 s  0
+   18.530 s  Return
+   21.175 s  2
+   21.420 s  Return
+   24.073 s  space
+
+SELECTED SCREENSHOTS
+  SCREENSHOTS/01-PAYMENT-SCREEN.png
+      15.976 seconds; source v19-fuse/17-paypackets/06-intro-settled.png
+  SCREENSHOTS/02-AMOUNT-ACCEPTED.png
+      24.069 seconds; source v19-targeted/17-paypackets/90-packet-count.png
+
+The pictured files are genuine FUSE captures from the sessions named
+above. When a selected frame comes from another session, its source is
+stated explicitly. A replay may show different random positions or
+slightly different timing. We record what happened, not what we hoped
+would happen.
