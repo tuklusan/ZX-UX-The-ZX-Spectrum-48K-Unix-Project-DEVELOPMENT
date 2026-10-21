@@ -5,6 +5,7 @@ from .lex import preprocess, CError
 from .parse import parse
 from . import z80gen, bcgen
 from .fit import FitError, find_smallest
+from .auto import recursive_stack, udg_slots
 
 SDK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SDK)
@@ -16,6 +17,8 @@ def compile_to_asm(path, opts=None):
     prog = parse(toks, lib=opts.get('lib', False))
     if opts.get('module'):
         opts = dict(opts, short=None)       # the library's full table has every form
+    if not opts.get('lib') and opts.get('udgs') is None:
+        opts = dict(opts, udgs=udg_slots(prog))
     if opts.get('bytecode') and 'short' not in opts:
         # first pass: which short forms are used often enough to keep
         g = bcgen.BGen(prog, dict(opts))
@@ -66,7 +69,8 @@ def stack_estimate(g):
     rec = any(F.recursive for f, F in funcs.items() if f not in getattr(g, 'bc', ()))
     rec = rec or any(f in f.calls or any(f in c.calls for c in f.calls if c in funcs) for f in funcs)
     if rec or any(g.scc_of.get(f, (f,)) != (f,) for f in funcs):
-        return max(1024, d + 512)
+        bound = recursive_stack(g)
+        return bound if bound is not None else max(1024, d + 512)
     return max(384, (d + 15) & ~15)
 
 
@@ -79,10 +83,24 @@ def build(src, opts):
     obj = ras.assemble_text(text, os.path.basename(base) + '.s')
     libp = os.path.join(SDK, 'lib', 'libc48.ssa')
     objs = [rld.Obj(obj, base)]
-    arcs = [rld.read_archive(open(libp, 'rb').read(), libp)]
+    # A C48 source may have a matching application assembly companion.  Link
+    # it automatically as a normal translation-unit input, not as a release
+    # builder or executable-name special case.
+    companion = os.path.splitext(src)[0] + '.asm'
+    if os.path.isfile(companion):
+        with open(companion, encoding='utf-8') as stream:
+            companion_text = stream.read()
+        companion_obj = ras.assemble_text(companion_text, os.path.basename(companion))
+        objs.append(rld.Obj(companion_obj, companion))
+    with open(libp, 'rb') as stream:
+        arcs = [rld.read_archive(stream.read(), libp)]
     stack = opts.get('stack')
     if stack is None:
         stack = stack_estimate(g)
+        # Calls implemented in external assembly have opaque stack depth.
+        # Never claim a proved C call-depth bound covers arbitrary ASM.
+        if os.path.isfile(companion):
+            stack = max(stack, 800)
     data, bss, ent, gaddr, chosen = rld.link(objs, arcs, 'start', stack, 0)
     h = rld.parse_ssx(data)
     need = max(len(h['image']) + h['bss'] + h['stack'], len(data))
@@ -100,7 +118,7 @@ def main(argv):
     udgs = None
     heap = 1024
     mode = None
-    fit = False
+    fit = True
     limit = ZXUX_MAX
     files = []
     i = 0
@@ -143,6 +161,8 @@ def main(argv):
             obj_only |= a == '-c'
         elif a == '--fit':
             fit = True
+        elif a == '--no-fit':
+            fit = False
         elif a in ('--bytecode', '--native'):
             selected = 'all' if a == '--bytecode' else 'none'
             if mode is not None and mode != selected:
@@ -152,11 +172,13 @@ def main(argv):
         else:
             files.append(a)
         i += 1
-    if fit and (mode is not None or asm_only or obj_only):
-        print('rcc: --fit needs linked output and no forced backend', file=sys.stderr)
-        return 2
+    if mode is not None or asm_only or obj_only:
+        if fit and '--fit' in argv:
+            print('rcc: --fit needs linked output and no forced backend', file=sys.stderr)
+            return 2
+        fit = False
     if len(files) != 1:
-        print('usage: rcc [-S|-c] [-o out] [--bytecode|--native|--fit] [--max BYTES] [--stack N] [--heap N] [--udgs N] file.c',
+        print('usage: rcc [-S|-c] [-o out] [--bytecode|--native|--fit|--no-fit] [--max BYTES] [--stack N] [--heap N] [--udgs N] file.c',
               file=sys.stderr)
         return 2
     src = files[0]
@@ -179,9 +201,10 @@ def main(argv):
             obj = ras.assemble_text(text, os.path.basename(base) + '.s')
             return write_out(target, obj)
         if fit:
-            (data, g, text, obj, need), trials, chosen = find_smallest(src, opts, build)
-            print('rcc: --fit smallest found in %d linked trials: %d bytes' %
-                  (trials, need), file=sys.stderr)
+            # Full measured fitting is the ordinary linked-output behavior.
+            # An explicit --fit is retained as a compatible spelling.
+            (data, g, text, obj, need), trials, chosen = find_smallest(
+                src, opts, build, max_candidates=128, max_passes=3)
         else:
             data, g, text, obj, need = build(src, opts)
         if not fit and mode is None and limit and need > limit:

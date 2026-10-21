@@ -1,4 +1,4 @@
-"""Opt-in measured C48 code-mode search; no guesswork about stack or UDGs.
+"""Default measured C48 code-mode search; caller settings are preserved.
 
 Every candidate is compiled and linked with the installed source/runtime.
 The reported result is the smallest found within this bounded search, NOT
@@ -44,8 +44,6 @@ def find_smallest(src, opts, build_fn, max_candidates=128, max_passes=3):
     original = dict(opts)
     original.pop('bytecode', None)
     native = build_fn(src, original)
-    if opts.get('stack') is None and has_call_cycle(native[1].p.funcs):
-        raise FitError('recursive source requires an explicit --stack for --fit')
     permitted = frozenset(f.name for f in native[1].p.funcs if not bcgen.uses_float(f))
     cache = {frozenset(): native}
     best_modes = frozenset()

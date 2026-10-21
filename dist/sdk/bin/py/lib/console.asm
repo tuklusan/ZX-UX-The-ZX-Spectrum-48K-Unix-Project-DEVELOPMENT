@@ -5,7 +5,7 @@ SYS     equ 6003h
 TTOP    equ 5BE4h               ; kernel: the console's first row while it
                                 ; shares the screen (0: it does not)
         section text
-        global @scrinit,_cls,_putchar,_puts,_print_at,_cursor_at,_ink,_paper,_bright,_flash
+        global @scrinit,_cls,_putchar,_puts,_print_at,_ink,_paper,_bright,_flash
         global _inverse,_over,_border,_plot,_point,@pixel,@pxok
         global _udg_define,_udg_get,_udg_clear,_udg_draw,_udg_draw_2x2
         global @attr,@ttyb,___pixel
@@ -162,33 +162,6 @@ _puts:  call @puts
         pop hl
         inc hl
         j @puts
-; int cursor_at(int row, int col): leave the next putchar at this place.
-; Unlike print_at this deliberately does not restore the old cursor.
-_cursor_at:
-        ld d,h                  ; keep the column's high byte for range check
-        ld e,l                  ; last argument (col) arrives in HL
-        pop bc                  ; return address
-        pop hl                  ; row comes from caller stack
-        push bc
-        ld a,h
-        or d
-        jp nz,@bad
-        ld a,l
-        call @lim
-        cp l
-        jp z,@bad
-        jp c,@bad
-        ld a,e
-        cp 64
-        jp nc,@bad
-        ld a,l
-        ld (@row),a
-        ld a,e
-        ld (@col),a
-        xor a
-        ld (@wrap),a
-        jp @ok
-
 ; int print_at(int row, int col, char *s)
 _print_at:
         ld (@tmp),hl
