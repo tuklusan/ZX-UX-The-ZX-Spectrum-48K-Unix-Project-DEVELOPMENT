@@ -83,7 +83,7 @@ class Keyboard:
         self.x.XFlush(self.ptr)
 
     def key(self, symbol, pause=.20):
-        names = {'\n': 'Return', ' ': 'space', '/': 'slash', '&': 'ampersand'}
+        names = {'\n': 'Return', '\b': 'BackSpace', ' ': 'space', '/': 'slash', '&': 'ampersand'}
         name = names.get(symbol, symbol)
         # Fuse maps Control to Spectrum Symbol Shift. On the Spectrum,
         # Symbol Shift + 6 types '&'; host Shift + 7 does not.
@@ -98,9 +98,10 @@ class Keyboard:
         shifted = symbol.isupper()
         if shifted:
             self.event('Shift_L', True)
-        self.event('7' if name == 'ampersand' else ('Return' if name == 'Return' else name.lower()), True)
+        key_name = name if name in ('Return', 'BackSpace') else name.lower()
+        self.event(key_name, True)
         time.sleep(pause)
-        self.event('7' if name == 'ampersand' else ('Return' if name == 'Return' else name.lower()), False)
+        self.event(key_name, False)
         if shifted:
             self.event('Shift_L', False)
         time.sleep(pause)

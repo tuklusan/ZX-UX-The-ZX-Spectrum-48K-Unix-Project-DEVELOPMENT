@@ -54,8 +54,10 @@ def run_rvm(folder, alias, case):
     runner.keys = actions
     runner.start()
     why = None
+    sound_edges = 0
     for frame in range(case.get('frames', 1100) + 300):
-        runner.frame()
+        _, _, audible_edge = runner.frame()
+        sound_edges += int(audible_edge)
         if case.get('stop_when') and frame % 3 == 0:
             partial, _ = runner.picture()
             current = zxscreen.screen_text(partial)
@@ -67,6 +69,10 @@ def run_rvm(folder, alias, case):
             break
     if runner.fg.started is None or why not in ('exit', 'input', 'frames', 'checkpoint'):
         raise AssertionError(f'ZX-UX did not run {alias}: {why}')
+    if 'sound_edges_min' in case and sound_edges < case['sound_edges_min']:
+        raise AssertionError(f'not enough genuine beeper activity: {sound_edges}')
+    if 'sound_edges_max' in case and sound_edges > case['sound_edges_max']:
+        raise AssertionError(f'unexpected genuine beeper activity: {sound_edges}')
     scr, border = runner.picture()
     text = zxscreen.screen_text(scr)
     for expected in case.get('expect', []):
@@ -219,6 +225,32 @@ def geometry(original, candidate, box, minimum):
     return intersection / union
 
 
+def named_color_geometry(original, candidate, box, minimum, color):
+    """Match real BASIC/C48 colored pixels, not the colored Spectrum paper."""
+    from PIL import Image
+    if color not in ('red', 'green', 'blue'):
+        raise ValueError('unsupported historical color comparison')
+    a = Image.open(original).convert('RGB')
+    b = Image.open(candidate).convert('RGB')
+    if a.size != (320, 240) or b.size != (320, 240):
+        raise AssertionError('expected 320x240 genuine Spectrum display')
+    channel = {'red': 0, 'green': 1, 'blue': 2}[color]
+    def lit(rgb):
+        return rgb[channel] > 100 and all(rgb[channel] > 1.3 * rgb[i]
+                                         for i in range(3) if i != channel)
+    pa = a.crop(tuple(box)).get_flattened_data()
+    pb = b.crop(tuple(box)).get_flattened_data()
+    intersection = union = 0
+    for x, y in zip(pa, pb):
+        xx, yy = lit(x), lit(y)
+        intersection += int(xx and yy)
+        union += int(xx or yy)
+    score = intersection / union if union else 0.0
+    if score < minimum:
+        raise AssertionError(f'{color} graphics mismatch: {score:.3f} < {minimum:.3f}')
+    return score
+
+
 def color_geometry(first, second, box, minimum):
     from PIL import Image
     a = Image.open(first).convert('RGB')
@@ -263,7 +295,10 @@ def main():
         candidate = folder / 'C48/screenshots' / args.host / check['capture']
         if candidate.is_file():
             ref = folder / 'BASIC/SCREENSHOTS' / check['reference']
-            score = geometry(ref, candidate, check['box'], check['threshold'])
+            score = (named_color_geometry(ref, candidate, check['box'],
+                                          check['threshold'], check['color'])
+                     if 'color' in check else
+                     geometry(ref, candidate, check['box'], check['threshold']))
             print(args.host, check['capture'], f'pixel-overlap={score:.3f}')
     if args.host == 'fuse':
         for check in data.get('rvm_geometry', []):

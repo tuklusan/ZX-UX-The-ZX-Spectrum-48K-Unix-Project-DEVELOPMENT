@@ -1,0 +1,3 @@
+RVM: python3 -B tools/bonus_replay.py --program 23-biorhythms --host rvm
+FUSE: python3 -B tools/bonus_replay.py --program 23-biorhythms --host fuse --speed 300 --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse
+PASS: 8 RVM scenarios; 6 native ZX-UX/FUSE capture states (intro, five fields, emotional graph, completed graph, restart, numeric deletion). Actual beeper edges distinguish birthday from other dates. Original BASIC emotional-curve red-mask overlap: RVM 0.990, FUSE 0.958. Original BASIC and screenshots unchanged.
