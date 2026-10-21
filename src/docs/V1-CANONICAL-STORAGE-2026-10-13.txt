@@ -1,0 +1,11 @@
+ZX-UX v1 — PERMANENT STORAGE
+
+The private GitHub repository is the canonical project store.
+Commit validated source changes, tests, reports, and native release files.
+The complete release/ directory belongs in remote GitHub main.
+Local /mnt/data and private Library copies are temporary support only.
+Check GitHub branch identity, source revision, paths, bytes, and hashes
+before and after each remote commit. Preserve release/manifest.txt.
+The manifest must list every shipped original file and exact hash.
+Keep external checked tools, ROM images, and private checker inputs
+outside Git. The repository stays private without owner approval.

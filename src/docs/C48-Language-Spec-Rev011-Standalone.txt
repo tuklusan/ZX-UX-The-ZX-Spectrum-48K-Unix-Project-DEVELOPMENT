@@ -1,0 +1,2700 @@
+C48 LANGUAGE SPECIFICATION
+
+C48 Language Specification -- Rev 0.11 (Standalone Edition)
+
+Copyright (c) 2026 Supratim Sanyal of SANYALnet Labs.
+
+Status: Standalone normative C48 Version 1 language specification for ZX-UX.
+
+Dialect: C48 Version 1
+
+Target: Original unexpanded 48K Sinclair ZX Spectrum / Z80A
+
+1. Purpose
+
+This document removes language-design discretion from the implementation of the ZX-UX C48 Version-1 compiler.
+
+Its purpose is to ensure that:
+
+the native ZX-UX cc compiler can be implemented without inventing missing C language rules;
+
+an independent Windows-hosted C48 compiler or interpreter can implement the same language;
+
+a C48 source program accepted by the Windows implementation can later be transferred to ZX-UX and accepted without source changes, subject only to documented implementation resource limits;
+
+C48 behavior does not depend on the behavior of a host ISO C compiler;
+
+unsupported C features fail explicitly rather than acquiring accidental implementation-specific behavior.
+
+This specification states the C48 Version 1 language rule in full. It is the controlling definition of C48 language syntax and semantics for both native ZX-UX and independent host implementations.
+
+This text defines C48 Version 1 language requirements without relying on other documents for their meaning.
+
+If a target-specific service detail is not specified here, that gap MUST be recorded; an implementation MUST NOT silently invent a new C48 language rule or treat a historical document as controlling.
+
+No compiler implementer is authorized to substitute personal preference, ISO C folklore, host-compiler behavior, Small-C precedent, z88dk behavior, SDCC behavior, or Sinclair BASIC behavior for a rule explicitly frozen here.
+
+2. Conformance terminology
+
+The words MUST, MUST NOT, SHALL, SHALL NOT, REQUIRED, and FORBIDDEN are normative.
+
+"Portable C48" means source whose behavior is defined by this specification and which remains within the explicitly stated Version-1 compiler and target resource limits.
+
+"Rejected" means compilation MUST fail deterministically. It does not mean that the compiler may accept the construct as an undocumented extension.
+
+There are no C48 Version-1 language extensions.
+
+A conforming compiler MUST provide an option or operating mode in which every accepted translation unit obeys exactly this specification. The native ZX-UX compiler operates in that mode unconditionally.
+
+3. C48 is not ISO C
+
+C48 is a deliberately defined C subset.
+
+The absence of a rule from ISO C does not make that rule undefined in C48.
+
+Likewise, the presence of a feature in ISO C does not make that feature available in C48.
+
+C48 uses familiar C syntax but defines its own complete Version-1 language rule.
+
+Where this document freezes behavior more tightly than ISO C, C48 behavior governs.
+
+4. Canonical source representation
+
+Canonical C48 source is an 8-bit byte stream. Language tokens use ASCII source characters; comment contents may contain any byte value.
+
+The canonical line separator is exactly:
+
+LF = 0x0A
+
+Outside comments, portable C48 source MUST contain only:
+
+TAB             0x09
+LF              0x0A
+printable ASCII 0x20..0x7E
+
+Outside comments, a canonical C48 source object MUST NOT contain:
+
+CR              0x0D
+NUL             0x00
+bytes 0x80..0xFF
+other ASCII control bytes
+These byte values are permitted within comments only.
+
+A host compiler MAY accept CRLF files as an input convenience, provided its strict portability check can normalize to canonical LF without changing program meaning.
+
+Portable C48 source uses canonical LF line endings. Native Z80 compilation of C48 source is not a ZX-UX v1 requirement; sdk/rcc runs on the host.
+
+There is no source-byte-order mark.
+
+UTF-8 multibyte sequences and all other byte values are permitted only within /* ... */ and // comments. Outside comments, UTF-8 non-ASCII source characters are not valid C48 Version 1 tokens. Comment bytes are ignored, not interpreted as language tokens.
+
+Non-ASCII data required by a program MUST be expressed using character or string escapes.
+
+C48 Version 1 has no trigraphs, digraph alternative tokens, universal-character-name escapes, source character-set translation phases, or wide/Unicode source-token forms. Bytes are tokenized exactly under this specification after the limited comment/preprocessing rules below.
+
+5. Physical and logical lines
+
+An LF terminates a source line.
+
+A final source line MAY end at end-of-file without a trailing LF.
+
+Backslash-newline source splicing is not supported.
+
+Therefore:
+
+abc\
+def
+
+never forms one logical token.
+
+A backslash immediately followed by LF outside a string or character literal is a compile-time error.
+
+6. White space
+
+The following are C48 white space:
+
+ASCII space 0x20
+TAB         0x09
+LF          0x0A
+comments
+
+No other byte is lexical white space.
+
+White space separates tokens where otherwise the bytes would form one token.
+
+Except inside string and character literals and for preprocessing line boundaries, multiple white-space bytes have no semantic distinction.
+
+7. Comments
+
+C48 supports both forms:
+
+/* block comment */
+
+and:
+
+// line comment
+
+A // comment continues through the byte immediately before LF or through end-of-file.
+
+A /* ... */ comment may span lines.
+
+Block comments MUST NOT nest.
+
+An unterminated block comment is a compile-time error.
+
+Comment introducers appearing inside string or character literals have no comment meaning.
+
+Comments behave as white space.
+
+8. Identifiers
+
+An identifier has the lexical form:
+
+identifier:
+    identifier-start identifier-continue*
+
+identifier-start:
+    A..Z
+    a..z
+    _
+
+identifier-continue:
+    identifier-start
+    0..9
+
+Identifiers are case-sensitive.
+
+The maximum identifier length is exactly 15 visible characters.
+
+The terminating NUL used internally or in an OBJ1 symbol record is not part of this 15-character limit.
+
+An identifier of 16 or more characters MUST be rejected.
+
+It MUST NOT be:
+
+truncated;
+
+hashed into a shorter accepted spelling;
+
+compared only through a prefix;
+
+case-folded;
+
+silently mapped to an OBJ1-safe alias.
+
+For example:
+
+abc
+Abc
+ABC
+
+are three distinct identifiers.
+
+9. Supported reserved words
+
+The complete C48 Version-1 supported keyword set is:
+
+break
+char
+continue
+do
+else
+extern
+float
+for
+if
+int
+return
+short
+sizeof
+static
+unsigned
+void
+while
+
+No other word introduces a C48 Version-1 language construct.
+
+unsigned participates only in the exact type combinations defined below.
+
+Plain int and plain short are signed.
+
+There is no supported signed type specifier.
+
+10. Reserved but unsupported C words
+
+To prevent a later compiler from accidentally treating familiar C keywords as ordinary user identifiers, the following spellings are permanently reserved in C48 Version 1 but unsupported:
+
+auto
+case
+const
+default
+double
+enum
+goto
+long
+register
+signed
+struct
+switch
+typedef
+union
+volatile
+
+The following later-ISO-C spellings are likewise reserved and unsupported:
+
+inline
+restrict
+_Alignas
+_Alignof
+_Atomic
+_Bool
+_Complex
+_Generic
+_Imaginary
+_Noreturn
+_Static_assert
+_Thread_local
+
+Encountering any of these where an identifier or keyword could occur MUST produce an explicit unsupported-language-feature diagnostic.
+
+They MUST NOT be accepted as user identifiers.
+
+This reservation does not imply future support.
+
+10.1 Implementation-reserved identifiers and remaining identifier spellings
+
+The supported-keyword list in Section 9, the reserved-but-unsupported list in Section 10, and the implementation-reserved names in this subsection are exhaustive. Any other lexically valid identifier spelling is an ordinary user identifier even if another C standard or host compiler gives it special meaning. For example, `bool`, `true`, `false`, `nullptr`, `alignas`, and `typeof` have no predefined C48 Version-1 meaning unless a later architecture revision reserves them.
+
+Every identifier beginning with two consecutive underscores is reserved to the C48/ZX-UX implementation and MUST NOT be declared or defined by user C48 source or used as a user macro name. The exact external entry symbol `_start` is also reserved. A single leading underscore is otherwise permitted by the ordinary identifier grammar.
+
+Known implementation-owned names include `_start`, `__heap_start`, `__heap_end`, the `__f*` floating helpers, `__itof`, `__ftoi`, and `__fcmp`. This list is illustrative rather than limiting: the double-underscore namespace is reserved as a class so later internal helpers cannot collide with user source.
+
+11. Operators and punctuation
+
+C48 uses longest-match tokenization. At every source position the lexer MUST select the longest valid token beginning there. Supported multi-character operators are recognized before their single-character prefixes. Comment introducers are recognized before the division operator when the required second character is present.
+
+The complete supported Version-1 operator set is:
+
+=
++
+-
+*
+/
+%
+++
+--
+<<
+>>
+<
+<=
+>
+>=
+==
+!=
+&
+|
+^
+~
+&&
+||
+!
+
+The supported syntactic punctuation is:
+
+(
+)
+[
+]
+{
+}
+;
+,
+
+The comma is a separator only, not an expression operator. It is used for function parameters, function arguments, multiple declarators, and array-initializer elements.
+
+The following familiar C operators are explicitly unsupported:
+
++=  -=  *=  /=  %=  <<=  >>=  &=  |=  ^=  ?  :  ->  .
+
+The final period in that list is the structure/union member operator. A period remains valid as part of a decimal floating literal.
+
+An unsupported compound token MUST be rejected as one token; it MUST NOT be decomposed into separately supported tokens. For example, `x += 1` is not `x + = 1`.
+
+Whitespace or comments prevent token fusion. Thus `+ +` is two `+` tokens and is not `++`.
+
+A numeric token immediately followed without separating whitespace by an identifier-start character or by an unsupported numeric suffix is one malformed numeric token and MUST be rejected rather than split into a number plus identifier. Examples include `123abc`, `1.0foo`, `1L`, and `1.0L`.
+
+A standalone source byte that belongs to neither the supported token grammar nor a supported preprocessing directive is a lexical error. In particular, backslash outside a literal is invalid except where it begins no supported construct, and `#` is valid only in the preprocessing-directive position defined in Section 70.
+
+12. Integer literals
+
+C48 supports decimal, octal, and hexadecimal integer literals.
+
+Grammar:
+
+decimal-literal:
+    0
+    nonzero-digit decimal-digit*
+
+octal-literal:
+    0 octal-digit+
+
+hexadecimal-literal:
+    0x hexadecimal-digit+
+    0X hexadecimal-digit+
+
+An integer literal may optionally have exactly one unsigned suffix: `u` or `U`. No other integer suffix is supported.
+
+unsupported integer suffixes: l L ul UL lu LU ll LL and every mixed-case equivalent containing L
+
+A leading plus or minus is never part of an integer literal. It is a unary operator token.
+
+Examples:
+
+0
+123
+077
+0x2a
+65535u
+0XFFU
+
+Digits 8 or 9 in an octal literal are invalid. A hexadecimal prefix must be followed by at least one hexadecimal digit.
+
+Binary integer literals (`0b...`/`0B...`), digit separators, and every integer prefix/suffix not explicitly listed in Sections 12-13 are unsupported and are rejected as malformed numeric tokens.
+
+An integer literal whose mathematical magnitude exceeds 65535 is a compile-time range error.
+
+Important INT_MIN rule: source text `-32768` is tokenized as unary `-` applied to the unsuffixed literal `32768`, whose type is `unsigned int` under Section 13. It therefore denotes unsigned value 32768, not signed `int` minimum. Portable C48 spells signed -32768 as `(int)0x8000u` or `(-32767 - 1)`.
+
+13. Integer-literal types
+
+C48 has no integer type wider than 16 bits.
+
+For an integer literal without u or U:
+
+if its value is 0..32767, its type is int;
+
+if its value is 32768..65535, its type is unsigned int.
+
+For an integer literal with u or U:
+
+its type is unsigned int;
+
+its value must be 0..65535.
+
+This rule applies equally to decimal, octal, and hexadecimal literals.
+
+There is no hidden host long, 32-bit temporary integer type, or arbitrary-precision run-time integer type.
+
+The compiler may use wider arithmetic internally while parsing, but the accepted C48 type and value are determined exactly by the rules above.
+
+14. Character literals
+
+A character literal denotes exactly one byte and has type `int` with value 0..255.
+
+Examples:
+
+'A'
+'0'
+'\n'
+'\x7f'
+
+The following escapes are supported in both character and string literals:
+
+\\      backslash          0x5C
+\'      single quote       0x27
+\"      double quote       0x22
+\0      NUL                0x00
+\a      bell               0x07
+\b      backspace          0x08
+\t      horizontal tab     0x09
+\n      line feed          0x0A
+\v      vertical tab       0x0B
+\f      form feed          0x0C
+\r      carriage return    0x0D
+
+C48 additionally supports the exact two-digit hexadecimal byte escape `\xHH`, where each H is one hexadecimal digit. Exactly two hexadecimal digits are consumed.
+
+'\x00'
+'\x41'
+'\xff'
+
+A one-digit hexadecimal escape such as `\x4` is invalid. In `\x041`, `\x04` is one escaped byte and the following `1` is an ordinary character; that makes a character literal containing it invalid because a character literal must produce exactly one byte.
+
+General octal escapes such as `\123` are unsupported. An unknown escape such as `\q` is a compile-time lexical error.
+
+Empty and multi-byte character constants are unsupported: `''` and `'AB'` are errors.
+
+Prefixed/wide character literals such as `L'A'`, `u'A'`, and `U'A'` are unsupported.
+
+An unescaped LF, end-of-file, or missing closing quote before the literal closes is a lexical error.
+
+15. String literals
+
+A string literal is a sequence of canonical source characters and supported Section-14 escapes between double quotes. Each source character contributes its ASCII byte, each escape contributes exactly one specified byte, and one terminating NUL byte is appended.
+
+"hello\n"
+
+A string literal has type `char[N]`, where N includes the terminating NUL. Therefore `sizeof("abc")` is 4.
+
+Adjacent string literals separated only by whitespace or comments are concatenated at compile time. `"hello " "world"` is identical to `"hello world"`; the result contains one final terminating NUL.
+
+An unescaped LF, end-of-file, unknown escape, or missing closing double quote is a lexical error.
+
+String literals have static storage duration. C48 source treats a string literal as nonmodifiable: a direct attempt to assign through the literal expression is rejected where the compiler can identify it, and modifying its bytes through an alias is outside the portable C48 rule. The stock 48K target has no memory protection, so this is a language rule rather than a hardware write-protection promise.
+
+Each non-adjacent string-literal sequence occurrence denotes its own distinct static array object. The compiler MUST NOT merge two separate literal occurrences into one address. Re-evaluating the same literal occurrence yields the same object address for the process lifetime. This freezes pointer-identity behavior and prevents host string-pooling choices from leaking into C48.
+
+Prefixed/wide string literals such as `L"text"`, `u"text"`, `U"text"`, and `u8"text"` are unsupported. C48 has only the byte-string form defined in this section.
+
+16. Floating literals
+
+C48 supports decimal floating literals using the mantissa/exponent grammar also accepted by the canonical SYS_FP_FROM_TEXT numeric parser once any source suffix has been removed.
+
+floating-literal:
+    digits '.' digits? exponent? float-suffix?
+    '.' digits exponent? float-suffix?
+    digits exponent float-suffix?
+
+exponent:
+    ('e' | 'E') ('+' | '-')? digits
+
+float-suffix:
+    'f' | 'F'
+
+At least one mantissa digit is required. Examples include `0.0`, `1.`, `.5`, `1.25`, `1e3`, `1E-2`, `.25e+1`, and `1.25f`.
+
+All accepted floating literals have C48 type `float`. The optional `f`/`F` suffix does not select a different format; the compiler removes it before canonical decimal-to-five-byte conversion.
+
+`l` and `L` floating suffixes and hexadecimal floating literals are unsupported. `NaN`, `Inf`, `Infinity`, and similar spellings are ordinary identifiers, not literals or predefined constants.
+
+A leading `+` or `-` is a unary operator and not part of the floating token.
+
+17. Floating-literal representation
+
+Every C48 floating value uses the Spectrum-ROM-compatible five-byte numeric representation specified in Sections 17, 19, 53, 84 and 94.
+
+sizeof(float) is exactly:
+
+5
+
+and float alignment is exactly:
+
+1
+
+A conforming compiler MUST NOT substitute:
+
+IEEE-754 binary32;
+
+IEEE-754 binary64;
+
+host float;
+
+host double;
+
+an implementation-private five-byte format.
+
+Decimal source conversion MUST produce the same five bytes as the canonical ZX-UX/Spectrum ROM numeric conversion path for the same accepted decimal value.
+
+The native compiler may use the controlled ROM conversion service.
+
+A Windows C48 implementation MUST emulate that conversion sufficiently to produce the same C48 numeric value and observable arithmetic results.
+
+Floating overflow, invalid domain conversion, or another ROM-defined numeric conversion failure MUST be reported rather than silently producing IEEE infinity or NaN.
+
+C48 has no NaN or infinity language semantics.
+
+18. Supported types
+
+The complete Version-1 fundamental type spellings are exactly:
+
+void
+char
+unsigned char
+short
+unsigned short
+int
+unsigned int
+float
+
+The following alternative spellings are not accepted:
+
+signed
+signed int
+signed short
+signed char
+short int
+unsigned
+unsigned short int
+unsigned long
+long int
+long
+double
+
+This deliberate canonical spelling rule reduces parser and documentation ambiguity.
+
+Plain char is unsigned.
+
+signed char is not a Version-1 type.
+
+Plain short and plain int are signed two's-complement types.
+
+19. Data model
+
+The complete Version-1 data model is:
+
+type                    size    alignment
+
+char                     1         1
+unsigned char            1         1
+short                    2         2
+unsigned short           2         2
+int                      2         2
+unsigned int             2         2
+pointer                  2         2
+float                    5         1
+
+void has no object size.
+
+sizeof(void) is invalid.
+
+Pointers are 16-bit target addresses.
+
+Arrays have no padding between elements beyond the element's own size.
+
+Array stride is exactly sizeof(element).
+
+Objects receive only the minimum padding required by their frozen alignment.
+
+The exact scalar ranges and object-byte representations are part of C48, because `memcpy`, `memmove`, `memset`, and byte-pointer access can observe them:
+
+char / unsigned char: 0..255, stored as one byte;
+short / int: -32768..32767, stored as a 16-bit little-endian two's-complement word;
+unsigned short / unsigned int: 0..65535, stored as a 16-bit little-endian word;
+pointer: one 16-bit little-endian logical address; null is bytes 00 00;
+float: exactly the five bytes, in memory order, used by the canonical Spectrum ROM numeric representation.
+
+C48 arrays have the alignment of their element type. Every array element begins exactly `sizeof(element)` bytes after the previous one; no tail rounding is inserted between elements.
+
+Semantic zero has an all-zero object representation for every C48 integer type and for the null pointer. C48's required BSS-zeroing semantics also require an all-zero five-byte `float` object to denote floating zero. A conforming implementation MUST preserve these zero-representation invariants.
+
+20. Declarators
+
+C48 deliberately supports only the declarator shapes required by Version 1. Appendix A contains the complete normative grammar; this section states the semantic restrictions.
+
+Declarator binding is exact. A postfix array or function suffix binds to the identifier before any leading pointer stars. Consequently `char *a[8]` declares a one-dimensional array of eight pointers to char, and `char *f(void)` declares a function returning pointer to char. The grammar has no parenthesized declarator, so the inverse constructions -- pointer to array and pointer to function -- cannot be formed. With multiple leading stars, all stars apply to the element/return base before the single suffix: `char **a[8]` is an array of pointers to pointers to char, and `char **f(void)` returns pointer to pointer to char.
+
+A declarator with no suffix declares the object type obtained by applying its leading pointer stars to the stated base type. A declarator with `[]` declares an array whose element type is that pointer-adjusted base type. A declarator with `()` declares a function whose return type is that pointer-adjusted base type. These three rules are normative and remove any implementation freedom in declarator interpretation.
+
+declarator:
+    pointer-part? identifier declarator-suffix?
+
+pointer-part:
+    '*' pointer-part?
+
+declarator-suffix:
+    array-suffix | function-suffix
+
+Parenthesized declarators are not supported. A single declarator therefore cannot describe a function pointer, pointer to array, array of functions, function returning an array, or another recursively nested ISO-C declarator construction.
+
+Multiple pointer indirections are supported, including `char **argv`. Functions may return object pointers. One-dimensional arrays of scalar or pointer elements are supported.
+
+True multidimensional array declarators are unsupported. Repeated indexing remains valid when an indexed expression itself has pointer type, for example `char **argv; argv[1][0]`.
+
+21. Declarations
+
+A declaration contains an optional permitted storage class, exactly one permitted C48 type spelling, one or more declarators separated by commas, optional permitted initializers, and a terminating semicolon.
+
+int x;
+int x, y;
+unsigned int mask;
+char *p;
+int values[10];
+
+The comma here is a declarator separator, not the comma expression operator. Implicit `int` does not exist; every object and function declaration states its type.
+
+At file scope, `int x;` and `static int x;` are definitions and allocate zero-initialized storage when no explicit initializer is present. `extern int x;` is a declaration and allocates no storage. Compatible repeated `extern` declarations are permitted; more than one definition of the same file-scope object in one translation unit is an error.
+
+For an external-linkage object, any number of exact-compatible `extern` declarations may appear before and/or after exactly one definition without a storage-class specifier in the same translation unit. Thus `extern int x; int x;`, `int x; extern int x;`, and repeated compatible extern declarations are valid; `int x; int x;` is two definitions and is rejected. A `static` declaration/definition cannot be mixed with an external-linkage declaration of the same identifier in the translation unit.
+
+File-scope global and static objects without an explicit initializer are initialized to all-zero bytes according to their C48 object representation.
+
+22. Storage classes
+
+At file scope C48 supports:
+
+static
+extern
+
+with normal C48 meanings:
+
+no storage class: external linkage for functions and file-scope objects;
+
+extern: declaration of an externally defined object or function;
+
+static: internal linkage within the current translation unit.
+
+At block scope, static and extern declarations are not supported in Version 1.
+
+Automatic local objects require no auto keyword.
+
+The auto and register keywords are unsupported and reserved.
+
+A file-scope extern object declaration MUST NOT contain an initializer.
+
+A function definition may have no storage-class specifier or may be declared static.
+
+extern may appear on a function declaration but not on a function definition.
+
+23. Scope
+
+C48 has:
+
+file scope;
+
+function-parameter scope;
+
+nested block scope.
+
+A declaration becomes visible after its declarator.
+
+An inner block may shadow an outer local, parameter, or file-scope name.
+
+Redeclaring two different objects in the same scope is an error.
+
+Compatible repeated function prototypes at file scope are permitted.
+
+A prototype and its eventual definition MUST match exactly.
+
+Functions cannot be defined inside functions.
+
+C48 has one ordinary identifier namespace because Version 1 has no struct/union tags, labels/goto language surface, or typedef names.
+
+Compiler-generated labels are implementation details and are not C48 source identifiers.
+
+In a function definition, each parameter name becomes visible after its own declarator and remains visible through the function body. The outermost compound statement of that function does not create a scope in which a parameter may be redeclared; a local declaration in that outermost body using a parameter name is therefore an error. A nested inner compound block may shadow a parameter under the normal inner-block rule.
+
+23.1 Type identity and compatibility
+
+C48 source type identity is stricter than representation size. `char`, `unsigned char`, `short`, `unsigned short`, `int`, `unsigned int`, and `float` are seven distinct arithmetic types even where two types have identical size or signedness. In particular, plain `char` and `unsigned char` have the same unsigned 8-bit representation but remain distinct source types; `short` and `int` remain distinct signed types; `unsigned short` and `unsigned int` remain distinct unsigned types.
+
+Two object-pointer types are exactly compatible only when their pointed-to types are exactly compatible recursively. `void *` implicit conversion does not make `void *` exactly compatible with another object-pointer type for declaration/prototype matching.
+
+Two function types match exactly only when return types match exactly and the fixed parameter count and each parameter type match exactly in order. Parameter names are not part of function type. calling convention-equivalent widths do not make different source types interchangeable in a prototype/definition pair.
+
+Two declarations of the same identifier in one scope must agree in entity kind and exact type. A function name and object name cannot coexist in the same scope. File-scope linkage declarations must not conflict: an identifier cannot switch between internal `static` linkage and external linkage within one translation unit.
+
+Function declarations/prototypes are permitted only at file scope. Block-scope function declarations are unsupported. At file scope, `static` may apply to objects and functions; `extern` may declare file-scope objects/functions; block-scope `static` and `extern` are unsupported as already stated in Section 22.
+
+23.2 Linkage, definitions, and OBJ1 symbol spelling
+
+A file-scope external-linkage object or function definition contributes an OBJ1 GLOBAL definition using the exact C48 source identifier bytes. C48 performs no leading-underscore decoration, case folding, truncation, or host-style name mangling.
+
+A referenced `extern` entity that is not defined in the translation unit becomes an undefined GLOBAL OBJ1 import using that exact identifier. An unused extern declaration need not create an import. File-scope `static` entities have internal linkage and MUST NOT be exported as OBJ1 GLOBAL definitions; the compiler resolves their internal references within the module or uses non-GLOBAL local OBJ1 symbols as needed.
+
+More than one definition of the same function in one translation unit is a compile-time declaration/linkage error, just as multiple object definitions are. Compatible repeated prototypes remain permitted.
+
+24. Local declarations
+
+Within every compound block, local declarations MUST precede executable statements in that block. A nested block begins a fresh declarations-before-statements region.
+
+{
+    int a;
+    int b;
+
+    a = 1;
+    b = 2;
+}
+
+A declaration after the first statement in the same block is unsupported.
+
+A `for` initializer is an expression, not a declaration. `for (int i = 0; ... )` is therefore unsupported; declare `i` before the `for` statement.
+
+An automatic local object without an initializer has unspecified stored bits. Reading it before the program has assigned a value is outside the portable C48 rule. The native compiler is not required to implement whole-function definite-assignment analysis, although host tooling SHOULD diagnose obvious uses where practical.
+
+25. Arrays
+
+Only one-dimensional array declarators are supported. An array element type may be any complete C48 object type other than an array.
+
+char bytes[16];
+int values[10];
+float samples[4];
+char *names[8];
+
+The bound MUST be a positive integer constant expression. Zero-sized arrays are invalid. An omitted bound is permitted only when an initializer determines the exact size, for example `char text[] = "hello";` or `int values[] = { 1, 2, 3 };`.
+
+Array objects are not assignable. Except as the direct operand of `sizeof`, an array expression converts to a pointer to its first element when used as a value.
+
+Because pointer-to-array types are not a Version-1 C48 type, unary `&` applied directly to an array is a compile-time type error. This is an intentional C48 restriction; C48 does not create an unsupported pointer-to-array type merely to mimic ISO C.
+
+Array-size computation is performed in widened compiler arithmetic. `bound * sizeof(element)` must be representable in the 16-bit `unsigned int` result domain of `sizeof`; a mathematical array size greater than 65535 bytes is a compile-time type-size error rather than wrapped metadata. Smaller arrays may still fail later compiler/link/runtime resource gates when they cannot fit the ZX-UX memory budgets.
+
+26. Pointers
+
+Pointers are exactly two bytes and have alignment two. Object pointers may refer to any supported complete object type or to `void`; function pointers and pointer-to-array types are not supported.
+
+Multiple object-pointer indirection is supported. Implementations may enforce documented bounded compiler capacities; those capacities are resource limits and MUST NOT change pointer types or the language grammar.
+
+Dereferencing `void *` and arithmetic on `void *` are invalid because `void` has no object size.
+
+For pointer arithmetic, C48 permits pointer + integer, integer + pointer, pointer - integer, and subtraction of two compatible pointers into the same array/object. Pointer + pointer and integer - pointer are invalid. Pointer subtraction has type `int` and reports the signed 16-bit element count.
+
+Indexing requires a pointer/array base on the left and an integer index on the right. `base[index]` is defined as `*(base + index)`. The ISO-C commuted spelling `index[base]` is intentionally unsupported.
+
+27. Null pointer
+
+The C48 null-pointer representation is:
+
+0x0000
+
+An integer constant expression with value zero is a null-pointer constant.
+
+It may be assigned to or compared for equality with any C48 object pointer.
+
+The built-in C48 environment SHALL define:
+
+NULL
+
+as an object-like constant equivalent to integer zero once the <c48.h> declaration set is frozen.
+
+No nonzero integer implicitly converts to a pointer.
+
+Integer-to-pointer and pointer-to-integer casts are not supported in C48 Version 1.
+
+28. void *
+
+An object pointer may convert implicitly to void *.
+
+A void * may convert implicitly to another object-pointer type.
+
+This rule exists so interfaces such as malloc can be usable without a pointer-cast language feature.
+
+No arithmetic or dereference operation is valid directly on void *.
+
+Equality comparison between an object pointer and void * is permitted after conversion to a common pointer representation.
+
+28.1 Pointer access, alignment, aliasing, and byte views
+
+A portable dereference must designate live storage large enough for the pointed-to object and must satisfy the pointed-to type's C48 alignment. Thus `short *`, `int *`, `unsigned short *`, `unsigned int *`, and pointer-to-pointer dereferences require an even logical address; `char *`, `unsigned char *`, and `float *` require only byte alignment. Null, one-past, freed, out-of-object, or misaligned dereferences are outside the portable C48 rule.
+
+C48 does not authorize strict-aliasing optimizations that assume differently typed pointers can never denote the same bytes. An object may always be inspected or modified bytewise through `char *` or `unsigned char *`. Access through another non-void pointer type is portable when that type is exactly compatible with the object's declared type. Converting through `void *` preserves the 16-bit address bits but does not by itself make an incompatible typed dereference portable.
+
+Storage returned by the C48 heap is initially untyped raw storage. Subject to live-allocation bounds and the alignment rule above, it may be used through any supported non-void object-pointer type selected by the program. The native compiler MUST NOT use host-style strict-alias assumptions to reorder or eliminate observable accesses.
+
+29. Function declarations
+
+A Version-1 function declaration uses a prototype.
+
+Old-style/K&R function declarations are not supported.
+
+For zero arguments the only valid prototype form is:
+
+f(void)
+
+An empty parameter list:
+
+f()
+
+is rejected because C48 does not have an "unspecified parameters" function type.
+
+Each parameter has exactly one supported scalar or pointer type.
+
+Variadic parameters are unsupported.
+
+... is not valid C48 syntax.
+
+Parameter names are optional in a prototype and required in a function definition.
+
+Examples:
+
+int add(int, int);
+int add(int a, int b);
+
+are valid compatible prototypes.
+
+30. Function definitions
+
+A function definition consists of:
+
+type declarator compound-statement
+
+using a function declarator.
+
+The return type may be:
+
+void;
+
+an integer scalar;
+
+float;
+
+an object pointer.
+
+Functions cannot return arrays.
+
+Functions cannot return functions.
+
+Recursive function calls are supported within available process-stack resources.
+
+A function MUST be declared or defined before it is called.
+
+C48 has no implicit function declarations.
+
+31. main
+
+The identifier `main` is reserved at file scope for the C48 program-entry function. A file-scope object named `main` is rejected. A function named `main` may be declared only with one of these two exact function types:
+
+int main(void)
+int main(int argc, char **argv)
+
+A compatible prototype for `main`, either without a storage-class specifier or with `extern`, is permitted before its definition and does not by itself create program entry. The actual `main` definition MUST have external linkage and no storage-class specifier. `static int main(...)`, `extern` on the definition, a different return type, an empty `main()`, or any different parameter type/count is rejected.
+
+For the argument form, the validated ARG1 rule gives `argc` in 1..16. `argv` points to an `argc+1` pointer vector constructed by crt0, `argv[0]` is the exact invocation token, and `argv[argc]` is the null pointer.
+
+Each argument string is NUL-terminated, contains no embedded NUL, and resides in the read-only process-owned ARG1 allocation for the process lifetime. C48 declares `argv` as `char **` for compatibility, but portable C48 code MUST NOT modify argument-string bytes. The pointer vector is bootstrap stack data; portable code MUST likewise treat its entries as read-only interface data rather than rewrite `argv[i]`.
+
+A translation unit is not required to define `main`; C48 supports separately compiled library/module objects. A translation unit containing only a compatible `main` prototype is therefore a valid module, but it is not a complete program until a conforming `main` definition is linked into the executable.
+
+When `main` returns normally, crt0 converts its 16-bit C48 `int` result to the 8-bit process exit status by taking the low eight bits, exactly as an `(unsigned char)` conversion, and passes that byte to SYS_EXIT. Thus `return 0;` yields status 0, `return 1;` yields status 1, and `return 256;` yields status 0.
+
+32. Initializers
+
+C48 Version 1 supports simple constant scalar initializers and one-dimensional constant array initializers only.
+
+A file-scope scalar initializer and an automatic-local scalar initializer MUST be a compatible C48 scalar constant expression. A run-time function call or object read is not permitted in a declaration initializer; assign it in a later statement instead.
+
+int x;
+x = function();
+
+Array initializers use braces. An optional trailing comma is permitted. Too many initializers are an error; missing final elements are zero-initialized.
+
+int a[3] = { 1, 2, 3 };
+int b[4] = { 1, 2, };
+
+Nested aggregate braces and designated initializers are unsupported.
+
+Only object declarators may have initializers; a function declarator followed by `=` is a syntax/type error. An empty braced initializer `{}` is unsupported because the Version-1 initializer-list grammar requires at least one element.
+
+File-scope initialization is complete before user program execution begins. A permitted automatic-local initializer is materialized anew whenever execution enters that block activation, before the block's statements execute. Re-entering a nested block therefore reinitializes its initialized automatic locals; an uninitialized automatic local retains the unspecified-bits rule of Section 24 for each activation.
+
+Implicit scalar initializer conversion uses the same compatibility matrix as assignment, function arguments, and return values: integer-to-integer is allowed; integer-to-float and float-to-integer are allowed using canonical C48 numeric conversion; compatible object pointers, object-pointer/`void *`, and null-pointer constant zero are allowed; incompatible non-void pointers, nonzero integer/pointer conversion, float/pointer conversion, and every pointer cast are rejected.
+
+33. Character-array string initialization
+
+A char or unsigned char array may be initialized by a string literal.
+
+Example:
+
+char text[] = "abc";
+
+has four elements:
+
+'a'
+'b'
+'c'
+0
+
+If an explicit bound is supplied, the complete string including its terminating NUL MUST fit.
+
+C48 does not adopt the ISO-C special case that allows a character array to omit the string's terminating NUL merely because the explicit bound equals the visible character count.
+
+Thus:
+
+char text[3] = "abc";
+
+is rejected.
+
+Use:
+
+char text[4] = "abc";
+
+34. Pointer constant initializers
+
+A pointer scalar constant initializer may be:
+
+null;
+
+a string-literal address where the destination type is compatible;
+
+the address of a file-scope object of compatible type;
+
+such an address plus or minus an integer constant offset valid under normal C48 pointer arithmetic.
+
+Other integer constants are not pointer initializers.
+
+No pointer reinterpretation cast exists.
+
+A string-literal sequence used as a pointer constant initializer first undergoes the ordinary array-to-pointer conversion to `char *`; it may therefore initialize `char *` directly or `void *` through the permitted implicit conversion. It does not directly initialize an incompatible non-void pointer such as `unsigned char *`.
+
+35. Constant expressions
+
+C48 constant expressions are compile-time-evaluable expressions with no run-time side effects. They are used for array bounds, scalar constant initializers, object-like macro constants, and the integer offsets permitted in pointer constant initializers.
+
+An arithmetic constant expression may contain integer, character, and floating literals; previously defined object-like constants; parentheses; `sizeof`; supported arithmetic casts; unary `+`, `-`, `!`, `~` where type-valid; and the supported binary arithmetic, shift, relational, equality, bitwise, and logical operators where type-valid. The normal C48 precedence, short-circuit, type-conversion, wrap, shift, comparison, and five-byte floating rules apply at compile time exactly as at run time.
+
+It MUST NOT contain assignment, prefix/postfix `++`/`--`, a function call, an evaluated object read, an evaluated address/dereference, or any unsupported operator. An identifier naming an object may occur inside an unevaluated `sizeof` operand because no object value is read. Run-time addresses are permitted only in the separately enumerated Section-34 pointer constant forms.
+
+If the final type of the pure arithmetic constant expression is one of the C48 integer types, it is an integer constant expression. If the final type is `float`, it is a floating constant expression. This permits, for example, an integer cast such as `(int)0x8000u` and a constant floating comparison such as `1.0 < 2.0` whose result is C48 `int`.
+
+Constant division or remainder by integer zero is a compile-time error. A floating constant operation/conversion that the canonical ROM numeric service rejects is likewise a compile-time constant-expression error. Compile-time evaluation MUST reproduce every C48 operation boundary; it may not evaluate in unrestricted host precision and narrow only at the end.
+
+36. Floating constant expressions
+
+A floating constant expression is the Section-35 pure arithmetic constant-expression form whose final C48 type is `float`. It may mix integer and floating constants and supported integer<->float casts as permitted by ordinary C48 operator/type rules.
+
+Every floating operation and conversion is materialized to the canonical Spectrum-compatible five-byte value at the same operation boundary required at run time. Compile-time and run-time evaluation of the same pure expression therefore agree.
+
+Public functions such as `sin()` and `sqrt()` are function calls and are not constant-expression operators. A ROM numeric domain/range failure during a required constant evaluation is a compile-time error rather than a run-time initializer action.
+
+37. Array initializers
+
+A one-dimensional array initializer contains scalar constant expressions compatible with the array element type.
+
+Example:
+
+int a[] = { 1, 2, 3 };
+
+is supported.
+
+An array of pointers may use valid pointer constant initializers.
+
+An array of floats may use valid C48 floating constant expressions.
+
+No designated initializers exist.
+
+Therefore:
+
+int a[4] = { [2] = 7 };
+
+is unsupported.
+
+38. Expression precedence and associativity
+
+The complete C48 Version-1 precedence table, from highest to lowest, is:
+
+1. postfix
+   function call       ()
+   array indexing      []
+   postfix             ++ --
+   associativity: left-to-right
+
+2. unary
+   prefix              ++ --
+   unary               + -
+   logical NOT         !
+   bitwise NOT         ~
+   address-of          &
+   dereference         *
+   sizeof
+   cast
+   associativity: right-to-left
+
+3. multiplicative
+   * / %
+   associativity: left-to-right
+
+4. additive
+   + -
+   associativity: left-to-right
+
+5. shift
+   << >>
+   associativity: left-to-right
+
+6. relational
+   < <= > >=
+   associativity: left-to-right
+
+7. equality
+   == !=
+   associativity: left-to-right
+
+8. bitwise AND
+   &
+   associativity: left-to-right
+
+9. bitwise XOR
+   ^
+   associativity: left-to-right
+
+10. bitwise OR
+    |
+    associativity: left-to-right
+
+11. logical AND
+    &&
+    associativity: left-to-right
+
+12. logical OR
+    ||
+    associativity: left-to-right
+
+13. assignment
+    =
+    associativity: right-to-left
+
+There is no conditional-operator precedence level.
+
+There is no comma-expression precedence level.
+
+39. Primary expressions
+
+A primary expression is:
+
+an identifier;
+
+an integer literal;
+
+a floating literal;
+
+a character literal;
+
+a string literal;
+
+a parenthesized expression.
+
+There are no:
+
+compound literals;
+
+generic selections;
+
+statement expressions;
+
+structure member expressions.
+
+40. Lvalues
+
+An lvalue designates a C48 object. A modifiable lvalue is an lvalue whose object is writable under the language rule.
+
+The left operand of assignment and the operand of prefix/postfix `++` or `--` MUST be a modifiable scalar lvalue. Arrays and functions are not modifiable lvalues. A string literal is a nonmodifiable array object.
+
+Dereferencing a valid non-void object pointer produces an lvalue of the pointed-to type. Unary address-of requires an object lvalue and produces a pointer to that exact object type, except that direct address-of of an array is rejected by Section 25. Address-of a function is rejected because function pointers do not exist.
+
+Dereferencing a null pointer, one-past pointer, pointer outside the live object, or otherwise invalid pointer is outside the portable C48 rule. The 48K machine has no memory protection; strict host execution SHOULD trap such invalid logical-pointer accesses where it can prove them.
+
+41. Integer promotions
+
+C48 uses the following integer promotions for arithmetic other than the special shift rule in Section 46:
+
+char            -> int
+unsigned char   -> int
+short           -> int
+unsigned short  -> unsigned int
+
+All values of `char` and `unsigned char` (0..255) fit in 16-bit C48 `int`. `short` and `int` share the same 16-bit signed range; `unsigned short` and `unsigned int` share the same 16-bit unsigned range.
+
+These promotions do NOT erase the C48 8-bit shift rule. For `<<` and `>>`, Section 46 deliberately uses the unpromoted left operand type and width. An 8-bit `char`/`unsigned char` shift uses the low three count bits; a 16-bit shift uses the low four bits.
+
+A character literal itself has type `int`, so shifting a character literal uses the 16-bit shift rule unless it has first been converted or stored to an 8-bit object.
+
+42. Usual arithmetic conversions
+
+For binary arithmetic and comparisons other than shifts:
+
+if either operand is `float`, the other arithmetic operand is converted to `float` and floating semantics apply;
+
+otherwise the Section-41 integer promotions are performed;
+
+if either promoted operand is `unsigned int`, the other is converted to `unsigned int`;
+
+otherwise both operands are `int`.
+
+The `%` and bitwise operators require integer operands. Shift operators follow their separate Section-46 width rule.
+
+The same conversion rules apply to relational and equality comparison after pointer-specific cases have been excluded.
+
+43. Integer conversion
+
+Converting to an unsigned integer type preserves the low destination-width bits (mathematically, reduction modulo 2^destination_bits).
+
+Converting to signed 16-bit `short` or `int` preserves the low 16 bits and interprets them as two's-complement. Converting to `char` or `unsigned char` preserves the low eight bits.
+
+These rules make narrowing and signed/unsigned conversion deterministic; host implementation-defined narrowing behavior MUST NOT leak into C48.
+
+Implicit scalar conversions are permitted for integer assignment/arguments/returns and for integer<->float assignment/arguments/returns. Float-to-integer conversion uses the controlled C48 conversion path and traps a range failure as specified in Section 53. No nonzero integer implicitly converts to a pointer.
+
+Integer-to-float conversion passes signed `short`/`int` through the signed SYS_INT_TO_FP path and passes `char`, `unsigned char`, `unsigned short`, and `unsigned int` through the unsigned path after the value has been represented in a 16-bit slot.
+
+For float-to-integer conversion, `short`/`int` require the truncated mathematical result in -32768..32767. `unsigned short`/`unsigned int` require 0..65535. Conversion to `char` or `unsigned char` first uses the unsigned 0..65535 SYS_FP_TO_INT domain and then keeps the low eight bits by Section 43. Therefore `(char)300.0` is 44, while `(char)-1.0` is a range failure.
+
+44. Integer arithmetic
+
+After the applicable C48 promotions/conversions, addition, subtraction, multiplication, unary minus, and left shift wrap modulo the width on which that operator is defined. Signed overflow for these operations is therefore defined in C48 rather than ISO-C undefined behavior.
+
+For ordinary `+`, `-`, `*`, `/`, `%`, and bitwise binary operators, the arithmetic width is normally 16 bits after Section-41 promotions. For shifts, the left operand retains its original 8- or 16-bit width as specified in Section 46.
+
+Assignment or an explicit integer cast then narrows to the destination width using Section 43.
+
+45. Division and remainder
+
+Signed integer division truncates toward zero. Signed remainder has the sign of the dividend. Division or remainder by zero terminates the C48 process through runtime error handling with status 1.
+
+The signed 16-bit overflow case must be tested using an expression that actually has signed `int` value -32768. Portable spellings include `(int)0x8000u` and `(-32767 - 1)`.
+
+((int)0x8000u) / -1   -> -32768
+((int)0x8000u) % -1   -> 0
+
+The quotient wraps to the 16-bit two's-complement result rather than invoking host-language undefined behavior. Source text `-32768` by itself does not denote signed INT_MIN; see Sections 12-13.
+
+Unsigned division and remainder operate on 0..65535 values: the quotient is the mathematical floor quotient and the remainder is the nonnegative residue smaller than the divisor. Division or remainder by unsigned zero uses the same status-1 runtime-error rule.
+
+46. Shift operations
+
+Shift operators are the deliberate exception to normal C48 integer promotion of the left operand. The left operand retains its original C48 integer width and signedness for the shift operation and result.
+
+If the left operand is `char` or `unsigned char`, the effective shift count is `count & 7`. If it is `short`, `unsigned short`, `int`, or `unsigned int`, the effective count is `count & 15`.
+
+Signed right shift is arithmetic; unsigned right shift is logical. Left shift wraps modulo the exact left-operand width. The result has the same integer type as the left operand.
+
+The right operand must be integer-valued and is converted only for obtaining the count; its signedness does not create an error because only the low count bits defined in this Section are used.
+
+Negative signed shift counts are therefore not a separate error in C48. Their 16-bit two's-complement value contributes only its low three or four bits; for example a count of -1 acts as 7 for an 8-bit left operand and 15 for a 16-bit left operand.
+
+A host implementation MUST explicitly emulate these rules rather than rely on host-C shift semantics.
+
+47. Bitwise operations
+
+The operators `&`, `|`, `^`, and `~` require integer operands.
+
+For binary bitwise operations, Section-41 integer promotions and Section-42 common-type conversion apply. Unary `~` applies after the normal integer promotion of its operand. The result type is the promoted/common integer type.
+
+This rule is distinct from shifts, which deliberately retain the unpromoted left operand width.
+
+48. Logical operations
+
+The operators:
+
+!
+&&
+||
+
+accept scalar operands.
+
+False is:
+
+integer zero;
+
+null pointer;
+
+floating value exactly equal to C48 floating zero.
+
+All other scalar values are true.
+
+Logical results have type:
+
+int
+
+and exact value:
+
+0 or 1
+
+&& and || short-circuit.
+
+The right operand of && is not evaluated when the left operand is false.
+
+The right operand of || is not evaluated when the left operand is true.
+
+49. Comparisons
+
+Integer comparisons use signed or unsigned comparison after the usual arithmetic conversions.
+
+Floating comparisons use the canonical C48 floating comparison service.
+
+Equality and relational results have type int and value 0 or 1.
+
+Pointer equality is permitted for:
+
+compatible pointer types;
+
+an object pointer and void *;
+
+any object pointer and a null-pointer constant.
+
+Relational pointer comparison is portable only for pointers into the same array/object.
+
+Ordering unrelated pointers is outside the portable C48 rule.
+
+For permitted pointer equality/inequality, C48 compares the exact 16-bit logical address bits after any allowed `void *` or null conversion. Equal address bits compare equal; different address bits compare unequal. Relational pointer operators require exactly compatible non-void object-pointer types and are portable only when both values designate positions in the same live array/object, including its one-past position; they compare logical element position within that object.
+
+50. Pointer arithmetic
+
+For a pointer `p` to element type T, `p + n`, `n + p`, `p - n`, `++p`, and `--p` scale the integer displacement by `sizeof(T)`.
+
+char *p;   p + 1   advances 1 byte
+int *p;    p + 1   advances 2 bytes
+float *p;  p + 1   advances 5 bytes
+
+Subtracting two compatible pointers into the same array/object yields a result of C48 type `int`: a signed 16-bit element count. Pointer addition of two pointers and integer-minus-pointer are invalid.
+
+For two compatible pointers into the same live array/object (including its one-past position), C48 pointer subtraction is fully defined even when the mathematical element distance does not fit signed 16-bit magnitude. Compute the mathematical element-index difference in widened arithmetic, reduce it modulo 65536, then interpret those 16 result bits as two's-complement C48 `int`. Thus +32768 yields -32768 and -32769 yields +32767. No host undefined/implementation-defined pointer-difference overflow may leak into C48.
+
+Ordering or subtracting unrelated pointers is outside the portable C48 rule. Pointer arithmetic may produce the conventional one-past pointer for the same object, but that pointer MUST NOT be dereferenced.
+
+Array indexing accepts only a pointer/array base on the left and integer index on the right; `base[index]` is `*(base + index)`. C48 intentionally rejects `index[base]`. Repeated indexing such as `argv[1][0]` is legal when an intermediate result is itself a pointer.
+
+Pointer subtraction computes the mathematical element-index difference, reduces it modulo 65536, and returns those low 16 bits interpreted as C48 signed `int`. This wrap is part of the C48 language rule for same-object compatible pointers, not undefined behavior.
+
+51. Assignment
+
+Simple assignment is `lvalue = expression` and associates right-to-left. The left side must be a modifiable scalar lvalue. The assignment result is a non-lvalue value of the destination type after conversion.
+
+The complete implicit assignment/parameter/return scalar compatibility matrix is:
+
+integer -> integer: allowed; convert by Section 43;
+
+integer -> float: allowed; convert through canonical C48 numeric conversion;
+
+float -> integer: allowed; truncate toward zero and apply the Section-53 range/error rule;
+
+float -> float: allowed; exact C48 float value copy;
+
+compatible object pointer -> same compatible pointer type: allowed;
+
+object pointer <-> void *: allowed without a cast;
+
+integer constant expression exactly zero -> any object pointer: allowed as null;
+
+different non-void object-pointer types: rejected;
+
+nonzero integer <-> pointer: rejected;
+
+float <-> pointer: rejected.
+
+Arrays are not assignable. Function entities are not assignable. Assignment never performs an undocumented pointer reinterpretation.
+
+Evaluation order is exact: compute the destination address first, evaluate and complete all side effects of the right operand second, perform conversion third, then store. Thus `i = i++` has deterministic C48 behavior: the post-increment occurs while evaluating the right operand and the subsequent assignment stores the old value back into `i`.
+
+52. Increment and decrement
+
+C48 supports prefix and postfix `++`/`--` on modifiable arithmetic or supported object-pointer lvalues.
+
+Integer increment/decrement adds/subtracts one using the exact destination type and its width; an 8-bit object therefore wraps at 8 bits and a 16-bit object at 16 bits. Float increment/decrement uses exact C48 floating 1.0 and the Section-53 numeric-error rule. Pointer increment/decrement scales by pointed-to `sizeof`.
+
+Prefix form performs the update and yields the new value. Postfix form captures the old value, performs the update, and yields the captured value. Both expression results have the same source type as the operand and are not lvalues.
+
+Increment/decrement of `void *`, an invalid pointer, a string literal, an array, or a non-lvalue is rejected or outside the portable pointer-access rule as applicable.
+
+53. Casts
+
+Version 1 supports explicit casts among integer scalar types, integer scalar to `float`, and `float` to integer scalar.
+
+(type) expression
+
+Pointer casts, pointer-to-integer casts, integer-to-pointer casts, and float/pointer casts are unsupported.
+
+Floating-to-integer conversion truncates toward zero. The underlying SYS_FP_TO_INT conversion accepts signed results only in -32768..32767 and unsigned results only in 0..65535. An invalid/out-of-range syscall conversion leaves its destination unchanged.
+
+When an error occurs in a compiler-generated language numeric operation or cast that has no C-level error-return channel -- including float arithmetic, float comparison, integer-to-float conversion, or float-to-integer conversion -- the standard C48 runtime terminates the process with status 1. Public library functions that explicitly return a ZX-UX error value, such as `beep`, retain their documented error-return rule instead of being converted into this language trap.
+
+A compile-time constant conversion that is provably invalid or out of range is a compile-time error.
+
+54. sizeof
+
+Both `sizeof expression` and `sizeof(type-name)` are supported. `sizeof` is a compile-time operator; it never evaluates its expression operand and produces a non-lvalue `unsigned int` result.
+
+sizeof(char)       == 1
+sizeof(short)      == 2
+sizeof(int)        == 2
+sizeof(void *)     == 2
+sizeof(float)      == 5
+sizeof("abc")      == 4
+
+For an array expression used directly as the operand of `sizeof`, including a parenthesized array expression, array-to-pointer decay is suppressed and the complete array size is returned.
+
+The unevaluated operand is still parsed and type-checked. `sizeof *p` is valid for any syntactically valid pointer `p` to a complete non-void object type even if the run-time value of `p` could be null, one-past, or otherwise invalid, because no dereference occurs. Likewise, side effects inside an operand such as `sizeof(a[i++])` do not execute.
+
+`sizeof(void)` and `sizeof` of a function are invalid. The Version-1 `type-name` grammar contains only a supported scalar type optionally followed by object-pointer stars, so array type names such as `sizeof(int[3])` are not C48 syntax; use `sizeof` on a declared array object instead.
+
+The result must be representable in `unsigned int`; Section 25 already rejects an array type whose mathematical size would exceed 65535 bytes.
+
+55. Evaluation order
+
+C48 deliberately freezes evaluation order to prevent host/native divergence.
+
+Except where `sizeof` suppresses evaluation or `&&`/`||` short-circuit suppresses the right operand, operands are evaluated left-to-right and each operand's side effects are complete before evaluation advances to the next operand.
+
+Function arguments are evaluated and their argument values captured left-to-right. Later argument evaluation therefore cannot retroactively change an already captured earlier argument value. Physical placement of fourth-and-later calling convention arguments on the stack right-to-left does not alter source evaluation order.
+
+Array indexing evaluates the base first and index second. Binary operators evaluate left then right. Assignment evaluates the destination lvalue/address first, then the complete right operand, then conversion and store.
+
+Prefix/postfix side effects occur as part of evaluating that operator. Parentheses affect grouping but do not create a different evaluation-order rule.
+
+C48 therefore has no ISO-C-style unspecified operand or argument evaluation order for supported expressions. A Windows implementation MUST preserve this rule even if its host compiler ordinarily would not.
+
+56. Function calls
+
+Only direct calls to declared C48 functions are supported. The called expression resolves to a function identifier; function pointers do not exist.
+
+Argument count MUST exactly match the prototype. Arguments are processed strictly left-to-right. For each argument in turn, the complete source expression is evaluated, its side effects finish, the required parameter conversion is performed, and the converted value is captured before evaluation of the next argument begins. A conversion failure therefore prevents evaluation of all later arguments.
+
+All C48 source parameters are pass-by-value. Assigning to a parameter variable inside the callee never changes the caller's argument object. Pointer parameters pass the pointer value by value, so the callee may still modify a caller object through a valid non-const C48 pointer.
+
+The float calling convention does not change this language rule. Although C48_REGCALL physically passes a float argument as a 16-bit pointer to caller-owned five-byte value storage, generated code MUST preserve pass-by-value semantics: any callee assignment to its float parameter must affect only the callee's parameter value, not the caller's source float object. The compiler may satisfy this with caller temporaries, callee copies, or another calling convention-equivalent implementation.
+
+There are no variadic calls and calls to undeclared functions are errors.
+
+57. C48_REGCALL
+
+The externally linkable calling convention is exactly:
+
+C48_REGCALL
+
+For ordinary scalar and pointer argument slots:
+
+first argument      HL
+second argument     DE
+third argument      BC
+remaining arguments stack words, right-to-left
+
+Every ordinary scalar/pointer argument occupies one 16-bit call slot.
+
+An 8-bit argument is zero-extended into its 16-bit slot.
+
+The caller removes stack argument words.
+
+SP is even-aligned at every C48 call boundary.
+
+A float argument is represented by a pointer to caller-owned five-byte storage and consumes one normal 16-bit argument slot.
+
+There is no CDECL alternative.
+
+No source syntax exists for selecting another calling convention.
+
+58. Function return calling convention
+
+Return representation is:
+
+void             no value
+8-bit scalar     L
+16-bit scalar    HL
+pointer          HL
+
+A function returning float receives a hidden first argument containing a pointer to caller-provided five-byte result storage.
+
+That hidden pointer occupies HL and moves user arguments to:
+
+DE
+BC
+stack
+
+The callee writes exactly five result bytes and returns the same result pointer in HL.
+
+For an 8-bit `char`/`unsigned char` return only register L is defined by C48_REGCALL; H is unspecified at the calling convention boundary. A conforming C48 caller that needs the returned value in a 16-bit expression must zero-extend L according to the normal unsigned 8-bit promotion rule rather than relying on H.
+
+59. Register ownership
+
+At a C48 external call boundary:
+
+AF BC DE HL      caller-clobbered
+IX               callee-preserved when used
+IY               ZX-UX/ROM reserved
+alternate bank   ZX-UX private
+
+Conforming C48-generated code MUST NOT treat IY as an application register.
+
+Conforming code MUST NOT depend on AF'/BC'/DE'/HL' retaining values across calls, syscalls, interrupts, or task activity.
+
+These rules apply to hand-written assembly intended to interoperate with C48.
+
+60. Statements
+
+The complete Version-1 statement set is:
+
+compound statement
+expression statement
+empty statement
+if
+if / else
+while
+do / while
+for
+break
+continue
+return
+
+There are no user labels.
+
+There is no goto.
+
+There is no switch, case, or default.
+
+Every `if`, `while`, `do/while`, and present `for` condition expression MUST have scalar type and is interpreted through Section-48 truth rules. A missing `for` condition is the constant true condition. A `void`-returning function call is valid as a standalone expression statement, but a void-valued expression cannot be assigned, used as an operator operand or condition, passed as an argument value, returned with `return expression`, or used with `sizeof`; `(void)expression` casts are not supported in C48 Version 1.
+
+61. Compound statements
+
+A compound statement is:
+
+{
+    declarations
+    statements
+}
+
+Declarations, if any, precede statements in that block.
+
+Nested compound statements are supported.
+
+62. Expression statements
+
+An expression followed by ; is an expression statement.
+
+An isolated semicolon is an empty statement.
+
+Examples:
+
+x = 1;
+function();
+i++;
+;
+
+63. if
+
+Syntax:
+
+if ( expression )
+    statement
+
+or:
+
+if ( expression )
+    statement
+else
+    statement
+
+The condition uses normal scalar truth rules.
+
+else binds to the nearest unmatched if.
+
+64. while
+
+Syntax:
+
+while ( expression )
+    statement
+
+The condition is evaluated before every iteration.
+
+The condition MUST have scalar type and uses the Section-48 truth rule.
+
+65. do / while
+
+Syntax:
+
+do
+    statement
+while ( expression );
+
+The body executes at least once.
+
+After each body execution, the trailing condition MUST have scalar type and uses the Section-48 truth rule.
+
+The final semicolon is required.
+
+66. for
+
+Syntax:
+
+for ( expression? ; expression? ; expression? )
+    statement
+
+The first expression executes once.
+
+The second expression is the condition. When omitted it is treated as true.
+
+When present, the second expression MUST have scalar type and uses the Section-48 truth rule.
+
+The third expression executes after each body iteration and after continue.
+
+Declarations in the first clause are not supported.
+
+67. break
+
+break; is valid only inside the nearest enclosing:
+
+while
+do / while
+for
+
+It exits that loop.
+
+Because C48 has no switch, break has no switch meaning.
+
+A break outside a loop is a compile-time error.
+
+68. continue
+
+continue; is valid only inside a loop.
+
+For while, control proceeds to condition evaluation.
+
+For do / while, control proceeds to the trailing condition.
+
+For for, control proceeds to the third expression and then the condition.
+
+A continue outside a loop is a compile-time error.
+
+69. return
+
+In a `void` function, `return;` is valid and `return expression;` is invalid. Reaching the closing brace is exactly equivalent to `return;`.
+
+In a non-void function, `return expression;` converts the expression through the Section-51 assignment/return compatibility matrix to the declared return type. `return;` without a value is invalid.
+
+Reaching the closing brace of any non-void function, including `main`, without a value-returning `return` invokes the standard C48 runtime-error path and terminates the process with status 1. This is a generated fallback epilogue rule; the compiler does not need whole-function path analysis.
+
+Returning from `main` through its explicit `int` result reaches crt0, which routes program termination through SYS_EXIT rather than returning to loader state. The shipped canonical `hello.c` remains required to contain explicit `return 0;`.
+
+70. Preprocessing overview
+
+C48 has a deliberately small, token-based preprocessor integrated into `cc`. Supported directives are exactly `#define` and `#include`.
+
+A directive marker `#` is recognized when, after removal of comments, it is the first preprocessing token of a physical source line. Ordinary leading space/TAB and comments therefore count as preprocessing whitespace. A `//` comment consumes the rest of its line and consequently prevents a following `#` on that line from becoming a directive. Spaces or TABs may appear between `#` and the directive name. Directive names are exact lower-case ASCII: `define` and `include`; case is not folded.
+
+A directive ends at the next physical LF or end-of-file. Backslash-newline continuation is unsupported. A block comment opened within a directive line MUST close before that directive's physical LF; crossing the directive-ending LF is a preprocessing error.
+
+Preprocessing is lexical and independent of C block scope: a directive may occur on any physical source line. Its expanded tokens must still be grammatically valid at the textual insertion point. A `#define` inside a function therefore has translation-unit preprocessing visibility from that physical line onward even though C identifiers themselves obey block scope.
+
+Outside this position, `#` is a lexical error. No other preprocessing directive exists.
+
+71. #define
+
+C48 supports object-like constants only.
+
+#define <hspace+> identifier <hspace+> replacement
+
+At least one preprocessing-white-space separator is required between `define` and the macro identifier and between the identifier and its nonempty replacement. If the macro name is immediately followed by `(` with no separator, the construct is diagnosed specifically as an unsupported function-like macro rather than interpreted as an object-like constant.
+
+The replacement MUST be nonempty after comment removal and MUST tokenize as a C48 compile-time constant token sequence: an integer constant expression, floating constant expression, character constant, or string literal constant.
+
+#define SIZE 10
+#define MASK (1 << 4)
+#define HALF .5
+#define NAME "zx-ux"
+
+The replacement is not an arbitrary source-code macro facility. It cannot define declarations, statements, parameterized macros, or syntactic fragments that are not a complete permitted constant sequence.
+
+The directive ends at the physical line boundary. A trailing line comment is ignored. After the replacement and optional comment, no extra preprocessing syntax exists.
+
+72. Macro expansion
+
+Macro expansion is token-based. Only a complete identifier token matching a defined object-like macro name is replaced; expansion never concatenates replacement text with adjacent source tokens.
+
+Macro names and visibility are case-sensitive. A definition becomes active immediately after its defining physical line and remains active to the end of the complete translation unit because Version 1 has no `#undef`.
+
+The current macro environment is inherited by a quoted local include and by the built-in header. Definitions created inside a local included source remain active after control returns to the including source.
+
+Macros are not expanded inside comments, character literals, string literals, or quoted/angle include operands. While validating a new `#define`, replacement identifiers may refer only to object-like macros already active at that physical line. Those previously defined macros are recursively expanded under the same rule; any other identifier in the claimed constant replacement is an error.
+
+Because every macro dependency must point to an already active earlier definition, the Version-1 dependency graph is acyclic by construction. A self-reference or forward reference is rejected immediately as an unresolved replacement identifier; no accepted macro definition can create a direct or indirect expansion cycle. The compiler MUST NOT implement C-style self-suppression or leave a recursive token unexpanded.
+
+A macro name cannot be a supported keyword, reserved-unsupported keyword, or implementation-reserved identifier. Redefinition is permitted only when the fully expanded canonical replacement token sequence is identical to the currently stored fully expanded canonical replacement; a different redefinition is an error.
+
+At each ordinary macro-use site, the compiler substitutes that canonical token sequence and then continues normal preprocessing/token parsing. Since accepted replacements are already fully expanded constants, use-site expansion requires no run-away recursion limit.
+
+73. Local include
+
+Local include syntax is exactly `#include "name"`. The quoted operand is not macro-expanded.
+
+The name is exact and case-sensitive, is 1..10 portable namespace characters, and uses only `A-Z a-z 0-9 _ - .`, excluding exact `.` and `..`. It resolves only in the current ZX-UX directory; PATH and system-header searching do not apply.
+
+A local include object MUST be an ordinary text-bearing TXT or C object. RAW and transparently PACKED representations are both accepted through ordinary logical reads. ASM, CFG, BIN, OBJ, DAT, and other object types are rejected as local C48 includes.
+
+Local include nesting depth is exactly one. The primary translation unit may include a local file. A locally included file MUST NOT include another quoted local file. It MAY include built-in `<c48.h>` because that include is compiler-resident rather than another local object. Direct/indirect local-include cycles are therefore rejected.
+
+Definitions introduced by the included source remain visible after the include completes. After the closing quote, only space/TAB and an optional comment may precede LF/end-of-file.
+
+The primary translation unit may include the same quoted local object more than once at separate top-level include points. Each inclusion reprocesses its logical bytes with the then-current macro/declaration environment; C48 has no implicit include guard. Resulting duplicate definitions or incompatible declarations are diagnosed by the normal language rules.
+
+74. Built-in <c48.h>
+
+The only angle-bracket system include is exactly `#include <c48.h>`. The operand is not macro-expanded; any other angle-bracket header is rejected.
+
+`<c48.h>` is a compiler-resident declaration source and is never loaded from a RAM/tape object. It is processed logically at the include point using the current macro/declaration environment. Repeated inclusion is idempotent.
+
+If a user declaration already exists for a header-provided function, the header declaration is accepted only when the entity and exact function type are compatible under Section 23.1; otherwise compilation fails. If a user macro already occupies a header-reserved macro/constant name, identical definition is permitted and a different definition is rejected. Header function names themselves cannot be hidden by an object-like macro at inclusion time; such a collision is a preprocessing/declaration error.
+
+The only built-in angle-bracket header, `<c48.h>`, exposes the mandatory public runtime names enumerated in Appendix B. This specification freezes their names and the language-level rules for declarations; it does not assert unpublished prototypes, parameter types, constants, errno/flag values, or supporting records. Such absent interface definitions MUST be recorded as unresolved target-runtime details rather than invented language syntax.
+
+Appendix B records the mandatory public-name inventory. Explanatory calling convention notation that uses an unsupported type modifier such as `const`, or an incomplete pseudo-prototype, is not valid C48 source syntax; see Sections 96-97.
+
+75. Unsupported preprocessing
+
+The following directives are explicitly unsupported:
+
+#undef
+#if
+#ifdef
+#ifndef
+#elif
+#else
+#endif
+#error
+#line
+#pragma
+
+Also unsupported are function-like or variadic macros, token pasting, stringification, predefined host macros, command-line macro definition, quoted-include nesting beyond one local level, general system include search, full ISO preprocessing, and backslash-newline continuation.
+
+Macros cannot manufacture an include operand. Unknown directives, upper-case directive names, missing/extra include operands, or noncomment trailing tokens after an include are preprocessing errors.
+
+76. Source-level unsupported language features
+
+Version 1 explicitly does not support:
+
+long
+distinct double
+long long
+signed char
+variable-length arrays
+multidimensional arrays
+complex initializers
+designated initializers
+variadic functions
+function pointers
+pointers to arrays
+struct
+union
+enum
+typedef
+switch
+case
+default
+goto
+compound assignment
+?:
+comma expression operator
+const
+volatile
+register
+auto keyword
+inline
+restrict
+compound literals
+bit-fields
+flexible array members
+`_Bool`
+complex numbers
+atomics
+thread-local storage
+generic selections
+static assertions
+full ISO C conformance
+
+No compiler implementation may add any of these as a Version-1 extension.
+
+77. Function-argument count and other resource limits
+
+The language grammar does not impose a three- or six-argument maximum merely because the first three argument slots are registers or because the acceptance suite exercises 0..6 arguments. Additional arguments use the C48_REGCALL stack slots.
+
+The Version-1 native compiler MUST use bounded capacities for globals/externs, locals, generated labels, expression trees, type/declarator representation, macro tables, include buffering, literals, and other finite compiler tables within the 20 KiB total process-owned compiler footprint stated below. Concrete table capacities MUST be declared and checked by each native compiler release; they MUST NOT silently alter C48 language grammar.
+
+The compiler's complete process-owned live footprint -- image+BSS, FAST stack, read-only ARG1/ENV1 allocation, and compiler-internal dynamic workspace -- has the exact release target <=20480 bytes. Failure for insufficient compiler memory is recoverable and must expose the clear `not enough memory for compiler` condition rather than corruption.
+
+A strict host portability implementation MUST enforce the documented capacities of the native compiler release against which it claims compatibility. If a capacity has not been published, the host MUST report that limit as unverified rather than invent a permanent grammatical restriction.
+
+78. Compiler architecture invariants
+
+The complete native compiler front-end/backend flow is:
+
+source logical-read stream
+    -> preprocessing scanner / directive and include expansion
+    -> C48 lexer
+    -> recursive-descent parser
+    -> bounded expression tree / direct emission
+    -> symbolic Z80 emitter
+    -> OBJ1 writer
+
+The preprocessing scanner performs only the lexical recognition needed to protect comments/literals, recognize directives, and expand object-like constant tokens; the C48 lexer then emits the language tokens defined by this specification. Both stages are streaming and bounded.
+
+No language rule authorizes whole-source materialization or a whole-program AST. Statements compile incrementally; expression storage is bounded and released promptly. Concrete resource capacities are reported and tested as compiler implementation limits.
+
+79. Output model
+
+The native command is `cc`. It accepts exactly one C-typed input object.
+
+Default `cc hello.c` requires the exact lower-case final `.c`, removes only that suffix, and appends `.obj`; the derived name must fit the exact 10-byte ZX-UX namespace limit. Otherwise the explicit form is `cc -o out.obj source`, with an exact case-sensitive <=10-byte destination. In both forms, source and destination paths obey the following ZX-UX rule: normalization is performed before comparison or access; the normalized path is at most 31 bytes excluding the terminating NUL; each ordinary object basename is 1..10 portable name characters `A-Z a-z 0-9 _ - .`, with exact `.` and `..` reserved; and lookup is case-sensitive. Overlength normalized paths are rejected through the normal ZX-UX path/errno rule rather than truncated.
+
+Output is explicitly OBJ/OBJ1; the kernel never infers object type from a suffix.
+
+Compilation is transactional: `cc` creates a unique O_CREATE|O_EXCL `/tmp/.cc<pid>.<n>` temporary object, writes and validates the complete OBJ1, closes it, and commits through SYS_RENAME only after success. Syntax, semantic, allocation, output, or rename failure leaves any previous destination byte-identical.
+
+RAW and transparently PACKED C input objects are compiled through the same ordinary logical read stream. The compiler MUST NOT materialize a second whole uncompressed source merely because the source is PACKED; RAW and PACKED forms of identical logical source MUST produce byte-identical OBJ1.
+
+For the same logical primary source bytes, same logical include bytes, same frozen built-in-header revision, and same compiler revision, compilation is deterministic: destination path, temporary name, PID, and RAW-versus-PACKED storage form MUST NOT be embedded into generated OBJ1 bytes. Default and explicit-output invocations therefore produce byte-identical OBJ1 when they compile the same logical program.
+
+Only external-linkage definitions are OBJ1 GLOBAL exports; referenced unresolved externals are GLOBAL imports; file-scope static entities are not GLOBAL exports. All link-visible C names use the exact source identifier spelling as frozen by Section 23.2.
+
+The grammar permits an empty translation unit and a translation unit containing only declarations. Such a C-typed source is a successful compilation when no other error/resource condition exists. If it contributes no text/data, BSS, symbols, or relocations, `cc` emits the canonical valid empty OBJ1: a 24-byte OBJ1 header with all four content counts/sizes zero, fixed offsets equal to 24, and the architecture-defined CRC fields for an empty body/header. It is a valid object module even though linking it alone as a normal program cannot satisfy crt0's required `main`.
+
+An ordinary ZX-UX RAM C or local-include object cannot exceed the 32768-byte logical object bound. A native compiler may impose separately documented smaller source/workspace limits to fit its available memory; such limits are resource failures, not modifications of this C48 grammar.
+
+80. Diagnostics
+
+Acceptance/rejection, compiler process status, diagnostic channel, diagnostic class spelling, and position convention are normative. Free-form reason prose after the frozen class prefix is not.
+
+`cc` stops after the first terminal compilation/tool error. Success exits with process status 0. A source-language/compiler error with no more specific ZX-UX errno exits with status 1. A terminal direct ZX-UX service failure exits with that positive errno value. Cleanup remains mandatory and MUST NOT replace the original terminal status/cause.
+
+The exact Version-1 diagnostic classes are: `usage`, `lexical`, `unsupported`, `preprocessing`, `syntax`, `type`, `declaration`, `constant-expression`, `literal-range`, `resource-limit`, and `io`. No other native `cc` class spelling is permitted in Version 1.
+
+Class mapping is exact: command-shape/default-suffix/same-input-output validation -> `usage`; malformed source bytes/tokens/comments/literals -> `lexical` except a numerically well-formed but out-of-range literal -> `literal-range`; recognized unsupported source keywords/operators -> `unsupported`; malformed/unsupported/nested/include-type/macro-rule violations detected by the C48 preprocessor itself -> `preprocessing`; grammar failures -> `syntax`; operand/type/object-type incompatibility -> `type`; redeclaration/prototype/linkage/`main` entity failures -> `declaration`; invalid pure constant evaluation including constant divide-by-zero or ROM-rejected constant numeric evaluation -> `constant-expression`; bounded compiler table/source/workspace capacity exhaustion not caused by a direct ZX-UX service errno -> `resource-limit`; and terminal direct ZX-UX path/open/stat/read/write/create/close/remove/rename/allocation or other service failures -> `io`.
+
+For a quoted include, lexical/name/nesting/wrong-object-type rules owned by Sections 73-75 are `preprocessing` errors with compiler status 1. If a syntactically valid include request instead fails because the named object is absent or a direct ZX-UX namespace/open/read service returns an errno, the class is `io`, the positioned diagnostic is anchored at the include operand, and process status is that positive errno. A direct E_NOMEM allocation failure likewise retains class `io`/status E_NOMEM; exhausting a frozen compiler table or source/workspace ceiling without such a service errno is `resource-limit`/status 1.
+
+Every positioned compile diagnostic identifies the logical source object in which the offending source bytes originated. For the primary input, `<source>` is its resolved normalized ZX-UX path. For a quoted local include, `<source>` is that included object's resolved normalized path. A macro expansion failure is anchored at the first byte of the macro invocation token and names that macro in the reason; an implementation MAY additionally mention its definition location.
+
+Diagnostic positions are 1-based physical byte coordinates. Line 1 is the first physical line. Column 1 is the first source byte on that line; TAB counts as one byte, not rendered width, and LF is not part of the preceding line's column count. For an existing offending token/construct, the coordinate is the first source byte of that token/construct. A missing required token at line end/end-of-file uses the current one-past-last-byte column; an empty file begins at line 1, column 1.
+
+The stable positioned prefix is `cc: <source>:<line>:<column>: <class>:` followed by concise implementation wording. Tool/usage failures with no source coordinate use `cc: <class>:`. Native `cc` writes all usage/error diagnostics to stderr handle 2, never stdout handle 1. Successful compilation is silent on both handles.
+
+C48 Version-1 native `cc` has no nonfatal warning class. Host development tooling MAY provide advisory warnings outside strict native diagnostic conformance, but those warnings MUST NOT change strict C48 acceptance/rejection.
+
+Failure while attempting to write a diagnostic MUST NOT replace the original compile/tool status, commit output, or convert failure to success. Cleanup still follows the original terminal cause.
+
+81. No undefined compiler extensions
+
+The following behavior is forbidden:
+
+"accepted because the parser happens to understand it"
+
+Any syntax not described as supported by this document is rejected.
+
+There is no permissive mode in the native Version-1 compiler.
+
+There are no vendor extensions.
+
+There is no host-language compatibility escape hatch.
+
+82. Host-side C48 development rule
+
+A Windows C48 implementation intended for portable ZX-UX development MUST implement the C48 abstract machine and parser rather than merely pass source to an ordinary Windows C compiler.
+
+At minimum it MUST reproduce the exact 8-bit unsigned plain-char, 16-bit short/int, 16-bit logical pointer, five-byte float, integer-promotion/conversion rules, the special unpromoted-left shift rule, modulo arithmetic, signed division/remainder, shift-count masking, pointer scaling, left-to-right evaluation, preprocessing, reserved words, 15-character identifier limit, and all unsupported-feature rejections.
+
+It MUST reproduce `sizeof` and alignment independent of the host calling convention and must treat source `-32768` according to the C48 literal rules rather than host C intuition.
+
+A host implementation MUST NOT claim strict C48 portability merely because MSVC, GCC, Clang, or another host compiler compiled translated source successfully.
+
+83. Host pointer execution
+
+A Windows executable obviously cannot use literal 16-bit ZX Spectrum process addresses as native Windows pointers.
+
+A host implementation may therefore represent C48 pointers internally using a checked emulated 16-bit address space or an equivalent mapping layer.
+
+Observable C48 pointer behavior MUST nevertheless obey the C48 two-byte logical pointer model.
+
+sizeof(pointer) remains 2 in C48 even when the host implementation uses a larger private representation.
+
+Host representation is an implementation detail.
+
+84. Host floating execution
+
+A Windows implementation MUST NOT use ordinary IEEE host floating point as its conformance reference.
+
+Every C48 floating operator and every integer<->float conversion produces a canonical five-byte C48 value at that language operation boundary. A host implementation MUST NOT keep extra precision across two C48 floating operations if doing so changes the value that the ROM-backed target would obtain after the first operation. Compile-time folding is permitted only when it reproduces the same per-operation five-byte rounding/conversion sequence.
+
+The canonical 48K ROM services are the executable reference for parsing, arithmetic, comparison, transcendental operations, formatting, and domain/range behavior. A host emulator or mathematical reimplementation is conforming only after a golden corpus demonstrates equivalence to those services; it may not invent IEEE NaN, infinity, denormal, or rounding behavior.
+
+It may use wider host arithmetic internally only if final values, comparisons, conversions, errors, and other observable results are demonstrably equivalent to C48's canonical five-byte Spectrum numeric semantics.
+
+The preferred compatibility implementation is an explicit Spectrum-number emulation layer with a golden byte/value corpus derived from the canonical ROM conversion/calculator behavior.
+
+85. Portable source rule
+
+For a source file to be declared "ZX-UX portable C48," the strict Windows checker MUST prove:
+
+The strict checker/runtime must also enforce C48 object byte representation, little-endian integer/pointer storage, implementation-reserved identifiers, pointer-alignment/aliasing rules, and the low-byte `main` exit-status conversion. Source that relies on a host compiler's padding, endianness, strict-alias optimizer, string-literal pooling, or wider return/status behavior does not meet the requirements for ZX-UX-portable C48.
+
+canonical C48 syntax only;
+
+no host extension;
+
+canonical types;
+
+canonical identifiers;
+
+canonical preprocessing;
+
+canonical literals;
+
+canonical integer semantics;
+
+canonical float semantics;
+
+canonical pointer semantics;
+
+canonical evaluation order;
+
+no unsupported language feature;
+
+compliance with the native compiler release's documented resource capacities;
+
+use only of <c48.h> APIs whose signatures are frozen for the corresponding ZX-UX release.
+
+If all conditions pass, the same source text, after canonical LF representation is ensured, is intended to compile on the native ZX-UX C48 compiler without source modification.
+
+86. Required lexical positive corpus
+
+C48 compiler tests MUST include at minimum positive lexical examples covering:
+
+abc
+abc123
+_abc
+ABC
+abc_DEF
+
+0
+32767
+32768
+65535
+65535u
+077
+0xff
+0XABCDU
+
+'A'
+'\n'
+'\0'
+'\xff'
+
+""
+"abc"
+"a" "b"
+
+0.0
+1.
+.5
+1e3
+1E-3
+1.25f
+
+and every supported operator/punctuator.
+
+87. Required lexical negative corpus
+
+Later compiler tests MUST explicitly reject at minimum:
+
+65536
+0x10000
+08
+1L
+1UL
+1.0L
+0x1.0p0
+''
+'AB'
+'\123'
+'\x4'
+'\q'
+identifier_longer_than_15_visible_characters
++=
+-=
+?:
+->
+...
+123abc
+1.0foo
+
+Every reserved-but-unsupported keyword and every unsupported preprocessing directive also has a required negative case.
+
+The negative corpus MUST also include binary/digit-separated integer literals, wide/prefixed character/string literals, `sizeof(int[3])`, `(void)expr`, a void-valued expression used as a value, and every unsupported alternative type spelling.
+
+88. Required semantic boundary corpus
+
+Later compiler/runtime tests MUST include at minimum:
+
+255 + 1 through assignment to an 8-bit destination
+32767 + 1
+(-32767 - 1) - 1
+65535u + 1u
+((int)0x8000u) / -1
+((int)0x8000u) % -1
+-7 / 3
+-7 % 3
+7 / -3
+7 % -3
+
+Shift tests MUST exercise an actual 8-bit left operand and an actual 16-bit left operand at counts 0, 7, 8, 15, 16, 31, and 255 as applicable, proving low-3-bit versus low-4-bit masking.
+
+Signed/unsigned comparison boundary cases MUST straddle 0x7FFF/0x8000. A dedicated literal test MUST prove that bare source `-32768` is unsigned 32768 under Sections 12-13 while `(int)0x8000u` is signed -32768.
+
+89. Required evaluation-order corpus
+
+Both host and native C48 implementations MUST execute deterministically and identically for tests exposing evaluation order and value capture.
+
+f(a(), b(), c())
+x = left() + right();
+f(i++, i);
+i = i++;
+
+Observable logging MUST prove `a` before `b` before `c`, left before right, and that the first argument of `f(i++, i)` captures the old i before the second observes the incremented i. `i = i++` must produce the Section-51 deterministic final value.
+
+The corpus MUST also verify `&&`/`||` suppression and that `sizeof(expr)` performs no operand side effect.
+
+`sizeof *p` with a null run-time pointer value MUST succeed based solely on pointed-to type without accessing memory; `sizeof(a[i++])` MUST leave `i` unchanged; `sizeof(int[3])` MUST be rejected because array type-names are outside the grammar.
+
+90. Required pointer corpus
+
+Tests MUST cover:
+
+char pointer +1;
+
+int pointer +1;
+
+float pointer +1;
+
+integer + pointer and pointer - integer;
+
+pointer increment and decrement;
+
+same-array subtraction producing positive, zero, and negative C48 `int` element counts;
+
+null equality;
+
+object-pointer / void * conversion;
+
+array-to-pointer decay;
+
+suppression of array decay inside sizeof;
+
+rejection of unary & on an array because pointer-to-array is unsupported;
+
+base[index] equivalence and rejection of index[base];
+
+repeated pointer indexing such as argv[1][0];
+
+rejection of void * arithmetic/dereference;
+
+rejection of pointer/integer casts;
+
+rejection of function pointers;
+
+rejection of multidimensional array declarators.
+
+91. Required declaration corpus
+
+Tests MUST cover scalar globals/locals, file-scope static objects/functions, file-scope extern objects/functions, multiple declarators, pointer returns/parameters, `char **argv`, one-dimensional arrays and arrays of pointers.
+
+Exact-type tests MUST distinguish `char` from `unsigned char`, `short` from `int`, and `unsigned short` from `unsigned int` in prototype/definition matching even though their representations overlap. Pointer compatibility must recurse on exact pointed-to type; `void *` implicit conversion must not make prototypes exact-compatible.
+
+Declarator-binding tests MUST prove `char *a[8]` is array[8] of char-pointer, `char **a[8]` is array[8] of pointer-to-char-pointer, `char *f(void)` returns char-pointer, and `char **f(void)` returns pointer-to-char-pointer; fixtures attempting `char (*p)[8]` or `char (*fp)(void)` MUST be rejected because parenthesized declarators/pointer-to-array/function types are absent.
+
+Tests MUST cover compatible repeated prototypes/externs, conflicting entity kind, duplicate definition, static/external linkage conflict, prototype/definition mismatch, undeclared calls, block-scope function declaration rejection, old-style `f()` rejection, both valid `main` forms, `static main` rejection, and other invalid main forms.
+
+Object-linkage tests MUST accept both `extern int x; int x;` and `int x; extern int x;`, accept repeated compatible extern declarations around the single definition, reject two definitions without storage-class specifiers, and reject any static/external linkage mixture for the same identifier.
+
+Scope tests MUST prove that an outermost function-body local cannot redeclare a parameter, while a nested block may shadow it. `main` tests MUST allow a compatible prototype before the definition without a storage-class specifier, reject a file-scope object named `main`, and accept a module with no `main` definition.
+
+92. Required initializer corpus
+
+Tests MUST cover:
+
+signed integer scalar;
+
+unsigned integer scalar;
+
+character scalar;
+
+float scalar;
+
+null pointer;
+
+string pointer;
+
+address of global;
+
+fixed-size array;
+
+inferred-size array;
+
+partially initialized array zero-fill;
+
+optional trailing initializer comma;
+
+character array from string;
+
+rejection when string plus NUL exceeds explicit character-array bound;
+
+rejection of designated initializer;
+
+rejection of nested aggregate initializer.
+
+93. Required preprocessing corpus
+
+Tests MUST prove object-like integer/floating/string/character constants, parenthesized constant expressions, definition-point visibility, case-sensitive names, and nested macro expansion only through already-defined constants.
+
+The corpus MUST prove macro non-expansion in strings/comments/chars/include operands; direct/indirect cycle rejection; identical redefinition acceptance; different redefinition rejection; inherited macro visibility into local includes; persistence of included-file definitions after return; and rejection of a forward unresolved macro reference in a definition.
+
+Include tests MUST cover local TXT/C RAW/PACKED logical source, current-directory/case/name validation, exact one local level, locally included `<c48.h>`, second quoted-level/include-cycle rejection, built-in header repetition, user/header compatible declaration coexistence, incompatible declaration collision, macro/header-name collision, and rejection of every unsupported directive/header/trailing-token form. Macro tests MUST prove backward-only already-defined dependencies, self/forward-reference rejection, and the impossibility of an accepted expansion cycle.
+
+94. Required float corpus
+
+The canonical C48 test suite MUST contain a golden set mapping source literals to exact five-byte Spectrum representations.
+
+At minimum it must cover:
+
+0
+1
+-1
+.5
+0.25
+1.25
+2
+10
+-12
+representative fractional values
+representative exponent forms
+representable boundary values
+range/domain failures
+
+The same corpus MUST run against:
+
+canonical Spectrum ROM conversion;
+
+native cc;
+
+Windows C48 implementation.
+
+A host implementation may not certify itself by comparison only against IEEE floating point.
+
+95. Grammar freeze versus compiler-resource freeze
+
+This document defines the complete C48 Version-1 language grammar and semantics.
+
+Compiler table capacities and storage budgets are implementation resource limits, not additional C48 syntax rules.
+
+A compiler MUST NOT invent arbitrary language restrictions merely to simplify memory management.
+
+Resource limits MUST NOT broaden or narrow the C48 grammar.
+
+A host checker claiming portability to a particular native compiler release MUST enforce that release's published resource limits independently of language conformance.
+
+96. Grammar freeze versus runtime API freeze
+
+This specification defines C48 tokens, grammar, preprocessing, types, declarations, expressions, statements, conversions, evaluation semantics, and the supported or forbidden language surface.
+
+Runtime service calling convention behavior and public header signatures are target-interface details. Appendix B lists mandatory public names; where an exact prototype, parameter type, constant value, or supporting record is absent from this specification, it MUST NOT be guessed, and no new C48 syntax may be introduced to express it.
+
+The public C48 function `beep` has the exact declaration `int beep(float duration, float pitch)`.
+
+The following is explanatory floating bridge notation only, not a valid C48 prototype:
+
+int zx_fp_exec(op, const float *lhs, const float *rhs, float *out)
+
+That notation is not valid C48 source: `op` has no stated C48 type and `const` is unsupported. Any actual source-facing declaration MUST use only the language syntax defined here and the target runtime's independently verified calling convention. This notation MUST NOT be copied into `<c48.h>` or used to extend C48.
+
+97. Important const distinction
+
+Read-only floating buffers may be described in explanatory calling convention notation using `const float *`. C48 Version 1 itself does not support the `const` type modifier.
+
+Only the C48 source syntax in this document is valid for built-in declarations.
+
+This distinction also applies to every other modern-C spelling that appears only in explanatory host/pseudocode and is absent from the frozen C48 language.
+
+98. No silent rule invention
+
+If a language or compiler behavior cannot be determined from the normative rules of this specification and its appendices, the implementer MUST identify the unresolved rule and stop that portion of the implementation.
+
+A target-specific runtime or OS integration detail not defined here MUST likewise be marked unresolved; it MUST NOT be used to invent a C48 language rule.
+
+The developer MUST NOT choose a behavior and then write a test that blesses the choice.
+
+Tests prove the specification.
+
+Tests do not create the specification.
+
+99. Windows/native equivalence criterion
+
+A Windows C48 implementation and the native ZX-UX C48 implementation are functionally language-equivalent when, for every canonical source within frozen implementation resource limits:
+
+both accept it or both reject it;
+
+accepted programs observe the same C48 scalar values;
+
+integer expressions have the same results;
+
+float expressions have equivalent Spectrum five-byte semantics;
+
+pointer arithmetic has the same logical results;
+
+sizeof has identical results;
+
+side effects occur in the same order;
+
+initialization produces the same logical object contents;
+
+preprocessing produces equivalent token streams;
+
+calls observe the same language-level argument/return behavior;
+
+differences caused solely by Windows versus ZX-UX operating-system implementation are confined behind the frozen <c48.h> compatibility layer.
+
+This is the foundation for writing C48 software on Windows and transferring the source unchanged to ZX-UX.
+
+100. Specification completeness rule
+
+The C48 Version-1 specification is not complete merely because it lists the supported C keywords.
+
+This document freezes, at minimum:
+
+canonical source representation and rejected translation conveniences;
+
+whitespace and comments;
+
+complete keyword/reserved/implementation-reserved identifier classification;
+
+identifiers and limits;
+
+complete supported token inventory and maximal-munch/token-boundary behavior;
+
+integer, character/string, and floating literal grammars, types, escapes, and canonical conversion;
+
+type spelling, type identity, exact data model, representation, and alignment;
+
+declarator restrictions, declarations, storage classes, scope, linkage, definitions, and OBJ1 symbol spelling;
+
+arrays, pointers, null/void pointers, pointer access/alignment/aliasing, and object lifetimes;
+
+prototypes, function definitions, parameter pass-by-value behavior, main/argc/argv, and calling convention-visible returns;
+
+initializers, initialization timing, pure constant expressions, and pointer constants;
+
+complete precedence/associativity, expression operand domains, result types/value categories, and void-value restrictions;
+
+promotions/conversions, integer arithmetic, division/remainder, shifts, floating semantics, pointer semantics, comparisons/logical behavior, assignment, increment/decrement, casts, and sizeof;
+
+expression/function-argument evaluation and value-capture order;
+
+complete statement/control-flow grammar and scalar-condition rules;
+
+preprocessing execution order, macro-definition/dependency/visibility rules, include behavior, and built-in-header collision rules;
+
+unsupported/deferred source-language surface;
+
+compiler command input/output/transaction/determinism/status/diagnostic rule;
+
+the distinction between language semantics, compiler resource limits, and target runtime API details;
+
+host/native source-portability and conformance criterion.
+
+No item above may be left to language-implementation inference. Internal code generation may use any method that preserves the exact semantics and calling convention-visible requirements stated in this document.
+
+101. Standalone conformance verification
+
+Validation requires three consecutive full reviews of this specification with no new findings or internal contradictions. The existence of this text alone does not establish compiler conformance.
+
+Each fresh scan MUST independently cover the normative rules in this document and at least the following dimensions:
+
+zero contradictions among the normative C48 rules in this specification
+zero supported C48 language features omitted
+zero unsupported language features accidentally enabled
+zero lexical categories left implementation-defined
+zero maximal-munch/token-boundary gaps
+zero grammar productions left to parser invention
+zero operator precedence/associativity gaps
+zero scalar conversion/type-result gaps
+zero shift-width or integer-literal contradictions
+zero pointer/indexing/type-construction gaps
+zero statement/control-flow gaps
+zero preprocessing behavior gaps
+zero host/native semantic differences left to host C
+zero undocumented language extensions
+zero unrecorded gaps in the compiler resource/runtime interface boundary
+
+Any new finding resets the consecutive-clean-pass count to zero after the documents are repaired and written to disk.
+
+102. Frozen Version-1 language summary
+
+Supported keyword set:
+
+break
+char
+continue
+do
+else
+extern
+float
+for
+if
+int
+return
+short
+sizeof
+static
+unsigned
+void
+while
+
+Supported fundamental type spellings:
+
+void
+char
+unsigned char
+short
+unsigned short
+int
+unsigned int
+float
+
+Supported operators:
+
+=
++
+-
+*
+/
+%
+++
+--
+<<
+>>
+<
+<=
+>
+>=
+==
+!=
+&
+|
+^
+~
+&&
+||
+!
+
+Supported structural punctuation:
+
+(
+)
+[
+]
+{
+}
+;
+,
+
+Supported statements:
+
+block
+expression
+empty
+if / else
+while
+do / while
+for
+break
+continue
+return
+
+Supported preprocessing:
+
+#define object-like constants
+#include "name"
+#include <c48.h>
+
+Core data model:
+
+char, unsigned char     1 byte, align 1
+short, unsigned short   2 bytes, align 2
+int, unsigned int       2 bytes, align 2
+pointer                 2 bytes, align 2
+float                   5 bytes, align 1
+
+Plain `char` is unsigned. Identifiers are case-sensitive and have a maximum of 15 visible characters. C48 is intentionally not full ISO C.
+
+C48 shifts retain the unpromoted left operand width: 8-bit operands use the low 3 bits of the count, and 16-bit operands use the low 4 bits.
+
+103. Developer directive
+
+Implementations SHALL use this document and its appendices as the standalone C48 Version-1 language definition. The native ZX-UX compiler and the independent Windows implementation MUST conform to the same language rule.
+
+The developer is not asked to "design a small C compiler."
+
+The language design is frozen.
+
+The implementer must encode the frozen rules accurately, identify any genuine internal conflict, and refuse to invent unspecified behavior.
+
+Both conforming implementations:
+
+Windows C48
+
+and:
+
+ZX-UX native cc
+
+shall target the same language rule.
+
+Their shared C48 language rule, not either compiler's incidental behavior, establishes source portability.
+
+Appendix A. Complete Normative Grammar
+
+This EBNF is normative for syntax. Semantic restrictions in Sections 18-76 further constrain grammatically recognizable constructs. `{ X }` means zero or more X; `[ X ]` means optional X; quoted text is a literal token.
+
+A.1 Translation unit and declarations
+
+translation-unit ::= { external-declaration } EOF
+
+external-declaration ::= function-definition | declaration
+
+declaration ::= [ storage-class ] type-specifier init-declarator { ',' init-declarator } ';'
+
+storage-class ::= 'static' | 'extern'
+
+type-specifier ::= 'void'
+                 | 'char'
+                 | 'unsigned' 'char'
+                 | 'short'
+                 | 'unsigned' 'short'
+                 | 'int'
+                 | 'unsigned' 'int'
+                 | 'float'
+
+init-declarator ::= declarator [ '=' initializer ]
+
+declarator ::= pointer-part identifier [ declarator-suffix ]
+             | identifier [ declarator-suffix ]
+
+pointer-part ::= '*' { '*' }
+
+declarator-suffix ::= array-suffix | function-suffix
+
+array-suffix ::= '[' [ integer-constant-expression ] ']'
+
+function-suffix ::= '(' parameter-clause ')'
+
+parameter-clause ::= 'void' | parameter-list
+
+parameter-list ::= parameter-declaration { ',' parameter-declaration }
+
+parameter-declaration ::= type-specifier [ pointer-part ] [ identifier ]
+
+function-definition ::= [ 'static' ] type-specifier function-declarator compound-statement
+
+function-declarator ::= [ pointer-part ] identifier '(' parameter-definition-clause ')'
+
+parameter-definition-clause ::= 'void' | parameter-definition-list
+
+parameter-definition-list ::= parameter-definition { ',' parameter-definition }
+
+parameter-definition ::= type-specifier [ pointer-part ] identifier
+
+type-name ::= type-specifier [ pointer-part ]
+
+Semantic restrictions: `extern` function definitions are rejected; parenthesized declarators are absent; a declarator has at most one array or function suffix; arrays are one-dimensional; a function definition requires a function suffix; function pointers and pointer-to-array types cannot be formed. A function prototype may omit parameter names; a definition may not. A parameter type cannot be plain `void`; `void` is legal in a parameter clause only as the sole zero-parameter marker, while `void *` is a valid parameter type. Array declarator syntax is not permitted in parameter declarations; use a pointer parameter explicitly.
+
+A.2 Initializers
+
+initializer ::= scalar-constant-expression
+              | '{' initializer-list [ ',' ] '}'
+              | string-literal-sequence
+
+initializer-list ::= scalar-constant-expression { ',' scalar-constant-expression }
+
+scalar-constant-expression ::= integer-constant-expression | floating-constant-expression | pointer-constant-expression
+
+The destination declaration determines which initializer form is legal. Braced initializer lists apply only to one-dimensional arrays. The special direct string-array initializer applies only to `char`/`unsigned char` arrays. Separately, a string-literal sequence may serve as the string-address form of a Section-34 pointer constant expression and thereby initialize compatible `char *` or `void *` pointer objects.
+
+A.3 Statements
+
+compound-statement ::= '{' { declaration } { statement } '}'
+
+statement ::= compound-statement
+            | expression-statement
+            | selection-statement
+            | iteration-statement
+            | jump-statement
+
+expression-statement ::= [ expression ] ';'
+
+selection-statement ::= 'if' '(' expression ')' statement [ 'else' statement ]
+
+iteration-statement ::= 'while' '(' expression ')' statement
+                      | 'do' statement 'while' '(' expression ')' ';'
+                      | 'for' '(' [ expression ] ';' [ expression ] ';' [ expression ] ')' statement
+
+jump-statement ::= 'break' ';'
+                 | 'continue' ';'
+                 | 'return' [ expression ] ';'
+
+A.4 Expressions
+
+expression ::= assignment-expression
+
+assignment-expression ::= logical-or-expression [ '=' assignment-expression ]
+
+logical-or-expression ::= logical-and-expression { '||' logical-and-expression }
+logical-and-expression ::= bitwise-or-expression { '&&' bitwise-or-expression }
+bitwise-or-expression ::= bitwise-xor-expression { '|' bitwise-xor-expression }
+bitwise-xor-expression ::= bitwise-and-expression { '^' bitwise-and-expression }
+bitwise-and-expression ::= equality-expression { '&' equality-expression }
+equality-expression ::= relational-expression { ( '==' | '!=' ) relational-expression }
+relational-expression ::= shift-expression { ( '<' | '<=' | '>' | '>=' ) shift-expression }
+shift-expression ::= additive-expression { ( '<<' | '>>' ) additive-expression }
+additive-expression ::= multiplicative-expression { ( '+' | '-' ) multiplicative-expression }
+multiplicative-expression ::= unary-expression { ( '*' | '/' | '%' ) unary-expression }
+
+unary-expression ::= postfix-expression
+                   | ( '++' | '--' | '+' | '-' | '!' | '~' | '&' | '*' ) unary-expression
+                   | 'sizeof' unary-expression
+                   | 'sizeof' '(' type-name ')'
+                   | '(' type-name ')' unary-expression
+
+postfix-expression ::= primary-expression { postfix-suffix }
+
+postfix-suffix ::= '[' expression ']'
+                 | '(' [ argument-list ] ')'
+                 | '++'
+                 | '--'
+
+argument-list ::= assignment-expression { ',' assignment-expression }
+
+primary-expression ::= identifier
+                     | integer-literal
+                     | floating-literal
+                     | character-literal
+                     | string-literal-sequence
+                     | '(' expression ')'
+
+string-literal-sequence ::= string-literal { string-literal }
+
+There is no comma expression, conditional expression, member access, function-pointer call, assignment operator other than `=`, or other implicit expression production.
+
+A.5 Constant expressions
+
+integer-constant-expression ::= assignment-expression constrained by Section 35
+floating-constant-expression ::= assignment-expression constrained by Section 36
+pointer-constant-expression ::= forms enumerated in Section 34
+
+A parser may reuse the normal expression grammar for constant expressions, but semantic validation MUST enforce the pure arithmetic/pointer-constant restrictions and result-type classification of Sections 34-37 exactly.
+
+A.6 Lexical grammar
+
+identifier ::= identifier-start { identifier-continue }
+identifier-start ::= 'A'..'Z' | 'a'..'z' | '_'
+identifier-continue ::= identifier-start | '0'..'9'
+
+digits ::= decimal-digit { decimal-digit }
+decimal-digit ::= '0'..'9'
+nonzero-digit ::= '1'..'9'
+octal-digit ::= '0'..'7'
+hexadecimal-digit ::= decimal-digit | 'A'..'F' | 'a'..'f'
+
+Integer, floating, character, string, comment, whitespace, preprocessing, and maximal-munch rules are exactly Sections 4-17 and 70-75.
+
+Appendix B. Required <c48.h> Public-Name Inventory
+
+The following names are mandatory `<c48.h>` public-runtime entries. This appendix records the complete required name inventory, not invented signatures; exact declarations absent from this language document must be verified against the implementation before a runtime-API conformance claim.
+
+exit
+yield
+sleep
+spawn
+wait
+kill
+chdir
+getcwd
+getenv
+getpid
+
+open
+open_typed
+close
+read
+write
+seek
+stat
+remove
+rename
+list
+pipe
+dup
+ioctl
+read_full
+write_full
+
+getchar
+putchar
+puts
+
+strlen
+strcmp
+strcpy
+strncpy
+memcpy
+memmove
+memchr
+memset
+
+malloc
+free
+
+cls
+print_at
+plot
+point
+draw
+circle
+ink
+paper
+bright
+flash
+inverse
+over
+border
+beep
+
+udg_define
+udg_get
+udg_draw
+udg_clear
+udg_draw_2x2
+
+tape_save
+tape_load
+ticks
+time_get
+time_set
+
+sin
+cos
+tan
+asin
+acos
+atan
+sqrt
+exp
+log
+pow
+fabs
+
+`printf` is not part of the mandatory Version-1 public surface. A compact integer formatter and a small ROM-backed floating formatter are required without imposing a large general-purpose `printf` interface.
+
+The floating helper names `__fadd`, `__fsub`, `__fmul`, `__fdiv`, `__fpow`, `__fabs`, `__fsgn`, `__fint`, `__fexp`, `__fln`, `__fsin`, `__fcos`, `__ftan`, `__fasin`, `__facos`, `__fatan`, `__fsqrt`, `__itof`, `__ftoi`, and `__fcmp` are implementation-owned runtime symbols, not public C48 header functions. `zx_fp_exec` is internal bridge notation and not a required public `<c48.h>` name in Version 1.
+
+Appendix C. Additional Mandatory Cross-Compiler Conformance Cases
+
+The following cases close semantic gaps that can otherwise make Windows and native C48 disagree:
+
+`char c = 1; c << 8` uses the 8-bit low-three-bit shift count and produces a `char`-typed shift result;
+
+`int i = 1; i << 16` uses the 16-bit low-four-bit shift count;
+
+bare `-32768` is distinguished from `(int)0x8000u`;
+
+`sizeof(array)` sees the whole array while `&array` is rejected;
+
+`argv[1][0]` succeeds while `1[argv]` is rejected;
+
+`i = i++` follows Section-55 left-to-right/address-then-RHS assignment order deterministically;
+
+fall-through from a non-void function takes the Section-69 status-1 runtime-error path;
+
+every compiler-generated floating numeric failure with no language error return takes the Section-53 status-1 runtime-error path;
+
+local include accepts TXT/C RAW or PACKED logical streams, permits included `<c48.h>`, and rejects a second quoted include level;
+
+RAW and PACKED source with identical logical bytes compile to byte-identical OBJ1.
+
+`short`/`int`/pointer byte representation is little-endian and all-zero BSS yields integer zero, null pointer, and floating zero;
+
+pointer equality compares exact 16-bit logical address bits and relational comparison rejects incompatible/void pointer types;
+
+unsigned division/remainder and negative masked shift counts follow Sections 45-46;
+
+float-to-char conversion uses unsigned 16-bit conversion then low-eight-bit narrowing, while a negative value fails conversion;
+
+a float parameter is pass-by-value even though its calling convention transport is a pointer;
+
+an 8-bit function return ignores H and is zero-extended from L when promoted;
+
+normal return from `main` maps its `int` result to the low eight process-status bits;
+
+successful `cc` is silent, diagnostics use handle 2, and `>` stdout redirection alone does not capture them;
+
+identical logical input produces byte-identical OBJ1 independent of destination path/temp/PID/storage representation.
+
+an empty/all-comment translation unit compiles successfully to the canonical empty OBJ1;
+
+a compatible `main` prototype may precede its definition without a storage-class specifier, while a file-scope object named `main` is rejected;
+
+automatic initialized locals are reinitialized on every block activation and uninitialized locals retain unspecified bits;
+
+pure constant expressions exercise arithmetic casts and float comparisons without host-precision drift;
+
+diagnostic fixtures prove every exact class spelling/mapping and source-position anchor from Section 80.
+
+Appendix D. Expression Type and Value-Category Matrix
+
+The following matrix is normative and closes all result-type/value-category decisions for supported expressions.
+
+identifier naming object       declared type; lvalue
+integer literal                 Section-13 integer type; non-lvalue
+character literal               int; non-lvalue
+floating literal                float; non-lvalue
+string literal                  char[N]; nonmodifiable array object
+(parenthesized expression)       preserves enclosed type/value category
+
+array value use                 pointer to first element except sizeof; non-lvalue pointer
+function call                   declared return type; non-lvalue (void has no value)
+base[index]                     pointed-to element type; lvalue
+unary *p                        pointed-to object type; lvalue
+unary &obj                      pointer to exact object type; non-lvalue
+sizeof                          unsigned int; non-lvalue
+
+unary + / - integer             Section-41 promoted integer type; non-lvalue
+unary + / - float               float; non-lvalue
+unary ~                         promoted integer type; non-lvalue
+unary !                         int value 0 or 1; non-lvalue
+
+* / % + - integer arithmetic    Section-42 common integer type; non-lvalue
++ - * / floating arithmetic     float after conversion; non-lvalue
+shift                           exact unpromoted left integer type; non-lvalue
+bitwise binary                  Section-42 common integer type; non-lvalue
+relational/equality             int value 0 or 1; non-lvalue
+logical && ||                   int value 0 or 1; non-lvalue
+
+pointer +/- integer             same pointer type; non-lvalue
+integer + pointer               same pointer type; non-lvalue
+pointer - compatible pointer    int element count; non-lvalue
+
+assignment                      destination type after conversion; non-lvalue
+prefix ++/--                    operand type, new value; non-lvalue
+postfix ++/--                   operand type, old value; non-lvalue
+cast                            named destination arithmetic type; non-lvalue
+
+Operand-domain rules are exact: `%`, shifts, `~`, and binary bitwise operators require integer operands; unary `+`/`-` require arithmetic operands; arithmetic `*` and `/` allow integer or float; binary `+`/`-` allow arithmetic forms plus only the pointer forms stated in Section 50; relational/equality allow arithmetic forms plus the pointer cases in Section 49; `&&`, `||`, and `!` require scalar operands.
+
+Appendix E. Object Lifetime and Parameter Semantics
+
+File-scope objects have process lifetime. They are initialized before `main` begins. File-scope uninitialized definitions have semantic zero values represented through normal BSS zeroing.
+
+Automatic local objects have the lifetime of each activation of their declaring block; named parameters have the lifetime of the function activation. Permitted automatic initializers are materialized on every block entry before statements. Their names obey Section-23 scope, including the outermost-body parameter redeclaration rule. A pointer to such an object becomes nonportable to dereference after that object's lifetime ends even if stale RAM bytes remain physically present.
+
+All parameters are source-language values. Integer and pointer values are copied into the callee parameter abstraction. Float arguments are also values despite pointer-backed calling convention transport; assigning to a float parameter cannot mutate the caller's source float.
+
+Distinct simultaneously live nonzero-size C48 objects have nonoverlapping storage and therefore distinct addresses. An object's logical address remains stable for its lifetime. Storage reuse after a lifetime ends is permitted and does not make a stale pointer valid.
+
+ARG1 and ENV1 are separate read-only process-owned bootstrap allocations. `argv` pointers may refer directly to ARG1 strings for the process lifetime, but portable C48 treats those argument bytes as read-only. Exact `getenv`/environment service behavior requires an independently validated runtime interface and is not redefined by this language specification.
+
+Appendix F. Deterministic `cc` Command-Line rule
+
+The only accepted invocation shapes are exactly `cc source` and `cc -o output source`. With one operand it is always the source operand even if its basename begins with `-`; with three operands the first must be exact lower-case `-o`. Any other argument count or option spelling is a usage error with status 1.
+
+The source operand is resolved as a normal ZX-UX path and MUST resolve to object type C. In default form its final basename must end in exact lower-case `.c`. The default destination is in the same parent directory as the source and is formed by replacing only that final `.c` with `.obj`; the final basename must fit 1..10 portable name bytes and the parent directory must accept OBJ type. Because `.obj` is four bytes, a default-form source stem may contain at most six bytes; a longer legal C source basename requires explicit `-o`.
+
+In explicit form, the output operand is a normal ZX-UX path. Its final basename is exact/case-sensitive, 1..10 portable name bytes; its destination directory must accept OBJ. The explicit source basename need not end in `.c`, but the resolved input object still MUST have C type.
+
+The fully normalized input and output paths MUST NOT be identical. `cc` rejects an attempt to replace its source object with OBJ output before creating a temporary.
+
+For the transaction name, `<pid>` is the decimal current PID and `<n>` is the lowest nonnegative decimal integer whose `/tmp/.cc<pid>.<n>` basename fits the 10-byte namespace and does not already exist. The compiler probes candidates from n=0 upward with O_CREATE|O_EXCL, retries only E_EXIST, and treats any other creation error as terminal. The 32-object mutable-table bound guarantees a free candidate before the 10-byte decimal-name space can be exhausted when the system can create another object.
+
+On any compile failure after temporary creation, `cc` closes/releases all compiler-owned handles/allocations and removes its temporary before exit. It never removes a pre-existing unrelated stale `.cc...` object. No compiler-owned leak is permitted. The final destination is affected only by the successful validated SYS_RENAME commit.
+
+Process status is exactly Section 80: 0 on success; 1 for source/usage/compiler errors without a more specific errno; otherwise the terminal direct ZX-UX errno. The compiler reports the first terminal error and does not continue emitting a partially valid object.
+
+Wrong input object type is reported as E_FORMAT/status 11. Missing input, invalid/overlength paths, creation/rename permission or busy failures, and other namespace/service errors propagate their direct ZX-UX errno when that service is the terminal cause. Pure command-shape/default-suffix validation remains status 1.
+
+On status 0, `cc` emits no stdout/stderr text and the destination OBJ exists in its committed form. On failure, stdout remains unused by `cc`; the first terminal diagnostic is written to stderr handle 2 under Section 80.
+
+Appendix G. Normative Type Categories and Object-Access Terminology
+
+C48 integer types are `char`, `unsigned char`, `short`, `unsigned short`, `int`, and `unsigned int`. The signed integer types are `short` and `int`; plain `char` is an unsigned integer type but remains source-type-distinct from `unsigned char`. The arithmetic types are all integer types plus `float`. Scalar types are arithmetic types plus supported object pointers. Object types are non-void scalar types and one-dimensional arrays of complete object types. `void` is not an object type. Function types are not object or scalar types.
+
+Where this specification says 'compatible pointer', exact pointed-to type compatibility from Section 23.1 is required unless the text explicitly names the special `void *` conversion. Where it says 'integer operand', all six integer types are included before any specified promotion. Where it says 'arithmetic operand', integer and float are both included.

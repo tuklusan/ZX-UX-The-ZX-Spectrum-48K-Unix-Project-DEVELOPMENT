@@ -23,6 +23,8 @@ class RebuildChecks(unittest.TestCase):
         (self.src / 'zx-ux/font4x8.bin').write_bytes(b'font')
         (self.src / 'assets/c48-src').mkdir(parents=True)
         (self.src / 'assets/c48-src/demo.c').write_text('void main(void) {}')
+        (self.src / 'docs').mkdir()
+        (self.src / 'docs/manual.txt').write_text('manual')
         (self.src / 'bonus/60-programs/demo/BASIC').mkdir(parents=True)
         (self.src / 'bonus/60-programs/demo/BASIC/demo.bas').write_text('10 PRINT "OK"')
         (self.root / 'build').mkdir()
@@ -60,18 +62,48 @@ def pack(*args):
         self.assertFalse(self.dist.exists())
         self.run_builder()
         self.assertTrue((self.dist/'zx-ux/ZX-UX.tzx').is_file())
+        self.assertEqual((self.dist/'docs/manual.txt').read_text(), 'manual')
         self.assertEqual((self.dist/'bonus/60-programs/demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
         (self.dist/'stale').write_text('obsolete')
         self.run_builder()
         self.assertFalse((self.dist/'stale').exists())
+        self.assertEqual((self.dist/'docs/manual.txt').read_text(), 'manual')
         self.assertEqual((self.src/'bonus/60-programs/demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
 
     def test_failure_preserves_dist(self):
         self.run_builder()
         before = (self.dist/'zx-ux/ZX-UX.tzx').read_bytes()
+        docs_before = (self.dist/'docs/manual.txt').read_text()
         (self.src/'zx-ux-sdk/tools/c48build.py').write_text('def build(*a): raise RuntimeError("failed")\n')
         self.run_builder(ok=False)
         self.assertEqual((self.dist/'zx-ux/ZX-UX.tzx').read_bytes(), before)
+        self.assertEqual((self.dist/'docs/manual.txt').read_text(), docs_before)
+
+    def test_missing_docs_does_not_modify_previous_dist(self):
+        self.run_builder()
+        (self.src / 'docs/manual.txt').unlink()
+        (self.src / 'docs').rmdir()
+        self.run_builder(ok=False)
+        self.assertEqual((self.dist/'docs/manual.txt').read_text(), 'manual')
+
+    def test_docs_are_copied_after_sdk_pack(self):
+        # The SDK pack is the last generator. A new doc written by it must
+        # appear in the published distribution.
+        pack = self.src / 'zx-ux-sdk/tools/sdkpack.py'
+        pack.write_text(pack.read_text() +
+                        "    (args[0].parent/'docs/late.txt').write_text('latest')\n")
+        self.run_builder()
+        self.assertEqual((self.dist/'docs/late.txt').read_text(), 'latest')
+
+    def test_caches_are_not_distributed(self):
+        for folder in (self.src/'docs', self.src/'bonus',
+                       self.src/'assets/c48-src', self.src/'zx-ux-sdk'):
+            cache = folder / '__pycache__'
+            cache.mkdir()
+            (cache / 'stale.pyc').write_bytes(b'ignored')
+        self.run_builder()
+        self.assertFalse(any(p.name == '__pycache__' or p.suffix == '.pyc'
+                             for p in self.dist.rglob('*'))
 
 
 if __name__ == '__main__':

@@ -1,0 +1,429 @@
+{
+  "source": "ZX-UX-Step5-spec-and-authentic-visuals-checked-2026-10-10.tar",
+  "comparison": "old SDK PNG scaled by verified exact factor 3 vs archived new-SDK host runtime PNG",
+  "source_state": "old frames not proven matched; this is pixel equality, not native v1 kernel compatibility",
+  "cases": [
+    {
+      "program": "city",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "1dd72e28770803c79e7695cd5e90b4feaea062b5fd4484a20e7d3ab83e5c1f3a",
+      "new_sha256": "24efce11bf4d5eb89a5ac2906887e8be21cde8088bbe5165acb2598c8de0ea98",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "dizzy4k",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "ec6d72648507bc756ca7beb4bdebe4223ddda6b6783e6e371f2c141c90ec37ff",
+      "new_sha256": "2aec220b0f7114e9cfedc4f074e0095590103c9911af9debda146ad2f4c3ec98",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "firework",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "fb56fffc11eac4f2e09982fecb3aed51f6b580800ac25f4702bdcc31dc3e4ba6",
+      "new_sha256": "889f7f93ffe2be7d37bdc6397d145fc5bd9b8da7d574ec676dc25895190f9893",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "forest",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "22c8217fd9d70f3299ff266cfb3d8241fd03c99e59abde543ab838f52297ad94",
+      "new_sha256": "0dbcab53afb31a313c833e2e9a8d97eb4ace978af0be0e1fabbed02fdfaa0499",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "galaxy",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "b93f1f64cecf1a0f015cf9127850d0c848aa19c3886c9d949a4b8c2ddae9e5ad",
+      "new_sha256": "60b355e6b84dbf621b58bf5d4b1f0eee73bbca7913558e423fa6cd6246a01caf",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "goblet",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "89ffe9c89384b76cf1a7ceb9aa9903e945a52d578bf3853a8eaac4e0ca36dbde",
+      "new_sha256": "e7c95c391667e6ec610eed97cc48a8eac5d10c75df0e270c8651f9fb8c484f41",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "julia",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "6dac6427e02c6f7e3d3a22839b7eefb7bf17301ffc3392e10297f0cc74168eb5",
+      "new_sha256": "a5de7638101670c4724ef994eb02c0834c1bfa7906afe8f738a5db67d67a1660",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "kaleido",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "0873b05c322f231f343050fce1de092130fd2e4c36758de26828c5a6f19e5b1e",
+      "new_sha256": "b56043c5b9a145f4c0a7471955ffda0421af882b0228ad2f647aada76d228d60",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "mandel",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "5e90e8e4d6789395708faeafb90e97e673770bc16b415ff118ea01395149d79b",
+      "new_sha256": "0f0df04cf04e9c513f1bdef0e0b08bc47249f1cc982f57d9684b26d6249e4dd0",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "mobius",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "50f2931d1b81f9e3f6f202a0e054a20ca6d42100bb4c50aa094d5cabc6801fef",
+      "new_sha256": "535e30e638554e39c9b85c0f91dde8eeb9d460885cbb0d9e753e29764e4eece0",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "moire",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "58a420ff3404f15c418dd4b57386920cfa7e15bab0a2327655df1e4447f4b2e9",
+      "new_sha256": "500756028cf10dae2b604348d02b40d4407103e08ee2d71972927bee2c87de4a",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "morph3d",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "4c4a05244e5196848c5bdecef6c3047b9461a5e15bd0ff9efdfd021699a9f08b",
+      "new_sha256": "dabe29209503455e14a707d9d8dd66297f94703e33739eecc60bab52ecb3afdb",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "ocean",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "4faa49e25ab17c8a7dc3f8aff33e02f20a2675b6a5a424a5fdf52edd60920794",
+      "new_sha256": "450f8511cf6e5f244898dd0e799d5f50044a10e5b86c05195a7bd5b3b9d9a136",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "orrery",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "537ea112328b218e0f22b3907ab002dfbfe2c39b64ce685457d9c19848e704ed",
+      "new_sha256": "ec604d9c8e79807f61294612ab0d7e0bbcdca26dd815816cf010639c0c5fe38a",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "plasma",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "bf05a61f378a70619674d6b6b5d745f164ee5aabfe19129a3a5fc88139a1d4cd",
+      "new_sha256": "28ada795cacd9c3bdcb8455e6f2c2b235ce95cd4c91a5f17ab1c62784db10165",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "raymaze",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "596e5f7e943633c688260f987ba1e02782d39100a41d21b3066e1b8d319b04d5",
+      "new_sha256": "edc646958ff24410d97e9cbb6de521c79e8fb34fe6895ab3b57c077da106dc73",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "spriteanim",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "13479b7fc104171ddbfdcd173bcb945426a971b2f922db9bcc8a13763738c91f",
+      "new_sha256": "e9267fff3e2726f56e5b6875ef1f6d8d91f6b31e5915a05f84bd7a804abeba52",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "sprites",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "640dff9de189e93f7a911da6f18d79b14dea6bfc41d0a8325371ddd19db3e3b0",
+      "new_sha256": "157bef43b610f39ac46e4082bda42c38ac5f22f047e693051bc76674304a8314",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "terrain",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "0acb90231ee1a6f14cf51e94019bc3f826e21f606a44b87bed81463ed443680e",
+      "new_sha256": "88328b5e2305f2a6329c28f5dc2c0c809a85bd5674b2b59fb1788bf5353dcf21",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "torus",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "c51e74f508577e9eac4298a7b279c92a376032da88ea6bf5f2303ebd04a14fb7",
+      "new_sha256": "c5f1e230c3b00dfa86b43c8b27b206fd89725abdde566f4fa8b08644989bade5",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "tunnel",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "3df46e145658f3db6bf2ed73206309e1c316accbbb8dbdec230de133a4846691",
+      "new_sha256": "34d2661a67b4c0032b020430e47848780fba6d155afcbb7ed09dc1584b08c67a",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    },
+    {
+      "program": "warp",
+      "status": "PIXEL_EQUAL",
+      "old_sha256": "dc5a36d3755cc85c3fc9aa38ff6b835e17ec6d249215e8777c18b18a1a63f46b",
+      "new_sha256": "7482998d04d2396de297a1f6e91054149fcdfcee0fd3774e01e5f6225180f1d1",
+      "old_reference_valid": true,
+      "new_reference_valid": true,
+      "old_size": [
+        768,
+        576
+      ],
+      "new_size": [
+        256,
+        192
+      ],
+      "scaled_pixel_differences": 0,
+      "frame_matched": false,
+      "native_v1_confirmed": false
+    }
+  ],
+  "cases_pixel_equal": 22,
+  "total_old_sdk_references": 48,
+  "remaining_old_sdk_cases": "26 images not independently compared",
+  "native_v1_visuals": "untested; no native same-state screenshots imported"
+}

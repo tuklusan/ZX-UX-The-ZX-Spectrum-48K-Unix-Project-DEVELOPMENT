@@ -32,7 +32,8 @@ def main():
     # Both source collections are independent of disposable dist/.
     corpus = S / 'assets/c48-src'
     bonus = S / 'bonus'
-    for source in (corpus, bonus):
+    docs = S / 'docs'
+    for source in (corpus, bonus, docs):
         checked_dir(source)
     if D.exists() or D.is_symlink():
         checked_dir(D)
@@ -43,15 +44,17 @@ def main():
         if path.exists():
             shutil.rmtree(path)
     stage = B / 'dist-new'
-    shutil.copytree(corpus, stage / 'assets/c48-src')
-    shutil.copytree(bonus, stage / 'bonus')
-    shutil.copytree(S / 'zx-ux', B / 'src')
-    shutil.copytree(S / 'zx-ux-sdk', B / 'sdk')
+    # Python cache files are never source inputs or release deliverables.
+    no_cache = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
+    shutil.copytree(corpus, stage / 'assets/c48-src', ignore=no_cache)
+    shutil.copytree(bonus, stage / 'bonus', ignore=no_cache)
+    shutil.copytree(S / 'zx-ux', B / 'src', ignore=no_cache)
+    shutil.copytree(S / 'zx-ux-sdk', B / 'sdk', ignore=no_cache)
     (B / 'out').mkdir()
     (B / 'sdk/rom').mkdir(exist_ok=True)
     for name, folder in (('48.rom', 'rom'), ('font4x8.bin', '')):
         shutil.copy2(S / 'zx-ux' / folder / name, B / 'sdk/rom' / name)
-    subprocess.run([sys.executable, str(S / 'zx-ux-sdk/tools/osbuild.py'), sjasm],
+    subprocess.run([sys.executable, '-B', str(S / 'zx-ux-sdk/tools/osbuild.py'), sjasm],
                    check=True)
     syms = dict((m.group(1), int(m.group(2), 16))
                 for line in (B / 'src/unix.sym').read_text().splitlines()
@@ -63,6 +66,9 @@ def main():
     shutil.copy2(B / 'out/ZX-UX.tzx', stage / 'zx-ux/ZX-UX.tzx')
     c48build.build(B / 'sdk', stage / 'assets/c48-src', stage / 'assets/c48-bin')
     sdkpack.pack(S / 'zx-ux-sdk', S / 'zx-ux', B, stage / 'sdk/bin')
+    # Final payload step: include documentation only after all builders succeed.
+    # Stage it before publication so failed copies cannot damage last-good dist/.
+    shutil.copytree(docs, stage / 'docs', ignore=no_cache)
     # Publication happens only after every builder has succeeded.
     had_previous = D.exists()
     if had_previous:
