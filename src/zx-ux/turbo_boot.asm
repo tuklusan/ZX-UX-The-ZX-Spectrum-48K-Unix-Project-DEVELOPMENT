@@ -476,7 +476,8 @@ nibble_ascii:
 
 render_text_row:
         ; 64-column, 4x8 font from the existing ZX-UX SDK (96 glyphs).
-        ; The 32 source characters each have a 4-pixel blank spacer.
+        ; Each 4-pixel character follows the previous one, with padding
+        ; at the right edge only (32 message glyphs + 32 blank glyphs).
         ; In row 24 keep the last 8 half-cells (4 Spectrum cells) intact.
         push hl
         pop ix

@@ -58,6 +58,24 @@ def check(sjasm: str) -> None:
     assert mem[row_index] == 1 and mem[ordinal] == 1
     assert word(cursor) == lines_base + 64
 
+    # 4x8 glyphs must touch: two adjacent characters share an 8-pixel
+    # bitmap byte, with NO inserted 4-pixel blank cells. Check the actual
+    # Z80-rendered pixels, not just the generated text or Python encoder.
+    first = (ROOT / 'src/zx-ux/turbo_lines.txt').read_text().splitlines()[0]
+    actual_chars = bytes(mem[lines_base:lines_base + 64])
+    assert actual_chars == first.encode('ascii').ljust(64, b' '), 'font64 has inter-character padding'
+    font = (ROOT / 'src/zx-ux/font4x8.bin').read_bytes()[8:]
+    for scanline in range(8):
+        for pair in range(32):
+            left, right = (actual_chars[pair * 2], actual_chars[pair * 2 + 1])
+            def nibble(char):
+                packed = font[(char - 32) * 4 + scanline // 2]
+                return packed >> 4 if scanline % 2 == 0 else packed & 15
+            expected = (nibble(left) << 4) | nibble(right)
+            actual = mem[0x4000 + scanline * 256 + pair]
+            assert actual == expected, ('unpacked font64 pixel', scanline, pair,
+                                        hex(actual), hex(expected))
+
     bottom = [0x4000 + 0x1000 + 32 * 7 + (y * 256) for y in range(8)]
 
     def last_row_drawn():
@@ -78,7 +96,8 @@ def check(sjasm: str) -> None:
         assert last_row_drawn() == (packet >= 23), 'last-line timing at packet %d' % packet
         assert bytes(mem[ribbon:ribbon + 4]) == b'\x12\x36\x14\x25', 'BASIC ribbon overwritten'
 
-    print('PASS: 1 line before turbo block 1; lines 2-24 after blocks 1-23;')
+    print('PASS: packed font64 pixels with no inter-character gaps;')
+    print('      1 line before turbo block 1; lines 2-24 after blocks 1-23;')
     print('      line 24 remains visible during block 24; ROM beep reached, ribbon intact')
 
 

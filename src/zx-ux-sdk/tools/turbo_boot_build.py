@@ -25,8 +25,8 @@ def progress_lines(size: int, syms: dict, kernel: int, free: int):
     """24 canonical 32-character messages, in the supplied v02 file order.
 
     The beta default time is 09:00:00, unlike the older reference's 00:00:00.
-    The 4x8 renderer places each glyph in a 64-column cell followed by a
-    blank half-character for clear legibility, retaining the exact wording.
+    Each 4-pixel-wide glyph occupies one true 64-column cell; the remaining
+    columns are blanked at the end, not inserted between characters.
     """
     source = (HERE.parent.parent / 'zx-ux/turbo_lines.txt').read_text().splitlines()
     if len(source) != COUNT or any(not s.isascii() or not s.isprintable() or len(s) > 32 for s in source):
@@ -47,8 +47,11 @@ def encode_basic():
     return struct.pack('>H', 10) + struct.pack('<H', len(line)) + line
 
 
-def expanded_line(line: str):
-    return ''.join(c+' ' for c in line)
+def packed_line(line: str):
+    """Write 64 adjacent 4-pixel character cells; pad only at the right."""
+    if not line.isascii() or len(line) > 64:
+        raise TurboFormatError('loader display line outside 64-character width')
+    return line.ljust(64)
 
 
 def create_tzx(sjasm: str, syms: dict, kernel: int, free: int, *, pause_ms=400, output_name="ZX-UX-turbo-experimental.tzx"):
@@ -61,7 +64,7 @@ def create_tzx(sjasm: str, syms: dict, kernel: int, free: int, *, pause_ms=400, 
         f'MAX_SEG_LEN equ {max(n for _,n in plan)}\n' +
         ''.join(f'        dw {off},{length}\n' for off, length in plan))
     (SRC/'turbo_lines.inc').write_text(
-        ''.join(f'        db "{expanded_line(line)}"\n' for line in lines))
+        ''.join(f'        db "{packed_line(line)}"\n' for line in lines))
     shutil.copyfile(ORIGINAL, SRC/'turbo_boot.asm')
     shutil.copyfile(HERE.parent.parent / 'zx-ux/font4x8.bin', SRC/'font4x8.bin')
     loader = OUT/'turbo_boot.bin'
