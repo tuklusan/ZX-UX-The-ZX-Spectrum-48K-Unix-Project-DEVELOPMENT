@@ -1,0 +1,428 @@
+{
+ "gp82": {
+  "dir": "apps"
+ },
+ "sheet48": {
+  "dir": "apps"
+ },
+ "wire3d": {
+  "dir": "apps"
+ },
+ "write48": {
+  "dir": "apps"
+ },
+ "city": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "dizzy4k": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "firework": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "forest": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "galaxy": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "goblet": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "hanoi": {
+  "dir": "demos",
+  "args": [
+   "--verify"
+  ],
+  "sha": "db087d44c1d01984de46ebaf83452b27d8a03f7fabd2f8612baf62ac89be69ac",
+  "frames": 200000,
+  "nosdk": true
+ },
+ "julia": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "kaleido": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "mandel": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "mobius": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "moire": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "morph3d": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "ocean": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "orrery": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "plasma": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "queens8": {
+  "dir": "demos",
+  "sha": "568f45c848f82a318c4942f28227015fd9625c3a9cfbe56bfe254ab1b7fa3efe",
+  "frames": 200000,
+  "nosdk": true
+ },
+ "raymaze": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "spriteanim": {
+  "dir": "demos",
+  "args": [
+   "12"
+  ]
+ },
+ "sprites": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "terrain": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "torus": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "tunnel": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "warp": {
+  "dir": "demos",
+  "args": [
+   "2"
+  ]
+ },
+ "argv": {
+  "dir": "examples",
+  "args": [
+   "alpha",
+   "beta",
+   "gamma"
+  ]
+ },
+ "colors": {
+  "dir": "examples",
+  "args": []
+ },
+ "graphics": {
+  "dir": "examples",
+  "args": []
+ },
+ "hello": {
+  "dir": "examples",
+  "args": []
+ },
+ "maze": {
+  "dir": "games",
+  "args": []
+ },
+ "maze1982": {
+  "dir": "examples",
+  "src": "maze",
+  "args": []
+ },
+ "udg": {
+  "dir": "examples",
+  "args": []
+ },
+ "advent": {
+  "dir": "games"
+ },
+ "arith": {
+  "dir": "games"
+ },
+ "bgammon": {
+  "dir": "games"
+ },
+ "chess": {
+  "dir": "games"
+ },
+ "cribbage": {
+  "dir": "games"
+ },
+ "fish": {
+  "dir": "games"
+ },
+ "fortune": {
+  "dir": "games"
+ },
+ "hangman": {
+  "dir": "games"
+ },
+ "quiz": {
+  "dir": "games"
+ },
+ "rogue": {
+  "dir": "games"
+ },
+ "snake": {
+  "dir": "games"
+ },
+ "trek": {
+  "dir": "games"
+ },
+ "wump": {
+  "dir": "games"
+ },
+ "secdbl": {
+  "dir": "security",
+  "expect_status": 1,
+  "note": "heap guard traps (exit status 1)",
+  "nosdk": true
+ },
+ "secforge": {
+  "dir": "security",
+  "note": "native code has no pointer checking or bounds checks: the write escapes (documented)",
+  "expect_status": 99,
+  "nosdk": true
+ },
+ "secfree": {
+  "dir": "security",
+  "expect_status": 1,
+  "note": "heap guard traps (exit status 1)",
+  "nosdk": true
+ },
+ "secguard": {
+  "dir": "security",
+  "expect_status": 0,
+  "nosdk": true
+ },
+ "secloop": {
+  "dir": "security",
+  "note": "runs until stopped (BREAK on ZX-UX, frame budget in rvm)",
+  "frames": 200
+ },
+ "secoob": {
+  "dir": "security",
+  "note": "native code has no pointer checking or bounds checks: the write escapes (documented)",
+  "expect_status": 99,
+  "nosdk": true
+ },
+ "secrecur": {
+  "dir": "security",
+  "expect_status": 1,
+  "note": "stack guard in @enter traps (exit status 1)",
+  "nosdk": true
+ },
+ "secuaf": {
+  "dir": "security",
+  "note": "native code has no pointer checking or bounds checks: the write escapes (documented)",
+  "expect_status": 42,
+  "nosdk": true
+ },
+ "tune": {
+  "dir": "sound",
+  "note": "the SDK host had no audio backend (beep -> 14); ZX-UX beeps and prints BEEP COMPLETE",
+  "expect_text": "BEEP COMPLETE",
+  "nosdk": true
+ },
+ "advent:play": {
+  "dir": "games",
+  "src": "advent",
+  "keys": "entsentswwq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "You return the crown. Victory!"
+ },
+ "wump:play": {
+  "dir": "games",
+  "src": "wump",
+  "keys": "acscq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "You slew the Wumpus!"
+ },
+ "hangman:play": {
+  "dir": "games",
+  "src": "hangman",
+  "keys": "kernlq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "You solved it. Press q.",
+  "zxux_text": "Last: ",
+  "zxux_note": "ticks() seeds the game: on ZX-UX it is the real clock, so the scripted keys play a different game"
+ },
+ "quiz:play": {
+  "dir": "games",
+  "src": "quiz",
+  "keys": "abcabcbacbq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "Quiz complete. Score:"
+ },
+ "maze:play": {
+  "dir": "games",
+  "src": "maze",
+  "keys": "ddssaassssddddddwwddddddddssddwwwwddsssssssq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "You escaped. Press q."
+ },
+ "trek:play": {
+  "dir": "games",
+  "src": "trek",
+  "keys": "wdtwdwstwdwswstwawawawwwwwwq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "Mission complete. Press q.",
+  "zxux_text": "accepted",
+  "zxux_note": "ticks() seeds the game: on ZX-UX it is the real clock, so the scripted keys play a different game"
+ },
+ "rogue:play": {
+  "dir": "games",
+  "src": "rogue",
+  "keys": "sssdddddddddddwwaaaaddddssaaaaasaaaasdddddssssddddddwwdssddq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "You escape rich. Press q."
+ },
+ "snake:play": {
+  "dir": "games",
+  "src": "snake",
+  "keys": "dddddq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "Score: 1",
+  "zxux_text": "accepted",
+  "zxux_note": "ticks() seeds the game: on ZX-UX it is the real clock, so the scripted keys play a different game"
+ },
+ "chess:play": {
+  "dir": "games",
+  "src": "chess",
+  "keys": "e2e4\\nq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "Black to move:"
+ },
+ "fish:play": {
+  "dir": "games",
+  "src": "fish",
+  "keys": "3x",
+  "ticks": 44257,
+  "expect_status": 0
+ },
+ "bgammon:play": {
+  "dir": "games",
+  "src": "bgammon",
+  "keys": "1ff0",
+  "ticks": 44257,
+  "expect_status": 0
+ },
+ "cribbage:play": {
+  "dir": "games",
+  "src": "cribbage",
+  "keys": "12q",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "Your show:"
+ },
+ "fortune:play": {
+  "dir": "games",
+  "src": "fortune",
+  "keys": "aq",
+  "ticks": 44257,
+  "expect_status": 0
+ },
+ "arith:play": {
+  "dir": "games",
+  "src": "arith",
+  "keys": "13\\nq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "Score: 1",
+  "zxux_text": "of 1",
+  "zxux_note": "ticks() seeds the game: on ZX-UX it is the real clock, so the scripted keys play a different game"
+ },
+ "chess:play2": {
+  "dir": "games",
+  "src": "chess",
+  "keys": "f2f3\\ne7e5\\ng2g4\\nd8h4\\nq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "CHECKMATE. Press q."
+ },
+ "chess:play3": {
+  "dir": "games",
+  "src": "chess",
+  "keys": "e2e4\\ne7e5\\ng1f3\\nb8c6\\nf1c4\\ng8f6\\ne1g1\\nq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "Black to move:"
+ },
+ "chess:play4": {
+  "dir": "games",
+  "src": "chess",
+  "keys": "e2e4\\na7a6\\ne4e5\\nd7d5\\ne5d6\\nq",
+  "ticks": 44257,
+  "expect_status": 0,
+  "expect_text": "Black to move:"
+ },
+ "3dpaint": {"dir": "games", "zxux_frames": 1400},
+ "maze1996": {"dir": "games", "src": "maze1982", "zxux_frames": 1400}
+}
