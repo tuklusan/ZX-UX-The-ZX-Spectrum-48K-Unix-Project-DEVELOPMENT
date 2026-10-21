@@ -184,7 +184,7 @@
  },
  "maze1982": {
   "dir": "examples",
-  "src": "maze",
+  "src": "maze1982",
   "args": []
  },
  "udg": {
@@ -318,7 +318,7 @@
  },
  "maze:play": {
   "dir": "games",
-  "src": "maze",
+  "src": "maze1982",
   "keys": "ddssaassssddddddwwddddddddssddwwwwddsssssssq",
   "ticks": 44257,
   "expect_status": 0,
@@ -424,5 +424,5 @@
   "expect_text": "Black to move:"
  },
  "3dpaint": {"dir": "games", "zxux_frames": 1400},
- "maze1996": {"dir": "games", "src": "maze1982", "zxux_frames": 1400}
+ "maze1996": {"dir": "games", "src": "maze1996", "zxux_frames": 1400}
 }

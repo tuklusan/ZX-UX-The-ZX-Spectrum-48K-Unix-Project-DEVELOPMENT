@@ -12,17 +12,16 @@ def build(stage_sdk: pathlib.Path, programs: pathlib.Path, dest: pathlib.Path):
     ssxdir, tzxdir = dest / 'ssx', dest / 'tzx'
     ssxdir.mkdir(parents=True, exist_ok=True)
     tzxdir.mkdir(parents=True, exist_ok=True)
-    # The source tree determines the selection.  Any same-stem assembly
-    # companion is discovered and linked by RCC itself.
-    def tape_name(p):
-        if p.parent.name == 'examples' and p.stem == 'maze':
-            return 'maze1982'
-        if p.parent.name == 'games' and p.stem == 'maze1982':
-            return 'maze1996'  # distinct Mark Green game, not the C48 example
-        return p.stem
-
-    choices = {tape_name(p): p for p in programs.rglob('*.c')
-               if p.name != 'seckern.c'}
+    # Executable names must match C source stems. Detect collisions rather
+    # than silently discarding one program when two folders share a name.
+    choices = {}
+    for source in sorted(programs.rglob('*.c')):
+        if source.name == 'seckern.c':
+            continue
+        name = source.stem
+        if name in choices:
+            raise RuntimeError('Duplicate C48 program name: ' + name)
+        choices[name] = source
     for name, source in sorted(choices.items()):
         ssx = ssxdir / (name + '.ssx')
         if driver.main([str(source), '-o', str(ssx)]):

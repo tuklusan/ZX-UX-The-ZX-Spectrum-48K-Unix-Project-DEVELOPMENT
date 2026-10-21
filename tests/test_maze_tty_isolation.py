@@ -16,7 +16,7 @@ import zxux
 
 class MazeTerminalIsolation(unittest.TestCase):
     def test_maze_game_and_shell_share_no_tty_reads(self):
-        source = ROOT / 'src/assets/c48-src/games/maze1982.c'
+        source = ROOT / 'src/assets/c48-src/games/maze1996.c'
         code = source.read_text()
         self.assertNotIn('void newest_key_only', code)
         self.assertNotIn('key = getchar(', code)

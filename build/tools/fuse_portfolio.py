@@ -309,9 +309,7 @@ def add_source_links():
     lines = index.read_text(encoding='utf-8').splitlines(keepends=True)
     sources = {}
     for path in sorted(SOURCES.glob('*/*.c')):
-        name = ('maze1982' if path.parent.name == 'examples' and path.stem == 'maze'
-                else 'maze1996' if path.parent.name == 'games' and path.stem == 'maze1982'
-                else path.stem)
+        name = path.stem
         sources[f'{path.parent.name}/{name}.png'] = [path]
     for a, b in PAIRS:
         sources[f'multitask/{a}-{b}-shell.png'] = [SOURCES / 'demos' / (n + '.c') for n in (a, b)]

@@ -83,9 +83,7 @@ def captures():
     for source in sorted(SOURCES.glob('*/*.c')):
         if source.stem == 'seckern':  # deliberately un-compilable security fixture
             continue
-        name = ('maze1982' if source.parent.name == 'examples' and source.stem == 'maze'
-                else 'maze1996' if source.parent.name == 'games' and source.stem == 'maze1982'
-                else source.stem)
+        name = source.stem
         if name not in scenarios:
             scenarios[name] = {'dir': source.parent.name}
         yield name, source.parent.name, {**scenarios[name], **CAPTURE.get(name, {})}
@@ -215,9 +213,7 @@ def add_source_links():
     lines = index.read_text(encoding='utf-8').splitlines(keepends=True)
     sources = {}
     for path in sorted(SOURCES.glob('*/*.c')):
-        name = ('maze1982' if path.parent.name == 'examples' and path.stem == 'maze'
-                else 'maze1996' if path.parent.name == 'games' and path.stem == 'maze1982'
-                else path.stem)
+        name = path.stem
         sources[f'{path.parent.name}/{name}.png'] = [path]
     for a, b in PAIRS:
         sources[f'multitask/{a}-{b}-shell.png'] = [SOURCES / 'demos' / (n + '.c') for n in (a, b)]
