@@ -565,6 +565,17 @@ sh_exec:
         sbc hl,de
         pop de
         jr nz,.wait
+        ; A foreground child can poll the physical keyboard directly; its
+        ; keys have also entered the raw tty ring while the shell waited.
+        ; Discard only those completed-job keys, before taking a new command.
+        ld a,(SH_INT)
+        or a
+        jr z,.checked
+        push de
+        ld a,TT_ECHO+TT_FLUSH
+        call gstty
+        pop de
+.checked:
         inc de                  ; killed by BREAK: new line
         ld a,d
         or e

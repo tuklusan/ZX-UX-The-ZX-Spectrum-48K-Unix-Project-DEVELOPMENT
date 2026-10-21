@@ -176,14 +176,20 @@ ttintr:
         ld (hl),1
 .n:     call nxslot
         jr c,.l
-        ld a,(ttyhd)
-        ld (ttytl),a            ; flush type-ahead
+        call ttyflush           ; discard stale keys after BREAK
         ld a,WC_TTY
         call kwakeup
         ld a,WC_WAIT
         call kwakeup
         ld a,WC_TIME
         jp kwakeup
+
+; Shared kernel-owned raw ring drain. The shell may request it via stty
+; only after a foreground child terminates; background readers retain input.
+ttyflush:
+        ld a,(ttyhd)
+        ld (ttytl),a
+        ret
 
 ; ---------------------------------------------------------------------
 ;  tty input - process side  (canonical line discipline, echo)
@@ -688,6 +694,9 @@ sysstty:
         inc hl
         inc hl
         inc hl
+        ld a,(hl)
+        rla                     ; TT_FLUSH bit 7 requests raw ring drain
+        call c,ttyflush
         ld a,(hl)
         and TT_RAW+TT_ECHO
         ld (ttymode),a

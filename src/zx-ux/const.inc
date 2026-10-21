@@ -181,6 +181,7 @@ NSYS    equ 41
 ; tty modes (stty word 3)
 TT_RAW  equ 020h
 TT_ECHO equ 010h
+TT_FLUSH equ 080h          ; stty request: flush stale raw input once
 
 ; ---------------------------------------------------------------- ROM
 ROM_KEYBOARD  equ 002BFh
