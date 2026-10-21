@@ -1,0 +1,3 @@
+RVM: python3 -B tools/bonus_replay.py --program 40-wordsum
+FUSE: python3 -B tools/bonus_replay.py --program 40-wordsum --host fuse --fuse /path/to/fuse-sdl --assets /path/to/fuse-data --libdir /path/to/fuse-libs
+Result: PASS. Seven RVM scenarios cover sums, three word variations, reveal, invalid restart and restart. Native FUSE covers initial puzzle, real key reveal, calculated figures and a new puzzle. Original BASIC graphics/color checkpoints checked against genuine RVM and FUSE captures; word and digits may differ with the random seed.

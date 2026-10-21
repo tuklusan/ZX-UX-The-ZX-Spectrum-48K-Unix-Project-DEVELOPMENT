@@ -1,0 +1,214 @@
+{
+  "alias": "wordsum",
+  "cases": [
+    {
+      "name": "main",
+      "argv": [
+        "35"
+      ],
+      "keys": "",
+      "frames": 800,
+      "expect": [
+        "PRESS <SPACE> TO REVEAL THE WORD"
+      ],
+      "capture": "01-main.png",
+      "fuse_steps": [],
+      "fuse_capture_delay": 1.2,
+      "fuse_wait": 2.0,
+      "fuse_capture_last": true,
+      "fuse_pixels": [
+        {
+          "box": [
+            104,
+            72,
+            208,
+            136
+          ],
+          "mode": "ink",
+          "min": 5500,
+          "max": 6656
+        }
+      ]
+    },
+    {
+      "name": "reveal",
+      "argv": [
+        "35"
+      ],
+      "keys": "{WAIT 400}x",
+      "frames": 1100,
+      "expect": [
+        "659262",
+        "25443",
+        "684705",
+        "P   L   A   N   T   S",
+        "PRESS <1> FOR ANOTHER WORDSUM"
+      ],
+      "decimal_sum_rows": [
+        7,
+        9,
+        12
+      ],
+      "capture": "02-after-input.png",
+      "fuse_steps": [
+        [
+          7.0,
+          "x"
+        ]
+      ],
+      "fuse_capture_delay": 0.8,
+      "fuse_wait": 2.0,
+      "fuse_capture_last": true,
+      "fuse_pixels": [
+        {
+          "box": [
+            32,
+            80,
+            95,
+            136
+          ],
+          "mode": "ink",
+          "min": 120,
+          "max": 400
+        }
+      ]
+    },
+    {
+      "name": "reject-other-restart",
+      "argv": [
+        "35"
+      ],
+      "keys": "{WAIT 400}x{WAIT 100}q",
+      "frames": 1200,
+      "expect": [
+        "PRESS <1> FOR ANOTHER WORDSUM"
+      ],
+      "forbid": [
+        "PRESS <SPACE> TO REVEAL THE WORD"
+      ]
+    },
+    {
+      "name": "restart",
+      "argv": [
+        "35"
+      ],
+      "keys": "{WAIT 400}x{WAIT 100}1",
+      "frames": 1300,
+      "expect": [
+        "PRESS <SPACE> TO REVEAL THE WORD"
+      ],
+      "forbid": [
+        "PRESS <1> FOR ANOTHER WORDSUM"
+      ],
+      "capture": "03-restart.png",
+      "fuse_steps": [
+        [
+          7.0,
+          "x"
+        ],
+        [
+          4.0,
+          "1"
+        ]
+      ],
+      "fuse_capture_delay": 0.6,
+      "fuse_wait": 2.0,
+      "fuse_capture_last": true,
+      "fuse_pixels": [
+        {
+          "box": [
+            32,
+            80,
+            95,
+            136
+          ],
+          "mode": "ink",
+          "min": 0,
+          "max": 0
+        }
+      ],
+      "fuse_difference": {
+        "capture": "01-main.png",
+        "box": [
+          104,
+          72,
+          208,
+          136
+        ],
+        "min": 60
+      }
+    },
+    {
+      "name": "varied-word-2",
+      "argv": [
+        "2"
+      ],
+      "keys": "{WAIT 350}x",
+      "frames": 1100,
+      "expect": [
+        "PRESS <1> FOR ANOTHER WORDSUM"
+      ],
+      "decimal_sum_rows": [
+        7,
+        9,
+        12
+      ]
+    },
+    {
+      "name": "varied-word-9",
+      "argv": [
+        "9"
+      ],
+      "keys": "{WAIT 350}x",
+      "frames": 1100,
+      "expect": [
+        "PRESS <1> FOR ANOTHER WORDSUM"
+      ],
+      "decimal_sum_rows": [
+        7,
+        9,
+        12
+      ]
+    },
+    {
+      "name": "space-reveal",
+      "argv": [
+        "35"
+      ],
+      "keys": "{WAIT 350}{SPACE}",
+      "frames": 1100,
+      "expect": [
+        "PRESS <1> FOR ANOTHER WORDSUM"
+      ],
+      "decimal_sum_rows": [
+        7,
+        9,
+        12
+      ]
+    }
+  ],
+  "geometry": [
+    {
+      "reference": "01-MAIN.png",
+      "capture": "01-main.png",
+      "box": [
+        104,
+        72,
+        208,
+        136
+      ],
+      "threshold": 0.88
+    },
+    {
+      "reference": "02-AFTER-INPUT.png",
+      "capture": "02-after-input.png",
+      "box": [
+        104,
+        72,
+        208,
+        136
+      ],
+      "threshold": 0.88
+    }
+  ]
+}

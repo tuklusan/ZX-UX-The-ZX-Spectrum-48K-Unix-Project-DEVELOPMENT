@@ -75,6 +75,19 @@ def run_rvm(folder, alias, case):
     for forbidden in case.get('forbid', []):
         if forbidden in text:
             raise AssertionError(f'forbidden {forbidden!r} in {case["name"]}:\n{text}')
+    if 'decimal_sum_rows' in case:
+        import re
+        rows = text.splitlines()
+        numbers = []
+        for line_index in case['decimal_sum_rows']:
+            if not 0 <= line_index < len(rows):
+                raise AssertionError('sum row missing')
+            match = re.match(r'\s*(-?\d+)', rows[line_index])
+            if not match:
+                raise AssertionError('sum row lacks decimal value: ' + rows[line_index])
+            numbers.append(int(match.group(1)))
+        if len(numbers) != 3 or numbers[0] + numbers[1] != numbers[2]:
+            raise AssertionError('arithmetic mismatch: ' + repr(numbers))
     if 'underscore_counts' in case:
         count = text.count('_')
         if count not in case['underscore_counts']:
@@ -147,7 +160,28 @@ def run_fuse(folder, alias, case, args):
                     f'{lit} lit pixels in {assertion["box"]}, '
                     f'expected {assertion["min"]}..{assertion["max"]}')
         print('Fuse state checked:', alias, case['name'])
+    change = case.get('fuse_difference')
+    if change:
+        earlier = folder / 'C48/screenshots/fuse' / change['capture']
+        count = frame_difference(earlier, output, change['box'], change['min'])
+        print('Fuse changed pixels:', alias, case['name'], count)
     return output
+
+
+def frame_difference(first, second, box, minimum):
+    """Test actual state changes on unmodified emulator screenshots."""
+    from PIL import Image
+    a = Image.open(first).convert('RGB')
+    b = Image.open(second).convert('RGB')
+    if a.size != (320, 240) or b.size != (320, 240):
+        raise AssertionError('expected 320x240 genuine Spectrum display')
+    pixels = a.crop(tuple(box)).get_flattened_data()
+    other = b.crop(tuple(box)).get_flattened_data()
+    count = sum(max(abs(x[i]-y[i]) for i in range(3)) > 32
+                for x, y in zip(pixels, other))
+    if count < minimum:
+        raise AssertionError(f'native frames changed only {count} pixels, expected {minimum}')
+    return count
 
 
 def geometry(original, candidate, box, minimum):
