@@ -38,13 +38,26 @@ class Beta8DistributionSourceChecks(unittest.TestCase):
             self.assertNotIn("'release', 'src', 'assets', 'c48-src'", script, name)
             self.assertIn('c48-src', script, name)
 
-    def test_rebuilder_stages_sources_before_compiling(self):
+    def test_rebuilder_replaces_dist_from_staged_inputs(self):
         script = (ROOT / 'release/build/build.py').read_text()
-        self.assertIn("corpus = D/'assets/c48-src'", script)
-        self.assertIn("shutil.copytree(corpus, B/'dist-new/assets/c48-src')", script)
-        self.assertIn("c48build.build(B/'sdk', B/'dist-new/assets/c48-src'", script)
-        self.assertIn("(B/'dist-new').rename(D)", script)
-        self.assertIn("(B/'dist-old').rename(D)", script)
+        self.assertIn("corpus = D / 'assets/c48-src'", script)
+        self.assertIn("shutil.copytree(corpus, stage / 'assets/c48-src')", script)
+        self.assertIn("bonus = S / 'bonus'", script)
+        self.assertIn("shutil.copytree(bonus, stage / 'bonus')", script)
+        self.assertIn("c48build.build(B / 'sdk', stage / 'assets/c48-src'", script)
+        self.assertIn("D.rename(B / 'dist-old')", script)
+        self.assertIn("stage.rename(D)", script)
+        self.assertIn("(B / 'dist-old').rename(D)", script)
+
+    def test_bonus_source_collection_is_outside_dist(self):
+        collection = ROOT / 'release/src/bonus/60-programs'
+        self.assertTrue(collection.is_dir())
+        folders = sorted(p for p in collection.iterdir() if p.is_dir() and p.name[:2].isdigit())
+        self.assertEqual(len(folders), 60)
+        for folder in folders:
+            self.assertTrue((folder / 'BASIC').is_dir(), folder.name)
+            self.assertEqual(len(list((folder / 'BASIC').glob('*.bas'))), 1, folder.name)
+            self.assertFalse((folder / 'C48').exists(), folder.name)
 
 
 if __name__ == '__main__':
