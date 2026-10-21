@@ -28,6 +28,20 @@ void c_cell(int row, int col, int color, int is_bright)
     print_at(row, col + 7, c_names[color]);
 }
 
+void farewell_tune(void)
+{
+    beep(0.45, 0.0);
+    beep(0.45, 2.0);
+    beep(0.45, 4.0);
+    beep(0.45, 5.0);
+    beep(0.45, 7.0);
+    beep(0.45, 9.0);
+    beep(0.45, 11.0);
+    beep(0.45, 12.0);
+    beep(0.70, 7.0);
+    beep(0.70, 12.0);
+}
+
 int main(void)
 {
     int c;
@@ -54,5 +68,6 @@ int main(void)
         yield();
     }
     border(1);
+    farewell_tune();
     return 0;
 }

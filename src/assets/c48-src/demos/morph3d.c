@@ -124,7 +124,8 @@ int main(int argc, char **argv)
     n = d_frames(argc, argv, 48);
     for (f = 0; f < n; f++) {
         scene(f);
-        if (f + 1 < n) d_scene_break();
+        /* The interpolated form reaches the star once per 16 frames. */
+        if ((f & 15) == 8) beep(0.18, 12.0);
         yield();
     }
     return 0;

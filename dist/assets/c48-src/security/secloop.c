@@ -8,9 +8,11 @@
 int main(void)
 {
     cls();
+    print_at(21, 0, "HISTORICAL TEST - REAL ZX-UX NOW");
     print_at(0, 0, "SECURITY TEST: INFINITE LOOP");
     print_at(2, 0, "ATTEMPT: run forever");
-    print_at(3, 0, "MITIGATION: --max-steps must stop VM");
+    print_at(3, 0, "HEADLESS RVM: --frames LIMIT");
+    print_at(4, 0, "GUI: USE BREAK TO STOP");
     for (;;) {
         ;
     }

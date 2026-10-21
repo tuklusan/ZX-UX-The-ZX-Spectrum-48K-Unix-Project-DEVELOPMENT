@@ -148,6 +148,20 @@ void a_half(int side, char *arg, char *path)
     a_body(side);
 }
 
+void farewell_tune(void)
+{
+    beep(0.45, 0.0);
+    beep(0.45, 4.0);
+    beep(0.45, 7.0);
+    beep(0.45, 12.0);
+    beep(0.45, 7.0);
+    beep(0.45, 9.0);
+    beep(0.45, 7.0);
+    beep(0.45, 4.0);
+    beep(0.70, 2.0);
+    beep(0.70, 0.0);
+}
+
 int main(int argc, char **argv)
 {
     char *arg;
@@ -161,5 +175,6 @@ int main(int argc, char **argv)
     border(1);
     a_half(0, arg, argv[0]);
     a_half(1, arg, argv[0]);
+    farewell_tune();
     return 0;
 }

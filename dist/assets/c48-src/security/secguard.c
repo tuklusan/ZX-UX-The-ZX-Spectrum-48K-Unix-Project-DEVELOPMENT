@@ -13,6 +13,7 @@ int main(void)
     int r, outx;
     int passed;
     cls();
+    print_at(21, 0, "HISTORICAL TEST - REAL ZX-UX NOW");
     passed = 0;
     print_at(0, 0, "ZX-UX C48 SECURITY GUARDS");
 

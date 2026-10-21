@@ -11,6 +11,20 @@
 // ============================================================
 #include "exapi.h"
 
+void farewell_tune(void)
+{
+    beep(0.45, 12.0);
+    beep(0.45, 9.0);
+    beep(0.45, 7.0);
+    beep(0.45, 4.0);
+    beep(0.45, 7.0);
+    beep(0.45, 9.0);
+    beep(0.45, 12.0);
+    beep(0.45, 14.0);
+    beep(0.70, 12.0);
+    beep(0.70, 7.0);
+}
+
 int main(void)
 {
     unsigned char a[8] = {24, 60, 126, 219, 255, 36, 90, 165};
@@ -21,5 +35,6 @@ int main(void)
     udg_draw(0, 10, 12);
     udg_draw(1, 10, 14);
     print_at(14, 16, "udg sprites");
+    farewell_tune();
     return 0;
 }

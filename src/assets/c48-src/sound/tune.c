@@ -5,46 +5,37 @@
 // SANYALnet Labs required, see LICENSE for more information
 #include <c48.h>
 
-int main(void) {
-    int rc;
-    int silent;
+/* A real Spectrum ROM-beeper melody, without host audio libraries. */
+int main(void)
+{
+    int errors;
     cls();
     border(1);
-    bright(1);
-    ink(7);
     paper(0);
-    silent = 0;
-    print_at(8, 10, "C48 ROM-COMPATIBLE BEEP");
-    print_at(10, 7, "C D E F G A B C + HALF-SEMITONE");
-    rc = beep(0.08, 0.0);
-    if (rc == 14) {
-        print_at(13, 5, "AUDIO BACKEND NOT INSTALLED");
-        print_at(15, 5, "WINDOWS: built-in winsound (no pip)");
-        print_at(16, 2,
-                 "LINUX/MAC: pip install playsound3==3.3.2");
-        print_at(18, 8, "DEMO CONTINUES WITHOUT SOUND");
-        silent = 1;
-    } else if (rc != 0) return rc;
-    if (!silent) {
-        rc = beep(0.08, 2.0);
-        if (rc != 0) return rc;
-        rc = beep(0.08, 4.0);
-        if (rc != 0) return rc;
-        rc = beep(0.08, 5.0);
-        if (rc != 0) return rc;
-        rc = beep(0.08, 7.0);
-        if (rc != 0) return rc;
-        rc = beep(0.08, 9.0);
-        if (rc != 0) return rc;
-        rc = beep(0.08, 11.0);
-        if (rc != 0) return rc;
-        rc = beep(0.12, 12.0);
-        if (rc != 0) return rc;
-        rc = beep(0.18, 0.5);
-        if (rc != 0) return rc;
-        print_at(13, 19, "BEEP COMPLETE");
-    } else {
-        print_at(20, 16, "SILENT DEMO COMPLETE");
+    ink(7);
+    bright(1);
+    print_at(8, 10, "SPECTRUM BEEPER TUNE");
+    print_at(10, 7, "A SHORT TUNE ON THE REAL ROM");
+    errors = 0;
+    errors = errors + beep(0.35, 0.0);
+    errors = errors + beep(0.35, 4.0);
+    errors = errors + beep(0.35, 7.0);
+    errors = errors + beep(0.35, 12.0);
+    errors = errors + beep(0.35, 9.0);
+    errors = errors + beep(0.35, 7.0);
+    errors = errors + beep(0.35, 5.0);
+    errors = errors + beep(0.35, 4.0);
+    errors = errors + beep(0.35, 2.0);
+    errors = errors + beep(0.35, 7.0);
+    errors = errors + beep(0.35, 9.0);
+    errors = errors + beep(0.35, 12.0);
+    errors = errors + beep(0.45, 7.0);
+    errors = errors + beep(0.45, 0.0);
+    if (errors != 0) {
+        print_at(14, 10, "ROM BEEP REPORTED ERROR");
+        sleep(250u);
+        return 1;
     }
+    print_at(14, 12, "MELODY COMPLETE");
     return 0;
 }
