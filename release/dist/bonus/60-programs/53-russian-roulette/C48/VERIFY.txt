@@ -1,3 +1,0 @@
-RVM: python3 -B tools/bonus_replay.py --program 53-russian-roulette
-FUSE: python3 -B tools/bonus_replay.py --program 53-russian-roulette --host fuse --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse
-Result: RVM gun, spin hold, live and empty chamber, scores and repeated firing passed. Native FUSE ready and survived with bullet in 4 captured. Original gun mask overlap >=0.80, handle matches exactly. Font64 text reflow allowed.

@@ -1,3 +1,0 @@
-RVM: python3 -B tools/bonus_replay.py --program 57-bulls-and-cows
-FUSE: python3 -B tools/bonus_replay.py --program 57-bulls-and-cows --host fuse --fuse /path/to/fuse-sdl --assets /path/to/fuse-assets --libdir /path/to/fuse-libs
-PASS: 8 RVM scenarios including invalid input, numeric clues, loss, win and guaranteed bulls. Native ZX-UX/FUSE: intro, main, input, exhausted attempts and nine numbered guesses. Black bull silhouettes now use yellow paper for contrast against the original blue field; bull and cow 8-pixel UDG positions align with their font64 headings. RVM and native captures assert visible bull color, heading alignment and absence of misplaced graphics. Original three BASIC states compared; this contrast change is a deliberate visible difference.
