@@ -1,8 +1,10 @@
 /* 2D MINI-MAZE, Mark Green (1996).
  * C48 port for ZX-UX, based on the original BASIC stored in 2DM.SNA.
  * Original maze layout, eight objects, eight-pixel tile sprites, and
- * player-following scroll is preserved in a 10x10 viewport. ZX-UX uses blocking getchar(),
- * so the rock event is checked once per input, rather than on every
+ * player-following scroll is preserved in a 10x10 viewport. Controls are
+ * polled from the physical keyboard, so games cannot consume or clear the
+ * shared ZX-UX terminal input while the shell accepts background commands.
+ * The rock event is checked once per input, rather than on every
  * pass through the original BASIC INKEY$ polling loop.
  * Safety fix: random rocks are accepted only if every uncollected
  * object stays reachable from the player. Original BASIC may trap you.
@@ -227,6 +229,8 @@ void viewport(void)
     counter();
 }
 
+int maze_key(int menu);
+
 int postgame(int won)
 {
     int key;
@@ -246,7 +250,7 @@ int postgame(int won)
     print_at(19, 0, "R = replay   Q = exit");
     credits();
     while (1) {
-        key = getchar();
+        key = maze_key(1);
         if (key == 'r' || key == 'R')
             return 1;
         if (key == 'q' || key == 'Q')
@@ -254,23 +258,33 @@ int postgame(int won)
     }
 }
 
-/* Keep the newest pending key instead of replaying stale moves after
- * a slow viewport redraw. ZX-UX raw keyboard ring: head 0x5B68,
- * tail 0x5B69, 32 entries. Both values are byte indices (0..31).
- * The C48 compiler cannot directly cast integers to pointers, so
- * memcpy supplies the two fixed RAM addresses as pointer values.
+/* Poll the keyboard matrix without touching /dev/tty.  The old code
+ * rewrote the kernel's shared tty tail and then called getchar(), stealing
+ * characters from a simultaneous shell command (e.g. kill or cls).
+ * Wait for key release so one held key generates one move, and sleep one
+ * tick between scans so the shell and other jobs continue to run.
  */
-void newest_key_only(void)
+int maze_key(int menu)
 {
-    unsigned char *head;
-    unsigned char *tail;
-    unsigned int addr;
-    addr = 0x5B68u;
-    memcpy(&head, &addr, 2);
-    addr = 0x5B69u;
-    memcpy(&tail, &addr, 2);
-    if (*head != *tail)
-        *tail = (unsigned char)((*head - 1) & 31);
+    int key;
+    while (1) {
+        key = 0;
+        if (kbd_down('q')) key = 'q';
+        else if (menu) {
+            if (kbd_down('r')) key = 'r';
+        } else {
+            if (kbd_down('z')) key = 'z';
+            else if (kbd_down('i')) key = 'i';
+            else if (kbd_down('p')) key = 'p';
+            else if (kbd_down('0')) key = '0';
+        }
+        if (key) {
+            while (kbd_down(key))
+                sleep(1);
+            return key;
+        }
+        sleep(1);
+    }
 }
 
 int play(void)
@@ -287,8 +301,7 @@ int play(void)
     credits();
     viewport();
     while (1) {
-        newest_key_only();
-        key = getchar();
+        key = maze_key(0);
         nx = px;
         ny = py;
         if (key == 'i' || key == 'I')
