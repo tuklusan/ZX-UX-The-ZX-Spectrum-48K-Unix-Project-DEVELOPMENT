@@ -1,0 +1,3 @@
+RVM: python3 -B tools/bonus_replay.py --program 57-bulls-and-cows
+FUSE: python3 -B tools/bonus_replay.py --program 57-bulls-and-cows --host fuse --fuse /path/to/fuse-sdl --assets /path/to/fuse-data --libdir /path/to/fuse-libs
+Result: PASS. Seven RVM cases cover start, four-digit input, both invalid input classes, clues, win and loss. Native FUSE confirms introduction, main board, clue display and losing result by screen-region assertions. Three original BASIC checkpoints compared with genuine captures, allowing font64 text differences and randomized digits.

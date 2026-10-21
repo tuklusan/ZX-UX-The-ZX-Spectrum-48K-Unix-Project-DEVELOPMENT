@@ -91,10 +91,35 @@ def run_fuse(folder, alias, case, args):
         libdir=Path(args.libdir).resolve() if args.libdir else None,
         speed=args.speed, boot_wait=70, wait=3, multitask_wait=3)
     steps = case.get('fuse_steps', [])
-    cfg = dict(post_command_wait=.2, capture_delay=.2, fuse_wait=2.0,
-               sample_step=.2, input_key_pause=.05, input_steps=steps)
+    cfg = dict(post_command_wait=.2,
+               capture_delay=float(case.get("fuse_capture_delay", .2)),
+               fuse_wait=float(case.get("fuse_wait", 2.0)),
+               sample_step=.2,
+               input_key_pause=float(case.get("fuse_key_pause", .05)),
+               input_steps=steps,
+               prefer_color=bool(case.get("fuse_prefer_color", False)))
     output = folder / 'C48/screenshots/fuse' / case['capture']
     fuse_portfolio.run_case((alias,), output, namespace, cfg)
+    # Assertions use the untouched emulator capture. The inner display is
+    # inspected, never painted, and no "best looking" state is accepted if
+    # its mandatory pixels are missing.
+    if case.get('fuse_pixels'):
+        from PIL import Image
+        image = Image.open(output).convert('RGB')
+        if image.size != (320, 240):
+            raise AssertionError('native capture is not a full Spectrum display')
+        for assertion in case['fuse_pixels']:
+            left, top, right, bottom = assertion['box']
+            if not (0 <= left < right <= 320 and 0 <= top < bottom <= 240):
+                raise ValueError('invalid native image test region')
+            pixels = image.crop((left, top, right, bottom)).getdata()
+            lit = sum(min(rgb) > int(assertion.get('brightness', 100)) for rgb in pixels)
+            if lit < int(assertion['min']) or lit > int(assertion['max']):
+                raise AssertionError(
+                    f'native state mismatch in {case["name"]}: '
+                    f'{lit} lit pixels in {assertion["box"]}, '
+                    f'expected {assertion["min"]}..{assertion["max"]}')
+        print('Fuse state checked:', alias, case['name'])
     return output
 
 
