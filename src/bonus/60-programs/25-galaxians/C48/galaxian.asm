@@ -1,12 +1,12 @@
-; Galaxians C48 experimental fast 8x8 text/UDG renderer.
-; Caller: gal_cell(row,col,code).  Last argument in HL; row, col on stack.
-; All pixels written directly to ZX Spectrum bitmap, bypassing 4x8 SDK text.
-; Uses frozen runtime @attr, @inv and @ovr: no UDG slot is reserved.
-; Codes 32..127 use Acer VGA 8x8 CP437 glyphs; 144..157 use BASIC UDG DATA.
-; VGA data from Oldschool PC Font Pack v2.2 (CC BY-SA 4.0).
+; Generated from c48lib and per-program glyphs. Do not edit.
+; ZX-UX C48 common 32x24 8x8 direct-screen glyph renderer.
+; Interface: c48_cell(row, col, code), code 32..127 VGA, 128..159 game.
+; Caller provides the VGA and per-game glyph tables in this module.
+; Uses SDK @attr, @inv, @ovr for colors and OVER/INVERSE.
+; No ROM text calls or ZX-UX UDG slots are used.
         section text
-        global _gal_cell
-_gal_cell:
+        global _c48_cell
+_c48_cell:
         ld a,l
         pop bc                  ; saved return address
         pop de                  ; column
@@ -26,19 +26,20 @@ _gal_cell:
         j c,.done
         cp 128
         j c,.plain
-        cp 144
-        j c,.done
-        cp 158
+        cp 160
         j nc,.done
-        sub 48                  ; 144->font index 96 (UDG region)
+        sub 128                 ; 32 game glyph slots: codes 128..159
+        ld hl,c48_game_glyphs
         j .idx
 .plain: sub 32
-.idx:   ld l,a
+        ld hl,c48_vga_font
+.idx:   push hl                  ; save table base
+        ld l,a
         ld h,0
         add hl,hl
         add hl,hl
         add hl,hl
-        ld de,gal_font
+        pop de                  ; base of selected table
         add hl,de
         ex de,hl                ; DE = glyph scanlines
         ld a,b                  ; screen: 010TTSSS LLLCCCCC
@@ -81,9 +82,10 @@ _gal_cell:
         ld (hl),a
 .done:  ld hl,0
         ret
+; Acer VGA 8x8; printable characters 32..127, 8 bytes each.
+; Licensed CC BY-SA 4.0; see FONT-SOURCE.txt.
         section data
-
-gal_font:
+c48_vga_font:
         db 0,0,0,0,0,0,0,0   ; 32
         db 24,60,60,24,24,0,24,0   ; 33
         db 108,108,72,0,0,0,0,0   ; 34
@@ -180,6 +182,10 @@ gal_font:
         db 112,24,24,28,24,24,112,0   ; 125
         db 0,118,220,0,0,0,0,0   ; 126
         db 0,16,56,108,198,198,254,0   ; 127
+; Fourteen Galaxians sprites, transcribed from original BASIC DATA.
+; Sprite codes 128..141.  Remaining bank slots are zero-filled.
+        section data
+c48_game_glyphs:
         db 34,35,36,62,15,7,2,14   ; 144
         db 36,196,228,252,240,224,64,112   ; 145
         db 2,3,7,63,39,39,34,3   ; 146
@@ -194,3 +200,4 @@ gal_font:
         db 18,19,18,28,4,2,1,1   ; 155
         db 72,200,72,56,32,64,128,128   ; 156
         db 1,31,63,127,225,193,192,192   ; 157
+        ds 144

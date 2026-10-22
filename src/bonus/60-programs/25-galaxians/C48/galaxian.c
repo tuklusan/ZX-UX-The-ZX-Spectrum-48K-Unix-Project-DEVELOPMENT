@@ -1,12 +1,12 @@
 /* GALAXIANS, program 25 in the historical Spectrum BASIC collection.
- * Experimental C48 translation: uses frozen C48 SDK and galaxian.asm
- * (VGA-style 32x24 8x8 text/UDG blitter, no UDG slot consumed).
+ * Experimental C48 translation: uses frozen C48 SDK and shared renderer
+ * (generated from shared c48lib and program glyphs).
  * Based on BASIC listing 25-galaxians.bas, lines 10..9500.
  * Z=left, X=right, M=fire.  Menu starts on any key.
  */
 #include <c48.h>
 
-int gal_cell(int row, int col, int ch);
+#include "../../c48lib/c48lib.h"
 static unsigned int rnd_state=917;
 static int ship[6];
 static int bomb[2];
@@ -32,7 +32,7 @@ static int random_n(int n)
 static void tile(int row,int col,int ch)
 {
     if (row>=0 && row<24 && col>=0 && col<32)
-        gal_cell(row,col,ch);
+        c48_cell(row,col,ch);
 }
 static void txt(int row,int col,char *s)
 {
@@ -95,9 +95,9 @@ static void draw_fleet(int phase)
     for(i=0;i<6;i++) {
         if(ship[i]) {
             if(phase) {
-                tile(2,fleetx+1+i*3,146);tile(2,fleetx+2+i*3,147);
+                tile(2,fleetx+1+i*3,130);tile(2,fleetx+2+i*3,131);
             } else {
-                tile(2,fleetx+1+i*3,144);tile(2,fleetx+2+i*3,145);
+                tile(2,fleetx+1+i*3,128);tile(2,fleetx+2+i*3,129);
             }
         }
     }
@@ -117,19 +117,22 @@ static void celebrate(void)
 {
     int f,i;
     for(f=0;f<16;f++) {
-        ink(7);tile(7,f+1,152);tile(7,f+2,153);tile(7,f+3,154);
+        /* Clear the previous mothership position before drawing the next. */
+        if(f>0)spaces(7,f,3);
+        ink(7);tile(7,f+1,136);tile(7,f+2,137);tile(7,f+3,138);
         if(f%3==0) {
             for(i=6;i>=2;i=i-2) {
-                ink(5);over(1);tile(i,f+1,144);tile(i,f+2,145);
+                ink(5);over(1);tile(i,f+1,128);tile(i,f+2,129);
                 beep(0.01,i);
-                tile(i,f+1,144);tile(i,f+2,145);over(0);
+                tile(i,f+1,128);tile(i,f+2,129);over(0);
             }
-            tile(2,f+1,144);tile(2,f+2,145);
+            tile(2,f+1,128);tile(2,f+2,129);
         }
     }
+    spaces(7,1,19); /* no trail left from the first pass */
     for(f=14;f<=26;f=f+2) {
         beep(0.01,-4);
-        spaces(7,f,5);tile(7,f+2,152);tile(7,f+3,153);tile(7,f+4,154);
+        spaces(7,f,5);tile(7,f+2,136);tile(7,f+3,137);tile(7,f+4,138);
     }
     spaces(7,14,18);
     fleet_reset();
@@ -144,7 +147,7 @@ static void explosion(int row,int col)
 {
     int k;
     ink(6);
-    for(k=0;k<3;k++)tile(row,col+k,151);
+    for(k=0;k<3;k++)tile(row,col+k,135);
     for(k=0;k<=15;k=k+5)beep(0.01,k);
     spaces(row,col,3);
     ink(7);
@@ -157,9 +160,9 @@ static void fire_laser(void)
     int victim;
     sx=posx*8+23;
     /* The BASIC game's plot/draw missile from lines 1000-1140. */
-    ink(7);plot(sx,8);draw(sx,8,sx,154);
+    ink(7);plot(sx,8);draw(sx,8,sx,138);
     beep(0.02,10);
-    over(1);plot(sx,8);draw(sx,8,sx,154);over(0);
+    over(1);plot(sx,8);draw(sx,8,sx,138);over(0);
     /* Check the BASIC cells occupied by the formation and falling pair. */
     if(bombrow>=3 && bombrow<21) {
         victim=-1;
@@ -192,7 +195,7 @@ static void game_over_msg(void)
     int i;
     for(i=1;i<=15;i++) {
         ink(1+random_n(6));
-        tile(21,posx+2,151);tile(21,posx+3,151);
+        tile(21,posx+2,135);tile(21,posx+3,135);
         beep(0.05,-random_n(30));
     }
     spaces(21,posx+2,2);
@@ -258,7 +261,7 @@ static void play(void)
         if(kbd_down('z') && posx>1)posx=posx-2;
         spaces(21,oldx,7);
         ink(7);txt(21,posx,"  ");
-        tile(21,posx+2,157);tile(21,posx+3,150);
+        tile(21,posx+2,141);tile(21,posx+3,134);
         txt(21,posx+4,"  ");
         oldx=posx;
         if(kbd_down('m'))fire_laser();
@@ -274,8 +277,8 @@ static void play(void)
             bombrow=3;bomb[0]=1;bomb[1]=1;
         }
         ink(4);
-        if(bomb[0]) {tile(bombrow,bombcol+1,148);tile(bombrow,bombcol+2,149);}
-        if(bomb[1]) {tile(bombrow,bombcol+4,148);tile(bombrow,bombcol+5,149);}
+        if(bomb[0]) {tile(bombrow,bombcol+1,132);tile(bombrow,bombcol+2,133);}
+        if(bomb[1]) {tile(bombrow,bombcol+4,132);tile(bombrow,bombcol+5,133);}
         ink(7);
         spaces(diverrow,divercol,2);
         diverrow=diverrow+3;
@@ -289,7 +292,7 @@ static void play(void)
                 break;
             }
         }
-        tile(diverrow,divercol,155);tile(diverrow,divercol+1,156);
+        tile(diverrow,divercol,139);tile(diverrow,divercol+1,140);
         if(random_n(5)==0 && (bomb[0] || bomb[1]))enemy_fire();
         if(gameover)break;
         t=(int)ticks();rnd_state=rnd_state ^ t;
