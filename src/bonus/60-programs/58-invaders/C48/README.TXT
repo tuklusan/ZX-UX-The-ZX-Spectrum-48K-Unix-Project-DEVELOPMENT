@@ -14,7 +14,7 @@ planet defeat, highest score and running total across games.
 Files:
   invaders.c            Game translation and logical screen collision grid
   invaders-glyphs.asm   13 original 8x8 sprite glyphs from BASIC DATA
-  invaders.asm          Generated matching companion, not hand-maintained
+  (invaders.asm)        Generated only under ../../build/tmp/, not tracked
   invaders.ssx          Frozen SDK SSX executable
   invaders.tzx          ZX-UX cassette, internal name invaders
   SCREENSHOTS/          Actual ZX-UX kernel emulator screen captures
@@ -25,7 +25,9 @@ Spectrum ROM font. The shared renderer writes directly to screen RAM
 and never consumes a BASIC game UDG slot.
 Build (from src/bonus/60-programs/):
   python build/build.py 58-invaders
-Or pass --sdk PATH for a separate frozen SDK checkout.
+Or pass --sdk PATH for a separate frozen SDK checkout. Generated assembly
+is assembled under ../../build/tmp/ and removed after successful builds.
+Only the final SSX/TZX outputs are published into C48/.
 
 BASIC references: ../BASIC/58-invaders.bas, KEYS-AND-TIMING.TXT and
 SCREENSHOTS/01-INTRO.png, 02-MAIN.png, 03-AFTER-INPUT.png.

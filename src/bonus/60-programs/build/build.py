@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Build program-local C48 SSX and ZX-UX TZX files with the frozen SDK.
+"""Build C48 programs with the frozen SDK; only final SSX/TZX files are kept.
 
 Usage: python build.py [--sdk PATH] [25-galaxians 58-invaders ...]
-With no program arguments, build each numbered program that has C48/*.c.
-Only writes under the corresponding numbered program's C48/ directory.
+Without program arguments, build available ports in the numbered BASIC order.
+Temporary compilation files live only in build/tmp and are removed on success.
 """
 from __future__ import annotations
 import argparse
 from pathlib import Path
+import shutil
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 COMMON = ROOT / 'c48lib'
+TMP = ROOT / 'build' / 'tmp'
 
 PROGRAM_ORDER = (
     '01-minelay', '02-fall-guy', '03-tug-of-war', '04-horse-race',
@@ -33,35 +35,53 @@ PROGRAM_ORDER = (
 )
 
 
-def build_one(program: Path, sdk: Path) -> None:
+def build_one(program: Path) -> None:
+    from rcc import driver
+    import rtap
+
     sources = sorted((program / 'C48').glob('*.c'))
     if len(sources) != 1:
         raise ValueError(f'{program.name}: expected exactly one C48 source')
-    src = sources[0]
-    stem = src.stem
+    original = sources[0]
+    stem = original.stem
     if len(stem) > 10:
         raise ValueError(f'{program.name}: cassette name {stem!r} exceeds 10 bytes')
-    glyphs = src.with_name(stem + '-glyphs.asm')
-    # ras does not support INCLUDE. rcc automatically links <stem>.asm.
+
+    # Mirror the source folder depth so relative includes still resolve.
+    scratch = TMP / program.name / 'C48'
+    if scratch.parent.exists():
+        shutil.rmtree(scratch.parent)
+    scratch.mkdir(parents=True)
+    src = scratch / original.name
+    shutil.copyfile(original, src)
+    for header in original.parent.glob('*.h'):
+        shutil.copyfile(header, scratch / header.name)
+
+    # ras has no INCLUDE; rcc automatically links the matching .asm file.
+    glyphs = original.with_name(stem + '-glyphs.asm')
     parts = [COMMON / 'c48lib.asm', COMMON / 'c48lib-font.asm']
     if glyphs.is_file():
         parts.append(glyphs)
     asm = src.with_suffix('.asm')
-    asm.write_bytes(b'; Generated from c48lib and per-program glyphs. Do not edit.\n'
+    asm.write_bytes(b'; Generated in build/tmp; do not edit.\n'
                     + b'\n'.join(p.read_bytes().rstrip(b'\r\n') for p in parts)
                     + (b'\n' if glyphs.is_file() else
                        b'\n        section data\nc48_game_glyphs:\n        ds 256\n'))
-    # Import only frozen SDK modules; do not write anything to SDK checkout.
-    from rcc import driver
-    import rtap
-    output = src.with_suffix('.ssx')
-    if driver.main([str(src), '-o', str(output)]):
-        raise RuntimeError(f'{src}: compilation/link failed')
-    data = output.read_bytes()
+
+    ssx = src.with_suffix('.ssx')
+    if driver.main([str(src), '-o', str(ssx)]):
+        raise RuntimeError(f'{original}: compile/link failed')
+    data = ssx.read_bytes()
     header, code = rtap.records(data, stem)
     title = ('ZX-UX C48 ' + stem).encode('ascii')
-    tape = (b'ZXTape!\x1a\x01\x14' + bytes((0x30, len(title))) + title)
-    rtap.write(str(src.with_suffix('.tzx')), tape, [(1000, header), (2000, code)])
+    tape_head = b'ZXTape!\x1a\x01\x14' + bytes((0x30, len(title))) + title
+    tzx = src.with_suffix('.tzx')
+    rtap.write(str(tzx), tape_head, [(1000, header), (2000, code)])
+
+    # Publish only finished binaries, never generated assembly or copied C.
+    shutil.copyfile(ssx, original.with_suffix('.ssx'))
+    shutil.copyfile(tzx, original.with_suffix('.tzx'))
+    shutil.rmtree(scratch.parent)
     print(f'{program.name}: {stem}.ssx ({len(data)} bytes), {stem}.tzx')
 
 
@@ -73,24 +93,39 @@ def main() -> None:
     sdk = args.sdk.resolve()
     if not (sdk / 'rcc' / 'driver.py').is_file():
         raise SystemExit('C48 SDK not found: ' + str(sdk))
-    # Import frozen SDK modules without generating __pycache__ in the checkout.
-    sys.dont_write_bytecode = True
-    sys.path.insert(0, str(sdk))
     wanted = set(args.programs)
     unknown = wanted.difference(PROGRAM_ORDER)
     if unknown:
         raise SystemExit('Unknown numbered program: ' + ', '.join(sorted(unknown)))
-    # The listing is intentionally identical to the historical BASIC directory
-    # order. Do not use alphabetical glob order for the build sequence.
-    for name in PROGRAM_ORDER:
-        if wanted and name not in wanted:
-            continue
-        folder = ROOT / name
-        if not folder.is_dir() or not (folder / 'C48').is_dir():
-            if wanted:
-                raise SystemExit('No C48 port for ' + name)
-            continue
-        build_one(folder, sdk)
+    # Avoid writing interpreter cache files anywhere in the frozen SDK.
+    sys.dont_write_bytecode = True
+    sys.path.insert(0, str(sdk))
+    TMP.mkdir(parents=True, exist_ok=True)
+    temp_common = TMP / 'c48lib'
+    temp_common.mkdir(exist_ok=True)
+    shutil.copyfile(COMMON / 'c48lib.h', temp_common / 'c48lib.h')
+    try:
+        for name in PROGRAM_ORDER:
+            if wanted and name not in wanted:
+                continue
+            folder = ROOT / name
+            if not folder.is_dir() or not (folder / 'C48').is_dir():
+                if wanted:
+                    raise SystemExit('No C48 port for ' + name)
+                continue
+            build_one(folder)
+    except BaseException:
+        # Keep intermediates on failure so an error can be inspected.
+        raise
+    else:
+        # A successful batch leaves only the tracked directory placeholder.
+        for item in TMP.iterdir():
+            if item.name == '.gitkeep':
+                continue
+            if item.is_dir() and not item.is_symlink():
+                shutil.rmtree(item)
+            else:
+                item.unlink()
 
 
 if __name__ == '__main__':

@@ -1,0 +1,5 @@
+# Do not commit generated C48 compiler inputs, temporary outputs, or caches.
+/tmp/*
+# Git cannot record an empty directory: retain only this placeholder.
+!/tmp/.gitkeep
+/__pycache__/
