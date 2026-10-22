@@ -78,7 +78,41 @@ def check_screen(system, sdk):
     runner.session.kb.add([('press', char_keys('p'), 20)])
     after_input = step(55)
     assert after_input != gameplay, 'Minelay did not respond to P movement'
-    print('PASS: real ZX-UX Minelay intro/idle, menu, maze, movement')
+    # Leave the player stationary while the mine-layer chases and consumes
+    # the remaining lives. A stable game-over/menu screen must follow.
+    # Use a fresh game without any movement so the pursuer reaches the base.
+    runner = rvm.Runner(opt)
+    runner.start()
+    for _ in range(4000):
+        runner.frame()
+        if runner.fg.started is not None:
+            break
+    else:
+        raise AssertionError('Minelay replay did not start')
+    step(130)
+    runner.session.kb.add([('press', ('SPACE',), 20)])
+    step(95)
+    runner.session.kb.add([('press', char_keys('2'), 20)])
+    step(35)
+    over_screen = step(1560)
+    font = ROOT / 'c48lib' / 'c48lib-font.asm'
+    charmap = {}
+    for row in font.read_text().splitlines():
+        match = re.search(r'\bdb ([0-9,]+)\s*; (\d+)', row)
+        if match:
+            charmap[tuple(int(v) for v in match[1].split(','))] = chr(int(match[2]))
+    def text_line(scr, row):
+        def glyph(col):
+            return tuple(scr[((row & 24) << 8) + (pix << 8) +
+                             ((row & 7) << 5) + col] for pix in range(8))
+        return ''.join(charmap.get(glyph(col), '?') for col in range(32))
+    assert 'G A M E  O V E R' in text_line(over_screen, 5), 'no GAME OVER after mine collisions'
+    assert step(120) == over_screen, 'Minelay game-over prompt changed without input'
+    runner.session.kb.add([('press', char_keys('1'), 20)])
+    hard_maze = step(130)
+    assert hard_maze != over_screen, 'Minelay failed to start a hard replay'
+    assert 'Score' in text_line(hard_maze, 0), 'Minelay hard replay did not draw a maze'
+    print('PASS: real ZX-UX intro/menu/maze/movement, mine-layer game-over, idle restart, hard replay')
 
 def main():
     cli = argparse.ArgumentParser(description=__doc__)

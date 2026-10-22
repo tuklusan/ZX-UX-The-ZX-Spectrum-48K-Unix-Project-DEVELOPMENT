@@ -68,3 +68,14 @@ smoke test, not a substitute for three clean independent audits.
 - Still incomplete: animated BASIC opening, exact mine pursuit and
   collision timing, lives/axe/endgame paths, three consecutive full
   disk-byte audits, and yolo cassette loading. Completion gate BLOCKED.
+
+Additional adversarial runtime regression:
+- With all movement keys released, the active mine-layer eventually
+  depletes the three player lives and reaches the GAME OVER screen.
+- The screen remained unchanged through an additional 120 idle frames;
+  an explicit new 1 keypress started a fresh hard-difficulty maze.
+- The per-program test now exercises this real ZX-UX kernel path, in
+  addition to original UDG bytes, introduction, menu, maze and movement.
+  SCREENSHOTS/05-C48-GAME-OVER-IDLE.png is a genuine frozen-RVM frame.
+- Full three-round source audit, exact intro animation, axe effects,
+  collision fidelity and yolo tape loading are still outstanding.
