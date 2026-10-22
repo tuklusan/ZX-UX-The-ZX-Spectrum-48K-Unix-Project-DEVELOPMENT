@@ -28,6 +28,21 @@ def check_glyphs():
     assert len(data) == 56 and data == local, 'Original BASIC sprite bitmap mismatch'
     print('PASS: 7 original BASIC glyphs independently match all 56 bytes')
 
+def check_placements():
+    """Independently compare BASIC SCREEN$ retry rules to C48 placement."""
+    basic = (THIS.parent / 'BASIC' / '01-minelay.bas').read_text()
+    source = (THIS / 'minelay.c').read_text()
+    for basic_line in ('7410 IF SCREEN$ (y,x)=""THEN GO TO 7400',
+                       '7520 IF SCREEN$ (y,x)=""THEN GO TO 7510'):
+        assert basic_line in basic, 'BASIC SCREEN$ rejection rule changed'
+    maze = source.split('static void make_maze(void)', 1)[1].split('static void lose_life(void)', 1)[0]
+    # Each of the first two random item-placement passes must reject a
+    # previously drawn UDG rather than destroy it; the five axes are not
+    # subjected to this BASIC rule.
+    assert maze.count('while(board[r*32+c]>=128);') == 2, 'UDG overwrite regression'
+    assert maze.count('do {r=rnd(18)+2;c=rnd(28)+1;}') == 2, 'BASIC retry missing'
+    print('PASS: eggs and mines preserve original BASIC SCREEN$ UDG retry behavior')
+
 def check_screen(system, sdk):
     sys.dont_write_bytecode = True
     os.environ['ZXUX_RVM_CACHE'] = str(ROOT / 'build' / 'tmp' / 'minelay-rvm-cache')
@@ -71,6 +86,7 @@ def main():
     cli.add_argument('--sdk',type=Path)
     a = cli.parse_args()
     check_glyphs()
+    check_placements()
     if a.system and a.sdk:
         check_screen(a.system.resolve(), a.sdk.resolve())
     else:

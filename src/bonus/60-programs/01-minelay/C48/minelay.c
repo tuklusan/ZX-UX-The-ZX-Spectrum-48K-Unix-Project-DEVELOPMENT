@@ -132,12 +132,16 @@ static void make_maze(void)
         c=rnd(14)*2+2;
         for(i=s;i<=e;i++)at_cell(i,c,128,7,0);
     }
+    /* BASIC lines 7410 and 7520 retry when SCREEN$ is empty for a UDG.
+     * Do not replace pre-existing walls, eggs, mines or axes. */
     for(k=0;k<20;k++){
-        r=rnd(18)+2;c=rnd(28)+1;
+        do {r=rnd(18)+2;c=rnd(28)+1;}
+        while(board[r*32+c]>=128);
         at_cell(r,c,132,6,1);
     }
     for(k=0;k<10;k++){
-        r=rnd(18)+2;c=rnd(28)+1;
+        do {r=rnd(18)+2;c=rnd(28)+1;}
+        while(board[r*32+c]>=128);
         at_cell(r,c,133,5,0);
     }
     for(k=0;k<5;k++)at_cell(rnd(18)+2,rnd(28)+1,134,4,1);

@@ -49,3 +49,22 @@ Repeatable automated checks (from this C48 folder):
 The test confirms the 56 BASIC glyph bytes and executes the real ZX-UX
 kernel through intro idle, menu, maze startup and movement. This is a
 smoke test, not a substitute for three clean independent audits.
+
+2026-10-22 source-fidelity correction — BASIC SCREEN$ retries:
+- BASIC lines 7410 and 7520 retry random placement if the target
+  SCREEN$ is empty (including all seven custom graphic cells). The
+  initial C48 version placed eggs and mines over existing UDG objects.
+- make_maze() now retries a random position while the logical cell is
+  a custom glyph (codes 128..159), keeping walls, eggs, mines, and axes
+  intact. This applies to the original 20 eggs and 10 mines; the later
+  opportunistic spawn is deliberately unchanged, matching BASIC.
+- Added independent source/glyph assertions to test-minelay.py.
+  Rebuilt the frozen C48 SSX and TZX twice with identical SHA-256 values,
+  executed the real frozen ZX-UX system in rvm, and drove intro,
+  difficulty choice, maze initialization, and P movement successfully.
+- SCREENSHOTS/04-C48-MAZE-RETRY-VERIFICATION.png is a real
+  headless-kernel capture. It verifies active display, not full game
+  equivalence or individual randomly selected target rejection.
+- Still incomplete: animated BASIC opening, exact mine pursuit and
+  collision timing, lives/axe/endgame paths, three consecutive full
+  disk-byte audits, and yolo cassette loading. Completion gate BLOCKED.
