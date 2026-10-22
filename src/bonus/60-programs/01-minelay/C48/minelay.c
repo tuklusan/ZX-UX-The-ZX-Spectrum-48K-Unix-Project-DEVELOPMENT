@@ -95,9 +95,10 @@ static void title_animation(void)
         }
         if((k&7)==0)sleep(1);
     }
-    /* Original BASIC line 9645 draws small highlights on the title. */
-    ink(5);plot(16,173);draw(16,173,19,163);draw(19,163,23,173);
-    plot(80,173);draw(80,173,87,145);
+    /* Original BASIC line 9645 draws small highlights on the title.
+     * Keep both highlights inside the five-row heading. */
+    ink(5);plot(16,175);draw(16,175,19,158);draw(19,158,23,175);
+    plot(80,175);draw(80,175,87,153);
     ink(7);
 }
 static void intro(void)
