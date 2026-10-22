@@ -1,0 +1,16 @@
+Font attribution for the experimental Galaxians C48 port
+
+The printable 8x8 glyph bitmaps in galaxian.asm were converted from
+Bm437_Acer_VGA_8x8.otb in The Ultimate Oldschool PC Font Pack v2.2,
+by VileR, copyright 2016-2020.
+
+Source: https://int10h.org/oldschool-pc-fonts/
+License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+License terms: https://creativecommons.org/licenses/by-sa/4.0/
+
+Changes: glyphs 32 through 127 were selected, exported as eight byte
+rows, and placed in the Z80 assembly table. The 14 extra game shapes
+are transcribed from the historical Galaxians BASIC DATA lines 9010-9300,
+not from the PC font pack.
+
+This file gives attribution and a link to the complete unchanged license.
