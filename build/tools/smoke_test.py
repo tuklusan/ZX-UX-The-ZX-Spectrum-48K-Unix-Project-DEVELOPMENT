@@ -25,8 +25,12 @@ class RebuildChecks(unittest.TestCase):
         (self.src / 'assets/c48-src/demo.c').write_text('void main(void) {}')
         (self.src / 'docs').mkdir()
         (self.src / 'docs/manual.txt').write_text('manual')
-        (self.src / 'bonus/60-programs/demo/BASIC').mkdir(parents=True)
-        (self.src / 'bonus/60-programs/demo/BASIC/demo.bas').write_text('10 PRINT "OK"')
+        bonus = self.src / 'bonus/60-programs'
+        for number in range(1, 61):
+            folder = bonus / f'{number:02d}-demo/BASIC'
+            folder.mkdir(parents=True)
+            (folder / 'demo.bas').write_text('10 PRINT "OK"')
+        (bonus / 'sixty-programs-social-preview.png').write_bytes(b'preview')
         (self.root / 'build').mkdir()
         (self.root / 'build/build.py').write_bytes(BUILD.read_bytes())
         (tools / 'osbuild.py').write_text('''
@@ -63,12 +67,45 @@ def pack(*args):
         self.run_builder()
         self.assertTrue((self.dist/'zx-ux/ZX-UX.tzx').is_file())
         self.assertEqual((self.dist/'docs/manual.txt').read_text(), 'manual')
-        self.assertEqual((self.dist/'bonus/60-programs/demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
+        self.assertEqual((self.dist/'bonus/60-programs/01-demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
         (self.dist/'stale').write_text('obsolete')
         self.run_builder()
         self.assertFalse((self.dist/'stale').exists())
         self.assertEqual((self.dist/'docs/manual.txt').read_text(), 'manual')
-        self.assertEqual((self.src/'bonus/60-programs/demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
+        self.assertEqual((self.src/'bonus/60-programs/01-demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
+
+    def test_bonus_has_only_numbered_programs_and_preview(self):
+        source = self.src / 'bonus/60-programs'
+        extras = ('CLEAN-INDEX.json', 'CLEANUP-SUMMARY.json', 'INDEX.csv',
+                  'PROGRAMS.zip', 'README-FIRST.TXT', 'SHA256SUMS.txt')
+        for name in extras:
+            (source / name).write_text('historical source data')
+        (source / 'TOOLS').mkdir()
+        (source / 'TOOLS/helper.py').write_text('pass')
+        (self.src / 'bonus/other-source.txt').write_text('not for release')
+        self.run_builder()
+        output = self.dist / 'bonus/60-programs'
+        expected = {f'{number:02d}-demo' for number in range(1, 61)}
+        expected.add('sixty-programs-social-preview.png')
+        self.assertEqual({p.name for p in output.iterdir()}, expected)
+        self.assertEqual({p.name for p in (self.dist / 'bonus').iterdir()},
+                         {'60-programs'})
+        self.assertEqual((output / 'sixty-programs-social-preview.png').read_bytes(),
+                         b'preview')
+        self.assertTrue((source / 'PROGRAMS.zip').exists())
+        self.assertTrue((source / 'TOOLS/helper.py').exists())
+        self.run_builder()
+        self.assertEqual({p.name for p in output.iterdir()}, expected)
+
+    def test_missing_numbered_program_preserves_prior_dist(self):
+        self.run_builder()
+        target = self.dist / 'bonus/60-programs/01-demo/BASIC/demo.bas'
+        before = target.read_bytes()
+        folder = self.src / 'bonus/60-programs/60-demo'
+        import shutil
+        shutil.rmtree(folder)
+        self.run_builder(ok=False)
+        self.assertEqual(target.read_bytes(), before)
 
     def test_failure_preserves_dist(self):
         self.run_builder()

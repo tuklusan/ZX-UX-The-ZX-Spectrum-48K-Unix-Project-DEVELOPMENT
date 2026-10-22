@@ -24,6 +24,27 @@ def checked_dir(root):
             raise RuntimeError('Unsafe build input: ' + str(path))
 
 
+def copy_bonus_programs(source, destination, no_cache):
+    """Stage only the 60 BASIC program folders and the social preview PNG.
+
+    The source collection retains its historical metadata, tools and archives;
+    those top-level items are not release payloads.
+    """
+    collection = source / '60-programs'
+    output = destination / '60-programs'
+    program_dirs = sorted(p for p in collection.iterdir()
+                          if p.is_dir() and re.fullmatch(r'\d{2}-.+', p.name))
+    if [int(p.name[:2]) for p in program_dirs] != list(range(1, 61)):
+        raise RuntimeError('Expected exactly 60 numbered BASIC program directories')
+    preview = collection / 'sixty-programs-social-preview.png'
+    if not preview.is_file() or preview.is_symlink():
+        raise RuntimeError('Missing or unsafe BASIC social preview: ' + str(preview))
+    output.mkdir(parents=True)
+    for program in program_dirs:
+        shutil.copytree(program, output / program.name, ignore=no_cache)
+    shutil.copy2(preview, output / preview.name)
+
+
 def main():
     argv = sys.argv[1:]
     argv = argv[1:] if argv[:1] == ['--sjasm'] else argv
@@ -47,7 +68,7 @@ def main():
     # Python cache files are never source inputs or release deliverables.
     no_cache = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
     shutil.copytree(corpus, stage / 'assets/c48-src', ignore=no_cache)
-    shutil.copytree(bonus, stage / 'bonus', ignore=no_cache)
+    copy_bonus_programs(bonus, stage / 'bonus', no_cache)
     shutil.copytree(S / 'zx-ux', B / 'src', ignore=no_cache)
     shutil.copytree(S / 'zx-ux-sdk', B / 'sdk', ignore=no_cache)
     (B / 'out').mkdir()
