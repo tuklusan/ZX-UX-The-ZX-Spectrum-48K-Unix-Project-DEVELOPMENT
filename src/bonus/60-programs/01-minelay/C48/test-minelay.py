@@ -49,7 +49,13 @@ def check_pursuer_draw_order():
     c48 = (THIS / 'minelay.c').read_text()
     assert '700 PRINT AT my,mx;" "' in basic
     assert '720 PRINT AT my,mx;INK 5;BRIGHT 1;"{93}"' in basic
+    assert '705 LET my1=my:LET mx1=mx' in basic
     mine = c48.split('static void mine_step(void)', 1)[1].split('int main(void)', 1)[0]
+    assert mine.index('previous_my=my;previous_mx=mx;') < mine.index('if(my2<y*2)'), (
+        'BASIC line 705 saves the pursuer BEFORE the half-cell move')
+    assert mine.index('old_my=previous_my;old_mx=previous_mx;') > mine.index('at_cell(my,mx,131,5,1);'), (
+        'The saved mine-trail position must be the pre-move cell')
+    assert 'old_my=my;old_mx=mx;' not in mine, 'Stale post-move mine-trail state'
     assert mine.index('at_cell(old_my,old_mx,133,5,0);') < mine.index('at_cell(my,mx,131,5,1);'), (        'Half-cell pursuer can disappear behind mine deposited at same cell')
     # Adversarial overlap: when old and new visible cells coincide, order
     # alone determines whether the player sees an active pursuer or a mine.
@@ -57,7 +63,7 @@ def check_pursuer_draw_order():
     cell = 133  # BASIC 700 may deposit into the same character cell.
     cell = 131  # BASIC 720 redraws the enemy *after* the deposit.
     assert cell == 131
-    print('PASS: pursuer draws after laid mine even on overlapping half-cell steps')
+    print('PASS: pursuer trails use pre-movement coordinates; mine is drawn before pursuer')
 
 def check_collision_cleanup():
     """BASIC 6000 clears the pursuer's occupied cell before respawning."""

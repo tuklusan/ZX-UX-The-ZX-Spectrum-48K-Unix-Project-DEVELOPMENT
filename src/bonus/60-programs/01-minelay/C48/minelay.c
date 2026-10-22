@@ -221,9 +221,12 @@ static void player_step(void)
 }
 static void mine_step(void)
 {
-    int my,mx;
+    int my,mx,previous_my,previous_mx;
     my=my2/2;mx=mx2/2;
     blank(my,mx);
+    /* BASIC 705 saves my1/mx1 BEFORE the half-cell move. Mine laying
+     * on the following iteration uses this older, pre-movement cell. */
+    previous_my=my;previous_mx=mx;
     /* BASIC's 0.5 movement increments: two internal units per cell. */
     if(my2<y*2)my2++;else if(my2>y*2)my2--;
     if(mx2<x*2)mx2++;else if(mx2>x*2)mx2--;
@@ -235,7 +238,7 @@ static void mine_step(void)
     if(hard){if(rnd(100)>70)at_cell(old_my,old_mx,133,5,0);}
     else {if(rnd(100)>85)at_cell(old_my,old_mx,133,5,0);}
     at_cell(my,mx,131,5,1);
-    old_my=my;old_mx=mx;
+    old_my=previous_my;old_mx=previous_mx;
     if(rnd(5)==0){
         int r,c;
         r=rnd(18)+2;c=rnd(28)+1;

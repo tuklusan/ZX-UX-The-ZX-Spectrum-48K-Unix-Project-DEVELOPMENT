@@ -144,3 +144,21 @@ Additional adversarial runtime regression:
   and adversarial review, three successive clean fresh-disk-byte
   audits, axe behavior parity, full timing/sound and yolo tape
   execution remain unverified. No BASIC or frozen platform file changed.
+
+2026-10-22 BASIC line 705 mine trail position correction:
+- BASIC saves my1/mx1 before each 0.5-cell mine-layer movement and
+  uses those saved pre-movement coordinates to lay a mine in its
+  following iteration (line 700). C48 formerly saved the coordinates
+  after movement, depositing some mines one half-step too far forward.
+- mine_step now saves previous_my/previous_mx before moving and uses
+  these for old_my/old_mx after drawing the current mine-layer.
+  Mine drawing remains before the active pursuer, as in BASIC 720.
+- Added a source regression asserting the exact BASIC 705 statement,
+  the pre-move state capture, and the retained draw order.
+- Frozen C48 builds passed twice with identical SSX and TZX SHA-256;
+  real ZX-UX kernel regression passed glyphs, intro, difficulty,
+  movement, pursuer visibility, six no-ghost frames, game over, idle
+  and hard restart. Private text checker passed both changed sources.
+- This is an incremental fix. The three independent clean scan rounds,
+  full axe and collision parity, sound/timing and yolo loading remain
+  open; do not declare the port equivalent or complete.
