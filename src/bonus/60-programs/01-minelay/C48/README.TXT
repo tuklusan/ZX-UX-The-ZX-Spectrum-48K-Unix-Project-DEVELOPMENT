@@ -97,3 +97,27 @@ Additional adversarial runtime regression:
 - This is a verified incremental fix, NOT final completion: the
   opening animation, deeper collision/axe parity, yolo loading, and
   the three clean independent disk-byte review rounds remain open.
+
+2026-10-22 BASIC title animation and ENTER prompt update:
+- The static C48 MINELAY heading was replaced with the original BASIC
+  line-9500 title bitmap pattern (157 characters over five 32-column
+  rows). The 64 underscore cells animate into the original graphic
+  code-150 shape, with red ink, white paper, sound and the small
+  pixel-line highlights of BASIC line 9645.
+- Shifted the original instructions below the five title rows.
+  Start now waits for a fresh physical ENTER key (supported as
+  kbd_down(13) in frozen C48), not just any key.
+- SCREENSHOTS/07-C48-ANIMATED-TITLE.png is a genuine headless ZX-UX
+  framebuffer capture from the final rebuilt program. The title
+  resembles the original BASIC screenshot, but animation timing
+  and the text/font rendering remain nonidentical.
+- test-minelay.py checks all 157 source pattern characters, ENTER
+  polling, input transitions, the mine-layer sprite, game-over and
+  restart. The full real-kernel test passed after the intro timing
+  and ENTER changes. Two final builds produced identical SSX/TZX
+  hashes. A further combined build+runtime re-run later timed out;
+  do not count that timed-out attempt as a passing check.
+- Original BASIC not changed. Completion gate remains OPEN:
+  exact pursuit and collision fidelity, axe, sound and timing,
+  full three-consecutive-round independent audit, and yolo loading
+  are not all demonstrated.

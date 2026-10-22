@@ -59,6 +59,16 @@ def check_pursuer_draw_order():
     assert cell == 131
     print('PASS: pursuer draws after laid mine even on overlapping half-cell steps')
 
+def check_original_title():
+    basic = (THIS.parent / 'BASIC' / '01-minelay.bas').read_text()
+    original = re.search(r'^9500 PRINT INK 0;AT 0,0;"([^"]*)"', basic, re.M)
+    source = (THIS / 'minelay.c').read_text()
+    image = re.search(r'pattern="([^"]*)";', source)
+    assert original and image and original[1] == image[1] and len(image[1]) == 157, (        'Original five-row BASIC title pattern was changed')
+    assert "if(pattern[k]=='_')" in source and 'title_animation();' in source
+    assert 'fresh_enter();' in source and 'while(!kbd_down(13))' in source, 'Original ENTER start required'
+    print('PASS: original BASIC 157-character animated-title data preserved')
+
 def check_screen(system, sdk):
     sys.dont_write_bytecode = True
     os.environ['ZXUX_RVM_CACHE'] = str(ROOT / 'build' / 'tmp' / 'minelay-rvm-cache')
@@ -82,10 +92,10 @@ def check_screen(system, sdk):
         for _ in range(frames):
             runner.frame()
         return runner.picture()[0]
-    intro = step(135)
+    intro = step(650)
     idle = step(40)
     assert intro == idle, 'Minelay intro advanced without user input'
-    runner.session.kb.add([('press', ('SPACE',), 20)])
+    runner.session.kb.add([('press', ('ENTER',), 20)])
     menu = step(95)
     assert menu != idle, 'Minelay did not reach difficulty selection'
     runner.session.kb.add([('press', char_keys('2'), 20)])
@@ -118,12 +128,12 @@ def check_screen(system, sdk):
             break
     else:
         raise AssertionError('Minelay replay did not start')
-    step(130)
-    runner.session.kb.add([('press', ('SPACE',), 20)])
+    step(650)
+    runner.session.kb.add([('press', ('ENTER',), 20)])
     step(95)
     runner.session.kb.add([('press', char_keys('2'), 20)])
     step(35)
-    over_screen = step(1560)
+    over_screen = step(2700)
     font = ROOT / 'c48lib' / 'c48lib-font.asm'
     charmap = {}
     for row in font.read_text().splitlines():
@@ -151,6 +161,7 @@ def main():
     check_glyphs()
     check_placements()
     check_pursuer_draw_order()
+    check_original_title()
     if a.system and a.sdk:
         check_screen(a.system.resolve(), a.sdk.resolve())
     else:

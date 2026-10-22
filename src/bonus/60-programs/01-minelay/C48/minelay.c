@@ -58,6 +58,13 @@ static void fresh_key(void)
     while(!c48_any_key())sleep(1);
     while(c48_any_key())sleep(1);
 }
+/* BASIC 9900 requests ENTER, not an arbitrary game-control key. */
+static void fresh_enter(void)
+{
+    while(c48_any_key())sleep(1);
+    while(!kbd_down(13))sleep(1);
+    while(c48_any_key())sleep(1);
+}
 static unsigned char tty[6];
 static void game_keyboard(void)
 {
@@ -71,22 +78,43 @@ static void status_line(void)
     for(c=0;c<lives&&c<6;c++)at_cell(0,13+c,129,7,0);
     line(0,19,"Hi-score",7);digits(0,28,highscore);
 }
+static void title_animation(void)
+{
+    /* BASIC 9500-9645: five rows of the exact underscore letter pattern,
+     * overwritten progressively with the original red-on-white UDG 150.
+     * Keep the encoded title from the historical listing unchanged. */
+    char *pattern;
+    int k,row,col;
+    pattern=" _ _ ___ _ _ ___   _    _  _ _   _ _  _  _ _ _     _   _ _ _ _   _ _  _  _ _ ___   _   ___  _    _ _  _  _ _ _     _   _ _  _    _ _ ___ _ _ ___   ___ _ _  _";
+    for(k=0;k<157;k++){
+        row=k/32;col=k%32;
+        if(pattern[k]=='_'){
+            paper(7);at_cell(row,col,134,2,1);paper(0);
+            beep(0.002,(col+row)/3);
+        }
+        if((k&7)==0)sleep(1);
+    }
+    /* Original BASIC line 9645 draws small highlights on the title. */
+    ink(5);plot(16,173);draw(16,173,19,163);draw(19,163,23,173);
+    plot(80,173);draw(80,173,87,145);
+    ink(7);
+}
 static void intro(void)
 {
     full_clear();
-    line(1,8,"M I N E L A Y",7);
-    line(4,0,"Move about the maze picking up",7);
-    line(5,0,"golden eggs, avoiding the mines",7);
-    line(6,0,"and also the mine-layer.",7);
-    line(8,0,"If you pick up an axe you can",6);
-    line(9,0,"destroy maze walls, mines and",6);
-    line(10,0,"the mine-layer.",6);
-    line(12,0,"You begin with 3 lives; an",7);
-    line(13,0,"extra life every 500 points.",7);
-    line(16,0,"Q.....UP      Z.....DOWN",6);
-    line(17,0,"I.....LEFT    P.....RIGHT",5);
-    line(20,0,"Press any key to start...",7);
-    fresh_key();
+    title_animation();
+    line(6,0,"Move about the maze picking up",7);
+    line(7,0,"golden eggs, avoiding the mines",7);
+    line(8,0,"and also the mine-layer.",7);
+    line(10,0,"If you pick up an axe you can",6);
+    line(11,0,"destroy maze walls, mines and",6);
+    line(12,0,"the mine-layer.",6);
+    line(14,0,"You begin with 3 lives; an",7);
+    line(15,0,"extra life every 500 points.",7);
+    line(17,0,"Q.....UP      Z.....DOWN",6);
+    line(18,0,"I.....LEFT    P.....RIGHT",5);
+    line(20,0,"Press ENTER to start...",7);
+    fresh_enter();
 }
 static void menu(void)
 {
