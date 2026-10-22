@@ -43,6 +43,22 @@ def check_placements():
     assert maze.count('do {r=rnd(18)+2;c=rnd(28)+1;}') == 2, 'BASIC retry missing'
     print('PASS: eggs and mines preserve original BASIC SCREEN$ UDG retry behavior')
 
+def check_pursuer_draw_order():
+    """BASIC 700/705/720: mine trail first; pursuing sprite is drawn last."""
+    basic = (THIS.parent / 'BASIC' / '01-minelay.bas').read_text()
+    c48 = (THIS / 'minelay.c').read_text()
+    assert '700 PRINT AT my,mx;" "' in basic
+    assert '720 PRINT AT my,mx;INK 5;BRIGHT 1;"{93}"' in basic
+    mine = c48.split('static void mine_step(void)', 1)[1].split('int main(void)', 1)[0]
+    assert mine.index('at_cell(old_my,old_mx,133,5,0);') < mine.index('at_cell(my,mx,131,5,1);'), (        'Half-cell pursuer can disappear behind mine deposited at same cell')
+    # Adversarial overlap: when old and new visible cells coincide, order
+    # alone determines whether the player sees an active pursuer or a mine.
+    cell = 32
+    cell = 133  # BASIC 700 may deposit into the same character cell.
+    cell = 131  # BASIC 720 redraws the enemy *after* the deposit.
+    assert cell == 131
+    print('PASS: pursuer draws after laid mine even on overlapping half-cell steps')
+
 def check_screen(system, sdk):
     sys.dont_write_bytecode = True
     os.environ['ZXUX_RVM_CACHE'] = str(ROOT / 'build' / 'tmp' / 'minelay-rvm-cache')
@@ -78,6 +94,19 @@ def check_screen(system, sdk):
     runner.session.kb.add([('press', char_keys('p'), 20)])
     after_input = step(55)
     assert after_input != gameplay, 'Minelay did not respond to P movement'
+    # Also check actual bitmap bytes: the pursuing glyph must remain visible
+    # after its deposited-mine trails, even on half-character-cell steps.
+    enemy_bytes = (195,36,24,36,126,90,129,0)  # original BASIC UDG 147
+    def enemy_visible(screen):
+        for row in range(2, 22):
+            for col in range(32):
+                found = tuple(screen[((row & 24) << 8) + (scan << 8) +
+                                     ((row & 7) << 5) + col] for scan in range(8))
+                if found == enemy_bytes:
+                    return True
+        return False
+    sampled = [after_input] + [step(15) for _ in range(5)]
+    assert sum(enemy_visible(screen) for screen in sampled) >= 4, (        'Minelay pursuer glyph disappeared behind its deposited-mine trails')
     # Leave the player stationary while the mine-layer chases and consumes
     # the remaining lives. A stable game-over/menu screen must follow.
     # Use a fresh game without any movement so the pursuer reaches the base.
@@ -121,6 +150,7 @@ def main():
     a = cli.parse_args()
     check_glyphs()
     check_placements()
+    check_pursuer_draw_order()
     if a.system and a.sdk:
         check_screen(a.system.resolve(), a.sdk.resolve())
     else:

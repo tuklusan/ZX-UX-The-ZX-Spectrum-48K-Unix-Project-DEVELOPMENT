@@ -193,9 +193,12 @@ static void mine_step(void)
     if(mx2<x*2)mx2++;else if(mx2>x*2)mx2--;
     my=my2/2;mx=mx2/2;
     if(my==y&&mx==x){lose_life();return;}
-    at_cell(my,mx,131,5,1);
+    /* BASIC 700/705/720: deposit the previous mine BEFORE drawing the
+     * pursuer. A half-cell step can keep the same visible character cell;
+     * drawing the deposited mine last would hide the active pursuer. */
     if(hard){if(rnd(100)>70)at_cell(old_my,old_mx,133,5,0);}
     else {if(rnd(100)>85)at_cell(old_my,old_mx,133,5,0);}
+    at_cell(my,mx,131,5,1);
     old_my=my;old_mx=mx;
     if(rnd(5)==0){
         int r,c;

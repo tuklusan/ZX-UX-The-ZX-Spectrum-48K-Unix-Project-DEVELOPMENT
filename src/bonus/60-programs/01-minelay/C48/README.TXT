@@ -79,3 +79,21 @@ Additional adversarial runtime regression:
   SCREENSHOTS/05-C48-GAME-OVER-IDLE.png is a genuine frozen-RVM frame.
 - Full three-round source audit, exact intro animation, axe effects,
   collision fidelity and yolo tape loading are still outstanding.
+
+2026-10-22 pursuer-versus-laid-mine redraw correction:
+- BASIC 700 clears the old mine-layer location and can leave a mine at
+  the previous one. BASIC 720 then draws the pursuer at its new position.
+- The C48 translation previously drew the pursuer first and deposited
+  a mine last. When a 0.5-cell move keeps the same displayed position,
+  that mine covered the pursuer sprite. Reordered C48 drawing to match
+  the original and to prevent the temporary disappearance.
+- New source-order and original-BASIC assertions in test-minelay.py,
+  plus a real frozen ZX-UX kernel bitmap check that locates the exact
+  8x8 mine-layer glyph in multiple subsequent gameplay frames.
+- SCREENSHOTS/06-C48-PURSUER-TRAIL-ORDER.png is a genuine headless
+  ZX-UX gameplay capture. Two isolated builds produced identical SSX
+  and TZX bytes; the full existing intro/menu/maze/movement/game-over/
+  replay smoke regression passed. Original BASIC remains unchanged.
+- This is a verified incremental fix, NOT final completion: the
+  opening animation, deeper collision/axe parity, yolo loading, and
+  the three clean independent disk-byte review rounds remain open.
