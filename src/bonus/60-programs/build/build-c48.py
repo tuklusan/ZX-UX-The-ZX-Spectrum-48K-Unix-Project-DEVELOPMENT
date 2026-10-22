@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build C48 programs with the frozen SDK; only final SSX/TZX files are kept.
 
-Usage: python build.py [--sdk PATH] [25-galaxians 58-invaders ...]
+Usage: python build-c48.py [--sdk PATH] [25-galaxians 58-invaders ...]
 Without program arguments, build available ports in the numbered BASIC order.
 Temporary compilation files live only in build/tmp and are removed on success.
 """

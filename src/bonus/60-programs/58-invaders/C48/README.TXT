@@ -24,7 +24,7 @@ FONT-SOURCE.txt. The font is Acer VGA 8x8, deliberately unlike the
 Spectrum ROM font. The shared renderer writes directly to screen RAM
 and never consumes a BASIC game UDG slot.
 Build (from src/bonus/60-programs/):
-  python build/build.py 58-invaders
+  python build/build-c48.py 58-invaders
 Or pass --sdk PATH for a separate frozen SDK checkout. Generated assembly
 is assembled under ../../build/tmp/ and removed after successful builds.
 Only the final SSX/TZX outputs are published into C48/.

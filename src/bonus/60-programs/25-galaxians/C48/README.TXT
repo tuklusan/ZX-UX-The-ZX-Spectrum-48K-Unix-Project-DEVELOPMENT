@@ -17,7 +17,7 @@ galaxian.ssx is the ZX-UX executable;
 galaxian.tzx is a cassette with internal executable name galaxian.
 
 Rebuild (from src/bonus/60-programs/):
-  python build/build.py 25-galaxians
+  python build/build-c48.py 25-galaxians
 Or pass --sdk PATH when the frozen SDK is located elsewhere.
 The builder uses ../../build/tmp/ for intermediates and publishes only
 SSX and TZX into this C48 directory. The shared VGA font's
