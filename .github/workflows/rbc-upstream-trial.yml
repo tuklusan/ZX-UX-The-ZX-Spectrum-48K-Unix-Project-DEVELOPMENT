@@ -12,52 +12,66 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
-      - name: Acquire Python compiler source
+      - name: Acquire Python BASIC compiler source
         run: |
           git clone https://github.com/imneme/pyhsb.git upstream-pyhsb
           git -C upstream-pyhsb checkout --detach 7cc87dafb58fcf5632b7190320dd11c30b4fe961
           python3 -m compileall -q upstream-pyhsb
-      - name: Test original BASIC compilation
-        shell: bash
+      - name: Prepare ZX-UX compiler and the original tape inputs
         run: |
-          set -uo pipefail
           mkdir -p trial-result
           unzip -oq experiments/hisoft-rbc-2026-10-22/rbc-pyhsb-stage.zip -d trial-result
           curl -fsSL --retry 2 --max-time 25 -o trial-result/hisoft48.tap \
-            https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap || true
+            https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap
           python3 - <<'PY'
+          import sys
           from pathlib import Path
-          p=Path('trial-result/hisoft48.tap')
-          print('tape_available:',p.exists(),'bytes:',p.stat().st_size if p.exists() else 0)
+          sys.path.insert(0,'trial-result/rbc')
+          import rbc
+          for source in sorted(Path('src/bonus/60-programs').glob('*/BASIC/*.tzx')):
+              target=Path('trial-result/tokenized')/source.parent.parent.name/(source.stem+'.tap')
+              target.parent.mkdir(parents=True,exist_ok=True)
+              try:
+                  target.write_bytes(rbc._tap_from_tzx(source))
+              except Exception as exc:
+                  print(f'WARN: {source}: {exc}')
+          Path('trial-result/hello.bas').write_text('10 PRINT "HELLO"\n')
           PY
-          cat > trial-result/hello.bas <<'BASIC'
-          10 PRINT "HELLO"
-          BASIC
-          for task in hello galaxians invaders; do
-            case "$task" in
-              hello) input=trial-result/hello.bas;;
-              galaxians) input=src/bonus/60-programs/25-galaxians/BASIC/25-galaxians.bas;;
-              invaders) input=src/bonus/60-programs/58-invaders/BASIC/58-invaders.bas;;
-            esac
-            echo "=== $task ===" | tee -a trial-result/compile.log
-            if test -f trial-result/hisoft48.tap; then
-              python3 trial-result/rbc/rbc.py "$input" \
-                --frontend upstream-pyhsb --sdk src/zx-ux-sdk \
-                --rom src/zx-ux-sdk/rom/48.rom \
-                --tape trial-result/hisoft48.tap \
-                -o "trial-result/$task-source.ssx" \
-                --report "trial-result/$task-source.json" \
-                2>&1 | tee -a trial-result/compile.log
-              echo "result=${PIPESTATUS[0]}" | tee -a trial-result/compile.log
-            fi
-          done
+      - name: Compile BASIC sources and collect results
+        run: |
+          python3 - <<'PY'
+          import json, subprocess, sys
+          from pathlib import Path
+          root=Path('src/bonus/60-programs')
+          out=Path('trial-result')
+          inputs=[('hello',out/'hello.bas')]
+          for folder in sorted(root.glob('[0-9][0-9]-*')):
+              raw=next(folder.glob('BASIC/*.bas'),None)
+              tap=out/'tokenized'/folder.name/(raw.stem+'.tap') if raw else None
+              if raw:
+                  inputs.append((folder.name+'-text',raw))
+                  if tap.is_file():inputs.append((folder.name+'-tape',tap))
+          results=[]
+          for name,source in inputs:
+              cmd=[sys.executable,str(out/'rbc/rbc.py'),str(source),
+                   '--frontend','upstream-pyhsb','--sdk','src/zx-ux-sdk',
+                   '--rom','src/zx-ux-sdk/rom/48.rom',
+                   '--tape',str(out/'hisoft48.tap'),
+                   '-o',str(out/(name+'.ssx')),
+                   '--report',str(out/(name+'.json'))]
+              run=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=100)
+              row={'program':name,'input':str(source),'ok':run.returncode==0,'output':run.stdout.strip()}
+              results.append(row)
+              print(f'{name}: {"PASS" if row["ok"] else "FAIL"}: {row["output"][:250]}',flush=True)
+          (out/'rbc-60-results.json').write_text(json.dumps(results,indent=2)+'\n')
+          if not results[0]['ok']:sys.exit('HELLO compiler regression')
+          print('PASS=',sum(x['ok'] for x in results),'TOTAL=',len(results))
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: rbc-python-source-trial
           path: |
-            upstream-pyhsb
-            trial-result/*.log
-            trial-result/*-source.ssx
-            trial-result/*-source.json
-          retention-days: 7
+            trial-result/*.json
+            trial-result/*.ssx
+          retention-days: 1
