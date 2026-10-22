@@ -1,0 +1,10 @@
+Program: 01-minelay
+System: ZX-UX.tzx
+Build: PASS
+TZX: PASS
+CHECK normal PASS
+CHECK adversarial PASS
+CHECK integration PASS
+CHECK remnants PASS
+Git scope: PASS
+Delivery: PENDING

@@ -10,6 +10,8 @@ real assertions. At closeout, validate the published Git commit, not a new build
 """
 from __future__ import annotations
 import argparse
+import os
+import tempfile
 import pathlib
 import re
 import shutil
@@ -24,8 +26,16 @@ REQUIRED = ("normal", "adversarial", "integration", "remnants")
 
 def execute(argv, cwd=ROOT, timeout=240):
     try:
-        return subprocess.run(argv, cwd=cwd, capture_output=True, text=True,
-                              timeout=timeout, check=False)
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONUNBUFFERED="1")
+        # A descriptor inherited by a child of an emulator/toolchain process
+        # must not keep an otherwise completed subprocess PIPE open forever.
+        with tempfile.TemporaryFile(mode="w+t") as out, tempfile.TemporaryFile(mode="w+t") as err:
+            finished = subprocess.run(argv, cwd=cwd, stdout=out, stderr=err,
+                                      timeout=timeout, check=False, env=env)
+            out.seek(0)
+            err.seek(0)
+            return subprocess.CompletedProcess(argv, finished.returncode,
+                                               out.read(), err.read())
     except (OSError, subprocess.TimeoutExpired):
         return None
 
@@ -210,14 +220,10 @@ def main():
         return bool(errors)
 
     if not errors:
-        build = execute([sys.executable, str(ROOT / "build" / "build-c48.py"),
-                         "--sdk", str(args.sdk.resolve()), args.program], timeout=240)
-        if build is None or build.returncode:
-            errors.append("single frozen build failed or timed out")
-            if build:
-                print(build.stderr[-1500:])
-    if not errors:
         errors += binary_errors(ssx, tzx, source.stem)
+    tested_bytes = None
+    if not errors:
+        tested_bytes = (ssx.read_bytes(), tzx.read_bytes())
     if not errors:
         test = args.test or folder / ("test-" + source.stem + ".py")
         test = (ROOT / test).resolve() if not test.is_absolute() else test.resolve()
@@ -234,6 +240,17 @@ def main():
                 verdict, problem = test_result(result.stdout)
                 if problem:
                     errors.append(problem)
+    if not errors:
+        build = execute([sys.executable, str(ROOT / "build" / "build-c48.py"),
+                         "--sdk", str(args.sdk.resolve()), args.program], timeout=240)
+        if build is None or build.returncode:
+            errors.append("single frozen build failed or timed out")
+            if build:
+                print(build.stderr[-1500:])
+    if not errors:
+        errors += binary_errors(ssx, tzx, source.stem)
+        if not errors and (ssx.read_bytes(), tzx.read_bytes()) != tested_bytes:
+            errors.append("final build differs from the binaries exercised by the real ZX-UX tests")
     if not errors:
         errors += clean_tmp()
     if not errors:

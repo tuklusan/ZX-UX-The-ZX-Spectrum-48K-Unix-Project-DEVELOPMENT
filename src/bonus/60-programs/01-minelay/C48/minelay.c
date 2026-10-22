@@ -122,10 +122,14 @@ static void menu(void)
     int i;
     full_clear();
     if(gameover){
-        line(5,8,"G A M E  O V E R",7);
-        line(8,7,"You scored",5);digits(8,18,score);
-        if(score>highscore)highscore=score;
-        line(10,2,"The high-score is",7);digits(10,22,highscore);
+        inverse(1);line(5,8,"G A M E  O V E R",7);inverse(0);
+        line(8,9,"You scored ",5);digits(8,20,score);
+        if(score>highscore){
+            highscore=score;
+            line(11,1,"Well done- A new high-score!!",7);
+        } else {
+            line(11,2,"The high-score is",7);digits(11,22,highscore);
+        }
     }
     line(13,1,"Press 1 for a hard game",6);
     line(15,1,"or 2 for an easier game",6);
@@ -186,26 +190,33 @@ static void lose_life(void)
     blank(my2/2,mx2/2);
     if(has_axe){
         has_axe=0;beep(0.05,15);respawn_mine();
-        /* The pursuer can collide in the very cell holding the player. */
-        at_cell(y,x,129,6,0);
+        /* BASIC 6000 drops the axe but does not redraw until line 100. */
         return;
     }
     for(i=7;i>=0;i--){at_cell(y,x,129,i,0);beep(0.01,i);}
     lives--;
     if(lives<=0){gameover=1;return;}
-    blank(y,x);x=1;y=2;last_x=x;last_y=y;
+    /* BASIC 6005 clears the last displayed player cell (y1,x1). */
+    blank(last_y,last_x);
+    blank(y,x); /* BASIC 5500 also clears the collision/explosion cell. */
+    x=1;y=2;last_x=x;last_y=y;
     respawn_mine();status_line();
 }
 static void player_step(void)
 {
     int nx,ny,a;
+    /* BASIC 100 draws the player at the PRE-movement coordinates.
+     * The changed position becomes visible at the next loop iteration. */
+    blank(last_y,last_x);
+    if(has_axe)at_cell(y,x,130,6,0);
+    else at_cell(y,x,129,6,0);
+    last_x=x;last_y=y;
     nx=x;ny=y;
     if(kbd_down('p'))nx++;
     if(kbd_down('i'))nx--;
     if(kbd_down('z'))ny++;
     if(kbd_down('q'))ny--;
     if(nx<0||nx>30||ny<1||ny>21){nx=x;ny=y;}
-    blank(last_y,last_x);
     a=get_attr(ny,nx);
     if(a==7 && board[ny*32+nx]!=32){
         if(has_axe && ny!=1 && ny!=21 && nx!=0 && nx!=30){
@@ -216,8 +227,8 @@ static void player_step(void)
     if(a==68){has_axe=1;beep(0.03,10);}
     if(a==5){x=nx;y=ny;lose_life();if(gameover)return;}
     else{x=nx;y=ny;}
-    if(has_axe)at_cell(y,x,130,6,0);else at_cell(y,x,129,6,0);
-    last_x=x;last_y=y;
+    /* Do not draw the new location yet: BASIC redraws it at line 100
+     * on the following iteration. Mine collision uses the visible cell. */
     status_line();
 }
 static void mine_step(void)
@@ -232,12 +243,14 @@ static void mine_step(void)
     if(my2<y*2)my2++;else if(my2>y*2)my2--;
     if(mx2<x*2)mx2++;else if(mx2>x*2)mx2--;
     my=my2/2;mx=mx2/2;
-    if(my==y&&mx==x){lose_life();return;}
+    /* BASIC 715 tests ATTR: the player is still drawn at y1,x1,
+     * not at the as-yet-undrawn position updated by BASIC 110. */
+    if(get_attr(my,mx)==6){lose_life();return;}
     /* BASIC 700/705/720: deposit the previous mine BEFORE drawing the
      * pursuer. A half-cell step can keep the same visible character cell;
      * drawing the deposited mine last would hide the active pursuer. */
-    if(hard){if(rnd(100)>70)at_cell(old_my,old_mx,133,5,0);}
-    else {if(rnd(100)>85)at_cell(old_my,old_mx,133,5,0);}
+    if(hard){if(rnd(100)>=70)at_cell(old_my,old_mx,133,5,0);}
+    else {if(rnd(100)>=85)at_cell(old_my,old_mx,133,5,0);}
     at_cell(my,mx,131,5,1);
     old_my=previous_my;old_mx=previous_mx;
     if(rnd(5)==0){
