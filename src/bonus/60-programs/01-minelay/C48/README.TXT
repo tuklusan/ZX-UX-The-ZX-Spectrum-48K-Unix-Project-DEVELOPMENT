@@ -162,3 +162,17 @@ Additional adversarial runtime regression:
 - This is an incremental fix. The three independent clean scan rounds,
   full axe and collision parity, sound/timing and yolo loading remain
   open; do not declare the port equivalent or complete.
+
+2026-10-22 historical reserve-life display correction:
+- The original BASIC line 60 shows only two reserve-player icons
+  when li=3. Line 6007 decrements li on a lost life, clearing the
+  appropriate reserve icon. C48 erroneously drew three icons at
+  startup. The status display now renders lives-1 reserve glyphs.
+- Regression checks the original BASIC line and verifies actual
+  frozen-kernel row-0 bitmap glyphs in columns 13, 14 and 15:
+  the first two show the reserve symbol and the third does not.
+- Two identical frozen SSX/TZX builds and the full Minelay kernel
+  smoke regression passed, including six no-ghost frames, idle game
+  over and restart. Private checker passed both updated text files.
+- No historical BASIC or frozen platform bytes were changed;
+  full three-clean-round source/audit closeout remains open.

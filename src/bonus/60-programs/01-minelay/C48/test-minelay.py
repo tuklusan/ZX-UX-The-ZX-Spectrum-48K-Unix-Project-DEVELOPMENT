@@ -77,6 +77,16 @@ def check_collision_cleanup():
         'Player must be restored when a mine-layer overlap consumes an axe')
     print('PASS: BASIC 6000 pursuer cleanup before respawn; axe overlap redraw')
 
+def check_reserve_lives():
+    basic = (THIS.parent / 'BASIC' / '01-minelay.bas').read_text()
+    c48 = (THIS / 'minelay.c').read_text()
+    assert '60 PRINT AT 0,13;"{91}{91}    Hi-score "' in basic
+    assert '6007 LET li=li-1' in basic
+    assert 'for(c=0;c<lives-1&&c<6;c++)' in c48, (
+        'BASIC shows two reserve symbols when li=3, not three')
+    print('PASS: reserve-life display matches BASIC li=3 with two icons')
+
+
 def check_original_title():
     basic = (THIS.parent / 'BASIC' / '01-minelay.bas').read_text()
     original = re.search(r'^9500 PRINT INK 0;AT 0,0;"([^"]*)"', basic, re.M)
@@ -119,6 +129,12 @@ def check_screen(system, sdk):
     runner.session.kb.add([('press', char_keys('2'), 20)])
     gameplay = step(115)
     assert gameplay != menu, 'Minelay did not draw active maze after choice 2'
+    def glyph(scr, row, col):
+        return tuple(scr[((row & 24) << 8) + (pix << 8) +
+                         ((row & 7) << 5) + col] for pix in range(8))
+    player_glyph = (28,28,73,62,8,28,20,54)
+    assert [glyph(gameplay, 0, c) == player_glyph for c in (13,14,15)] == [True,True,False], (
+        'Minelay row-0 life display differs from BASIC: expected 2 reserves')
     runner.session.kb.add([('press', char_keys('p'), 20)])
     after_input = step(55)
     assert after_input != gameplay, 'Minelay did not respond to P movement'
@@ -195,6 +211,7 @@ def main():
     check_placements()
     check_pursuer_draw_order()
     check_collision_cleanup()
+    check_reserve_lives()
     check_original_title()
     if a.system and a.sdk:
         check_screen(a.system.resolve(), a.sdk.resolve())

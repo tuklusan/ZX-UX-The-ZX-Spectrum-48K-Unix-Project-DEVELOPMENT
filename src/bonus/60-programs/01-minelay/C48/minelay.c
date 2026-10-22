@@ -75,7 +75,8 @@ static void status_line(void)
     int c;
     line(0,0,"Score       ",7);digits(0,6,score);
     for(c=13;c<32;c++)blank(0,c);
-    for(c=0;c<lives&&c<6;c++)at_cell(0,13+c,129,7,0);
+    /* BASIC 60 displays only the reserve lives: two glyphs for li=3. */
+    for(c=0;c<lives-1&&c<6;c++)at_cell(0,13+c,129,7,0);
     line(0,19,"Hi-score",7);digits(0,28,highscore);
 }
 static void title_animation(void)
