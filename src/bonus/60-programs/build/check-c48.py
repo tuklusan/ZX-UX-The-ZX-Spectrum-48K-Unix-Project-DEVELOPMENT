@@ -18,6 +18,8 @@ import shutil
 import subprocess
 import sys
 
+from port_progress import PROGRESS, ProgressError, load_progress
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TMP = ROOT / "build" / "tmp"
 PREFIX = "src/bonus/60-programs/"
@@ -166,7 +168,7 @@ def remote_errors(repo, folder):
     head = local.stdout.strip()
     if head != remote.stdout.split()[0]:
         errors.append("HEAD differs from remote main")
-    for file in sorted(folder.rglob("*")):
+    for file in sorted([*folder.rglob("*"), ROOT / PROGRESS]):
         if not file.is_file() or file.name.startswith("."):
             continue
         path = file.relative_to(repo).as_posix()
@@ -189,6 +191,15 @@ def main():
     args = cli.parse_args()
     sys.dont_write_bytecode = True
     errors = []
+    try:
+        state = load_progress(ROOT)
+        if args.closeout:
+            if not state["completed"] or state["completed"][-1] != args.program:
+                errors.append("closeout requires the latest completed program")
+        elif args.program != state["next_program"]:
+            errors.append("progress cursor requires " + str(state["next_program"]))
+    except ProgressError as exc:
+        errors.append("invalid progress cursor: " + str(exc))
     if not re.fullmatch(r"\d\d-[a-z0-9-]+", args.program):
         cli.error("expected a numbered program directory")
     program = ROOT / args.program

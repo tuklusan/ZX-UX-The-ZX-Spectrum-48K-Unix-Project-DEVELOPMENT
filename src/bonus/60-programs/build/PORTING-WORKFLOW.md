@@ -1,63 +1,94 @@
-# BASIC-to-C48 workflow — v0.5
+# BASIC-to-C48 workflow — v0.6
 
 Applies to all 60 numbered Spectrum BASIC programs, in directory order 01–60.
-Translate the actual program, not a substitute. Execute autonomously within the
-current active session: **continue without approval prompts or pauses between
-steps and programs**. **Zero progress chatter, narration or interim chat
-feedback.** On completion report only the concise final outcome, GitHub commit,
-and any genuine blockers. Do not promise unattended work after the session ends.
+Translate the real historical program, not a substitute. Continue autonomously
+within the active session, without approval pauses between stages or programs.
+No routine chat narration; report only a minimal final outcome or blocker.
+No work continues outside an active session.
 
 **Hard boundary:** ZX-UX `beta-0.2.0` is frozen. Write only inside
 `src/bonus/60-programs/`. Preserve every original `BASIC/` file byte-for-byte.
 Never modify the SDK, compiler, emulator, root scripts, `dist/`, or frozen
-checks. Run frozen tools only with output in this workspace or in isolated
+checks. Run frozen tools only with output in this workspace or isolated
 disposable copies. GitHub `main` is permanent storage.
 
-## Six steps per program
+## Mandatory cross-chat recovery — do this FIRST
 
-1. **Inspect BASIC.** Read the entire `.bas` listing and historical tape,
-   screenshots, controls and replay notes. Establish the actual program's
-   rules, calculations, DATA/UDGs, input, output, color, timing, animation and
-   end states. Compare against genuine BASIC execution when needed.
-2. **Translate.** Put the faithful C48 source and optional glyphs under the
-   numbered program's `C48/`. Use frozen C48 APIs and shared `c48lib`.
-   Keep temporary same-basename assembly under ignored `build/tmp/`.
-   Do not alter the originals to make comparisons pass.
-3. **Develop with targeted tests.** Build once after each source change using
-   `python build/build-c48.py NN-name`, run focused tests, correct C48 defects,
-   and add regressions. Do not rebuild unchanged source just to duplicate an
-   output or maintain separate digest records. Keep a brief `C48/README.TXT`
-   for real differences and any unresolved issues.
-4. **Independently review.** On the latest complete BASIC and C48 source,
-   perform two distinct autonomous passes: **normal** (every relevant BASIC
-   branch, calculation and observable behavior) and **adversarial** (invalid
-   or extreme input, collisions, timing, state changes, end/restart, edges).
-   Use separate review agents in parallel when available; otherwise conduct
-   distinct passes without pretending other agents were used. Repair each
-   discovered defect in C48, add a failing-then-passing test, and repeat the
-   affected reviews. No human approval or human signoff is required.
-5. **Final integration.** Run the port under the actual frozen ZX-UX kernel,
-   test applicable states and controls, compare equivalent original/C48
-   screens, and inspect for **leftover pixels, attributes, character fragments,
-   trails, stale messages and erased objects**. Use bitmap/attribute checks
-   where possible; treat timing, font and random differences carefully.
-   Test loading the TZX with `yolo` before claiming that path works. Run the
-   complete program-specific regression suite once on the final source.
-   If anything fails, return to step 3 and repeat relevant checks.
-6. **Deliver once.** Only after the complete final suite passes: run the
-   automatic gate, examine the full Git diff (including deletions/renames),
-   reject changes outside `src/bonus/60-programs/` or unrequested BASIC
-   changes, run the available private checker, and make **one commit and push
-   for the completed program**. Use fast-forward only; read back the remote
-   HEAD, changed paths and files. Do not commit incremental fixes or start
-   the next numbered program until the current one passes. An unfinished
-   program is blocked, not finished; do not disguise unrun tests as passes.
+1. Read live GitHub `main` HEAD (not a remembered commit or a stale local
+   mirror). Fetch `src/bonus/60-programs/PORTING-PROGRESS.json` and this
+   workflow **from that same HEAD**. If local checkout differs, reconcile
+   safely before using it; never discard unrelated local changes.
+2. Run `python build/port_progress.py status` in the up-to-date workspace.
+   The JSON file is the committed cursor: `completed` is a continuous prefix
+   of 01–60, and `next_program` is the first not yet completed. Both are
+   validated against the 60 actual numbered directories.
+3. Confirm the last completed program's remote `C48/PORT-RESULT.txt` and
+   committed source/SSX/TZX/tests exist, and that its commit passed closeout.
+   If the GitHub cursor disagrees with committed results, **stop and repair
+   the record**, rather than silently skipping or redoing work.
+4. **Resume only `next_program`. Never re-port a `completed` program.**
+   Existing experimental or pilot C48 files in a later numbered directory do
+   not mark it complete; when its turn arrives, review and validate them under
+   the current gate. If `next_program` is null, all 60 are complete.
 
-## Automatic final gate — no checkboxes or extra paperwork
+Current baseline at workflow v0.6 adoption: `01-minelay` is completed on
+GitHub in commit `82a3514539e35641c09e659d9a31b0d9da90d9e7`.
+`02-fall-guy` is next. This paragraph is historical; always use the live
+committed JSON rather than a copied summary or an earlier conversation.
 
-Each program's existing `C48/test-<stem>.py` should execute its real checks
-with `--system PATH` and `--sdk PATH`, and print these lines **only after**
-the respective assertions passed:
+## Six steps for each program
+
+1. **Inspect BASIC.** Read the entire original `.bas` listing and relevant
+   tape, screenshots, controls, timing and replay notes. Establish actual
+   behavior, calculations, DATA/UDGs, input/output, color, sound, animation
+   and end states. Compare with genuine BASIC execution where needed.
+2. **Translate.** Put faithful C48 sources and optional glyphs under its
+   `C48/`. Use frozen C48 APIs and `c48lib`. Keep temporary matching assembly
+   in ignored `build/tmp/`. Never change historical BASIC for a comparison.
+3. **Develop and test.** After each source revision build once with
+   `python build/build-c48.py NN-name`, run targeted tests and repair defects.
+   Do not duplicate unchanged-source builds or manually maintain hashes.
+   Describe meaningful differences and any open gaps in `C48/README.TXT`.
+4. **Independently review.** On the latest complete BASIC and C48 sources,
+   perform separate normal and adversarial audits. Check all significant
+   calculations, behavior, edge cases, inputs, collision, state, restart,
+   timing and end conditions. If a defect appears, fix, regress and repeat
+   the affected checks. Never claim independent agents unless used.
+5. **Final integration.** Exercise actual frozen ZX-UX gameplay and controls;
+   compare genuine equivalent BASIC/C48 states; inspect leftover pixels,
+   attributes, sprite trails, ghost text and stale messages. Use real bitmap
+   and attribute captures where possible. Test the actual TZX with `yolo`
+   before claiming that path passed. Run the full program tests on final
+   source. A failure returns to step 3.
+6. **Deliver ONCE.** Run the automatic gate, update the progress cursor and
+   include the cursor in the **same** single commit as this completed program.
+   Review the full proposed diff; reject any locked path or BASIC change.
+   Run the available private checker, commit, fast-forward push, then read
+   back remote HEAD, changed paths, port bytes and progress cursor. Run
+   `--closeout`. Advance to the next numbered program only after success.
+
+## Release commands (from `src/bonus/60-programs/`)
+
+```sh
+python build/port_progress.py status
+python build/check-c48.py NN-name --system PATH/ZX-UX.tzx --sdk PATH/SDK
+# Only after READY: update cursor BEFORE staging the single program commit
+python build/port_progress.py complete NN-name
+# Inspect full diff; run private checker; commit port AND progress in one push
+python build/check-c48.py NN-name --system PATH/ZX-UX.tzx --sdk PATH/SDK --closeout
+python build/port_progress.py status
+```
+
+`complete` refuses any program other than the next one, missing C48 binaries,
+or missing `PORT-RESULT.txt` gate PASS markers. The checker refuses a
+completed/out-of-order program at normal gate time. Its closeout accepts only
+the newest completed program, checks the committed progress file as well as
+that port's files, and checks remote `main` equals local HEAD. These safeguards
+prevent a new chat from restarting a finished port and stop advancement on a
+failed or unpublished port. Run `python build/test-port-progress.py` when
+changing the cursor code; it does not build or emulate games.
+
+Program-specific tests must emit these lines only after real assertions:
 
 ```
 CHECK normal PASS
@@ -66,28 +97,18 @@ CHECK integration PASS
 CHECK remnants PASS
 ```
 
-For programs that never update their display, `CHECK remnants NA` is allowed
-only when the test script verifies that the case does not apply. The program
-may use a different test script through `--test PATH`. These lines replace
-manual PASS fields; they cannot independently prove review thoroughness.
+`CHECK remnants NA` needs actual proof no display remnants can apply. The
+single-build gate executes the tests, validates package and tape name, rejects
+unauthorized paths and uses `C48/PORT-RESULT.txt` to record its result. A
+compile or intro screenshot is not full fidelity. No manual signoffs,
+`PORT-CHECK.json`, hash ledger, duplicate builds or repeated full scans.
 
-From `src/bonus/60-programs/`:
+**Interrupted or blocked ports:** Never advance the cursor for partial work.
+An uncommitted port can be lost when the session ends; this follows the
+one-commit-per-finished-program rule. An unpushed local cursor is NOT canonical.
+Re-fetch GitHub `main` at every new chat. A failed checker, remote conflict,
+missing tests, or closeout failure is a blocker, not a completed program.
 
-```sh
-python build/check-c48.py NN-name --system PATH/ZX-UX.tzx --sdk PATH/SDK
-# commit and fast-forward push only if READY
-python build/check-c48.py NN-name --system PATH/ZX-UX.tzx --sdk PATH/SDK --closeout
-```
-
-The gate builds **once**, runs the program-specific tests using the actual
-system, checks the SSX/TZX and tape name, rejects dirty or out-of-scope Git
-changes, then prints all gate results and fails closed. At closeout it also
-checks the live `origin/main` and committed file bytes. No manual JSON,
-second build, repeated full-source scans or separate hash spreadsheet.
-
-**Scope of the gate:** It can verify commands, outputs, test assertions and
-Git delivery, but cannot prove that an independent review was rigorous or
-that untested gameplay is correct. Record such gaps plainly and do not call
-an incomplete port finished. Local uncommitted work can be lost if a session
-ends; this is an explicit trade-off of the one-commit-per-completed-program
-policy, not permission to make intermediate commits.
+**Checker scope:** Machine checks cannot by themselves prove that review was
+rigorous or that untested gameplay behaves correctly. Describe real gaps;
+never claim a check ran when it did not.
