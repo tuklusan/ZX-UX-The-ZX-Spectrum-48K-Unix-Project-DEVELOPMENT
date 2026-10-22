@@ -1,4 +1,4 @@
-# BASIC-to-C48 porting workflow — v0.2
+# BASIC-to-C48 porting workflow — v0.3
 
 Applies to **every one of the 60 numbered historical ZX Spectrum BASIC
 programs**, whether a game, utility, educational program, simulation,
@@ -20,13 +20,13 @@ numbered program directory and `stem` is the selected C48 source/tape name
 - **Historical preservation:** All existing `BASIC/` files, tapes, scripts,
   timing logs, and screenshots remain byte-for-byte unchanged. The `.bas`
   source is the translation authority; the original tape and reference
-  captures provide independent behavior and visual evidence.
+  captures provide independent behavior and visual proof.
 - **Dedicated work:** New source, port-specific glyphs, final SSX/TZX,
   notes, tests and actual captures belong in that program's `C48/`.
   Shared renderer/font/header belong in `c48lib/`. Build/test tools
   belong in `build/`. Generated files belong only in ignored
   `build/tmp/` (tracked placeholder: `.gitkeep`).
-- **Evidence:** Translation, compilation, linkage, tape creation,
+- **Proof:** Translation, compilation, linkage, tape creation,
   boot/execution, visual correspondence, behavior and `yolo` loading
   are *different claims*. Mark PASS / FAIL / NOT RUN / NOT APPLICABLE,
   with proof. No fabricated screenshots or unrun test results.
@@ -50,6 +50,7 @@ c48lib/
   c48lib.asm, c48lib-font.asm, c48lib.h, FONT-SOURCE.txt
 build/
   build-c48.py               C48 builder, historical 01–60 order
+  check-c48.py               mandatory executable final 21-item gate
   build-basic.py             optional fresh BASIC tape/FUSE references
   test-c48.py                existing pilot-specific tests; not universal
   tmp/.gitkeep               only tracked contents of temporary area
@@ -201,7 +202,7 @@ Capture only real emulator frames. Compare corresponding BASIC
 states and expected calculations, outputs and interactions.
 
 **Check:** Actual ZX-UX execution, observable correct behavior
-and comparisons are evidenced, with untested branches named.
+and comparisons are proofd, with untested branches named.
 Do not infer full equivalence from a boot or one screenshot.
 
 ### 9. Explicit residual-pixel and stale-screen-object check
@@ -320,7 +321,7 @@ passes** and cannot be concealed as clean.
 If **either Step-1 scan or either independent Step-2 audit**
 finds **any** new gap/defect, then:
 
-- Fix only authorized C48/shared-port/test artifacts, preserving
+- Fix only authorized C48/shared-port/test files, preserving
   BASIC and the frozen platform. Add or update reproduction tests.
 - Rebuild and rerun relevant real-kernel/visual checks, including
   the residual-pixel check. Recheck on-disk bytes.
@@ -362,7 +363,7 @@ Round | BASIC SHA-256 | C48 source/glyph/shared SHA-256 | Step-1 | Normal | Adve
 
 A fresh scan is not a claim of a separate reviewer; identify
 who or what performed each review and what was independently
-checked. The final counter, hashes and concrete test evidence
+checked. The final counter, hashes and concrete test proof
 must be part of the port's completion record.
 
 ## After the three-scan gate
@@ -386,33 +387,164 @@ mapping, commands, actual controls, deliberate and justified
 platform differences, tests, screenshots, file hashes,
 three-clean-scan record, unresolved limitations and any
 unproven behaviors. Do not declare full equivalence unless
-all relevant behavior is evidenced. Never invent execution,
+all relevant behavior is proofd. Never invent execution,
 captures, checks or success.
 
 **Check:** Distinguish source translated, compiled, linked,
 tape packaged, actual ZX-UX execution, visuals compared,
 independent audits, and `yolo` loaded (if tested).
 
-### 12. Inspect, push and verify GitHub remotely
+### 12. Execute the fail-safe checklist, then push and close out
 
-Read the current remote `main` HEAD **again** and reconcile
-intervening commits. Inspect the *full* proposed diff,
-including additions, changes, renames and deletions. Reject
-the entire push if **any path** is outside
-`src/bonus/60-programs/`, or any original historical file
-was changed without explicit authorization. Stage only
-authorized work, run the existing private checker when
-available, commit and fast-forward push; never force-push.
-Read back remote HEAD, tree and all changed paths.
-A rejected checker, push or remote check is a blocker,
-never a claimed success.
+**This gate is mandatory, not advisory.** The workflow cannot end
+because the author believes the preceding steps are done. An actual
+executable validator must enumerate **all 21 acceptance items** and
+exit successfully. If any item is missing, stale, failed, not run, or
+unsupported by proof, go back and perform that work. Do not
+skip a failed item, mark it PASS without proof, or bypass the gate.
 
-**Check:** Final remote bytes and filenames equal reviewed
-deliverables; report commit SHA, tests and outstanding gaps.
+#### 12a. Initialize the checklist before the repeated audit
+
+From the 60-program workspace root, after creating the C48 port:
+
+```sh
+python build/check-c48.py --init NN-name
+```
+
+This creates `NN-name/C48/PORT-CHECK.json` containing a full source
+SHA-256 snapshot and explicitly **NOT_RUN** entries, not fake passes.
+The snapshot covers all files inside that program's historical BASIC
+directory, the C48 source/headers/glyphs, the shared C48 library
+sources and the builder. Keep this JSON in the program's `C48/`
+directory as part of its permanent review proof.
+
+For every reviewable checklist item, change the status to `PASS`
+**only after carrying out the actual check**, and supply both:
+- A meaningful `note` naming the test/inspection and outcome.
+- One or more existing, nonempty proof files in `proof`
+  (paths relative to the 60-programs workspace, for example a
+  program-local notes file, test log, or genuine capture).
+
+`NOT_APPLICABLE` is allowed only for the four genuinely conditional
+items: input behavior, residual-screen check when a program never
+changes its display, `yolo` if no such claim is made, and the private
+checker if unavailable. Each still needs an explicit explanation and
+an proof path. All other items must PASS; NOT_RUN and FAIL block.
+The nine machine-verifiable entries are computed by the validator
+and are **not** writable checkboxes.
+
+#### 12b. Log all three full fresh-byte audits
+
+The `audits` array must contain an entry per scan with:
+`round` (sequential integer), timezone-aware `time`,
+`source_sha256` (the exact current complete source snapshot),
+`scan`, `normal`, `adversarial`, and `defects`.
+
+Each of `scan`, `normal`, and `adversarial` must have its own
+`status: PASS`, `reviewer`, meaningful `note`, and `proof`
+path(s). `defects` must be `[]`. Manual byte-by-byte scans and
+independent reviews must actually have occurred: code cannot
+verify that a human or agent read every line simply by checking
+a signed-off JSON entry. It *can* refuse missing records, stale
+source hashes, missing proof files, incomplete scans, fewer
+than three successive clean rounds, and declared unresolved
+defects. Do not impersonate independent reviewers.
+
+If any defect is found in either audit, fix only authorized
+C48 files, rebuild and start from the first byte of the latest
+BASIC/C48 disk sources. Then run:
+
+```sh
+python build/check-c48.py --restart NN-name
+```
+
+This archives the former audit record under `history`,
+re-fingerprints the repaired sources, clears **all** existing
+PASS statuses and the consecutive-scan counter, and requires
+three new complete clean rounds. It does not change BASIC.
+
+Record `known_defects: []` **only when truly none remain**.
+Add the expected `binary_sha256` map for the current SSX/TZX
+and `rebuild` proof with `status: PASS`, `note`,
+`proof`, and equal `first` and `second` binary-hash maps
+from two actual previous builds. This record alone does not
+pass the build gate: the validator repeats both builds itself.
+
+#### 12c. Mandatory pre-push execution
+
+```sh
+python build/check-c48.py NN-name
+```
+
+The script must examine and **print all 21 items**, not stop after
+the first PASS or FAIL. The validator independently checks:
+- Current disk-byte source fingerprints against the record,
+  complete BASIC file hashes, and any changed Git paths outside
+  the writable subtree or under historical `BASIC/`.
+- The complete recorded three-round clean audit streak and
+  existing proof for every human judgment.
+- SSX1 and TZX presence, internal executable tape name,
+  the 10-character limit and expected binary hashes.
+- **Two newly executed frozen-C48 builds** with byte-identical
+  SSX/TZX output matching the submitted files.
+- No generated same-name assembler companions under `C48/`,
+  and no unclean `build/tmp/` contents.
+
+Only item **21 (post-push remote read-back)** may say PENDING
+at this stage. A zero exit code means **PREPUSH READY**,
+not finished or remotely delivered. Any other missing item
+exits nonzero and forbids publishing a "completed" port.
+Run the relevant missing step, repeat affected tests, and
+restart the three-round audit on any source change or defect.
+
+#### 12d. Commit and verify *all 21* items after the push
+
+After PREPUSH READY: verify live GitHub `main`, reconcile
+intervening work, inspect the complete proposed changed-path
+list and reject anything outside `src/bonus/60-programs/`
+or any unrequested original BASIC edits. Run the existing
+private checker when available. Commit only authorized files
+and fast-forward push; never force-push or modify tags.
+Then run **the second mandatory gate**:
+
+```sh
+python build/check-c48.py --closeout NN-name
+```
+
+This checks all 21 again. For item 21 it independently
+queries `origin/main` using `git ls-remote`, checks local
+HEAD equals the remote commit, examines the commit changed
+paths, and verifies the checklist and port outputs are
+tracked and byte-identical to the pushed HEAD. It requires
+a live authenticated Git remote. If credentials, network,
+an up-to-date checkout, or other prerequisites are missing,
+it **fails closed**; do not substitute an unsupported claim.
+The remote HEAD and full changed-path list must also be
+read back and reported by the delivery supervisor.
+
+**Only a zero-exit `CLOSEOUT COMPLETE` after a successful
+pre-push gate permits the workflow to end as delivered.**
+If a final check exposes a source change or new defect, stop,
+fix C48 only, and return to Audit Step-1 for three new
+consecutive clean scans. All outcome reports must list any
+unproven behaviors separately, never convert NOT_RUN to PASS.
+
+**Limit of the guarantee:** The program guarantees that every
+registered checklist entry is evaluated, missing/stale
+proof is rejected, objective checks are rerun, and
+completion fails closed. It cannot mathematically guarantee
+the honesty or completeness of a human/agent's manual
+line-by-line inspection; truthful distinct review proof
+and supervisory oversight remain essential.
+
 
 ## Per-program acceptance checklist
 
-Use PASS / FAIL / NOT RUN / NOT APPLICABLE **with evidence**
+This is the human-readable counterpart of the **21 mandatory IDs**
+in `build/check-c48.py`. The executable gate, not these printed
+checkboxes alone, determines closure. No item may be skipped.
+
+Use PASS / FAIL / NOT RUN / NOT APPLICABLE **with proof**
 for each relevant item; only a genuine non-applicable feature
 may be marked NOT APPLICABLE:
 
@@ -440,7 +572,7 @@ may be marked NOT APPLICABLE:
 [ ] Remote GitHub diff scope, fast-forward push and read-back verified
 Known legitimate differences:
 Missing tests / blockers:
-Three-round scan hashes / review evidence:
+Three-round scan hashes / review proof:
 Verified remote commit:
 ```
 
@@ -451,7 +583,7 @@ requirement remains unproven, mark it NOT RUN and withhold
 a "complete/equivalent" claim until it is tested. Report
 verified milestones precisely and keep blocked ports open.
 
-This workflow is **v0.2**, generic to all 60 BASIC programs.
+This workflow is **v0.3**, generic to all 60 BASIC programs.
 When new defects expose a repeatable weakness, update the
 workflow without retroactively claiming previously unrun
 audits or tests were performed.
