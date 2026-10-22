@@ -27,14 +27,20 @@ def main():
     compile((ROOT / 'build/build.py').read_bytes(), str(ROOT / 'build/build.py'), 'exec')
     if not isinstance(json.loads((TOOLS / 'runs.json').read_text()), dict):
         raise RuntimeError('Invalid local run configurations')
-    folders = sorted(p for p in (ROOT / 'src/bonus/60-programs').iterdir()
+    collection = ROOT / 'src/bonus/60-programs'
+    if not (collection / 'c48lib').is_dir() or (collection / 'c48lib').is_symlink():
+        raise RuntimeError('Missing or unsafe shared C48 library')
+    folders = sorted(p for p in collection.iterdir()
                      if p.is_dir() and p.name[:2].isdigit())
-    if len(folders) != 60:
+    if len(folders) != 60 or [int(p.name[:2]) for p in folders] != list(range(1, 61)):
         raise RuntimeError('Expected exactly 60 original BASIC program directories')
     for folder in folders:
         listings = list((folder / 'BASIC').glob('*.bas'))
-        if len(listings) != 1 or (folder / 'C48').exists():
+        if len(listings) != 1 or any(p.is_symlink() for p in listings):
             raise RuntimeError('Unexpected BASIC program directory: ' + folder.name)
+        c48 = folder / 'C48'
+        if c48.is_symlink() or (c48.exists() and not c48.is_dir()):
+            raise RuntimeError('Invalid optional C48 directory: ' + folder.name)
     # Run the launcher from outside the project; the current directory must not matter.
     with tempfile.TemporaryDirectory() as elsewhere:
         result = subprocess.run([sys.executable, '-B', str(TOOLS / 'release.py'),

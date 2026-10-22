@@ -34,7 +34,7 @@ from zxmachine import FRAME                        # noqa: E402
 import zxscreen                                    # noqa: E402
 
 MACHINE_VERSION = 'rvm-machine/2-tzx-kernel'
-DEFAULT_SYSTEM = os.path.normpath(os.path.join(HERE, '..', '..', '..', 'zx-ux', 'ZX-UX.tzx'))
+DEFAULT_SYSTEM = os.path.normpath(os.path.join(HERE, '..', '..', '..', 'zx-ux', 'tzx', 'ZX-UX.tzx'))
 
 # system calls rvm follows (src/unix.asm systab)
 SYS_EXIT, SYS_FORK, SYS_READ, SYS_WAIT, SYS_SCREEN, SYS_SSXLOAD = 1, 2, 3, 7, 39, 40

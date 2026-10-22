@@ -28,7 +28,7 @@ replaces `dist/` only after the whole build succeeds. A missing `dist/` is norma
 before the first build. Deleting `dist/` is safe because it contains generated
 outputs only. A failed build keeps the previous `dist/` intact.
 
-The canonical GitHub repository currently **tracks `dist/`** so built artifacts
+The canonical GitHub repository currently **tracks `dist/`** so built files
 survive cloud/container shutdown and manual mirror pulls. After a verified
 build, commit and push the changed distribution (`git add -A dist` followed
 by `git commit` and `git push`). The initial tracked distribution was recovered
@@ -45,8 +45,16 @@ SDK, and C48 programs are built, `build.py` copies `src/docs/` to the staged
 `dist/` directory. Python bytecode caches are not included in output.
 
 Build intermediates are under `build/src/`, `build/sdk/`, and `build/out/`.
-The ZX-UX TZX is delivered to `dist/zx-ux/ZX-UX.tzx`. The SDK is in
-`dist/sdk/bin/`; compiled C48 programs are in `dist/assets/c48-bin/`.
+The ZX-UX system tape is delivered to `dist/zx-ux/tzx/ZX-UX.tzx`, with
+its source tree at `dist/zx-ux/src/`. The project license is at
+`dist/LICENSE`. The SDK is in `dist/sdk/bin/`; compiled C48 programs
+are in `dist/assets/c48-bin/`.
+
+Each historical BASIC program is copied into `dist/bonus/60-programs/`.
+Optional sibling `C48/` folders contribute only top-level `.c`, `.ssx`,
+`.tzx`, `.asm` files and the complete `SCREENSHOTS/` folder. Developer notes,
+checks, and build intermediates are not part of that C48 release payload.
+The shared `src/bonus/60-programs/c48lib/` is copied in full.
 
 ## Optional emulation and screenshots
 

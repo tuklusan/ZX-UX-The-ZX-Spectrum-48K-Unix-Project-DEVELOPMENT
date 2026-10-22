@@ -5,7 +5,7 @@ import hashlib
 
 def rewrite(source: str, syms: dict, image: bytes, low: bytes, kern: bytes, fs: bytes, bootstrap: bytes):
     original = "DEFAULT_SYSTEM = os.path.normpath(os.path.join(HERE, '..', '..', 'build', 'out', 'ZX-UX.tzx'))"
-    replacement = "DEFAULT_SYSTEM = os.path.normpath(os.path.join(HERE, '..', '..', '..', 'zx-ux', 'ZX-UX.tzx'))"
+    replacement = "DEFAULT_SYSTEM = os.path.normpath(os.path.join(HERE, '..', '..', '..', 'zx-ux', 'tzx', 'ZX-UX.tzx'))"
     if source.count(original) != 1:
         raise RuntimeError('VM system-image locator changed unexpectedly')
     source = source.replace(original, replacement)

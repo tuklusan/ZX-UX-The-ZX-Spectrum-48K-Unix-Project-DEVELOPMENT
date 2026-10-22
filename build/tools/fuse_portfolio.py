@@ -138,7 +138,7 @@ def run_case(names, destination, args, config=None):
         inputs = [str(BIN / (name + '.ssx')) for name in names]
         if any(not Path(f).is_file() for f in inputs):
             raise RuntimeError('compiled program missing')
-        if rtap.main(['-o', str(tape), '--after', str(DIST / 'zx-ux/ZX-UX.tzx')] + inputs):
+        if rtap.main(['-o', str(tape), '--after', str(DIST / 'zx-ux/tzx/ZX-UX.tzx')] + inputs):
             raise RuntimeError('cannot append program to boot TZX')
         display = ':' + str(args.display)
         screen = ['Xvfb', display, '-screen', '0', f'{SCREEN_WIDTH}x{SCREEN_HEIGHT}x24', '-nolisten', 'tcp']

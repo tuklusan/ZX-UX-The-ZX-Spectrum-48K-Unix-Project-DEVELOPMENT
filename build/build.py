@@ -41,7 +41,26 @@ def copy_bonus_programs(source, destination, no_cache):
         raise RuntimeError('Missing or unsafe BASIC social preview: ' + str(preview))
     output.mkdir(parents=True)
     for program in program_dirs:
-        shutil.copytree(program, output / program.name, ignore=no_cache)
+        # Historical BASIC material is copied just as before.  C48 contains
+        # development files, so it needs a separate release allowlist.
+        target = output / program.name
+        def omit_c48(folder, names):
+            omitted = set(no_cache(folder, names))
+            if pathlib.Path(folder) == program:
+                omitted.add('C48')
+            return omitted
+        shutil.copytree(program, target, ignore=omit_c48)
+        c48 = program / 'C48'
+        if c48.is_dir():
+            release = target / 'C48'
+            release.mkdir()
+            for item in sorted(c48.iterdir()):
+                if item.is_file() and item.suffix.lower() in {'.c', '.ssx', '.tzx', '.asm'}:
+                    shutil.copy2(item, release / item.name)
+                elif item.is_dir() and item.name == 'SCREENSHOTS':
+                    shutil.copytree(item, release / item.name)
+    # Shared C48 library files are required without selective filtering.
+    shutil.copytree(collection / 'c48lib', output / 'c48lib')
     shutil.copy2(preview, output / preview.name)
 
 
@@ -83,10 +102,12 @@ def main():
     _, _, free, _ = osbuild.mkfs(syms, osbuild.program_list())
     turbo_boot_build.create_tzx(sjasm, syms, syms['kend'] - 0x6000, free,
                                 output_name='ZX-UX.tzx')
-    (stage / 'zx-ux').mkdir(parents=True)
-    shutil.copy2(B / 'out/ZX-UX.tzx', stage / 'zx-ux/ZX-UX.tzx')
+    (stage / 'zx-ux/tzx').mkdir(parents=True)
+    shutil.copy2(B / 'out/ZX-UX.tzx', stage / 'zx-ux/tzx/ZX-UX.tzx')
     c48build.build(B / 'sdk', stage / 'assets/c48-src', stage / 'assets/c48-bin')
     sdkpack.pack(S / 'zx-ux-sdk', S / 'zx-ux', B, stage / 'sdk/bin')
+    (stage / 'sdk/bin/LICENSE').replace(stage / 'LICENSE')
+    shutil.copytree(S / 'zx-ux', stage / 'zx-ux/src', ignore=no_cache)
     # Final payload step: include documentation only after all builders succeed.
     # Stage it before publication so failed copies cannot damage last-good dist/.
     shutil.copytree(docs, stage / 'docs', ignore=no_cache)

@@ -21,6 +21,7 @@ class RebuildChecks(unittest.TestCase):
         (self.src / 'zx-ux/rom').mkdir(parents=True)
         (self.src / 'zx-ux/rom/48.rom').write_bytes(b'rom')
         (self.src / 'zx-ux/font4x8.bin').write_bytes(b'font')
+        (self.src / 'zx-ux/unix.asm').write_bytes(b'kernel source')
         (self.src / 'assets/c48-src').mkdir(parents=True)
         (self.src / 'assets/c48-src/demo.c').write_text('void main(void) {}')
         (self.src / 'docs').mkdir()
@@ -31,6 +32,8 @@ class RebuildChecks(unittest.TestCase):
             folder.mkdir(parents=True)
             (folder / 'demo.bas').write_text('10 PRINT "OK"')
         (bonus / 'sixty-programs-social-preview.png').write_bytes(b'preview')
+        (bonus / 'c48lib').mkdir()
+        (bonus / 'c48lib/c48lib.h').write_bytes(b'library header')
         (self.root / 'build').mkdir()
         (self.root / 'build/build.py').write_bytes(BUILD.read_bytes())
         (tools / 'osbuild.py').write_text('''
@@ -55,6 +58,8 @@ def build(stage, sources, dest):
 def pack(*args):
     args[-1].mkdir(parents=True)
     (args[-1]/'rcc').write_text('sdk')
+    (args[-1]/'LICENSE').write_text('project license')
+    (args[-1]/'THIRD-PARTY.txt').write_text('third party')
 ''')
 
     def run_builder(self, ok=True):
@@ -65,7 +70,7 @@ def pack(*args):
     def test_cold_and_repeated_build(self):
         self.assertFalse(self.dist.exists())
         self.run_builder()
-        self.assertTrue((self.dist/'zx-ux/ZX-UX.tzx').is_file())
+        self.assertTrue((self.dist/'zx-ux/tzx/ZX-UX.tzx').is_file())
         self.assertEqual((self.dist/'docs/manual.txt').read_text(), 'manual')
         self.assertEqual((self.dist/'bonus/60-programs/01-demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
         (self.dist/'stale').write_text('obsolete')
@@ -86,7 +91,7 @@ def pack(*args):
         self.run_builder()
         output = self.dist / 'bonus/60-programs'
         expected = {f'{number:02d}-demo' for number in range(1, 61)}
-        expected.add('sixty-programs-social-preview.png')
+        expected.update(('sixty-programs-social-preview.png', 'c48lib'))
         self.assertEqual({p.name for p in output.iterdir()}, expected)
         self.assertEqual({p.name for p in (self.dist / 'bonus').iterdir()},
                          {'60-programs'})
@@ -94,8 +99,41 @@ def pack(*args):
                          b'preview')
         self.assertTrue((source / 'PROGRAMS.zip').exists())
         self.assertTrue((source / 'TOOLS/helper.py').exists())
+        self.assertEqual((output/'c48lib/c48lib.h').read_bytes(), b'library header')
         self.run_builder()
         self.assertEqual({p.name for p in output.iterdir()}, expected)
+
+    def test_selected_c48_release_files_only(self):
+        source = self.src / 'bonus/60-programs/01-demo/C48'
+        source.mkdir()
+        allowed = ('main.c', 'main.ssx', 'main.tzx', 'glyphs.asm')
+        for name in allowed:
+            (source / name).write_bytes(name.encode())
+        for name in ('README.TXT', 'test-main.py', 'PORT-RESULT.txt', 'other.dat'):
+            (source / name).write_text('development only')
+        (source / 'build/tmp').mkdir(parents=True)
+        (source / 'build/tmp/generate.asm').write_text('exclude')
+        (source / 'SCREENSHOTS/nested').mkdir(parents=True)
+        (source / 'SCREENSHOTS/nested/sample.png').write_bytes(b'png')
+        self.run_builder()
+        result = self.dist / 'bonus/60-programs/01-demo/C48'
+        self.assertEqual({p.name for p in result.iterdir()}, set(allowed) | {'SCREENSHOTS'})
+        for name in allowed:
+            self.assertEqual((result / name).read_bytes(), (source / name).read_bytes())
+        self.assertEqual((result / 'SCREENSHOTS/nested/sample.png').read_bytes(), b'png')
+        self.assertEqual((self.src / 'bonus/60-programs/01-demo/BASIC/demo.bas').read_text(),
+                         (self.dist / 'bonus/60-programs/01-demo/BASIC/demo.bas').read_text())
+        self.assertTrue((source / 'README.TXT').exists())
+
+    def test_layout_and_license(self):
+        self.run_builder()
+        self.assertEqual((self.dist / 'zx-ux/tzx/ZX-UX.tzx').read_bytes(), b'tape')
+        self.assertFalse((self.dist / 'zx-ux/ZX-UX.tzx').exists())
+        self.assertEqual((self.dist / 'zx-ux/src/unix.asm').read_bytes(), b'kernel source')
+        self.assertEqual((self.dist / 'zx-ux/src/rom/48.rom').read_bytes(), b'rom')
+        self.assertEqual((self.dist / 'LICENSE').read_text(), 'project license')
+        self.assertFalse((self.dist / 'sdk/bin/LICENSE').exists())
+        self.assertEqual((self.dist / 'sdk/bin/THIRD-PARTY.txt').read_text(), 'third party')
 
     def test_missing_numbered_program_preserves_prior_dist(self):
         self.run_builder()
@@ -109,11 +147,11 @@ def pack(*args):
 
     def test_failure_preserves_dist(self):
         self.run_builder()
-        before = (self.dist/'zx-ux/ZX-UX.tzx').read_bytes()
+        before = (self.dist/'zx-ux/tzx/ZX-UX.tzx').read_bytes()
         docs_before = (self.dist/'docs/manual.txt').read_text()
         (self.src/'zx-ux-sdk/tools/c48build.py').write_text('def build(*a): raise RuntimeError("failed")\n')
         self.run_builder(ok=False)
-        self.assertEqual((self.dist/'zx-ux/ZX-UX.tzx').read_bytes(), before)
+        self.assertEqual((self.dist/'zx-ux/tzx/ZX-UX.tzx').read_bytes(), before)
         self.assertEqual((self.dist/'docs/manual.txt').read_text(), docs_before)
 
     def test_missing_docs_does_not_modify_previous_dist(self):
