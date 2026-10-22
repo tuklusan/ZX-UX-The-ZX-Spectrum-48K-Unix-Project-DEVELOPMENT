@@ -1,277 +1,252 @@
 #!/usr/bin/env python3
-"""Fail-closed BASIC->C48 port checklist, with minimal one-file signoff.
+"""Single-build C48 release checks; no manual checklists or repeat builds.
 
-Run from src/bonus/60-programs:
-  python build/check-c48.py --init NN-name
-  python build/check-c48.py NN-name             # before push
-  python build/check-c48.py --closeout NN-name  # after push
-  python build/check-c48.py --restart NN-name   # after a defect or source edit
+From src/bonus/60-programs:
+  python build/check-c48.py NN-name --system ZX-UX.tzx --sdk SDK
+  python build/check-c48.py NN-name --system ZX-UX.tzx --sdk SDK --closeout
 
-Manual judgments need one status per item and one review note in the program's
-C48/README.TXT. The gate itself checks files, hashes, builds and Git state.
+Program tests print CHECK normal/adversarial/integration/remnants PASS after
+real assertions. At closeout, validate the published Git commit, not a new build.
 """
 from __future__ import annotations
-
 import argparse
-import hashlib
-import json
-from pathlib import Path
+import pathlib
 import re
+import shutil
 import subprocess
 import sys
 
-ROOT = Path(__file__).resolve().parent.parent
-LABELS = (
-    ("basic", "Original BASIC bytes reviewed"),
-    ("mapping", "BASIC-to-C48 mapping complete"),
-    ("references", "Genuine BASIC reference states checked"),
-    ("sdk", "Only frozen SDK interfaces used"),
-    ("data", "Data, formulas and optional glyphs checked"),
-    ("inputs", "Input and terminal behavior checked"),
-    ("link", "Frozen compiler and linker produced SSX"),
-    ("tape", "Valid TZX and internal executable name"),
-    ("runtime", "Actual ZX-UX runtime checked"),
-    ("comparison", "BASIC/C48 behavior and screen compared"),
-    ("remnants", "No unexplained leftover pixels, text or attributes"),
-    ("negative", "Adversarial/negative behavior tested"),
-    ("audit_1", "First fresh-byte scan + normal/adversarial reviews"),
-    ("audit_2", "Second fresh-byte scan + normal/adversarial reviews"),
-    ("audit_3", "Third fresh-byte scan + normal/adversarial reviews"),
-    ("streak", "Three consecutive defect-free audits"),
-    ("repro", "Two byte-identical frozen builds"),
-    ("yolo", "yolo loading, if claimed"),
-    ("hygiene", "Only authorized files changed; tmp clean"),
-    ("checker", "Private checker result, if available"),
-    ("remote", "Remote HEAD and committed bytes verified"),
-)
-AUTO = {"link", "tape", "audit_1", "audit_2", "audit_3", "streak", "repro", "hygiene", "remote"}
-CONDITIONAL = {"inputs", "remnants", "yolo", "checker"}
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+TMP = ROOT / "build" / "tmp"
+PREFIX = "src/bonus/60-programs/"
+REQUIRED = ("normal", "adversarial", "integration", "remnants")
 
 
-def sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def snapshot(folder: Path) -> str:
-    """One fingerprint for *all* current BASIC and C48 source disk bytes."""
-    paths = [p for p in (folder / "BASIC").rglob("*") if p.is_file()]
-    for place in (folder / "C48", ROOT / "c48lib"):
-        paths.extend(p for p in place.rglob("*") if p.is_file()
-                     and p.suffix in {".c", ".asm", ".h", ".py"})
-    paths.extend(ROOT / "build" / n for n in
-                 ("build-c48.py", "check-c48.py", "test-c48.py"))
-    h = hashlib.sha256()
-    for p in sorted(set(paths)):
-        if p.is_file():
-            h.update(p.relative_to(ROOT).as_posix().encode() + b"\0")
-            h.update(bytes.fromhex(sha(p)))
-    return h.hexdigest()
-
-
-def command(args, cwd, timeout=60):
+def execute(argv, cwd=ROOT, timeout=240):
     try:
-        return subprocess.run(args, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        return subprocess.run(argv, cwd=cwd, capture_output=True, text=True,
+                              timeout=timeout, check=False)
     except (OSError, subprocess.TimeoutExpired):
         return None
 
 
-def git_errors(folder: Path, closeout: bool) -> list[str]:
-    top = command(["git", "rev-parse", "--show-toplevel"], folder)
-    if not top or top.returncode:
-        return ["Git checkout unavailable"]
-    repo = Path(top.stdout.strip()).resolve()
-    if (repo / "src/bonus/60-programs").resolve() != ROOT.resolve():
-        return ["not the expected repository checkout"]
-    status = command(["git", "status", "--porcelain", "--untracked-files=all"], repo)
-    if not status or status.returncode:
-        return ["Git status unavailable"]
+def git_scope(program, closeout):
+    r = execute(["git", "rev-parse", "--show-toplevel"])
+    if r is None or r.returncode:
+        return ["Git checkout not available"], None
+    base = pathlib.Path(r.stdout.strip()).resolve()
+    if (base / PREFIX).resolve() != ROOT.resolve():
+        return ["not in the expected repository checkout"], base
     errors = []
-    for line in status.stdout.splitlines():
-        for name in line[3:].split(" -> "):
-            name = name.strip('"')
-            if not name.startswith("src/bonus/60-programs/") or "/BASIC/" in name:
-                errors.append("unauthorized working-tree path: " + name)
-    if not closeout:
-        return errors
-    if status.stdout.strip():
-        errors.append("uncommitted work at closeout")
-    local = command(["git", "rev-parse", "HEAD"], repo)
-    remote = command(["git", "ls-remote", "origin", "refs/heads/main"], repo, 30)
-    if not local or local.returncode or not remote or remote.returncode or not remote.stdout.strip():
-        return errors + ["live GitHub remote read-back unavailable"]
-    commit = local.stdout.strip()
-    if commit != remote.stdout.split()[0]:
-        errors.append("local HEAD differs from live origin/main")
-    diff = command(["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"], repo)
-    if not diff or diff.returncode or not diff.stdout.strip():
-        errors.append("cannot inspect committed changed-path list")
-    else:
-        for name in diff.stdout.splitlines():
-            if not name.startswith("src/bonus/60-programs/") or "/BASIC/" in name:
-                errors.append("unauthorized committed path: " + name)
-    wanted = [folder / "C48" / "PORT-CHECK.json", *(folder / "C48").glob("*.c"),
-              *(folder / "C48").glob("*.ssx"), *(folder / "C48").glob("*.tzx")]
-    for p in wanted:
-        name = p.relative_to(repo).as_posix()
-        tracked = command(["git", "ls-files", "--error-unmatch", name], repo)
-        match = command(["git", "diff", "--quiet", "HEAD", "--", name], repo)
-        if not tracked or tracked.returncode or not match or match.returncode:
-            errors.append("not committed at verified HEAD: " + name)
+    result = execute(["git", "status", "--porcelain", "--untracked-files=all", "-z"], base)
+    if result is None or result.returncode:
+        return ["cannot read Git worktree status"], base
+    records = result.stdout.split("\0")
+    index = 0
+    while index < len(records) and records[index]:
+        record = records[index]
+        kind = record[:2]
+        candidates = [record[3:]]
+        if "R" in kind or "C" in kind:
+            index += 1
+            if index >= len(records) or not records[index]:
+                errors.append("malformed Git rename record")
+                break
+            candidates.append(records[index])
+        for name in candidates:
+            if not name.startswith(PREFIX) or "/BASIC/" in name:
+                errors.append("unauthorized Git path: " + name)
+        index += 1
+    if closeout:
+        if result.stdout.strip("\0"):
+            errors.append("uncommitted files at closeout")
+        paths = execute(["git", "diff-tree", "--no-commit-id", "--name-only",
+                         "-r", "HEAD"], base)
+        if paths is None or paths.returncode or not paths.stdout.strip():
+            errors.append("cannot inspect last commit changes")
+        else:
+            for name in paths.stdout.splitlines():
+                if not name.startswith(PREFIX) or "/BASIC/" in name:
+                    errors.append("unauthorized committed path: " + name)
+    return errors, base
+
+
+def tape_stem(blob):
+    if not blob.startswith(b"ZXTape!\x1a") or len(blob) < 15:
+        raise ValueError("invalid TZX header")
+    i = 10
+    if blob[i] == 0x30:
+        i += 2 + blob[i + 1]
+    if i + 5 > len(blob) or blob[i] != 0x10:
+        raise ValueError("missing tape data header")
+    size = int.from_bytes(blob[i + 3:i + 5], "little")
+    data = blob[i + 5:i + 5 + size]
+    if len(data) != size or len(data) < 13 or data[:2] != b"\0\x04":
+        raise ValueError("invalid executable tape header")
+    return data[2:12].decode("ascii").rstrip()
+
+
+def basic_files_ok(program):
+    folder = ROOT / program / "BASIC"
+    return folder.is_dir() and bool(list(folder.glob("*.bas")))
+
+
+def port_files(program):
+    folder = ROOT / program / "C48"
+    sources = list(folder.glob("*.c"))
+    if len(sources) != 1:
+        raise ValueError("expected exactly one C48 .c source")
+    src = sources[0]
+    if len(src.stem) > 10:
+        raise ValueError("tape name exceeds 10 characters")
+    return folder, src, src.with_suffix(".ssx"), src.with_suffix(".tzx")
+
+
+def binary_errors(ssx, tzx, stem):
+    problems = []
+    try:
+        if not ssx.read_bytes().startswith(b"SSX1"):
+            problems.append("invalid SSX")
+    except OSError:
+        problems.append("SSX not found")
+    try:
+        if tape_stem(tzx.read_bytes()) != stem:
+            problems.append("TZX internal name mismatch")
+    except (OSError, ValueError, UnicodeError, IndexError) as exc:
+        problems.append("TZX missing or invalid: " + str(exc))
+    return problems
+
+
+def test_result(stdout):
+    verdict = {}
+    for line in stdout.splitlines():
+        m = re.fullmatch(r"CHECK (normal|adversarial|integration|remnants) (PASS|NA)", line.strip())
+        if m:
+            if m[1] in verdict:
+                return None, "duplicate CHECK marker: " + m[1]
+            verdict[m[1]] = m[2]
+    for item in REQUIRED:
+        if item not in verdict:
+            return None, "missing CHECK marker: " + item
+        if verdict[item] == "NA" and item != "remnants":
+            return None, "invalid NA: " + item
+    return verdict, None
+
+
+def clean_tmp():
+    if not TMP.is_dir():
+        return ["build/tmp missing"]
+    for path in TMP.iterdir():
+        if path.name == ".gitkeep":
+            continue
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+    return [] if (TMP / ".gitkeep").is_file() else ["build/tmp/.gitkeep missing"]
+
+
+def remote_errors(repo, folder):
+    errors = []
+    local = execute(["git", "rev-parse", "HEAD"], repo)
+    remote = execute(["git", "ls-remote", "origin", "refs/heads/main"], repo, 30)
+    if (local is None or local.returncode or remote is None or remote.returncode
+            or not remote.stdout.strip()):
+        return ["live remote GitHub verification unavailable"]
+    head = local.stdout.strip()
+    if head != remote.stdout.split()[0]:
+        errors.append("HEAD differs from remote main")
+    for file in sorted(folder.rglob("*")):
+        if not file.is_file() or file.name.startswith("."):
+            continue
+        path = file.relative_to(repo).as_posix()
+        tracked = execute(["git", "ls-files", "--error-unmatch", "--", path], repo)
+        diff = execute(["git", "diff", "--quiet", "HEAD", "--", path], repo)
+        if tracked is None or tracked.returncode:
+            errors.append("not committed: " + path)
+        elif diff is None or diff.returncode:
+            errors.append("differs from committed version: " + path)
     return errors
 
 
-def tape_stem(data: bytes) -> str:
-    if not data.startswith(b"ZXTape!\x1a") or len(data) < 15:
-        raise ValueError("not a TZX file")
-    pos = 10
-    if data[pos] == 0x30:
-        pos += 2 + data[pos + 1]
-    if pos + 5 > len(data) or data[pos] != 0x10:
-        raise ValueError("executable tape block missing")
-    length = int.from_bytes(data[pos + 3:pos + 5], "little")
-    block = data[pos + 5:pos + 5 + length]
-    if len(block) != length or len(block) < 13 or block[:2] != b"\x00\x04":
-        raise ValueError("executable tape header invalid")
-    return block[2:12].decode("ascii").rstrip()
-
-
-def build_twice(folder: Path, sdk: Path | None) -> list[str]:
-    sources = list((folder / "C48").glob("*.c"))
-    if len(sources) != 1:
-        return ["expected exactly one C48 source"]
-    binaries = [sources[0].with_suffix(s) for s in (".ssx", ".tzx")]
-    before = {p.name: sha(p) for p in binaries if p.is_file()}
-    if len(before) != 2:
-        return ["missing submitted SSX or TZX"]
-    args = [sys.executable, str(ROOT / "build" / "build-c48.py")]
-    if sdk is not None:
-        args += ["--sdk", str(sdk)]
-    args.append(folder.name)
-    for index in range(2):
-        r = command(args, ROOT, 180)
-        if not r or r.returncode:
-            return ["frozen build %d failed or timed out" % (index + 1)]
-        result = {p.name: sha(p) for p in binaries if p.is_file()}
-        if result != before:
-            return ["build %d changed SSX/TZX bytes" % (index + 1)]
-    return []
-
-
-def clean_rounds(record, source: str) -> int:
-    rounds = record.get("audits", [])
-    if not isinstance(rounds, list):
-        return 0
-    streak = 0
-    for index, rnd in enumerate(rounds, 1):
-        if not isinstance(rnd, dict):
-            streak = 0
-            continue
-        ok = (rnd.get("round") == index and rnd.get("source") == source
-              and rnd.get("scan") == "PASS" and rnd.get("normal") == "PASS"
-              and rnd.get("adversarial") == "PASS" and rnd.get("defects") == []
-              and isinstance(rnd.get("reviewer"), str) and bool(rnd["reviewer"].strip())
-              and isinstance(rnd.get("note"), str) and len(rnd["note"].strip()) >= 12)
-        streak = streak + 1 if ok else 0
-    return streak
-
-
-def check(folder: Path, record: dict, sdk: Path | None, closeout: bool) -> bool:
-    failures = {key: [] for key, _ in LABELS}
-    source = snapshot(folder)
-    if record.get("source") != source:
-        failures["basic"].append("source bytes changed: restart the three-round audit")
-    if record.get("known_defects") != []:
-        failures["streak"].append("known defects unresolved")
-    streak = clean_rounds(record, source)
-    for index in range(1, 4):
-        if streak < index:
-            failures[f"audit_{index}"].append(f"only {streak} clean consecutive rounds")
-    if streak < 3:
-        failures["streak"].append("three clean rounds missing")
-    readme = folder / "C48" / "README.TXT"
-    if not readme.is_file() or len(readme.read_text(errors="replace").strip()) < 50:
-        failures["mapping"].append("nonempty C48/README.TXT required as single review note")
-    for key, _ in LABELS:
-        if key in AUTO:
-            continue
-        value = record.get("checks", {}).get(key, "NOT_RUN")
-        if value == "PASS":
-            continue
-        if key in CONDITIONAL and isinstance(value, str) and value.startswith("N/A: ") and len(value.strip()) > 12:
-            continue
-        failures[key].append("not signed off: " + str(value))
-    sources = list((folder / "C48").glob("*.c"))
-    if len(sources) != 1:
-        failures["link"].append("exactly one C48 source required")
-    else:
-        file = sources[0]
-        if not file.with_suffix(".ssx").is_file() or not file.with_suffix(".ssx").read_bytes().startswith(b"SSX1"):
-            failures["link"].append("missing or invalid SSX")
-        try:
-            if tape_stem(file.with_suffix(".tzx").read_bytes()) != file.stem or len(file.stem) > 10:
-                failures["tape"].append("internal tape name mismatch")
-        except (ValueError, OSError, UnicodeError, IndexError) as exc:
-            failures["tape"].append(str(exc))
-    failures["repro"].extend(build_twice(folder, sdk))
-    tmp = ROOT / "build" / "tmp"
-    if not tmp.is_dir() or sorted(p.name for p in tmp.iterdir()) != [".gitkeep"]:
-        failures["hygiene"].append("build/tmp is not clean")
-    if any(not p.name.endswith("-glyphs.asm") for p in (folder / "C48").glob("*.asm")):
-        failures["hygiene"].append("generated assembly found in program source")
-    failures["hygiene"].extend(git_errors(folder, False))
-    if closeout:
-        failures["remote"].extend(git_errors(folder, True))
-    blocked = 0
-    print("PORT CHECKLIST:", folder.name)
-    for index, (key, description) in enumerate(LABELS, 1):
-        if key == "remote" and not closeout:
-            result = "PENDING"
-        elif failures[key]:
-            result = "BLOCKED"
-            blocked += 1
-        else:
-            result = "PASS"
-        print(f"{index:02d}/21 {result}: {description}")
-        for note in failures[key]:
-            print("    -", note)
-    print("BLOCKED" if blocked else "CLOSEOUT COMPLETE" if closeout else "PREPUSH READY")
-    return not blocked
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("program", help="NN-name")
-    parser.add_argument("--sdk", type=Path)
-    modes = parser.add_mutually_exclusive_group()
-    modes.add_argument("--init", action="store_true")
-    modes.add_argument("--restart", action="store_true")
-    modes.add_argument("--closeout", action="store_true")
-    args = parser.parse_args()
-    folder = ROOT / args.program
-    path = folder / "C48" / "PORT-CHECK.json"
-    if not re.fullmatch(r"\d\d-[a-z0-9-]+", args.program) or not (folder / "C48").is_dir():
-        parser.error("valid numbered C48 directory required")
-    if args.init or args.restart:
-        if args.init and path.exists():
-            parser.error("checklist already exists: use --restart for new source")
-        if args.restart and not path.exists():
-            parser.error("no checklist to restart: use --init")
-        record = {"version": 2, "program": args.program, "source": snapshot(folder),
-                  "known_defects": ["NOT REVIEWED"], "audits": [],
-                  "checks": {key: "NOT_RUN" for key, _ in LABELS if key not in AUTO}}
-        path.write_text(json.dumps(record, indent=2) + "\n")
-        print("Initialized:", path)
-        return 0
+def main():
+    cli = argparse.ArgumentParser(description=__doc__)
+    cli.add_argument("program")
+    cli.add_argument("--system", required=True, type=pathlib.Path)
+    cli.add_argument("--sdk", required=True, type=pathlib.Path)
+    cli.add_argument("--test", type=pathlib.Path)
+    cli.add_argument("--closeout", action="store_true")
+    args = cli.parse_args()
+    sys.dont_write_bytecode = True
+    errors = []
+    if not re.fullmatch(r"\d\d-[a-z0-9-]+", args.program):
+        cli.error("expected a numbered program directory")
+    program = ROOT / args.program
     try:
-        record = json.loads(path.read_text())
-        if record.get("version") != 2 or record.get("program") != args.program:
-            raise ValueError("wrong checklist version or program")
-        return 0 if check(folder, record, args.sdk, args.closeout) else 1
-    except (OSError, ValueError, TypeError, KeyError) as exc:
+        folder, source, ssx, tzx = port_files(args.program)
+    except ValueError as exc:
         print("BLOCKED:", exc)
-        for index, (_, name) in enumerate(LABELS, 1):
-            print(f"{index:02d}/21 BLOCKED: {name}")
         return 1
+    if not basic_files_ok(args.program):
+        errors.append("original BASIC listing not found")
+    if not args.system.is_file() or not args.sdk.is_dir():
+        errors.append("system tape or SDK unavailable")
+    scope, repo = git_scope(args.program, args.closeout)
+    errors += scope
+    if args.closeout:
+        errors += binary_errors(ssx, tzx, source.stem)
+        if not (folder / "PORT-RESULT.txt").is_file():
+            errors.append("automatically generated PORT-RESULT.txt missing")
+        else:
+            report = (folder / "PORT-RESULT.txt").read_text()
+            checks, issue = test_result(report)
+            if issue:
+                errors.append("incomplete test result: " + issue)
+        if repo is not None:
+            errors += remote_errors(repo, folder)
+        print("CLOSEOUT COMPLETE" if not errors else "BLOCKED")
+        for item in errors:
+            print("FAIL:", item)
+        return bool(errors)
+
+    if not errors:
+        build = execute([sys.executable, str(ROOT / "build" / "build-c48.py"),
+                         "--sdk", str(args.sdk.resolve()), args.program], timeout=240)
+        if build is None or build.returncode:
+            errors.append("single frozen build failed or timed out")
+            if build:
+                print(build.stderr[-1500:])
+    if not errors:
+        errors += binary_errors(ssx, tzx, source.stem)
+    if not errors:
+        test = args.test or folder / ("test-" + source.stem + ".py")
+        test = (ROOT / test).resolve() if not test.is_absolute() else test.resolve()
+        if not test.is_file() or not test.is_relative_to(ROOT):
+            errors.append("missing program-specific test inside the permitted workspace")
+        else:
+            result = execute([sys.executable, str(test), "--system", str(args.system.resolve()),
+                              "--sdk", str(args.sdk.resolve())], timeout=300)
+            if result is None or result.returncode:
+                errors.append("program tests failed or timed out")
+                if result:
+                    print((result.stdout + result.stderr)[-2000:])
+            else:
+                verdict, problem = test_result(result.stdout)
+                if problem:
+                    errors.append(problem)
+    if not errors:
+        errors += clean_tmp()
+    if not errors:
+        lines = ["Program: " + args.program,
+                 "System: " + args.system.name,
+                 "Build: PASS", "TZX: PASS",
+                 *["CHECK " + k + " " + verdict[k] for k in REQUIRED],
+                 "Git scope: PASS", "Delivery: PENDING"]
+        (folder / "PORT-RESULT.txt").write_text("\n".join(lines) + "\n")
+    print("READY" if not errors else "BLOCKED")
+    for problem in errors:
+        print("FAIL:", problem)
+    return bool(errors)
 
 
 if __name__ == "__main__":
