@@ -1,345 +1,457 @@
-# BASIC-to-C48 porting workflow — v0.1
+# BASIC-to-C48 porting workflow — v0.2
 
-This is the repeatable process developed while porting **25-galaxians** and
-**58-invaders**. It is a procedure and an acceptance checklist, not a claim
-that those two pilots have completed every gameplay-equivalence test.
+Applies to **every one of the 60 numbered historical ZX Spectrum BASIC
+programs**, whether a game, utility, educational program, simulation,
+calculator, or text/data application. This is the repeatable way to translate
+the *actual* original program into C48, verify it, and publish the result.
+It is not a claim that any existing port has already passed the complete gate.
 
-Run commands below from \`src/bonus/60-programs/\` unless otherwise noted.
-\`NN-name\` means the numbered program directory; \`game\` is its C48
-source/tape stem (maximum 10 characters).
+Run commands from `src/bonus/60-programs/`. Below, `NN-name` is any
+numbered program directory and `stem` is the selected C48 source/tape name
+(10 characters maximum). Process the collection in numerical order, 01–60.
 
-## Ground rules and output layout
+## Invariants and layout
 
-- The frozen ZX-UX platform (beta-0.2.0) is read-only. **Only**
-  \`src/bonus/60-programs/\` may be changed. In particular, do not alter
-  the compiler, assembler, linker, SDK, kernel, emulator, root scripts,
-  \`build/\` or \`dist/\` outside this workspace, even to fix a port.
-- Preserve existing historical \`BASIC/\` listings, TZX tapes, replay
-  records, and screenshots **byte-for-byte**. New work goes into
-  \`NN-name/C48/\`, shared sources into \`c48lib/\`, and scripts into
-  \`build/\`.
-- The only canonical permanent storage is the private GitHub repository.
-  Read the live \`main\` HEAD before work and before a push. No force-push,
-  tag operations, or unrelated edits.
-- Do not run full repository build/release in the canonical checkout:
-  it regenerates frozen paths. Run frozen SDK tools with outputs inside
-  the permitted workspace, or in an isolated disposable checkout.
+- **Frozen platform:** ZX-UX `beta-0.2.0` and everything outside
+  `src/bonus/60-programs/` are read-only. Never patch the kernel, compiler,
+  assembler, linker, SDK, emulator, checker, root build/release scripts,
+  or `dist/` to make a port work. A frozen-API limitation is a port
+  constraint or blocker.
+- **Historical preservation:** All existing `BASIC/` files, tapes, scripts,
+  timing logs, and screenshots remain byte-for-byte unchanged. The `.bas`
+  source is the translation authority; the original tape and reference
+  captures provide independent behavior and visual evidence.
+- **Dedicated work:** New source, port-specific glyphs, final SSX/TZX,
+  notes, tests and actual captures belong in that program's `C48/`.
+  Shared renderer/font/header belong in `c48lib/`. Build/test tools
+  belong in `build/`. Generated files belong only in ignored
+  `build/tmp/` (tracked placeholder: `.gitkeep`).
+- **Evidence:** Translation, compilation, linkage, tape creation,
+  boot/execution, visual correspondence, behavior and `yolo` loading
+  are *different claims*. Mark PASS / FAIL / NOT RUN / NOT APPLICABLE,
+  with proof. No fabricated screenshots or unrun test results.
+- **Permanent record:** GitHub `main` is canonical; local clones and
+  scratch output are disposable. Verify live remote HEAD before a change
+  and a push. Never force-push or change tags without explicit approval.
 
-Expected files for a port:
+Typical per-program layout (create only the files a program needs):
 
-\`\`\`text
+```text
 NN-name/
-  BASIC/                  original, unchanged
+  BASIC/                      historical; do not modify
   C48/
-    game.c                translated program logic
-    game-glyphs.asm       program-specific 8x8 sprites, if needed
-    game.ssx              built ZX-UX executable
-    game.tzx              built ZX-UX cassette
-    README.TXT            controls, differences, tests, remaining gaps
-    SCREENSHOTS/          actual captures only
+    stem.c                    translated C48 source
+    stem-glyphs.asm           optional program-specific bitmap characters
+    stem.ssx                  native ZX-UX executable
+    stem.tzx                  ZX-UX tape
+    README.TXT                mapping, results, differences, open gaps
+    SCREENSHOTS/              actual C48 runtime captures
 c48lib/
-  c48lib.asm              shared 32x24 screen renderer and key helpers
-  c48lib-font.asm         Acer VGA 8x8 font data
-  c48lib.h                declarations
-  FONT-SOURCE.txt         font license and attribution
+  c48lib.asm, c48lib-font.asm, c48lib.h, FONT-SOURCE.txt
 build/
-  build-c48.py            numbered-order compilation and tape packaging
-  test-c48.py             CURRENTLY covers pilots 25 and 58 only
-  build-basic.py          optional fresh BASIC reference tape/replay builder
-  tmp/.gitkeep            tracked placeholder; generated contents ignored
-\`\`\`
+  build-c48.py               C48 builder, historical 01–60 order
+  build-basic.py             optional fresh BASIC tape/FUSE references
+  test-c48.py                existing pilot-specific tests; not universal
+  tmp/.gitkeep               only tracked contents of temporary area
+```
 
-The assembler does not support INCLUDE, and \`rcc\` links a matching
-same-basename \`.asm\` file automatically. \`build-c48.py\` constructs that
-companion **only in \`build/tmp/\`** by combining the shared renderer, font,
-and local glyphs. Do not commit generated \`game.asm\` files.
+The frozen `ras` has no `INCLUDE`, and `rcc` only auto-links a matching
+`.asm` companion. `build-c48.py` assembles the shared renderer, font and
+optional local glyphs into that companion in `build/tmp/`; the generated
+`stem.asm` must **not** be committed.
 
-## Step-by-step procedure and checks
+## Preparation and construction
 
-### 1. Inspect the original program; record the contract
+### 1. Select and inventory the historical program
 
-Read \`BASIC/NN-name.bas\` from beginning to end. Also read
-\`BASIC/README.TXT\`, \`KEYS-AND-TIMING.TXT\`, \`REPLAY.sh\`, and the
-original \`BASIC/SCREENSHOTS/\` images. Inspect the original TZX if tape
-behavior is relevant. Record:
+Read **all** of `NN-name/BASIC/NN-name.bas`, plus its README, replay,
+keys/timing, original TZX and available screenshots. Inspect every BASIC
+statement and data value. Record the program's actual function:
+calculations, displayed information, user prompts, editing, validation,
+menus, file/data flows, simulation rules, graphics, interactivity, sound,
+or gameplay as applicable. Capture initialization and termination;
+numeric/string semantics; arrays, `DATA`, `READ`, `RESTORE`, `POKE`,
+`PEEK`, `USR`, screen memory and machine calls if present.
 
-- Every playable state: intro, initialisation, main loop, win, lose,
-  restart, levels and special animations.
-- Controls and **their exact BASIC implementation** (\`INKEY$\`,
-  \`IN\` port reads, cursor/shift combinations, \`PAUSE\`, \`INPUT\`).
-- Rules: movement, collision detection, obstacles, score/high score,
-  lives/ammunition, random behaviour, boundaries, timing and sound.
-- Print and drawing commands: rows/columns, pixel coordinates, paper,
-  ink, border, \`OVER\`, \`INVERSE\`, \`FLASH\`, \`PLOT\`, \`DRAW\`, etc.
-- \`DATA\`/\`READ\`/\`POKE\` and UDG definitions, including order in which
-  bytes are assigned to character cells.
+**Check:** A concise BASIC line/routine -> C48 routine/state mapping
+covers all relevant branches, data definitions and outputs. Do not
+invent gameplay requirements for programs that are not games.
 
-**Check:** Keep a short BASIC-line-to-C48-function mapping or equivalent
-notes. Nothing essential may disappear merely because it is difficult to
-port. Mark undecoded constructs and unclear game rules explicitly.
+### 2. Establish the genuine BASIC behavior and appearance
 
-### 2. Establish authentic BASIC visual/behavioural references
+Use the original `BASIC/` tape and selected FUSE captures as the
+primary reference. If needed, run a genuine Spectrum 48K/FUSE session
+and record representative states: initial screen, a normal operation,
+changed input/output, boundary/error conditions, and completion/end
+state. For animated programs, inspect successive frames and motion.
 
-Use the **existing historical** BASIC TZX and selected FUSE screenshots
-as the primary reference. When useful, run that original tape in a
-Spectrum 48K/FUSE and capture intro, active gameplay, an interaction,
-a hit/miss, and an endgame. Save any new experimental captures separately.
+An optional **secondary** reference command is:
 
-Optional: \`python build/build-basic.py --screenshots NN-name\` generates
-a **new** tape from the stored \`.bas\` listing and fresh FUSE captures in
-\`build/tmp/basic-output/\`; it must not overwrite the originals.
-The re-tokenised tapes are **not byte-identical** to the historical
-tapes and are secondary evidence only.
+```sh
+python build/build-basic.py --screenshots NN-name
+```
 
-**Check:** Confirm genuine source provenance. Compare the same game
-*states*, not blindly the same elapsed seconds: historical FUSE times
-include tape loading and can use a different emulator speed; animations
-and random seeds can also change individual frames.
+This re-tokenizes `.bas` and writes new tapes/captures into ignored
+`build/tmp/basic-output/`. These tapes are not guaranteed byte-identical
+to the historical ones. Do not replace originals with them.
 
-### 3. Verify the frozen target and port constraints
+**Check:** Reference provenance is genuine. Compare equivalent
+states, not blindly matching timestamps: historic FUSE replay times
+may include tape loading and an accelerated emulator. Distinguish
+random, timing and font differences from incorrect behavior.
 
-Read the actual frozen \`c48.h\`, SDK examples and implementation of any
-API you intend to call. Establish the target's C48 restrictions,
-calling convention and RAM budget. Use only verified compiler/runtime
-interfaces. Do not infer that a Sinclair ROM BASIC function is available
-to a C48 program.
+### 3. Map BASIC semantics to verified, frozen C48 interfaces
 
-**Check:** List any unavailable BASIC facility and the port-local
-replacement. If no legal replacement exists, report a blocker. Never
-patch \`rcc\`, \`ras\`, \`rld\`, \`libc48\`, the kernel, or the emulator.
+Inspect the actual frozen SDK headers/implementation and C48
+compiler restrictions. Plan equivalents for BASIC numeric operations
+(integer/float range and rounding), strings, array indexes,
+`PRINT`/`INPUT`/cursor behavior, `SCREEN$`/`POINT`, keyboard
+(`INKEY$` vs `IN`), color, timing, `BEEP`, memory, and
+program-specific operations **only when those occur in the source**.
 
-### 4. Transcribe and independently verify game graphics
+**Check:** Each interface used is supported by the frozen toolchain.
+Explain approximations; block the affected portion when faithful
+behavior cannot be implemented without changing a locked path.
 
-For each historical UDG or \`POKE USR\` glyph, extract all **eight**
-bitmap bytes from BASIC \`DATA\` and reconstruct any interleaved
-\`READ\` layout correctly. Put the game's data in
-\`C48/game-glyphs.asm\`. The shared \`c48lib\` renderer uses glyph
-codes **32..127** for the VGA font and **128..159** for local graphics;
-map original BASIC character codes deliberately. Do not reserve or
-overwrite frozen SDK UDG slots.
+### 4. Translate data, glyphs and screen conventions
 
-**Check:** Independently reconstruct the BASIC bytes and compare them
-to the port's table, glyph by glyph. The pilot test script checks both
-Galaxians' contiguous sprite data and Invaders' interleaved data.
-Visually inspect large/multi-cell sprites assembled from those glyphs.
+Use the shared 32x24 8x8 VGA text renderer for ports needing full-width
+Spectrum-style cells: `c48_cell(row,col,code)`. Printable codes
+32..127 index the shared Acer VGA font; codes 128..159 are program
+glyphs. Correctly transcribe 8 bytes per historical UDG, including
+interleaved `READ`/`POKE` sequences; put program-local bytes in
+`C48/stem-glyphs.asm` only when needed. Do not consume SDK UDG slots.
+Programs not using these graphics need no fabricated glyph assets.
 
-### 5. Translate the real gameplay, screen and sound
+**Check:** Compare transcribed glyph/data bytes independently against
+the BASIC source, including original character mapping, row order,
+multi-cell assembly, colors and layout. Note intentional font changes.
 
-Create \`C48/game.c\`: translate original state and rules, not a
-substitute game. Preserve screen geometry (32 columns by 24 rows for
-shared full-height text), controls, palette, ship/enemy/shield layouts,
-movement and redraw behaviour, scoring and transitions. Use shared
-\`c48_cell()\` for text/sprites, existing frozen pixel APIs for pixel
-drawing, and C48 sound/timing APIs where justified.
+### 5. Implement the actual BASIC program in C48
 
-Where BASIC checks \`SCREEN$\` or \`POINT\`, model the correct logical
-characters and/or bitmap state rather than guessing from a nearby
-sprite. Track moving objects and erase **their previous positions**.
-Galaxians' mothership trail and Invaders' overlapping HUD text are
-examples of the failure mode.
+Create `C48/stem.c`. Preserve original program purpose, formulas,
+data, input validation, state transitions, screen contents, timing
+where material, sound and controls. Translate every significant
+BASIC branch. Use the shared renderer, frozen pixel/audio calls
+or other documented SDK facilities as appropriate. Keep source
+readable enough for independent line-by-line comparison.
 
-**Check:** For every main BASIC branch and subroutine, identify the
-corresponding C48 path. List deliberate differences (font, timings,
-randomness, sound, controls, collision precision). No silent changes.
+**Check:** All original paths have C48 counterparts or explicit,
+justified limitations. Non-game tasks must be tested for correct
+answers and I/O, not scored as shooters; games and animations must
+preserve their rules, interactions, outcomes and redraws.
 
-### 6. Handle keyboard semantics deliberately
+### 6. Audit input and rendering semantics while implementing
 
-BASIC \`INKEY$\` is a nonblocking view of *current* Spectrum keys; it
-is not equivalent to buffered terminal \`getchar()\`. For gameplay,
-use verified physical-key state, such as \`kbd_down()\` and shared
-\`c48_any_key()\`. For CAPS SHIFT cases use the verified shared
-\`c48_shift_down()\` (Invaders uses SHIFT+5/8 for five-cell moves).
-Set the ZX-UX terminal to raw, non-echo mode using frozen
-\`gtty\`/\`stty\` when the game polls keys directly.
+`INKEY$` tests current physical Spectrum keys; buffered terminal
+`getchar()` is not equivalent. Use verified physical-key polling
+for repeated gameplay/control input, and consider `c48_any_key()`
+and `c48_shift_down()` for key matrix/shift semantics. Set raw,
+non-echo tty mode through frozen `gtty`/`stty` where needed so
+keystrokes do not appear as stray screen characters. A prompt
+that requires a fresh key event should wait for release, press,
+release; compare against the actual BASIC prompt before choosing it.
 
-For a new-press-only intro/restart prompt, use a defined sequence:
-wait until all keys are **released**, wait for a **fresh press**,
-then wait for **release** before gameplay resumes. Review whether that
-release policy intentionally differs from a specific BASIC prompt.
+**Check:** Test idle/no input, a tap, hold, repeated events,
+modified/cursor keys, old buffered input, and prompts after
+prolonged interaction; verify no unintended echo, stuck scan
+or auto-advance. For programs without interactive keys, mark
+those cases NOT APPLICABLE.
 
-**Check:** Test no key, a short tap, a held key, release/repress,
-rapid fire, shifted movement, and a game-over prompt after sustained
-gameplay. A previously held or buffered gameplay key must not dismiss
-a new prompt. A key must not echo unwanted characters onto the screen.
-The initial shared keyboard-scanning loop once failed to terminate
-with no key; this was caught by the emulator and fixed, so idle-key
-testing is mandatory.
+### 7. Compile, link and generate tape with the frozen builder
 
-### 7. Build with the frozen SDK; keep intermediates temporary
-
-From the workspace root:
-
-\`\`\`sh
+```sh
 python build/build-c48.py NN-name
-\`\`\`
+```
 
-Use \`--sdk PATH\` only if the frozen SDK is elsewhere. The builder:
+Use `--sdk PATH` only when the frozen SDK resides elsewhere.
+The builder copies C48 sources/headers to `build/tmp/`, builds a
+same-basename ASM companion from shared and local sources, calls
+frozen `rcc`/`ras`/`rld`, creates the SSX, packages with
+frozen `rtap`, and publishes the completed SSX/TZX to `C48/`.
+A successful batch removes temporary files; a failed build
+keeps intermediates for diagnosis. Without a program argument,
+ports build in numbered directory order 01 through 60.
 
-1. Copies the C48 source and headers to mirrored \`build/tmp/\` paths.
-2. Concatenates \`c48lib.asm\`, \`c48lib-font.asm\` and
-   optional \`game-glyphs.asm\` into a generated matching \`game.asm\`.
-3. Calls frozen \`rcc\` to compile, assemble and link an SSX.
-4. Uses frozen \`rtap\` to package the executable as a TZX.
-5. Copies **only** \`game.ssx\` and \`game.tzx\` into \`C48/\`;
-   cleans intermediates on success and preserves them for debugging
-   on failure.
+**Check:** Record separately: source translated, compiler pass,
+assembler/linker pass, SSX exists, TZX exists, internal tape
+name is correct (10 characters or fewer), and outputs fit
+real system memory. Compilation is *not* proof of runtime fidelity.
 
-With no arguments, it builds the *available* ports in historical
-directory order 01 through 60. The executable tape name must fit the
-10-character limit.
+### 8. Run a representative functional/reference comparison
 
-**Check:** Distinguish each outcome: translated source, compiled,
-linked, SSX created, TZX packaged. Verify the intended tape's internal
-name and that its SSX/TZX exist. A successful build is **not** proof of
-ZX-UX runtime execution, \`yolo\` loading or BASIC equivalence.
+Boot the **real frozen ZX-UX system** through the existing `rvm`
+emulator (or a supported physical-machine equivalent), then load the
+port as the system actually would. Exercise representative normal,
+boundary and completion states. If claiming the finished tape
+works with `yolo`, explicitly test `yolo` with that TZX;
+running the SSX directly does not establish the tape loader path.
 
-### 8. Make a first independent source-review pass
+Use existing tests when applicable, but **do not mistake a
+pilot-specific test for a test of another program**. For example:
 
-Review \`.bas\` and \`.c\` side by side without relying on the port
-author's description. Compare line mapping, constants, indexes,
-\`DATA\` sprites, collision state, key semantics and exit/restart paths.
-Look specifically for off-by-one errors, shifted characters, misread
-\`BIN\` data, wrong arguments to pixel functions, unsigned arithmetic,
-and stale screen contents.
-
-**Check:** Resolve all substantive discrepancies or record blockers.
-Prefer a different reviewer/agent when available; independence means
-re-checking against BASIC, not merely reading the author's notes.
-
-### 9. Execute under the *real frozen ZX-UX kernel*
-
-Boot an actual frozen ZX-UX system image using the existing \`rvm\`
-emulator (or an equivalent supported real-machine session). Provide
-the matching system TZX and \`kernel.json\`, not merely a standalone
-assembled graphics proof. Exercise startup, input, gameplay and visible
-state transitions.
-
-The existing pilot regression is:
-
-\`\`\`sh
+```sh
 python build/test-c48.py --system /path/to/ZX-UX.tzx --sdk /path/to/sdk
-\`\`\`
+```
 
-\`--captures\` additionally writes actual emulator frames into pilot
-\`C48/SCREENSHOTS/\`: use it only when intentionally updating evidence.
-**Without \`--system\`, \`test-c48.py\` runs source checks only and says
-that emulator tests were skipped.** Its assertions currently cover
-programs 25 and 58; extend tests for each new port before treating
-this as a universal gate.
+This particular script currently exercises only ports 25 and 58;
+without `--system` it runs source checks only. Write or extend
+behavioral checks for each new program and its actual functions.
+Capture only real emulator frames. Compare corresponding BASIC
+states and expected calculations, outputs and interactions.
 
-**Check:** Confirm the process starts under ZX-UX and the program
-responds correctly to actual key events. Save only genuine, labeled
-captures. Compare intro and equivalent animated/gameplay states
-against the original BASIC images. A direct SSX run does **not**
-establish that \`yolo\` can load the TZX; test \`yolo\` separately before
-claiming that loader path works.
+**Check:** Actual ZX-UX execution, observable correct behavior
+and comparisons are evidenced, with untested branches named.
+Do not infer full equivalence from a boot or one screenshot.
 
-### 10. Run a separate adversarial behavioural pass
+### 9. Explicit residual-pixel and stale-screen-object check
 
-Try to *break* the port after the ordinary path passes. Deliberately
-exercise:
+This check is mandatory for every program that draws, erases,
+scrolls, overwrites or updates a screen (including text/menus,
+graphs, charts, cursor-driven forms, games and simulations).
 
-- Idle, tap, hold, release and rapid repeated keys; game-over restart
-  without a new press; terminal echo and shift/cursor combinations.
-- Every scoring case, valid hit, miss, simultaneous events, projectile
-  flight, moving target, ship destruction, shields, edge columns,
-  lives/ammo exhaustion, victory, defeat, replay and high scores.
-- Sprite redraw trails, overwritten/ghost HUD characters, incorrect
-  colour attributes, screen-edge drawing, stale object-grid state,
-  accidental ASCII characters used in place of game glyphs.
-- Timing-dependent sequences: early fire, late fire, multiple levels,
-  random spawns and collision near boundaries.
+**Code-level inspection:** Trace every screen writer and all
+screen-update paths. Identify exactly where the old region is
+cleared or restored when an object moves, a character is replaced,
+text shrinks, a score changes, a form field is erased, a page
+scrolls, an animation ends or a transient message disappears.
+Verify full **width, height, pixel rows and attribute cells**
+are restored. Check `OVER`/XOR/inverse/flash behavior; clearing
+with a space or toggling twice may fail if another draw happened
+in between. Check clipping at all edges and drawing overlap.
 
-The pilot adversarial pass found an endless idle-key scan, an ASCII
-\`a\` in place of a rocket, invisible projectile travel, score-line
-remnants and inaccurate command-ship hit accounting. These faults
-illustrate the value of trying **negative** conditions as well as
-successful play.
+**Runtime visual inspection:** Capture before/after matched states
+in BASIC and C48, especially after moving an object away, repeated
+moves, a collision/hit, a deleted character, a cleared prompt,
+an animation ending, and a restart. Examine vacated regions
+for leftover pixels, partial glyphs, ghost text, stray characters,
+old colors/attributes or unchanged background that should have
+been restored. Use screen bitmap and attribute-byte comparisons
+or frame-difference tools where they help. Font differences and
+legitimate animation must be accounted for; a raw pixel mismatch
+alone is not necessarily a defect. A suspicious residual must be
+explained, fixed, and retested against the original's behavior.
 
-**Check:** Each confirmed defect gets a minimal code fix and a
-repeatable assertion that fails on the old behaviour. Rerun normal
-and adversarial tests after fixing. Do not count timed-out tests as
-passes; do not claim complete gameplay equivalence from one screenshot.
+**Check:** No unexplained pixel, attribute or screen-item remnant
+is present in C48 that the BASIC original does not leave. Log the
+verified frames/regions or mark NOT APPLICABLE *with a reason*
+if the program never changes its displayed contents.
 
-### 11. Rebuild twice and preserve useful evidence
+## Mandatory repeated independent audit gate — ALL 60 programs
 
-Run the same build twice without source changes; compare the resulting
-SSX and TZX hashes. Check \`build/tmp/\` contains only its tracked
-\`.gitkeep\` after success. Keep original \`BASIC/\` files and their
-screenshots unchanged. Store actual C48 captures, control instructions,
-known differences, test commands and unresolved outcomes in
-\`C48/README.TXT\` (and \`C48/SCREENSHOTS/\` as appropriate).
+Run this gate **per program** after the first build/runtime check.
+No fixed number of loops. The port is **not deliverable** until
+**three successive complete Step-1 scans** discover zero new gaps
+or defects **and** each corresponding independent normal and
+adversarial audit is also clean. A new defect invalidates the
+streak and forces re-review from disk.
 
-**Check:** Byte-for-byte reproducibility, no generated \`game.asm\`
-tracked in Git, no unintended writes outside the workspace. Run the
-available private checker on candidate files where accessible; never
-alter the checker to manufacture a pass.
+### Audit Step-1 — fresh disk BYTES, manual line-by-line scan
 
-### 12. Inspect, commit, push and verify the remote
+At the beginning of **every** round, take/reopen the **latest
+fresh on-disk copies** of both sides:
 
-Before publishing, re-read live remote \`main\` and reconcile any
-intervening work. Review the **complete** proposed diff, including
-added, modified, removed and renamed files.
+1. Original `BASIC/*.bas` as raw disk bytes, then decoded line by
+   line, including all lines, constants, DATA, comments, control
+   characters, escaped graphic codes and ordering. Recheck source
+   tape/UDG bytes where they affect interpretation.
+2. Latest C48 `*.c`, local `*.asm`/`*.h`, and relevant shared
+   `c48lib/` sources **as raw disk bytes**, viewed completely,
+   **line by line**. Review the actual bytes that the builder will
+   compile, not recalled excerpts, summaries, stale buffers,
+   prior review notes or only `git diff` hunks.
+3. Fresh SSX/TZX outputs and relevant screenshots/tests: verify
+   their byte hashes, packaging, and what is truly executed.
+   Inspect binary byte/hex representation where required to
+   resolve questions; do not pretend machine-code data is BASIC
+   source lines.
+4. Record the file set, on-disk SHA-256 hashes, scan round and
+   reviewer(s). Confirm every original BASIC file hash remains
+   unchanged. Restart the scan if a working file changes while
+   scanning. If the review is performed from a disposable copy,
+   ensure its hashes match the current intended sources.
 
-**Hard reject** if a changed path lies outside
-\`src/bonus/60-programs/\`, or if an original historical file was
-changed without explicit authorization. Stage only the requested
-port/test/doc files. Use a fast-forward update; never force-push.
-Read back the remote HEAD, commit/tree and changed-path list after
-the push; report any failed check or upload.
+**Check:** Both full source sides were reopened from the latest
+disk bytes and manually inspected end to end. No selective
+source diff or automated scan can replace this requirement.
+Mark a scan INCOMPLETE if any source or material byte region
+cannot be read or reviewed; an incomplete scan never counts
+toward the streak.
 
-**Check:** The verified remote commit contains exactly the approved
-paths and test evidence. Do not claim a push before remote read-back.
+### Audit Step-2a — independent Normal audit; find and fix C48 defects
 
-## Completion record (copy into each port's README)
+An independent reviewer/agent (separate from the original
+implementation reasoning wherever possible) reconstructs expected
+BASIC behavior directly from Step-1's **fresh** sources.
+Examine all routine mappings, inputs/outputs, arithmetic,
+string/data handling, display layout, all observable normal
+paths, state transitions, timing and colors/sound where present.
+Compare real kernel execution and relevant authentic BASIC frames.
+Apply the Step-9 stale-pixel/item check as part of this review.
 
-Use **PASS / FAIL / NOT RUN / NOT APPLICABLE**, with actual evidence or
-a short explanation for each line:
+**Check:** Enumerate every gap/defect with specific BASIC
+lines/data, C48 code, test reproduction, and observed impact.
+Repair C48 sources/tests only. **Never modify BASIC**.
+If independent staffing is unavailable, perform a separately
+documented fresh review without claiming a different agent.
 
-\`\`\`text
-[ ] Original BASIC rules/controls/screen inventory completed
-[ ] BASIC UDG/DATA sprites independently compared
-[ ] BASIC visual states/reference captures identified
-[ ] C48 source translated and independent review passed
-[ ] Frozen C48 compiled
-[ ] Frozen assembler/linker produced SSX
-[ ] Frozen tape packager produced TZX; internal name checked
-[ ] Actual ZX-UX execution demonstrated (system image recorded)
-[ ] Actual C48 screens captured and visually compared to BASIC
-[ ] Start, idle-key, hold/release, restart and keyboard-mode checks
-[ ] Movement, scoring, hits, misses, boundaries and HUD checked
-[ ] All relevant win/loss/replay, special animations and sound checked
-[ ] Independent adversarial review passed
-[ ] Relevant regression assertions added and passed
-[ ] Repeated builds byte-for-byte equal; temporary files cleaned
-[ ] yolo loaded and executed final TZX (if claiming yolo support)
-[ ] Historical BASIC and frozen platform unchanged
-[ ] Private checker available: result recorded
-[ ] Remote GitHub fast-forward push and read-back verified
-Open differences / tests not run:
-Evidence paths / commands:
+### Audit Step-2b — independent Adversarial audit; find and fix C48 defects
+
+A distinct adversarial review, without adopting Step-2a's
+conclusions as assumptions, actively searches for failures in
+edge and negative conditions applicable to this particular
+program: empty/maximum/invalid data; numeric limits; repeated,
+absent, stale or held input; key combinations; boundary
+coordinates; cancellation/retry/restart; overlapping screen
+updates, trails and pixel/attribute remnants; rapid transitions;
+random/timing extremes; success and failure branches; wrong
+scores, outputs, calculations or preserved state. Reproduce
+issues with actual C48/ZX-UX execution when practical.
+Add a repeatable regression for each fix.
+
+**Check:** A pass means no identified new unexplained difference
+or defect, not merely that a smoke test ran. Independently
+confirm the residual-pixel test under hostile redraw sequences.
+Tests that fail, time out or cannot be performed are **not
+passes** and cannot be concealed as clean.
+
+### Audit Step-3 — any defect sends the process back to Step-1
+
+If **either Step-1 scan or either independent Step-2 audit**
+finds **any** new gap/defect, then:
+
+- Fix only authorized C48/shared-port/test artifacts, preserving
+  BASIC and the frozen platform. Add or update reproduction tests.
+- Rebuild and rerun relevant real-kernel/visual checks, including
+  the residual-pixel check. Recheck on-disk bytes.
+- **Reset the consecutive-clean-scan counter to 0.**
+- Return to **Audit Step-1**, rereading fresh disk bytes of both
+  BASIC and revised C48 from the first line/byte. A quick
+  reread of changed hunks does not count.
+- If a defect cannot be fixed within the write boundary, record
+  the blocker and stop delivery; don't relabel the defect as
+  a deliberate difference to pass the gate.
+
+If all three parts (Step-1, Step-2a, Step-2b) finish without
+new gaps/defects and no known unresolved defects remain,
+increment the clean-scan counter by **one**. Then start a
+**new** Step-1 scan from freshly reopened disk bytes even
+when no files changed; independent perspectives, scenarios
+and inspection order should vary where useful.
+
+### Audit Step-4 — require 3 successive clean scans before delivery
+
+Only when the counter reaches **3**, with three fully
+documented **consecutive** Step-1 byte scans and both
+independent audits clean in **each** round, may the port
+proceed to final reproducibility and delivery checks.
+Zero "new" defects alone is insufficient if a known
+defect remains unresolved. Any discovered gap, updated
+C48 source or failed regression invalidates the streak.
+
+Minimal per-port record (in `C48/README.TXT` or one short
+port-local audit note; no bulky bureaucracy):
+
+```text
+Round | BASIC SHA-256 | C48 source/glyph/shared SHA-256 | Step-1 | Normal | Adversarial | new defects | consecutive clean
+  1   | ...          | ...                             | PASS   | PASS   | FAIL        | ...         | 0
+  2   | ...          | ...                             | PASS   | PASS   | PASS        | 0           | 1
+  3   | ...          | ...                             | PASS   | PASS   | PASS        | 0           | 2
+  4   | ...          | ...                             | PASS   | PASS   | PASS        | 0           | 3
+```
+
+A fresh scan is not a claim of a separate reviewer; identify
+who or what performed each review and what was independently
+checked. The final counter, hashes and concrete test evidence
+must be part of the port's completion record.
+
+## After the three-scan gate
+
+### 10. Rebuild reproducibly and check repository hygiene
+
+Build twice with identical sources; compare SSX and TZX byte
+hashes. Ensure `build/tmp/` contains only its tracked
+`.gitkeep` after success, no generated `stem.asm` was
+added to Git, and all originals are unchanged. Run relevant
+automated and private checks if available. Every failure
+forces correction and a new three-clean-scan sequence.
+
+**Check:** The final tested binaries correspond to the exact
+port bytes audited in all three clean rounds.
+
+### 11. Record proof and remaining legitimate differences
+
+Write concise `C48/README.TXT` notes: original-to-C48
+mapping, commands, actual controls, deliberate and justified
+platform differences, tests, screenshots, file hashes,
+three-clean-scan record, unresolved limitations and any
+unproven behaviors. Do not declare full equivalence unless
+all relevant behavior is evidenced. Never invent execution,
+captures, checks or success.
+
+**Check:** Distinguish source translated, compiled, linked,
+tape packaged, actual ZX-UX execution, visuals compared,
+independent audits, and `yolo` loaded (if tested).
+
+### 12. Inspect, push and verify GitHub remotely
+
+Read the current remote `main` HEAD **again** and reconcile
+intervening commits. Inspect the *full* proposed diff,
+including additions, changes, renames and deletions. Reject
+the entire push if **any path** is outside
+`src/bonus/60-programs/`, or any original historical file
+was changed without explicit authorization. Stage only
+authorized work, run the existing private checker when
+available, commit and fast-forward push; never force-push.
+Read back remote HEAD, tree and all changed paths.
+A rejected checker, push or remote check is a blocker,
+never a claimed success.
+
+**Check:** Final remote bytes and filenames equal reviewed
+deliverables; report commit SHA, tests and outstanding gaps.
+
+## Per-program acceptance checklist
+
+Use PASS / FAIL / NOT RUN / NOT APPLICABLE **with evidence**
+for each relevant item; only a genuine non-applicable feature
+may be marked NOT APPLICABLE:
+
+```text
+[ ] BASIC file and supporting originals inspected; byte hashes preserved
+[ ] BASIC-to-C48 line/routine mapping complete
+[ ] Reference BASIC behavior/screens/data captured or identified
+[ ] Frozen SDK interface constraints honored
+[ ] Original data, calculations and optional sprites independently checked
+[ ] Inputs/prompts/keyboard/terminal behavior matched where relevant
+[ ] C48 source compiled; assembler/linker produced SSX
+[ ] TZX created with valid internal executable name
+[ ] Actual ZX-UX execution and appropriate program behavior tested
+[ ] Reference state/screen/output comparisons completed
+[ ] Residual pixels, attributes, ghost text and stale objects explicitly checked
+[ ] Appropriate edge/negative scenarios and regressions exercised
+[ ] Audit round 1: full fresh-disk manual byte scan + independent 2a/2b CLEAN
+[ ] Audit round 2: full fresh-disk manual byte scan + independent 2a/2b CLEAN
+[ ] Audit round 3: full fresh-disk manual byte scan + independent 2a/2b CLEAN
+[ ] Three consecutive scans clean, zero known unresolved defects
+[ ] Repeat SSX/TZX builds byte-for-byte reproducible
+[ ] yolo loading explicitly tested if making that claim
+[ ] Build/tmp clean; historical BASIC and frozen paths unchanged
+[ ] Private checker outcome recorded, when available
+[ ] Remote GitHub diff scope, fast-forward push and read-back verified
+Known legitimate differences:
+Missing tests / blockers:
+Three-round scan hashes / review evidence:
 Verified remote commit:
-\`\`\`
+```
 
-**Language for reporting:** State *source translated*, *compiled*,
-*linked*, *tape generated*, *ZX-UX executed*, *visuals compared*, and
-*behaviour independently verified* separately. A program with an
-unexercised relevant gameplay branch remains an **experimental port**;
-never label it fully verified solely because it compiles or boots.
+**Release decision:** Three clean scan/audit rounds are
+necessary, not sufficient to assert an untested capability.
+If a material gameplay, computational, rendering or input
+requirement remains unproven, mark it NOT RUN and withhold
+a "complete/equivalent" claim until it is tested. Report
+verified milestones precisely and keep blocked ports open.
 
-## Pilot status when v0.1 was written
-
-- **25 Galaxians:** BASIC sprite-data review, compilation/linkage,
-  tape creation, real-kernel intro/gameplay, stable game-over prompt
-  and fresh restart have evidence. The fleet-completion mothership
-  animation, exhaustive collisions/sounds and \`yolo\` tape loading
-  remain open.
-- **58 Invaders:** BASIC sprite-data review, compilation/linkage,
-  tape creation, real-kernel launch, movement, visible rocket flight,
-  a 20-point alien hit, a -10-point miss, clean HUD and CAPS SHIFT
-  movement have evidence. A real 200-point command-ship hit, every
-  victory/defeat/replay path, full sound/collision fidelity and
-  \`yolo\` tape loading remain open.
-
-This is **v0.1**: update the procedure when a new port uncovers a
-repeatable gap, but never retroactively promote unrun tests to passes.
+This workflow is **v0.2**, generic to all 60 BASIC programs.
+When new defects expose a repeatable weakness, update the
+workflow without retroactively claiming previously unrun
+audits or tests were performed.
