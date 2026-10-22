@@ -39,3 +39,22 @@ The historical FUSE clock times include tape loading and are not valid
 for direct ZX-UX wall-clock matching. Full behavioral equivalence,
 collision pixel accuracy, mothership animation, exact sound timing and
 loading with yolo are not yet independently proven.
+
+2026-10-22 source and adversarial review:
+- The new shared c48_any_key checks all eight physical keyboard rows.
+  The original first draft of this scan did not terminate with no key;
+  emulator review caught and corrected it before publishing.
+- The intro and GAME OVER prompts now wait for release, a fresh physical
+  press and release. The game sets ZX-UX terminal raw/non-echo mode so
+  terminal key events cannot print over the bitmap game display.
+- Independent BASIC DATA review checks all 14 original sprite shapes.
+- Automated real-kernel tests exercise the intro, gameplay, GAME OVER
+  prompt held idle for 120 frames and a fresh game restart. The saved
+  SCREENSHOTS/04-C48-GAME-OVER-WAIT.png is from the actual ZX-UX rvm run.
+- Run from src/bonus/60-programs/: python build/test-c48.py --system
+  PATH/ZX-UX.tzx --sdk PATH/ZX-UX-SDK [--captures]
+  The system tape requires its matching kernel.json in the same directory.
+- Still open: visually exercised fleet-completion mothership animation,
+  exhaustive BASIC collision and score equivalence, FUSE-versus-C48
+  motion and sound comparison, and running the TZX through ZX-UX yolo.
+  This experimental port is NOT declared fully behaviorally verified.

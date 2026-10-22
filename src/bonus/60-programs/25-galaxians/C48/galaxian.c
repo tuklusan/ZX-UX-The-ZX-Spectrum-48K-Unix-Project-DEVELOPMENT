@@ -60,6 +60,24 @@ static void number(int row,int col,int n)
     z=0;
     while (i>0) { i--; tile(row,col+z,buf[i]); z++; }
 }
+/* INKEY$ reads the physical matrix, not terminal input.  Disable normal
+ * terminal echo/cooked conversion so control keys cannot write over graphics. */
+static unsigned char tty_settings[6];
+static void game_keyboard(void)
+{
+    if(gtty(0,tty_settings)>=0) {
+        tty_settings[4]=32; /* ZX-UX TT_RAW, matching the frozen getchar runtime. */
+        stty(0,tty_settings);
+    }
+}
+static void fresh_key(void)
+{
+    /* An INKEY$-style fresh press, never a buffered getchar().  A key held
+     * across game over first has to be released, then pressed and released. */
+    while(c48_any_key())sleep(1);
+    while(!c48_any_key())sleep(1);
+    while(c48_any_key())sleep(1);
+}
 static void intro(void)
 {
     ink(7); paper(0); border(0); cls();
@@ -79,7 +97,7 @@ static void intro(void)
     txt(15,0,"line.");
     txt(17,0,"z = left  x = right  m = fire");
     inverse(1);txt(19,0,"PRESS ANY KEY TO START");inverse(0);
-    getchar();
+    fresh_key();
     cls();
 }
 static void fleet_reset(void)
@@ -204,7 +222,7 @@ static void game_over_msg(void)
     txt(10,8,"G A M E  O V E R");
     txt(18,2,"PRESS ANY KEY TO PLAY AGAIN");
     flash(0);
-    getchar();
+    fresh_key();
     ink(7);cls();
     gameover=1;
 }
@@ -300,6 +318,7 @@ static void play(void)
 }
 int main(void)
 {
+    game_keyboard();
     border(0);paper(0);ink(7);cls();
     rnd_state=rnd_state ^ ticks();
     intro();

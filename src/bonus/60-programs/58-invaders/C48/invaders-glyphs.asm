@@ -1,5 +1,5 @@
 ; Original Invaders BASIC DATA lines 1030-1090, unmodified sprite bytes.
-; 128-140 follow code assignments below.  141-159 are blank.
+; 128-140 follow code assignments below.  142-159 are blank.
         section data
 c48_game_glyphs:
         db 60,140,115,51,63,111,193,192   ; 128 alien left
@@ -15,4 +15,5 @@ c48_game_glyphs:
         db 255,0,255,0,255,0,255,0   ; 138 shield2
         db 255,126,255,126,255,126,255,0   ; 139 shield3
         db 0,82,24,124,62,24,74,0   ; 140 explosion
-        ds 152
+        db 0,16,16,16,16,16,16,0   ; 141 visible upward rocket
+        ds 144

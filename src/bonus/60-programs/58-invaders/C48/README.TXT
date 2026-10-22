@@ -13,7 +13,7 @@ planet defeat, highest score and running total across games.
 
 Files:
   invaders.c            Game translation and logical screen collision grid
-  invaders-glyphs.asm   13 original 8x8 sprite glyphs from BASIC DATA
+  invaders-glyphs.asm   13 original BASIC glyphs plus a rocket glyph
   (invaders.asm)        Generated only under ../../build/tmp/, not tracked
   invaders.ssx          Frozen SDK SSX executable
   invaders.tzx          ZX-UX cassette, internal name invaders
@@ -50,3 +50,29 @@ BASIC numeric formatting, command-ship randomness, arrow-key repeats,
 replay timing and BEEP sound have not been independently matched.
 Not all win/loss/restart branches were exercised. The yolo tape loader
 has not been independently tested on a running machine.
+
+2026-10-22 source and adversarial review:
+- Intro and replay prompts now require release, a fresh physical press,
+  then release, instead of consuming buffered terminal getchar input.
+  Both programs enable raw/non-echo tty mode using frozen gtty/stty.
+- An animated vertical rocket is drawn with extra sprite 141 rather than
+  incorrectly printing ASCII 97 ('a'). A missile is visibly rendered in
+  successive screen rows before impact; an alien hit was observed.
+- MISS! is now transient and its HUD area is cleared; ordinary score and
+  rocket reserve values are then refreshed. The moving command ship has
+  separately tracked hit bounds and must match an actual ship glyph.
+- CAPS SHIFT+5/8 now produces five-cell moves as with BASIC's cursor keys;
+  the frozen SDK's kbd_down(8/9) does not represent shifted cursors.
+- The BASIC DATA reference pass checks 13 original sprites byte for byte,
+  including its interleaved POKE/READ layouts. Sprite 141 is a new rocket.
+- Automated real ZX-UX kernel checks drove the launcher, observed the
+  rocket in flight, verified score 20 and reserve 59 after a hit, then
+  score 10 and reserve 58 after a miss, with no HUD remnants, and CAPS
+  SHIFT fast movement. Actual captures were saved as
+  SCREENSHOTS/04-C48-ROCKET-FLIGHT.png and 05-C48-SCORED-HIT.png.
+- Run: python build/test-c48.py --system PATH/ZX-UX.tzx
+  --sdk PATH/ZX-UX-SDK [--captures] (requires adjacent kernel.json).
+- NOT YET VERIFIED: actual 200-point command ship strike, victory and
+  defeat/restart sequences, all collision branches, sound
+  equivalence to BASIC, and ZX-UX yolo loading of the cassette. This
+  remains an experimental port; no full-equivalence claim is made.

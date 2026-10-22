@@ -1,6 +1,6 @@
 /* Invaders (1983 Michael Bews): C48 port of original BASIC lines 10..1090.
  * The 32x24 renderer is common c48lib, with original program sprite data.
- * 5/8 and shifted left/right move, 7/up fires (60 rockets initially).
+ * 5/8 or CAPS SHIFT+5/8 move; 7/up fires (60 rockets initially).
  */
 #include <c48.h>
 #include "../../c48lib/c48lib.h"
@@ -10,6 +10,7 @@ static unsigned char hit[50];
 static int top_row, line_row, cycles, direction, fleet_x;
 static int position, score, highest, total, rockets;
 static int over_game;
+static int ship_col, ship_active;
 static unsigned int seed=22831;
 
 static int random_n(int n)
@@ -64,6 +65,7 @@ static void launcher(void)
 static void score_line(void)
 {
     ink(0);line(21,0,"SCORE:");clear_n(21,6,7);val(21,6,score);
+    clear_n(21,10,5); /* MISS! must never remain in the permanent HUD. */
     line(21,15,"ROCKET RESERVE:");clear_n(21,30,2);val(21,30,rockets);
 }
 static void full_field(void)
@@ -81,6 +83,24 @@ static void full_field(void)
     }
     ch(19,30,139);ch(19,31,138);
     ink(0);launcher();score_line();
+}
+/* INKEY$ reads the physical matrix, not terminal input.  Disable normal
+ * terminal echo/cooked conversion so control keys cannot write over graphics. */
+static unsigned char tty_settings[6];
+static void game_keyboard(void)
+{
+    if(gtty(0,tty_settings)>=0) {
+        tty_settings[4]=32; /* ZX-UX TT_RAW, matching the frozen getchar runtime. */
+        stty(0,tty_settings);
+    }
+}
+static void fresh_key(void)
+{
+    /* An INKEY$-style fresh press, never a buffered getchar().  A key held
+     * across game over first has to be released, then pressed and released. */
+    while(c48_any_key())sleep(1);
+    while(!c48_any_key())sleep(1);
+    while(c48_any_key())sleep(1);
 }
 static void intro(void)
 {
@@ -107,12 +127,13 @@ static void intro(void)
     line(21,0,"IF INVADERS GET CLOSE TO YOU");
     line(22,0,"THEY BECOME INDESTRUCTIBLE!");
     flash(1);line(23,2,"<PRESS ANY KEY TO START GAME>");flash(0);
-    getchar();
+    fresh_key();
 }
 static void new_game(void)
 {
     int i;
     top_row=0;line_row=0;cycles=0;direction=1;fleet_x=0;
+    ship_active=0;ship_col=0;
     score=0;rockets=60;position=0;over_game=0;
     for(i=0;i<50;i++)hit[i]=0;
     full_field();
@@ -142,7 +163,7 @@ static void end_game(int won)
     line(12,12,"HIGHEST SCORE");val(12,26,highest);
     line(13,12,"TOTAL SCORE");val(13,26,total);
     flash(1);line(15,2,"PRESS ANY KEY FOR NEXT GAME");flash(0);
-    getchar();
+    fresh_key();
     paper(6);ink(2);wipe();line(11,12,"STANDBY");
     for(i=5;i>0;i--) {val(17,15,i);sleep(10);}
     over_game=1;
@@ -176,54 +197,85 @@ static void march(void)
     }
     if(line_row==0 && top_row>0) {
         clear_n(0,0,32);
-        ink(2);draw_ship(0,random_n(27));
+        ship_col=random_n(27);
+        ship_active=1;
+        ink(2);draw_ship(0,ship_col);
     }
 }
 static void rocket(void)
 {
-    int xs,r,x,ix,shotcol;
+    int xs,r,x,ix,shotcol,first,code,offset;
     shotcol=position+1;
     xs=((position-1+10)*2)%10;
-    if(xs!=2 && xs!=4)return; /* shield gap, BASIC line 330 */
+    if(xs!=2 && xs!=4)return; /* Same shield-gap check as BASIC 330. */
     if(rockets<1){flash(1);line(21,15,"  TAKE COVER!! 0 ");flash(0);return;}
     beep(0.12,35);rockets--;score_line();
-    ink(0);ch(19,shotcol,97);
-    for(r=18;r>=0;r--)if(at(r,shotcol)!=32)break;
-    if(r<0){
-        ch(19,shotcol,' ');ch(0,shotcol,97);
+    /* Render a real rocket, not printable ASCII 97 ('a').  Advance one
+     * Spectrum character row at a time; inspect the next cell BEFORE drawing
+     * into it so neither aliens nor the command ship can be erased early. */
+    ink(0);
+    ch(19,shotcol,141);sleep(1);ch(19,shotcol,' ');
+    for(r=18;r>=0;r--) {
+        if(at(r,shotcol)!=32)break;
+        ch(r,shotcol,141);
+        sleep(1);
+        ch(r,shotcol,' ');
+    }
+    if(r<0) {
         flash(1);line(21,10,"MISS!");flash(0);
         beep(0.2,-15);score=score-10;
-        clear_n(21,6,7);val(21,6,score);
-        ch(0,shotcol,' ');return;
+        sleep(5);score_line();return;
     }
-    for(x=1;x<=3;x++){
+    /* Distinguish ship from formation and shield hits; the original BASIC
+     * tests SCREEN$ while the command ship is redrawn independently. */
+    code=at(r,shotcol);
+    for(x=1;x<=3;x++) {
         ch(r,shotcol,140);beep(0.02,30-3*x);
-        sleep(1);ch(r,shotcol,' ');
+        sleep(1);
+        ch(r,shotcol,code);
     }
-    clear_n(r,position,3);ch(19,shotcol,' ');
-    if(r==0)score=score+200;
-    else score=score+20;
-    clear_n(21,6,7);val(21,6,score);
-    if(r>=top_row && r<=top_row+6){
-        ix=7*(r-top_row)+1+(position+1)/4;
-        if(ix>=1 && ix<=49)hit[ix]=1;
+    if(r==0 && ship_active && shotcol>=ship_col && shotcol<ship_col+5
+       && code>=132 && code<=136) {
+        clear_n(0,ship_col,5);
+        ship_active=0;
+        score=score+200;
+    } else if(code==128 || code==129) {
+        first=shotcol-(code==129);
+        clear_n(r,first,2);
+        score=score+20;
+        if(r>=top_row && r<=top_row+6) {
+            offset=first%4;
+            ix=7*(r-top_row)+1+(first-offset)/4;
+            if(ix>=1 && ix<=49)hit[ix]=1;
+        }
+    } else {
+        /* A non-alien cell was encountered.  Never count a shield as a
+         * destroyed invader and do not remove the score or HUD graphics. */
     }
+    score_line();
 }
 static void controls(void)
 {
     int old,move;
     old=position;move=0;
-    if(kbd_down('5'))move=-1;
-    if(kbd_down('8'))move=1;
-    if(kbd_down('7') || kbd_down(11)) {rocket();return;}
-    if(kbd_down(8))move=-5;
-    if(kbd_down(9))move=5;
+    /* BASIC INKEY$ codes 8/9 are CAPS SHIFT+5/8 on the Spectrum.
+     * kbd_down(8/9) does not implement cursor codes in the frozen SDK. */
+    if(kbd_down('5')) {
+        move=-1;
+        if(c48_shift_down())move=-5;
+    }
+    if(kbd_down('8')) {
+        move=1;
+        if(c48_shift_down())move=5;
+    }
+    if(kbd_down('7')) {rocket();return;}
     if(move<0 && position>0){position=position+move;if(position<0)position=0;}
     if(move>0 && position<27){position=position+move;if(position>27)position=27;}
     if(position!=old){ink(0);clear_n(20,old,4);launcher();beep(0.08,-40);}
 }
 int main(void)
 {
+    game_keyboard();
     seed=seed^ticks();highest=0;total=0;
     intro();
     while(1) {

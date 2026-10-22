@@ -5,3 +5,7 @@
  * Supports the frozen SDK's INVERSE and OVER state; no UDG slots used.
  */
 int c48_cell(int row, int col, int code);
+
+/* 1 if any physical Spectrum key is held, else 0; never reads tty buffer. */
+int c48_any_key(void);
+int c48_shift_down(void); /* Physical CAPS SHIFT; never reads tty. */
