@@ -121,3 +121,26 @@ Additional adversarial runtime regression:
   exact pursuit and collision fidelity, axe, sound and timing,
   full three-consecutive-round independent audit, and yolo loading
   are not all demonstrated.
+
+2026-10-22 collision cleanup and screen-remnant review:
+- BASIC line 6000 clears the active mine-layer cell (my,mx) before
+  relocating it. The C48 collision handler could relocate its logical
+  coordinates without erasing the old visible glyph, leaving a ghost
+  after a collision with a laid mine. It now blanks the active pursuer
+  cell before respawn in both life-loss and axe-protected collision
+  cases. A protected overlapping collision redraws the player once
+  the mine-layer has moved.
+- Added BASIC line 6000 source-fidelity assertions and a screen-level
+  adversarial check sampling six genuine ZX-UX gameplay/game-over frames,
+  rejecting any frame containing more than one visible pursuer glyph.
+- Two builds under the frozen SDK produced byte-identical SSX/TZX.
+  The real ZX-UX kernel regression passed original glyphs, placements,
+  title, keyboard/maze/movement, pursuing-sprite visibility,
+  game-over, idle wait, fresh restart, and the sampled ghost check.
+  The private checker passed both changed text files.
+- An earlier over-dense 45-snapshot emulator run timed out and is
+  expressly NOT counted as passing; the six-snapshot check completed.
+- This remains an experimental port: the complete BASIC-to-C48 normal
+  and adversarial review, three successive clean fresh-disk-byte
+  audits, axe behavior parity, full timing/sound and yolo tape
+  execution remain unverified. No BASIC or frozen platform file changed.

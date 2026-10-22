@@ -59,6 +59,18 @@ def check_pursuer_draw_order():
     assert cell == 131
     print('PASS: pursuer draws after laid mine even on overlapping half-cell steps')
 
+def check_collision_cleanup():
+    """BASIC 6000 clears the pursuer's occupied cell before respawning."""
+    basic = (THIS.parent / 'BASIC' / '01-minelay.bas').read_text()
+    c48 = (THIS / 'minelay.c').read_text()
+    assert '6000 PRINT AT my,mx;" "' in basic
+    collision = c48.split('static void lose_life(void)', 1)[1].split('static void player_step(void)', 1)[0]
+    assert collision.index('blank(my2/2,mx2/2);') < collision.index('respawn_mine();'), (
+        'The old mine-layer screen cell is not cleared before respawn')
+    assert 'at_cell(y,x,129,6,0);' in collision, (
+        'Player must be restored when a mine-layer overlap consumes an axe')
+    print('PASS: BASIC 6000 pursuer cleanup before respawn; axe overlap redraw')
+
 def check_original_title():
     basic = (THIS.parent / 'BASIC' / '01-minelay.bas').read_text()
     original = re.search(r'^9500 PRINT INK 0;AT 0,0;"([^"]*)"', basic, re.M)
@@ -133,7 +145,22 @@ def check_screen(system, sdk):
     step(95)
     runner.session.kb.add([('press', char_keys('2'), 20)])
     step(35)
-    over_screen = step(2700)
+    # Adversarial screen inspection across life losses and mine respawns:
+    # a prior pursuer must never survive as a second, ghost sprite.
+    def pursuer_count(screen):
+        n = 0
+        for row in range(2, 22):
+            for col in range(32):
+                glyph = tuple(screen[((row & 24) << 8) + (pix << 8) +
+                                      ((row & 7) << 5) + col] for pix in range(8))
+                if glyph == enemy_bytes:
+                    n += 1
+        return n
+    for _ in range(6):
+        over_screen = step(450)
+        assert pursuer_count(over_screen) <= 1, (
+            'More than one live mine-layer sprite: stale screen pixels after respawn')
+    print('PASS: no ghost pursuer in 6 sampled ZX-UX gameplay/game-over frames')
     font = ROOT / 'c48lib' / 'c48lib-font.asm'
     charmap = {}
     for row in font.read_text().splitlines():
@@ -161,6 +188,7 @@ def main():
     check_glyphs()
     check_placements()
     check_pursuer_draw_order()
+    check_collision_cleanup()
     check_original_title()
     if a.system and a.sdk:
         check_screen(a.system.resolve(), a.sdk.resolve())

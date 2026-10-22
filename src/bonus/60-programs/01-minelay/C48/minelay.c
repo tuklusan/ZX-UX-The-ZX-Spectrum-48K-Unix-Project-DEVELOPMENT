@@ -180,7 +180,15 @@ static void make_maze(void)
 static void lose_life(void)
 {
     int i;
-    if(has_axe){has_axe=0;beep(0.05,15);respawn_mine();return;}
+    /* BASIC 6000 clears the mine-layer's OLD screen cell before moving it.
+     * Otherwise a collision with a laid mine can strand the old pursuer. */
+    blank(my2/2,mx2/2);
+    if(has_axe){
+        has_axe=0;beep(0.05,15);respawn_mine();
+        /* The pursuer can collide in the very cell holding the player. */
+        at_cell(y,x,129,6,0);
+        return;
+    }
     for(i=7;i>=0;i--){at_cell(y,x,129,i,0);beep(0.01,i);}
     lives--;
     if(lives<=0){gameover=1;return;}
