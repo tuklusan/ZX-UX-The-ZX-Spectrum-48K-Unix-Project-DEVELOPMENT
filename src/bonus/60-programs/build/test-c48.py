@@ -58,6 +58,13 @@ def check_sources():
         source = (directory / 'C48' / (stem + '.c')).read_text()
         assert not re.search(r'getchar\s*\(\s*\)\s*;', source), f'{stem}: buffered terminal input on a game prompt'
         assert 'fresh_key();' in source, f'{stem}: missing fresh-key gate'
+    gal = (ROOT / '25-galaxians' / 'C48' / 'galaxian.c').read_text()
+    player_laser = gal.split('static void fire_laser(void)', 1)[1].split('static void game_over_msg(void)', 1)[0]
+    enemy_laser = gal.split('static void enemy_fire(void)', 1)[1].split('static void round_init(void)', 1)[0]
+    assert 'plot(sx,8)' not in player_laser, 'Galaxians duplicates DRAW start pixel with PLOT'
+    assert 'plot(col*8,y0)' not in enemy_laser, 'Galaxians duplicates enemy DRAW start pixel'
+    assert 'draw(sx,8,sx,138)' in player_laser and 'draw(col*8,y0,col*8,9)' in enemy_laser
+
     inv = (ROOT / '58-invaders' / 'C48' / 'invaders.c').read_text()
     assert 'ch(19,shotcol,97)' not in inv, 'ASCII a used in place of a rocket'
     assert 'ship_active' in inv and 'code>=132 && code<=136' in inv
@@ -120,6 +127,18 @@ def test_kernel(system: Path, sdk: Path, captures=False):
     restarted = step_to(gal, 1170)
     assert 'PRESS ANY KEY TO PLAY AGAIN' not in text(restarted, 18), 'Galaxians failed a fresh restart'
     print('PASS: Galaxians ZX-UX intro, fresh start, stable game-over, fresh restart')
+    # Regress the missile endpoint on actual ZX-UX screen RAM. The frozen
+    # console may reserve row 22, so source inspection above is also required.
+    shot = launch('25-galaxians', 'galaxian')
+    step_to(shot, 135)
+    shot.session.kb.add([('press', space, 20)])
+    baseline = step_to(shot, 220)
+    assert cell(baseline, 22, 17)[7] & 1 == 0, 'dirty laser start pixel before firing'
+    shot.session.kb.add([('press', char_keys('m'), 20)])
+    after_shot = step_to(shot, 295)
+    assert cell(after_shot, 22, 17)[7] & 1 == 0, 'laser left a bottom-row pixel'
+    print('PASS: Galaxians pixel endpoint after firing; redundant PLOT source guard')
+
 
     inv = launch('58-invaders', 'invaders')
     intro = step_to(inv, 135)

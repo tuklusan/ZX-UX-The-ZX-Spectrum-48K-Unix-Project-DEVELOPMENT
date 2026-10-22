@@ -178,9 +178,10 @@ static void fire_laser(void)
     int victim;
     sx=posx*8+23;
     /* The BASIC game's plot/draw missile from lines 1000-1140. */
-    ink(7);plot(sx,8);draw(sx,8,sx,138);
+    /* DRAW includes its starting pixel; duplicate PLOT leaves a dot. */
+    ink(7);draw(sx,8,sx,138);
     beep(0.02,10);
-    over(1);plot(sx,8);draw(sx,8,sx,138);over(0);
+    over(1);draw(sx,8,sx,138);over(0);
     /* Check the BASIC cells occupied by the formation and falling pair. */
     if(bombrow>=3 && bombrow<21) {
         victim=-1;
@@ -237,10 +238,10 @@ static void enemy_fire(void)
     y0=(21-bombrow)*8-1;
     ink(3);
     if(y0>=0 && y0<=191) {
-        plot(col*8,y0);
+        /* DRAW includes y0; never toggle a separate PLOT. */
         draw(col*8,y0,col*8,9);
         beep(0.001,38);beep(0.001,40);beep(0.001,42);
-        over(1);plot(col*8,y0);draw(col*8,y0,col*8,9);over(0);
+        over(1);draw(col*8,y0,col*8,9);over(0);
     }
     ink(7);
     if(col==posx+2 || col==posx+3) game_over_msg();

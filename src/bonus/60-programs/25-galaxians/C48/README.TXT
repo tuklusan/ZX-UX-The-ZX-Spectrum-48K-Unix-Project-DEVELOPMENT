@@ -58,3 +58,21 @@ loading with yolo are not yet independently proven.
   exhaustive BASIC collision and score equivalence, FUSE-versus-C48
   motion and sound comparison, and running the TZX through ZX-UX yolo.
   This experimental port is NOT declared fully behaviorally verified.
+
+2026-10-22 missile endpoint defect fix:
+- The frozen C48 draw(x1,y1,x2,y2) visits BOTH endpoints. The port
+  additionally called plot() on each missile's starting point, and then
+  used OVER 1 to erase by XOR. The redundant PLOT toggled the same
+  endpoint twice during erasure, leaving a single stray set pixel.
+- Removed the extra PLOT calls from both the player's fire_laser() and
+  the enemy_fire() routines; DRAW and XOR redraw now visit each endpoint
+  once. This does not alter the original BASIC files.
+- Rebuilt SSX and TZX twice in an isolated frozen SDK workspace with
+  byte-for-byte identical results; actual ZX-UX headless RVM booted the
+  rebuilt SSX and demonstrated the game and a fired shot.
+- Source regression explicitly forbids duplicate starting-point PLOTs.
+  A model of frozen pixel XOR confirms the old code leaves a 1 and the
+  fixed code clears it. The active ZX-UX console reserves bottom rows,
+  so the headless screen-capture by itself does not visibly reproduce
+  the original end-pixel dot; end-to-end yolo and all collision paths
+  are still unverified.
