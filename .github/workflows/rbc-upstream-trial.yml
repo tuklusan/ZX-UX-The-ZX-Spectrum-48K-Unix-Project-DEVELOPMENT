@@ -1,0 +1,63 @@
+name: RBC Python compiler trial
+on:
+  push:
+    paths:
+      - '.github/workflows/rbc-upstream-trial.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Acquire Python compiler source
+        run: |
+          git clone https://github.com/imneme/pyhsb.git upstream-pyhsb
+          git -C upstream-pyhsb checkout --detach 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+          python3 -m compileall -q upstream-pyhsb
+      - name: Test original BASIC compilation
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p trial-result
+          unzip -oq experiments/hisoft-rbc-2026-10-22/rbc-pyhsb-stage.zip -d trial-result
+          curl -fsSL --retry 2 --max-time 25 -o trial-result/hisoft48.tap \
+            https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap || true
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('trial-result/hisoft48.tap')
+          print('tape_available:',p.exists(),'bytes:',p.stat().st_size if p.exists() else 0)
+          PY
+          cat > trial-result/hello.bas <<'BASIC'
+          10 PRINT "HELLO"
+          BASIC
+          for task in hello galaxians invaders; do
+            case "$task" in
+              hello) input=trial-result/hello.bas;;
+              galaxians) input=src/bonus/60-programs/25-galaxians/BASIC/25-galaxians.bas;;
+              invaders) input=src/bonus/60-programs/58-invaders/BASIC/58-invaders.bas;;
+            esac
+            echo "=== $task ===" | tee -a trial-result/compile.log
+            if test -f trial-result/hisoft48.tap; then
+              python3 trial-result/rbc/rbc.py "$input" \
+                --frontend upstream-pyhsb --sdk src/zx-ux-sdk \
+                --rom src/zx-ux-sdk/rom/48.rom \
+                --tape trial-result/hisoft48.tap \
+                -o "trial-result/$task-source.ssx" \
+                --report "trial-result/$task-source.json" \
+                2>&1 | tee -a trial-result/compile.log
+              echo "result=${PIPESTATUS[0]}" | tee -a trial-result/compile.log
+            fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rbc-python-source-trial
+          path: |
+            upstream-pyhsb
+            trial-result/*.log
+            trial-result/*-source.ssx
+            trial-result/*-source.json
+          retention-days: 7
