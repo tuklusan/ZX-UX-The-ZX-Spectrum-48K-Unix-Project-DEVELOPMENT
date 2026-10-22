@@ -1,4 +1,4 @@
-# BASIC-to-C48 workflow — v0.6
+# BASIC-to-C48 workflow — v0.7
 
 Applies to all 60 numbered Spectrum BASIC programs, in directory order 01–60.
 Translate the real historical program, not a substitute. Continue autonomously
@@ -19,22 +19,29 @@ disposable copies. GitHub `main` is permanent storage.
    workflow **from that same HEAD**. If local checkout differs, reconcile
    safely before using it; never discard unrelated local changes.
 2. Run `python build/port_progress.py status` in the up-to-date workspace.
-   The JSON file is the committed cursor: `completed` is a continuous prefix
-   of 01–60, and `next_program` is the first not yet completed. Both are
-   validated against the 60 actual numbered directories.
-3. Confirm the last completed program's remote `C48/PORT-RESULT.txt` and
+   The JSON file is the committed cursor: `completed` is the continuous prefix of **non-pilot** programs,
+   `pilot_completed` contains only the accepted 25/58 historical pilots, and
+   `next_program` is the first remaining program. All are validated against
+   the 60 actual numbered directories.
+3. Confirm the last regular completed program's remote `C48/PORT-RESULT.txt` and
    committed source/SSX/TZX/tests exist, and that its commit passed closeout.
    If the GitHub cursor disagrees with committed results, **stop and repair
    the record**, rather than silently skipping or redoing work.
-4. **Resume only `next_program`. Never re-port a `completed` program.**
-   Existing experimental or pilot C48 files in a later numbered directory do
-   not mark it complete; when its turn arrives, review and validate them under
-   the current gate. If `next_program` is null, all 60 are complete.
+4. **Resume only `next_program`. Never re-port a `completed` or
+   `pilot_completed` program.** The two user-accepted migrations,
+   `25-galaxians` and `58-invaders`, are explicitly grandfathered as pilots;
+   they already have committed C48 source, executable SSX/TZX and screenshots.
+   They precede the v0.6 per-program gate, so do NOT claim historical
+   `PORT-RESULT.txt` files or the newer gate existed for them. The cursor
+   skips these two positions when it reaches them. Every other program must
+   pass the full current gate before completion. If `next_program` is null,
+   all 60 are accounted for.
 
-Current baseline at workflow v0.6 adoption: `01-minelay` is completed on
-GitHub in commit `82a3514539e35641c09e659d9a31b0d9da90d9e7`.
-`02-fall-guy` is next. This paragraph is historical; always use the live
-committed JSON rather than a copied summary or an earlier conversation.
+Historical baseline: `01-minelay` passed the program gate in commit
+`82a3514539e35641c09e659d9a31b0d9da90d9e7`. The pilot exceptions were
+added separately with the user's express acceptance of `25-galaxians` and
+`58-invaders`; `02-fall-guy` remains next. This paragraph is descriptive,
+not a substitute for reading live GitHub progress.
 
 ## Six steps for each program
 
@@ -79,8 +86,10 @@ python build/check-c48.py NN-name --system PATH/ZX-UX.tzx --sdk PATH/SDK --close
 python build/port_progress.py status
 ```
 
-`complete` refuses any program other than the next one, missing C48 binaries,
-or missing `PORT-RESULT.txt` gate PASS markers. The checker refuses a
+`complete` refuses pilots, any program other than the next one, missing C48 binaries,
+or missing `PORT-RESULT.txt` gate PASS markers. The permanent `pilot_completed`
+field is separate from normal gate results; it never bypasses checks for 02–24,
+26–57, or 59–60. The checker refuses a
 completed/out-of-order program at normal gate time. Its closeout accepts only
 the newest completed program, checks the committed progress file as well as
 that port's files, and checks remote `main` equals local HEAD. These safeguards

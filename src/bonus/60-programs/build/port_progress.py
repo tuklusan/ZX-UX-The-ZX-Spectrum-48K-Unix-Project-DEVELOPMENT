@@ -14,6 +14,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 PROGRESS = "PORTING-PROGRESS.json"
+PILOT_NAMES = ("25-galaxians", "58-invaders")
 NAME = re.compile(r"(?:0[1-9]|[1-5][0-9]|60)-[a-z0-9-]+\Z")
 CHECKS = ("normal", "adversarial", "integration", "remnants")
 
@@ -35,14 +36,20 @@ def load_progress(root=ROOT):
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ProgressError("cannot read progress file: " + str(exc)) from exc
     names = programs(root)
-    if not isinstance(data, dict) or set(data) != {"schema", "completed", "next_program"}:
+    if not isinstance(data, dict) or set(data) != {"schema", "completed", "pilot_completed", "next_program"}:
         raise ProgressError("unknown progress file fields")
-    if type(data["schema"]) is not int or data["schema"] != 1:
+    if type(data["schema"]) is not int or data["schema"] != 2:
         raise ProgressError("unsupported progress schema")
+    pilots = data["pilot_completed"]
+    if (not isinstance(pilots, list) or
+            pilots != [name for name in names if name in pilots] or
+            any(name not in PILOT_NAMES for name in pilots)):
+        raise ProgressError("only the two verified historical pilots may bypass the normal sequence")
+    ordered = [name for name in names if name not in pilots]
     done = data["completed"]
-    if not isinstance(done, list) or done != names[:len(done)]:
-        raise ProgressError("completed programs must be a consecutive prefix in 01-60 order")
-    if data["next_program"] != (names[len(done)] if len(done) < 60 else None):
+    if not isinstance(done, list) or done != ordered[:len(done)]:
+        raise ProgressError("regular completed programs must follow 01-60 order, excluding pilots")
+    if data["next_program"] != (ordered[len(done)] if len(done) < len(ordered) else None):
         raise ProgressError("next_program does not match first incomplete program")
     return data
 
@@ -78,9 +85,10 @@ def complete(root, program):
         raise ProgressError("out of order: next program is " + str(data["next_program"]))
     checked_result(root, program)
     next_done = data["completed"] + [program]
-    names = programs(root)
-    updated = {"schema": 1, "completed": next_done,
-               "next_program": names[len(next_done)] if len(next_done) < len(names) else None}
+    ordered = [name for name in programs(root) if name not in data["pilot_completed"]]
+    updated = {"schema": 2, "completed": next_done,
+               "pilot_completed": data["pilot_completed"],
+               "next_program": ordered[len(next_done)] if len(next_done) < len(ordered) else None}
     (root / PROGRESS).write_text(json.dumps(updated, indent=2) + "\n", encoding="utf-8")
     return updated
 
@@ -99,8 +107,9 @@ def main():
             if args.program:
                 cli.error("status does not take a program")
             data = load_progress(ROOT)
-        print("Completed: {}/60".format(len(data["completed"])))
-        print("Last completed: " + (data["completed"][-1] if data["completed"] else "none"))
+        print("Completed: {}/60".format(len(data["completed"]) + len(data["pilot_completed"])))
+        print("Pilots: " + (", ".join(data["pilot_completed"]) or "none"))
+        print("Last regular completion: " + (data["completed"][-1] if data["completed"] else "none"))
         print("Next program: " + (data["next_program"] or "ALL DONE"))
         return 0
     except ProgressError as exc:

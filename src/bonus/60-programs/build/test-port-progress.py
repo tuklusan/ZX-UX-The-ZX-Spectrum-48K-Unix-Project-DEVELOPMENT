@@ -22,9 +22,11 @@ class TrackerTests(unittest.TestCase):
             (self.root / p).mkdir()
         self.write(0)
 
-    def write(self, count, next_override="UNSET"):
-        obj = {"schema": 1, "completed": self.names[:count],
-               "next_program": self.names[count] if count < 60 else None}
+    def write(self, count, next_override="UNSET", pilots=()):
+        names = [n for n in self.names if n not in pilots]
+        obj = {"schema": 2, "completed": names[:count],
+               "pilot_completed": list(pilots),
+               "next_program": names[count] if count < len(names) else None}
         if next_override != "UNSET":
             obj["next_program"] = next_override
         (self.root / progress.PROGRESS).write_text(json.dumps(obj) + "\n")
@@ -45,7 +47,7 @@ class TrackerTests(unittest.TestCase):
         self.assertEqual(state["next_program"], self.names[1])
 
     def test_invalid_gap_rejected(self):
-        obj = {"schema": 1, "completed": [self.names[1]], "next_program": self.names[2]}
+        obj = {"schema": 2, "completed": [self.names[1]], "pilot_completed": [], "next_program": self.names[2]}
         (self.root / progress.PROGRESS).write_text(json.dumps(obj))
         with self.assertRaises(progress.ProgressError):
             progress.load_progress(self.root)
@@ -80,6 +82,40 @@ class TrackerTests(unittest.TestCase):
         self.write(59)
         self.create_valid_port(self.names[-1])
         self.assertIsNone(progress.complete(self.root, self.names[-1])["next_program"])
+
+    def test_pilot_exemptions_do_not_move_cursor(self):
+        self.names[24] = "25-galaxians"
+        self.names[57] = "58-invaders"
+        for name in ("25-galaxians", "58-invaders"):
+            (self.root / name).mkdir()
+            (self.root / ("25-example25" if name.startswith("25") else "58-example58")).rmdir()
+        self.write(1, pilots=("25-galaxians", "58-invaders"))
+        state = progress.load_progress(self.root)
+        self.assertEqual(state["next_program"], self.names[1])
+        self.assertEqual(len(state["pilot_completed"]) + len(state["completed"]), 3)
+
+    def test_sequence_skips_pilots_when_reached(self):
+        self.names[24] = "25-galaxians"
+        self.names[57] = "58-invaders"
+        for name, former in (("25-galaxians", "25-example25"), ("58-invaders", "58-example58")):
+            (self.root / former).rename(self.root / name)
+        pilots = ("25-galaxians", "58-invaders")
+        self.write(24, pilots=pilots)
+        self.assertEqual(progress.load_progress(self.root)["next_program"], self.names[25])
+        self.create_valid_port(self.names[25])
+        self.assertEqual(progress.complete(self.root, self.names[25])["next_program"], self.names[26])
+        self.write(55, pilots=pilots)
+        self.assertEqual(progress.load_progress(self.root)["next_program"], self.names[56])
+        self.create_valid_port(self.names[56])
+        self.assertEqual(progress.complete(self.root, self.names[56])["next_program"], self.names[58])
+
+    def test_nonpilot_gap_and_unknown_pilot_rejected(self):
+        self.write(1, pilots=("25-galaxians", "58-invaders"))
+        with self.assertRaises(progress.ProgressError):
+            progress.load_progress(self.root)
+        self.write(1, pilots=(self.names[2],))
+        with self.assertRaises(progress.ProgressError):
+            progress.load_progress(self.root)
 
     def test_checker_marker_required(self):
         self.write(0)
