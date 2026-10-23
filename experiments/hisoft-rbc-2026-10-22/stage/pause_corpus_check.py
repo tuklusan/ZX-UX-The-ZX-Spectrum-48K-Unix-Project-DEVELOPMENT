@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Check safe PAUSE 0 transformations across unchanged original BASIC tapes.
+"""Verify original BASIC tape bytes and proposed PAUSE changes without changing tapes.
 
-This is a tokenized-source preparation check, not a HiSoft compilation run.
-Both the input tapes and their associated text listings remain read-only.
+Use the repository's existing tape tools rather than a second tape tokenizer.
+This inspection does not establish that a compiled game plays correctly.
 """
 from __future__ import annotations
 
@@ -15,6 +15,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 from pause_zero import rewrite_pause_zero
+
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'src/bonus/60-programs/build'))
+sys.path.insert(0, str(ROOT / 'experiments/hisoft-rbc-2026-10-22'))
+from basic_tape import TOKENS, encode_body  # noqa: E402
+from corpus_line_audit import basic_lines  # noqa: E402
 
 
 def _rows(program: bytes):
@@ -43,7 +49,6 @@ def _join(rows):
 
 
 def inspect(root: Path):
-    from zx_basic_tape import TOKENS, encode_body, find_basic, parse_standard_tzx
     words = {word: code for code, word in TOKENS.items()}
     fake_tap = types.ModuleType('tap')
     fake_tap.split_lines = _rows
@@ -58,10 +63,7 @@ def inspect(root: Path):
         for path in tapes:
             raw = path.read_bytes()
             digest = hashlib.sha256(raw).hexdigest()
-            programs = find_basic(parse_standard_tzx(raw))
-            if not programs:
-                raise ValueError(f'{path.name}: no tokenized BASIC program')
-            original = programs[0][1]
+            original = _join(sorted(basic_lines(raw).items()))
             temporary, changes = rewrite_pause_zero(original, keys, None)
             if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
                 raise RuntimeError(f'source file changed during check: {path}')
