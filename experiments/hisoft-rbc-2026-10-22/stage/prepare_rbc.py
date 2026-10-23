@@ -10,14 +10,14 @@ def prepare(checkpoint: Path, extensions: Path):
     compiler = checkpoint / 'rbc' / 'rbc.py'
     text = compiler.read_text()
     old = 'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize'
-    new = 'from line_targets import resolve_missing_targets\n' + old
+    new = 'from basic_listing import normalize_listing\nfrom line_targets import resolve_missing_targets\n' + old
     if text.count(old) != 1 or text.count('program = source.tokenize_directives(program,kw)') != 1:
         raise ValueError('RBC checkpoint changed; extension location needs review')
     text = text.replace(old, new, 1)
     old = 'program = source.tokenize_directives(program,kw)'
     text = text.replace(old, old + '\n        program, next_lines = resolve_missing_targets(program, kw, initial.fp)', 1)
-    # The ROM recognizes an in-memory line zero. HiSoft needs OPEN before
-    # the first source line even when the archive starts with line one.
+    # Try the compiler's in-memory line zero for a missing OPEN.
+    # HiSoft needs OPEN before the first user BASIC line.
     before = '            program = source.add_directives(program, directives, True, [], kw, initial.fp)'
     after = "            try:\n                program = source.add_directives(program, directives, True, [], kw, initial.fp)\n            except source.SourceError as exc:\n                if directives or 'no free line numbers' not in str(exc):\n                    raise\n                program = source.add_directives(program, [], False,\n                                                ['0 REM : OPEN #'], kw, initial.fp)"
     if text.count(before) != 1:
@@ -31,6 +31,8 @@ def prepare(checkpoint: Path, extensions: Path):
     if text.count(anchor) != 1:
         raise ValueError('RBC source reader changed')
     text = text.replace(anchor, "def _read_basic_text(src):\n    try:\n        return src.read_text(encoding='utf-8-sig')\n    except UnicodeDecodeError:\n        return src.read_text(encoding='latin-1')\n\n\n" + anchor, 1)
+    text = text.replace("source.tokenize_line(''.join(chunks),kw)",
+                        "source.tokenize_line(normalize_listing(''.join(chunks)),kw)", 1)
     # The archival listing joins a string variable to THEN without a space.
     anchor = '            if not quoted and not comment and c.isdigit():'
     if text.count(anchor) != 1:
@@ -47,6 +49,7 @@ def prepare(checkpoint: Path, extensions: Path):
     memory_source = memory_source.replace(
         old_target, "target=_target(('USR ' if op=='USR' else '') + address)", 1)
     memory.write_text(memory_source)
+    shutil.copyfile(extensions / 'basic_listing.py', checkpoint / 'rbc' / 'basic_listing.py')
     shutil.copyfile(extensions / 'line_targets.py', checkpoint / 'rbc' / 'line_targets.py')
     compiler.write_text(text)
 

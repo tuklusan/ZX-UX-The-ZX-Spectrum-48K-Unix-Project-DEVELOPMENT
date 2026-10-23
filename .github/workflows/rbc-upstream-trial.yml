@@ -122,4 +122,6 @@ jobs:
             trial-result/*.json
             trial-result/*.ssx
             trial-result/*.png
+            trial-result/rbc/*.py
+            trial-result/rbc/font32.bin
           retention-days: 1
