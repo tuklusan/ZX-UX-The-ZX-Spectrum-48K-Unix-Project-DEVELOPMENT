@@ -2,7 +2,7 @@
 """Adapt literal Spectrum ROM scroll-counter resets in temporary BASIC code.
 
 ZX-UX screen writes do not use the ROM's scroll prompt counter. Remove only
-plain POKE 23692,255 statements, leaving every other memory operation for
+plain POKE 23692,255 or POKE 23692,-1 statements, leaving other memory operations for
 strict checking. Source text and tape files are never modified.
 """
 from __future__ import annotations
@@ -53,7 +53,7 @@ def adapt_scroll_counter(program: bytes, keywords):
 
     poke = keywords.CODE_FOR['POKE']
     rem = keywords.CODE_FOR['REM']
-    pattern = re.compile(rb'\s*' + bytes([poke]) + rb'\s*23692\s*,\s*255\s*')
+    pattern = re.compile(rb'\s*' + bytes([poke]) + rb'\s*23692\s*,\s*(?:255|-1)\s*')
     changed = []
     rows = []
     for number, body in tap.split_lines(program):
