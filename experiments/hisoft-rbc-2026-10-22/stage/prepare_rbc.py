@@ -10,12 +10,12 @@ def prepare(checkpoint: Path, extensions: Path):
     compiler = checkpoint / 'rbc' / 'rbc.py'
     text = compiler.read_text()
     old = 'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize'
-    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom native_scroll import adapt_scroll_counter\nfrom udg_bounds import allow_bounded_udg_loops\nfrom native_pause_rt import install as install_native_pause\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
+    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom native_scroll import adapt_scroll_counter\nfrom restore_data import resolve_restores\nfrom udg_bounds import allow_bounded_udg_loops\nfrom native_pause_rt import install as install_native_pause\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
     if text.count(old) != 1 or text.count('program = source.tokenize_directives(program,kw)') != 1:
         raise ValueError('RBC checkpoint changed; extension location needs review')
     text = text.replace(old, new, 1)
     old = 'program = source.tokenize_directives(program,kw)'
-    text = text.replace(old, old + '\n        program, scroll_lines = adapt_scroll_counter(program, kw)\n        program, next_lines = resolve_missing_targets(program, kw, initial.fp)', 1)
+    text = text.replace(old, old + '\n        program, scroll_lines = adapt_scroll_counter(program, kw)\n        program, next_lines = resolve_missing_targets(program, kw, initial.fp)\n        program, data_lines = resolve_restores(program, kw, initial.fp)', 1)
     # Confirm bounded glyph writes across numbered FOR/POKE/NEXT lines.
     check_anchor = 'checks = analyze_lines(spectrum_tap.split_lines(program), kw.TOKEN)'
     if text.count(check_anchor) != 1:
@@ -138,6 +138,7 @@ def prepare(checkpoint: Path, extensions: Path):
     shutil.copyfile(extensions / 'native_pause_rt.py', checkpoint / 'rbc' / 'native_pause_rt.py')
     shutil.copyfile(extensions / 'native_scroll.py', checkpoint / 'rbc' / 'native_scroll.py')
     shutil.copyfile(extensions / 'udg_bounds.py', checkpoint / 'rbc' / 'udg_bounds.py')
+    shutil.copyfile(extensions / 'restore_data.py', checkpoint / 'rbc' / 'restore_data.py')
     compiler.write_text(text)
 
 
