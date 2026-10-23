@@ -27,7 +27,13 @@
     }
   ],
   "cleanup_current_run_excluded": 39964969962,
-  "cleared_run_ids": [],
+  "cleared_run_ids": [
+    39964839368,
+    39964781256,
+    39964772308,
+    39964772270,
+    39964476034
+  ],
   "delete_errors": [],
   "note": "Old run logs are not proof of completed 60-program compatibility.",
   "protected_unconsumed_run_ids": []
