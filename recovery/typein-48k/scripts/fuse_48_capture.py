@@ -22,6 +22,7 @@ def main(argv=None):
  p.add_argument('tape',type=Path);p.add_argument('--rom',type=Path,required=True)
  p.add_argument('--fuse',default='fuse-sdl');p.add_argument('--out',type=Path,default=Path('fuse-smoke'))
  p.add_argument('--wait',type=float,default=9.0)
+ p.add_argument('--boot-wait',type=float,default=14.0)
  p.add_argument('--after-key',default='',help='Comma-separated keys to press after LOAD screenshot, e.g. space,n or Return')
  p.add_argument('--after-wait',type=float,default=5.0)
  p.add_argument('--final-wait',type=float,default=0.0)
@@ -94,7 +95,7 @@ def main(argv=None):
   if not wins:
    raise RuntimeError('FUSE window not found; discovered '+str([(v[1],v[2],v[3]) for v in seen]))
   win=sorted(wins,key=lambda v:(abs(v[1]-320)+abs(v[2]-240),v[3]))[0][0]
-  win.set_input_focus(X.RevertToParent,X.CurrentTime);d.sync();time.sleep(.2)
+  win.set_input_focus(X.RevertToParent,X.CurrentTime);d.sync();time.sleep(a.boot_wait)
   capture(win,a.out/'01-boot.png')
   # Real Spectrum keyword mode: J is LOAD, Symbol Shift+P (Ctrl+P on
   # Fuse mapping) is the double quote character.
