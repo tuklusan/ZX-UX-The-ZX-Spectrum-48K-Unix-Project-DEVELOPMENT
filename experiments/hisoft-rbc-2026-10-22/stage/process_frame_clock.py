@@ -2,9 +2,10 @@
 
 The ZX Spectrum increments the FRAMES counter at 23672..23674. Motocross and
 Buzzy Bee set its three bytes to 255, then read all three to time a game.
-Native ZX-UX code must never write those shared addresses. Instead, record
-an offset in process-owned BSS and read (real_ticks - reset_ticks - 1) modulo
-2**24. Both the code generation and memory permission review require the
+Native ZX-UX code must never write those shared addresses. Instead, call
+the real kernel frame-clock service (38) and keep a private 24-bit timer in
+process-owned BSS. Count 16-bit kernel tick wraps and subtract the reset tick.
+The original offset of -1 and 24-bit wrapping are preserved. Both the code generation and memory permission review require the
 same exact original write/read patterns. Other POKE/PEEK behavior is unchanged.
 """
 from __future__ import annotations
@@ -107,7 +108,7 @@ def install(compiler):
         old_layout(self)
         if self._zxux_frame_shape is not None:
             self._zxux_frame_base = self.pc
-            self.pc = (self.pc + 3) & 0xffff
+            self.pc = (self.pc + 5) & 0xffff
 
     def st_poke(self):
         if self._zxux_frame_shape and self.line_no == self._zxux_frame_shape[0]:
@@ -120,11 +121,13 @@ def install(compiler):
                 if n != 255:
                     self.not_supported('timer reset value')
                 if addr == 23672:
-                    # Copy current ticks, never write the system FRAMES bytes.
-                    self.emit('ld hl,($5C78)')
+                    # Call the documented 50 Hz system timer (call 38).
+                    # Keep its reset point, last tick and wraps in BSS.
+                    self.emit('ld a,38; call $6003')
                     self.emit_op_reloc('ld (nn),hl', self._zxux_frame_base)
-                    self.emit('ld a,($5C7A)')
-                    self.emit_op_reloc('ld (nn),a', self._zxux_frame_base + 2)
+                    self.emit_op_reloc('ld (nn),hl', self._zxux_frame_base + 2)
+                    self.emit('xor a')
+                    self.emit_op_reloc('ld (nn),a', self._zxux_frame_base + 4)
                 return
         return old_poke(self)
 
@@ -136,12 +139,21 @@ def install(compiler):
                 parsed = self.number_to_hl()
                 if parsed != addr:
                     self.not_supported('timer byte address')
-                # Low 16 bits: current - start - 1, including borrowed carry.
-                self.emit('ld hl,($5C78)')
+                # 38 returns a real 50 Hz tick counter in HL.
+                # Carry from current-last increments the high-byte wrap.
+                self.emit('ld a,38; call $6003; push hl')
+                self.emit_op_reloc('ld de,(nn)', self._zxux_frame_base + 2)
+                self.emit('or a; sbc hl,de')
+                self.emit_op_reloc('ld a,(nn)', self._zxux_frame_base + 4)
+                self.emit('adc a,0')
+                self.emit_op_reloc('ld (nn),a', self._zxux_frame_base + 4)
+                self.emit('pop hl')
+                self.emit_op_reloc('ld (nn),hl', self._zxux_frame_base + 2)
+                # Low 16 bits: current - start - 1, high=wraps-borrow.
                 self.emit_op_reloc('ld de,(nn)', self._zxux_frame_base)
-                self.emit('scf; sbc hl,de; push hl; ld a,($5C7A); ld b,a')
-                self.emit_op_reloc('ld a,(nn)', self._zxux_frame_base + 2)
-                self.emit('ld e,a; ld a,b; sbc a,e; pop hl')
+                self.emit('scf; sbc hl,de')
+                self.emit_op_reloc('ld a,(nn)', self._zxux_frame_base + 4)
+                self.emit('sbc a,0')
                 if addr == 23672:
                     self.emit('ld h,0')
                 elif addr == 23673:

@@ -116,8 +116,9 @@ class NativeTests(unittest.TestCase):
         c.st_poke()
         self.assertEqual(c.ch, len(c.buf)-1)
         self.assertEqual(c.ops, [
-            ('emit','ld hl,($5C78)'),('reloc','ld (nn),hl',1000),
-            ('emit','ld a,($5C7A)'),('reloc','ld (nn),a',1002)])
+            ('emit','ld a,38; call $6003'),('reloc','ld (nn),hl',1000),
+            ('reloc','ld (nn),hl',1002),('emit','xor a'),
+            ('reloc','ld (nn),a',1004)])
 
     def test_timing_byte_reads_use_process_offset(self):
         for address in (23672,23673,23674):
@@ -126,8 +127,11 @@ class NativeTests(unittest.TestCase):
             c.buf=bytearray(str(address).encode()+b'\x0e\0\0\0\0\0\r')
             c.fn_peek()
             self.assertEqual(c.t,StubModule.POSINT)
-            self.assertEqual(c.ops[1],('reloc','ld de,(nn)',1000))
-            self.assertEqual(c.ops[3],('reloc','ld a,(nn)',1002))
+            self.assertEqual(c.ops[0],('emit','ld a,38; call $6003; push hl'))
+            self.assertEqual(c.ops[1],('reloc','ld de,(nn)',1002))
+            self.assertEqual(c.ops[3],('reloc','ld a,(nn)',1004))
+            self.assertIn(('emit','adc a,0'),c.ops)
+            self.assertIn(('emit','sbc a,0'),c.ops)
             self.assertTrue(any('sbc hl,de' in x[1] for x in c.ops if x[0]=='emit'))
             self.assertFalse(any('ld ($5C7' in str(x) for x in c.ops))
 
