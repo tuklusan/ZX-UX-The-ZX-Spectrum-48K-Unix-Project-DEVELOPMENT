@@ -17,6 +17,31 @@ from pathlib import Path
 GAMES = ((25, 'galaxians'), (58, 'invaders'))
 CHARSET_OFFSET = 32
 CHARSET_SIZE = 96
+# First two sprite definitions taken from the unchanged BASIC DATA lines.
+UDG_EXPECTED = {
+    '25-galaxians': {
+        0x90: bytes((34, 35, 36, 62, 15, 7, 2, 14)),
+        0x91: bytes((36, 196, 228, 252, 240, 224, 64, 112)),
+    },
+    '58-invaders': {
+        0xA2: bytes((60, 140, 115, 51, 63, 111, 193, 192)),
+        0x98: bytes((60, 49, 206, 204, 252, 246, 131, 3)),
+    },
+}
+
+
+def check_udgs(memory, base: int, name: str) -> list[dict]:
+    """Verify selected process-local sprite bytes against original DATA lines."""
+    checks = []
+    for code, expected in UDG_EXPECTED.get(name, {}).items():
+        start = base + (code - 0x90) * 8
+        valid = 0 <= start <= 65536 - 8
+        actual = bytes(memory[start:start + 8]) if valid else b''
+        checks.append({'spectrum_character': code,
+                       'address': start, 'expected': expected.hex(),
+                       'actual': actual.hex(),
+                       'matches_original_data': actual == expected})
+    return checks
 
 
 def screen_cell(bitmap: bytes, row: int, col: int) -> bytes:
@@ -53,6 +78,7 @@ def capture(runner, font: bytes, directory: Path, name: str, label: str) -> dict
     rvm.write_png(bitmap, str(png), border)
     text = screen_letters(bitmap, font)
     status = runner.fg.status if runner.fg else None
+    udg_base = word_at(runner.session.m.mem, 0x5C7B)
     return {
         'phase': label,
         'native_png': png.name,
@@ -60,7 +86,10 @@ def capture(runner, font: bytes, directory: Path, name: str, label: str) -> dict
         'active_pixels': sum(int(byte).bit_count() for byte in bitmap[:6144]),
         'border': int(border),
         'chars_pointer': word_at(runner.session.m.mem, 0x5C36),
-        'udg_pointer': word_at(runner.session.m.mem, 0x5C7B),
+        'udg_pointer': udg_base,
+        'known_udg_glyphs': check_udgs(runner.session.m.mem, udg_base, name),
+        'keyboard_state': runner.session.kb.state,
+        'keyboard_interrupt_scans': runner.session.m.ints,
         'foreground_status': status,
         'active_program_frames': runner.session.m.frame - (runner.fg.started or runner.session.m.frame),
         'text_lines': text,
@@ -100,13 +129,17 @@ def run_game(ssx: Path, system: Path, font: bytes, original: Path, directory: Pa
     advance(runner, 70)
     report['captures'].append(capture(runner, font, directory, name, 'idle'))
     # These are physical matrix holds, not buffered input characters.
-    for letter, hold in (('z', 24), ('x', 24), ('m', 15)):
+    key_plan = (('5', 24), ('8', 24), ('7', 15)) if name == '58-invaders' else (('z', 24), ('x', 24), ('m', 15))
+    for letter, hold in key_plan:
         runner.session.kb.add([('press', zxux.char_keys(letter), hold)])
         advance(runner, hold)
         report['captures'].append(capture(runner, font, directory, name, letter + '-held'))
         advance(runner, 36)
         report['captures'].append(capture(runner, font, directory, name, letter + '-released'))
     report['capture_count'] = len(report['captures'])
+    report['key_plan'] = [key for key, _ in key_plan]
+    report['sprite_data_correct_at_end'] = all(
+        g['matches_original_data'] for g in report['captures'][-1]['known_udg_glyphs'])
     report['all_frames_nonblank'] = all(x['active_pixels'] > 0 for x in report['captures'])
     report['screen_changed_after_input'] = any(
         x['screen_sha256'] != report['captures'][0]['screen_sha256']
