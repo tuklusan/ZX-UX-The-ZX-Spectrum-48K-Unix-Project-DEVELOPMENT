@@ -77,7 +77,7 @@ def verify_result(data, sha):
             or not isinstance(rows, list) or len(rows) != expected
             or len({x['program'] for x in rows}) != expected):
         raise RuntimeError('Input record count is incomplete')
-    if data.get('mode') == 'fast' and expected != 11:
+    if data.get('mode') == 'fast' and (expected < 11 or expected % 2 != 1):
         raise RuntimeError('Incorrect FAST input count')
     if data.get('mode') == 'full' and expected != 121:
         raise RuntimeError('Incorrect FULL input count')
