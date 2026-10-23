@@ -8,6 +8,21 @@ from __future__ import annotations
 import re
 
 
+def split_numbered_line(raw: str) -> tuple[int, str]:
+    """Decode a numbered text line without discarding a blank BASIC statement.
+
+    An empty program line is stored as a single space before carriage return
+    in the original Sinclair tape; it must not be lost by stripping the text.
+    """
+    match = re.fullmatch(r'(\d+)(?:[ \t]+(.*))?', raw.strip())
+    if not match:
+        raise ValueError('invalid numbered BASIC line')
+    number = int(match.group(1))
+    if number > 9999:
+        raise ValueError('BASIC line number out of range')
+    return number, match.group(2) or ' '
+
+
 def normalize_listing(body: str) -> str:
     out = []
     i = start = 0
