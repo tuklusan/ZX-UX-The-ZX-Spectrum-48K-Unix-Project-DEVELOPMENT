@@ -95,8 +95,8 @@ On the historical, previously compiled SSX1 images, Galaxians remains at
 its opening screen after SPACE. Invaders changes display but is still not
 visually faithful to the original FUSE pictures.
 
-The full local Python suite now passes 27 of 27 checks, including the
-five new PAUSE cases and a check of the exact game controls. The full
+The full local Python suite now passes 32 of 32 checks, including the
+expanded PAUSE cases and a check of the exact game controls. The full
 private checker self-test remains 305 passing text cases. These tests are
 not a new run of the full BASIC collection.
 
@@ -118,3 +118,20 @@ priority games from freshly built native SSX1, confirm that PAUSE exits on
 real input, compare screen states with original BASIC captures, then fix
 remaining printing and graphics behavior. Save actual new runner outputs
 in GitHub before calling any compatibility step complete.
+
+## Original BASIC wait sweep
+
+The safe wait handler now supports unconditional `PAUSE 0` after another
+statement and multiple consecutive waits, as long as there are enough free
+BASIC line numbers for split continuations. It leaves preceding `IF`
+conditionals and computed waits unchanged. The checker-readable scan is in
+`stage/pause_corpus_check.py`; its saved read-only results are in
+`pause-zero-corpus.json`. This run read all 60 preserved original tapes,
+found 44 safe waiting statements in 25 programs, and verified that tape
+bytes did not change during the scan. These are source transformations,
+not 44 successful native compilation or runtime tests. The complete
+32-test host suite and the private checker passed. The workflow now runs
+the 60-tape wait scan and archives its JSON with each trial shard.
+
+The last confirmed full compile baseline remains 16/121 pending a fresh
+five-shard result. Game completion and actual frame comparison remain open.
