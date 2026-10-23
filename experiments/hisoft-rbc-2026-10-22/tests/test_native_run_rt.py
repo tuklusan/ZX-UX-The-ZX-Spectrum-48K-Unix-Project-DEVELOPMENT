@@ -133,6 +133,19 @@ class RunTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'RUN line outside listing'):
             obj.st_run()
 
+    def test_original_evolution_1_run_reenters_same_listing(self):
+        root = Path(__file__).resolve().parents[3]
+        path = root / 'src/bonus/60-programs/44-evolution-1/BASIC/44-evolution-1.bas'
+        numbered = {}
+        for line in path.read_text(encoding='utf-8-sig').splitlines():
+            number, body = line.split(' ', 1)
+            numbered[int(number)] = body.strip()
+        self.assertIn(130, numbered)
+        self.assertIn(8030, numbered)
+        self.assertEqual(numbered[130], 'GO TO 1000')
+        self.assertTrue(numbered[8030].endswith(':RUN 130'))
+        self.assertEqual(_run_entry(sorted(numbered.items()),130),130)
+
     def test_install_is_repeatable(self):
         cls = Module.Compiler
         first = cls.st_run
