@@ -9,7 +9,13 @@ permissions:
 jobs:
   trial:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4]
+    env:
+      RBC_SHARD: ${{ matrix.shard }}
     steps:
       - uses: actions/checkout@v4
       - name: Acquire Python BASIC compiler source
@@ -47,12 +53,15 @@ jobs:
       - name: Compile BASIC sources and collect results
         run: |
           python3 - <<'PY'
-          import json, subprocess, sys
+          import json, os, subprocess, sys
           from pathlib import Path
           root=Path('src/bonus/60-programs')
           out=Path('trial-result')
-          inputs=[('hello',out/'hello.bas')]
-          for folder in sorted(root.glob('[0-9][0-9]-*')):
+          shard=int(os.environ['RBC_SHARD'])
+          folders=sorted(root.glob('[0-9][0-9]-*'))
+          if len(folders)!=60:sys.exit(f'expected 60 BASIC programs; got {len(folders)}')
+          inputs=[('hello',out/'hello.bas')] if shard==0 else []
+          for folder in folders[shard*12:(shard+1)*12]:
               raw=next(folder.glob('BASIC/*.bas'),None)
               tap=out/'tokenized'/folder.name/(raw.stem+'.tap') if raw else None
               if raw:
@@ -70,15 +79,44 @@ jobs:
               row={'program':name,'input':str(source),'ok':run.returncode==0,'output':run.stdout.strip()}
               results.append(row)
               print(f'{name}: {"PASS" if row["ok"] else "FAIL"}: {row["output"][:250]}',flush=True)
-          (out/'rbc-60-results.json').write_text(json.dumps(results,indent=2)+'\n')
-          if not results[0]['ok']:sys.exit('HELLO compiler regression')
-          print('PASS=',sum(x['ok'] for x in results),'TOTAL=',len(results))
+          (out/f'rbc-60-results-shard-{shard}.json').write_text(json.dumps(results,indent=2)+'\n')
+          if shard==0 and not results[0]['ok']:sys.exit('HELLO compiler regression')
+          print('SHARD=',shard,'PASS=',sum(x['ok'] for x in results),'TOTAL=',len(results))
+          PY
+      - name: Run bounded native ZX-UX boot tests
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          from pathlib import Path
+          sys.path.insert(0,'src/zx-ux-sdk')
+          import rvm
+          out=Path('trial-result')
+          shard=int(os.environ['RBC_SHARD'])
+          system=Path('dist/zx-ux/tzx/ZX-UX.tzx')
+          outcomes=[]
+          for ssx in sorted(out.glob('*.ssx')):
+              if not ssx.name.endswith('-tape.ssx') and ssx.name!='hello.ssx':
+                  continue
+              try:
+                  run=rvm.run_kernel(str(ssx),system=str(system),frames=120)
+                  bitmap,border=run.picture()
+                  rvm.write_png(bitmap,str(out/(ssx.stem+'.png')),border)
+                  row={'program':ssx.stem,'booted':True,'result':run.why,
+                       'exit_status':run.fg.status if run.fg is not None else None,
+                       'bitmap_nonempty':any(bitmap)}
+              except Exception as e:
+                  row={'program':ssx.stem,'booted':False,'error':str(e)}
+              outcomes.append(row)
+              print('NATIVE',json.dumps(row),flush=True)
+          (out/f'rbc-runtime-shard-{shard}.json').write_text(json.dumps(outcomes,indent=2)+'\n')
           PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: rbc-python-source-trial
+          name: rbc-python-source-trial-${{ matrix.shard }}
           path: |
             trial-result/*.json
             trial-result/*.ssx
+            trial-result/*.png
           retention-days: 1
