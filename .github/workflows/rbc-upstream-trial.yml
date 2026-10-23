@@ -9,15 +9,9 @@ on:
 permissions:
   contents: read
 jobs:
-  trial:
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [0, 1, 2, 3, 4]
-    env:
-      RBC_SHARD: ${{ matrix.shard }}
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Acquire Python BASIC compiler source
@@ -41,19 +35,57 @@ jobs:
           curl -fsSL --retry 2 --max-time 25 -o trial-result/hisoft48.tap \
             https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap
           python3 - <<'PY'
-          import sys
+          import sys, json
           from pathlib import Path
           sys.path.insert(0,'trial-result/rbc')
           import rbc
+          conversion_errors={}
           for source in sorted(Path('src/bonus/60-programs').glob('*/BASIC/*.tzx')):
               target=Path('trial-result/tokenized')/source.parent.parent.name/(source.stem+'.tap')
               target.parent.mkdir(parents=True,exist_ok=True)
               try:
                   target.write_bytes(rbc._tap_from_tzx(source))
               except Exception as exc:
+                  conversion_errors[str(source)]=repr(exc)
                   print(f'WARN: {source}: {exc}')
           Path('trial-result/hello.bas').write_text('10 PRINT "HELLO"\n')
+          Path('trial-result/tape-conversion-errors.json').write_text(json.dumps(conversion_errors,indent=2)+chr(10))
           PY
+      - name: Record shared source hashes
+        run: |
+          sha256sum trial-result/hisoft48.tap trial-result/rbc/rbc.py \
+            trial-result/rbc/font32.bin upstream-pyhsb/compiler.py \
+            > trial-result/inputs.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rbc-shared
+          path: |
+            trial-result/rbc/
+            trial-result/tokenized/
+            trial-result/hello.bas
+            trial-result/tape-conversion-errors.json
+            trial-result/hisoft48.tap
+            trial-result/inputs.sha256
+            upstream-pyhsb/
+          retention-days: 1
+  trial:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4]
+    env:
+      RBC_SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rbc-shared
+          path: .
+      - name: Verify shared input hashes
+        run: sha256sum -c trial-result/inputs.sha256
       - name: Verify original Galaxians text and tape token parity
         if: matrix.shard == 2
         run: |
@@ -75,7 +107,7 @@ jobs:
       - name: Compile BASIC sources and collect results
         run: |
           python3 - <<'PY'
-          import json, os, subprocess, sys
+          import json, os, subprocess, sys, hashlib
           from pathlib import Path
           root=Path('src/bonus/60-programs')
           out=Path('trial-result')
@@ -86,23 +118,57 @@ jobs:
           for folder in folders[shard*12:(shard+1)*12]:
               raw=next(folder.glob('BASIC/*.bas'),None)
               tap=out/'tokenized'/folder.name/(raw.stem+'.tap') if raw else None
-              if raw:
-                  inputs.append((folder.name+'-text',raw))
-                  if tap.is_file():inputs.append((folder.name+'-tape',tap))
+              inputs.append((folder.name+'-text',raw))
+              inputs.append((folder.name+'-tape',tap if tap and tap.is_file() else None))
           results=[]
+          conversion_errors=json.loads((out/'tape-conversion-errors.json').read_text())
+          compiler_hash=hashlib.sha256((out/'rbc/rbc.py').read_bytes()).hexdigest()
           for name,source in inputs:
-              cmd=[sys.executable,str(out/'rbc/rbc.py'),str(source),
-                   '--frontend','upstream-pyhsb','--sdk','src/zx-ux-sdk',
-                   '--rom','src/zx-ux-sdk/rom/48.rom',
-                   '--tape',str(out/'hisoft48.tap'),
-                   '-o',str(out/(name+'.ssx')),
-                   '--report',str(out/(name+'.json'))]
-              run=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=100)
-              row={'program':name,'input':str(source),'ok':run.returncode==0,'output':run.stdout.strip()}
+              binary=out/(name+'.ssx')
+              report=out/(name+'.json')
+              row={'program':name,'input':str(source) if source else None,
+                   'input_sha256':hashlib.sha256(source.read_bytes()).hexdigest() if source else None,
+                   'tool_sha256':compiler_hash,'revision':os.environ.get('GITHUB_SHA'),
+                   'output_path':str(binary),'report_path':str(report),
+                   'output_sha256':None,'native_result':None,
+                   'ok':False,'cause_category':None,'returncode':None,'output':''}
+              if source is None:
+                  row['cause_category']='missing-input'
+                  if name.endswith('-tape'):
+                      folder=name[:-5]
+                      original=root/folder/'BASIC'/(folder+'.tzx')
+                      row['output']=conversion_errors.get(str(original),'converted tape unavailable')
+                  else:
+                      row['output']='original text input unavailable'
+              else:
+                  cmd=[sys.executable,str(out/'rbc/rbc.py'),str(source),
+                       '--frontend','upstream-pyhsb','--sdk','src/zx-ux-sdk',
+                       '--rom','src/zx-ux-sdk/rom/48.rom',
+                       '--tape',str(out/'hisoft48.tap'),
+                       '-o',str(binary),'--report',str(report)]
+                  try:
+                      run=subprocess.run(cmd,stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT,text=True,timeout=100)
+                      row['returncode']=run.returncode
+                      row['output']=run.stdout
+                      row['ok']=run.returncode==0 and binary.is_file()
+                      if not row['ok']:
+                          output=run.stdout.lower()
+                          row['cause_category']=('memory' if 'memory' in output else
+                                                 'source-parse' if 'sourceerror' in output or 'syntax' in output else
+                                                 'compiler-error')
+                  except subprocess.TimeoutExpired as exc:
+                      row['cause_category']='timeout'
+                      row['output']=str(exc)+'; partial output: '+str(exc.stdout)
+                  except Exception as exc:
+                      row['cause_category']='runner-error'
+                      row['output']=repr(exc)
+              if binary.is_file():
+                  row['output_sha256']=hashlib.sha256(binary.read_bytes()).hexdigest()
               results.append(row)
-              last_line=row["output"].splitlines()[-1] if row["output"] else ''
-              print(f'{name}: {"PASS" if row["ok"] else "FAIL"}: {last_line[:350]}',flush=True)
-          (out/f'rbc-60-results-shard-{shard}.json').write_text(json.dumps(results,indent=2)+'\n')
+              last_line=row['output'].splitlines()[-1] if row['output'] else ''
+              print(f'{name}: {"PASS" if row["ok"] else "FAIL"} ({row["cause_category"]}): {last_line[:350]}',flush=True)
+          (out/f'rbc-60-results-shard-{shard}.json').write_text(json.dumps(results,indent=2)+chr(10))
           if shard==0 and not results[0]['ok']:sys.exit('HELLO compiler regression')
           if shard==0:
               required = {'08-chomper-text','08-chomper-tape',
@@ -128,6 +194,7 @@ jobs:
           shard=int(os.environ['RBC_SHARD'])
           system=Path('dist/zx-ux/tzx/ZX-UX.tzx')
           outcomes=[]
+          errors=[]
           for ssx in sorted(out.glob('*.ssx')):
               if not ssx.name.endswith('-tape.ssx') and ssx.name not in (
                       'hello.ssx','23-biorhythms-text.ssx'):
@@ -147,12 +214,22 @@ jobs:
               if ssx.stem in ('08-chomper-tape', '11-defend-tape') and not (
                       row.get('booted') and row.get('foreground_started')
                       and row.get('bitmap_nonempty')):
-                  sys.exit('computed BASIC jump native launch regression: '+ssx.stem)
+                  errors.append('computed BASIC jump native launch regression: '+ssx.stem)
               if ssx.stem == '23-biorhythms-text' and not (
                       row.get('booted') and row.get('foreground_started')
                       and row.get('bitmap_nonempty')):
-                  sys.exit('Biorhythms native launch regression')
-          (out/f'rbc-runtime-shard-{shard}.json').write_text(json.dumps(outcomes,indent=2)+'\n')
+                  errors.append('Biorhythms native launch regression')
+          (out/f'rbc-runtime-shard-{shard}.json').write_text(json.dumps(outcomes,indent=2)+chr(10))
+          result_path=out/f'rbc-60-results-shard-{shard}.json'
+          if result_path.exists():
+              rows=json.loads(result_path.read_text())
+              by_name={item['program']:item for item in rows}
+              for row in outcomes:
+                  if row['program'] in by_name:
+                      by_name[row['program']]['native_result']=row
+              result_path.write_text(json.dumps(rows,indent=2)+chr(10))
+          if errors:
+              sys.exit('; '.join(errors))
           PY
       - name: Verify immediate INKEY$ press, hold, release and no-key
         if: matrix.shard == 0
@@ -160,7 +237,7 @@ jobs:
           python3 experiments/hisoft-rbc-2026-10-22/stage/inkey_probe.py \
             --root . --out trial-result/rbc-game-probe
       - name: Capture Galaxians and Invaders native key sequences
-        if: always()
+        if: always() && (matrix.shard == 2 || matrix.shard == 4)
         run: |
           python3 experiments/hisoft-rbc-2026-10-22/stage/frame_probe.py \
             --root . --trial trial-result
@@ -201,9 +278,35 @@ jobs:
             trial-result/rbc-movement/*.png
             trial-result/rbc-native-pause-controls/*.json
             trial-result/rbc-native-pause-controls/*.png
-            trial-result/rbc/*.py
-            trial-result/rbc/font32.bin
-            trial-result/hisoft48.tap
-            upstream-pyhsb/*.py
-            upstream-pyhsb/LICENSE.txt
-          retention-days: 1
+          retention-days: 1  summarize:
+    if: always()
+    needs: [prepare, trial]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: rbc-python-source-trial-*
+          path: results
+      - name: Summarize all compilation attempts
+        run: |
+          python3 - <<'PY'
+          import collections, json, os
+          from pathlib import Path
+          files=sorted(Path('results').glob('*/rbc-60-results-shard-*.json'))
+          rows=[]
+          for path in files:
+              rows.extend(json.loads(path.read_text()))
+          passed=sum(x['ok'] for x in rows)
+          failed=len(rows)-passed
+          counts=collections.Counter(x['cause_category'] or 'pass' for x in rows)
+          text=f"RBC full input results: {passed} passed, {failed} failed, {len(rows)} recorded / 121 expected"
+          print(text)
+          print('Cause groups:',json.dumps(counts,sort_keys=True))
+          summary=os.environ.get('GITHUB_STEP_SUMMARY')
+          if summary:
+              Path(summary).write_text('## RBC 121-input summary'+chr(10)+text+chr(10)+
+                                       'Cause groups: '+json.dumps(counts,sort_keys=True)+chr(10))
+          if len(rows)!=121 or len({x['program'] for x in rows})!=121 or failed:
+              raise SystemExit('Full input compilation remains incomplete; inspect saved shard results')
+          PY
