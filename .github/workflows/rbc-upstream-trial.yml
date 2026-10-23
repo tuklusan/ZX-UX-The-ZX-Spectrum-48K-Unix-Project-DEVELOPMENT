@@ -136,6 +136,12 @@ jobs:
           python3 experiments/hisoft-rbc-2026-10-22/stage/gameplay_ports.py \
             --root . --binary trial-result/25-galaxians-tape.ssx \
             --output trial-result/rbc-movement
+      - name: Verify native Galaxians fire laser and score
+        if: matrix.shard == 2
+        run: |
+          python3 experiments/hisoft-rbc-2026-10-22/stage/fire_probe.py \
+            --root . --binary trial-result/25-galaxians-tape.ssx \
+            --output trial-result/rbc-game-probe
       - name: Verify native Invaders INK and PAPER colors
         if: matrix.shard == 4
         run: |

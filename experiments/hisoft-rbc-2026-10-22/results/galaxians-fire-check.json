@@ -1,0 +1,16 @@
+{
+  "control": {
+    "fire_held": false,
+    "max_beam_pixels": 11,
+    "full_laser_frames": 0,
+    "maximum_score": 0,
+    "ula_issue": 2
+  },
+  "held_fire": {
+    "fire_held": true,
+    "max_beam_pixels": 134,
+    "full_laser_frames": 11,
+    "maximum_score": 40,
+    "ula_issue": 2
+  }
+}
