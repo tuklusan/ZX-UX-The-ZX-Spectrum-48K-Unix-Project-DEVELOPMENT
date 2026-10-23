@@ -65,7 +65,16 @@ jobs:
             if [[ "$name" == 'spectrum-says' ]]; then args=(--type-lines 1 --step-wait 1); fi
             if python recovery/typein-48k/scripts/fuse_48_capture.py "output/tapes/$name.tzx" --fuse fuse-sdl --rom "$rom" --out "output/screens/$name" --display ":$x" --wait 7 --after-key r,Return --after-wait 1 --pre-action-wait 3 --samples 2 --sample-interval 1 "${args[@]}" >"output/logs/$name-capture.txt" 2>&1; then
               count="$(find "output/screens/$name" -name '*.png' -size +500c | wc -l)"
-              if [[ "$count" -ge 4 ]]; then echo "$name,pass,pass,started,yes" >> output/logs/results.csv
+              if [[ "$count" -ge 4 ]]; then
+                if [[ "$name" == 'spectrum-says' ]]; then
+                  if python -c 'import sys; from PIL import Image; im=Image.open(sys.argv[1]).convert("RGB"); pixels=im.crop((0,0,280,205)).getdata(); amount=sum(1 for r,g,b in pixels if max(r,g,b)-min(r,g,b)>=70 and max(r,g,b)>=90); print("gameplay-color-pixels:",amount); assert amount>300' "output/screens/$name/75-input-01.png" >>"output/logs/$name-screen-check.txt" 2>&1; then
+                    echo "$name,pass,pass,started,yes" >> output/logs/results.csv
+                  else
+                    echo "$name,pass,pass,not-proven,no" >> output/logs/results.csv
+                  fi
+                else
+                  echo "$name,pass,pass,unreviewed,yes" >> output/logs/results.csv
+                fi
               else echo "$name,pass,pass,attempted,no" >> output/logs/results.csv; fi
             else
               echo "$name,pass,pass,failed,no" >> output/logs/results.csv
