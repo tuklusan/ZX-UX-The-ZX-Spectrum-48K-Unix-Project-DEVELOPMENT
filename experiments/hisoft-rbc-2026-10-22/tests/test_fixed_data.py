@@ -25,7 +25,7 @@ class Source:
         n=int(raw)
         return raw+b'\x0e\x00\x00'+n.to_bytes(2,'little')+b'\x00'
 
-ROOT=Path(__file__).resolve().parents[1]/'src/bonus/60-programs/34-grand-prix/BASIC/34-grand-prix.tzx'
+ROOT=Path(__file__).resolve().parents[3]/'src/bonus/60-programs/34-grand-prix/BASIC/34-grand-prix.tzx'
 def read_tzx(p):
     raw=p.read_bytes(); assert raw.startswith(b'ZXTape!\x1a')
     pos=10; blocks=[]
