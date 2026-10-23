@@ -1,0 +1,78 @@
+name: Build Spectrum Show BASIC tapes
+
+on:
+  push:
+    branches:
+      - typeins-spectrum-show-20261023
+    paths:
+      - .github/workflows/spectrum-show-tapes.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build-tapes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout isolated runner source
+        uses: actions/checkout@v4
+      - name: Fetch previously downloaded original games
+        uses: actions/download-artifact@v4
+        with:
+          name: spectrum-show-typeins-39986062137
+          run-id: 39986062137
+          github-token: ${{ github.token }}
+          path: source_data
+      - name: Checkout zmakebas-plus exact source revision
+        uses: actions/checkout@v4
+        with:
+          repository: tuklusan/zmakebas-plus
+          ref: eb02e0cdf64a0ef51bffa9e691fc6420692563e2
+          path: zmakebas-plus
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install snapshot reader
+        run: python -m pip install skoolkit==10.1
+      - name: Build zmakebas-plus command-line program
+        working-directory: zmakebas-plus
+        run: |
+          npm ci
+          npm run build:cli
+      - name: Convert all recovered BASIC listings into TAP and TZX files
+        run: |
+          python3 tools/spectrum-show-make-tapes.py \
+            --source source_data \
+            --output tape_output \
+            --cli zmakebas-plus/dist-cli/zmakebas.js \
+            --tool-sha eb02e0cdf64a0ef51bffa9e691fc6420692563e2
+      - name: Save all conversion results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-show-all-tapes-${{ github.run_id }}
+          path: |
+            spectrum-show-all-tapes.zip
+            tape_output/build-report.json
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Show incomplete conversion count
+        if: success()
+        run: |
+          python3 - <<'PY'
+          import json
+          r=json.load(open('tape_output/build-report.json'))
+          got=r['status_counts'].get('compiled_not_run',0)
+          total=len(r['records'])
+          print(f'Successfully built {got}/{total} unique TAP and TZX pairs')
+          if got < total:
+              print('See build-report.json for each failed listing')
+          PY
