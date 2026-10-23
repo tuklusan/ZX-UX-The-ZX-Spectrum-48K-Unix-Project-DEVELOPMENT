@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "consumed_runs": [
+    {
+      "run_id": 39878801410,
+      "archive_path": "experiments/hisoft-rbc-2026-10-22/rbc-run-39878801410-results.zip",
+      "archive_sha256": "3d5b45ae2c09f3346bb19792b76ea74353a2d799ce50db38463d01c587b5445c",
+      "expected_inputs": 121,
+      "source_sha": "5a5e0ee2ec1b77c4fa49fa3f0361e7718d87d6d9"
+    }
+  ]
+}
