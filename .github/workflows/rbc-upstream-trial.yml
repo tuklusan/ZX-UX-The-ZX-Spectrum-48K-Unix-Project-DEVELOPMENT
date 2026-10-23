@@ -3,6 +3,8 @@ on:
   push:
     paths:
       - '.github/workflows/rbc-upstream-trial.yml'
+      - 'experiments/hisoft-rbc-2026-10-22/stage/**'
+      - 'experiments/hisoft-rbc-2026-10-22/tests/**'
   workflow_dispatch:
 permissions:
   contents: read
