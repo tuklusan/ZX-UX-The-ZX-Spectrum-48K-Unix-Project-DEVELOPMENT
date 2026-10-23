@@ -74,12 +74,27 @@ def main(argv=None):
   time.sleep(.7)
   d=display.Display(a.display)
   proc=subprocess.Popen([a.fuse,'--machine','48','--speed',str(a.fuse_speed),'--no-sound','--no-auto-load','--traps','--rom-48',str(a.rom),'--tape',str(a.tape.resolve())],env=env,cwd=str(a.out.resolve()),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-  time.sleep(2.2)
-  if proc.poll() is not None:raise RuntimeError('FUSE exited '+str(proc.returncode))
   root=d.screen().root
-  wins=[w for w in root.query_tree().children if w.get_geometry().width==320 and w.get_geometry().height==240]
-  if not wins:raise RuntimeError('FUSE window not found')
-  win=wins[-1];win.set_input_focus(X.RevertToParent,X.CurrentTime);d.sync();time.sleep(.2)
+  def children(node, depth=0):
+   if depth>3:return []
+   acc=[]
+   for child in node.query_tree().children:
+    g=child.get_geometry()
+    acc.append((child,g.width,g.height,depth))
+    acc.extend(children(child,depth+1))
+   return acc
+  wins=[]
+  seen=[]
+  for attempt in range(15):
+   if proc.poll() is not None:raise RuntimeError('FUSE exited '+str(proc.returncode))
+   seen=children(root)
+   wins=[row for row in seen if 250<=row[1]<=900 and 180<=row[2]<=700]
+   if wins:break
+   time.sleep(.6)
+  if not wins:
+   raise RuntimeError('FUSE window not found; discovered '+str([(v[1],v[2],v[3]) for v in seen]))
+  win=sorted(wins,key=lambda v:(abs(v[1]-320)+abs(v[2]-240),v[3]))[0][0]
+  win.set_input_focus(X.RevertToParent,X.CurrentTime);d.sync();time.sleep(.2)
   capture(win,a.out/'01-boot.png')
   # Real Spectrum keyword mode: J is LOAD, Symbol Shift+P (Ctrl+P on
   # Fuse mapping) is the double quote character.
