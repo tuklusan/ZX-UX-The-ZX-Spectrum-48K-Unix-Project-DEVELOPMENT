@@ -101,6 +101,21 @@ def download_result(run, root):
             'result': result}
 
 
+def read_saved_result(root):
+    try:
+        data = json.loads((root / FAST_RECORD).read_text())
+        result = verify_result(data['result'], data['source_sha'])
+        if (type(data['source_run']) is not int or data['source_run'] <= 0
+                or data['mode'] != result['mode']
+                or data['expected_inputs'] != result['expected_inputs']
+                or data['passed_inputs'] != sum(x.get('ok') is True
+                                                for x in result['inputs'])):
+            raise RuntimeError('Stored compiler results disagree with their summary')
+        return data
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise RuntimeError('No verified permanent compiler result to reuse') from exc
+
+
 def rollup(runs, current_id, fast, baseline_pass):
     eligible = [r for r in runs if r['status'] == 'completed' and r['id'] != current_id]
     counts = collections.Counter((r['name'], r.get('conclusion')) for r in eligible)
@@ -122,8 +137,14 @@ def stage_and_publish(root, files):
     names = [str(path) for path in files]
     command('git', 'add', '--', *names)
     diff = command('git', 'diff', '--cached', '--name-only').stdout.splitlines()
-    if sorted(diff) != sorted(names):
+    if not set(diff).issubset(set(names)):
         raise RuntimeError('Unexpected staged changes, publication refused: ' + repr(diff))
+    if not diff:
+        for path in files:
+            stored = command('git', 'show', 'HEAD:' + str(path)).stdout
+            if stored.encode() != (root / path).read_bytes():
+                raise RuntimeError('Unchanged result file differs from current commit')
+        return
     base = command('git', 'rev-parse', 'HEAD').stdout.strip()
     upstream = command('git', 'ls-remote', 'origin', 'refs/heads/main').stdout.split()[0]
     if upstream != base:
@@ -153,7 +174,7 @@ def execute(root, current_id):
             protected_ids.add(candidate['id'])
             continue
     if fast_record is None:
-        raise RuntimeError('No verified recent input report could be retrieved')
+        fast_record = read_saved_result(root)
     summary = rollup(runs, current_id, fast_record, baseline_pass)
     summary['protected_unconsumed_run_ids'] = sorted(protected_ids)
     folder = root / OUT
