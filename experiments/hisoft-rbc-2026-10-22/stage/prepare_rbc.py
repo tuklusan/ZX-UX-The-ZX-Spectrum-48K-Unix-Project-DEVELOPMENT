@@ -10,7 +10,7 @@ def prepare(checkpoint: Path, extensions: Path):
     compiler = checkpoint / 'rbc' / 'rbc.py'
     text = compiler.read_text()
     old = 'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize'
-    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom pause_zero import rewrite_pause_zero\nfrom bss_layout import target_offset\n' + old
+    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom pause_zero import rewrite_pause_zero\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, restore, append_slots\n' + old
     if text.count(old) != 1 or text.count('program = source.tokenize_directives(program,kw)') != 1:
         raise ValueError('RBC checkpoint changed; extension location needs review')
     text = text.replace(old, new, 1)
@@ -68,6 +68,23 @@ def prepare(checkpoint: Path, extensions: Path):
     if text.count(original_target) != 1:
         raise ValueError('RBC SSX1 variable relocation changed; review needed')
     text = text.replace(original_target, replacement_target, 1)
+    # Initialise the program with the 48K BASIC printer colours, but return
+    # the surrounding ZX-UX display defaults when this program exits.
+    startup_anchors = (
+        ('    call=len(e.code)+1;e.call(0,rel=True)',
+         '    color_records = save_and_set(e)\n'
+         '    call=len(e.code)+1;e.call(0,rel=True)'),
+        ('    e.ldhl(0);e.lda(39);e.call(SYS)',
+         '    restore(e, color_records)\n'
+         '    e.ldhl(0);e.lda(39);e.call(SYS)'),
+        ('    font_start=len(e.code);e.code.extend(font)',
+         '    append_slots(e, color_records)\n'
+         '    font_start=len(e.code);e.code.extend(font)'),
+    )
+    for anchor, replacement in startup_anchors:
+        if text.count(anchor) != 1:
+            raise ValueError('RBC display startup sequence changed; review needed')
+        text = text.replace(anchor, replacement, 1)
     memory = checkpoint / 'rbc' / 'memory_safety.py'
     memory_source = memory.read_text()
     old_target = 'target=_target(address)'
@@ -80,6 +97,7 @@ def prepare(checkpoint: Path, extensions: Path):
     shutil.copyfile(extensions / 'line_targets.py', checkpoint / 'rbc' / 'line_targets.py')
     shutil.copyfile(extensions / 'pause_zero.py', checkpoint / 'rbc' / 'pause_zero.py')
     shutil.copyfile(extensions / 'bss_layout.py', checkpoint / 'rbc' / 'bss_layout.py')
+    shutil.copyfile(extensions / 'startup_colors.py', checkpoint / 'rbc' / 'startup_colors.py')
     compiler.write_text(text)
 
 
