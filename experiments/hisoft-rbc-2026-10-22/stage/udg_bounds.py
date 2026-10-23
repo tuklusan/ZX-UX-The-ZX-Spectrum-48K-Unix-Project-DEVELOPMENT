@@ -86,7 +86,7 @@ def allow_bounded_udg_loops(lines, token_names, findings):
             if any(n in targets for n, _ in span[1:]):
                 continue
             # No conditional branches or early exits inside these simple loops.
-            if any(_FLOW.search(t) and (i != end or re.search(
+            if any(_FLOW.search(t) and (i != len(span)-1 or re.search(
                     r'\b(?:GO\s*TO|GO\s*SUB|RETURN|STOP|RUN|CONTINUE|IF)\b', t, re.I))
                    for i, (_, t) in enumerate(span)):
                 continue
