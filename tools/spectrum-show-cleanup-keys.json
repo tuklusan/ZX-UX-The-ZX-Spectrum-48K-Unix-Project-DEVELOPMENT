@@ -1,0 +1,204 @@
+{
+  "04-beltman--beltman": [
+    "8",
+    "6",
+    "5",
+    "7",
+    "8"
+  ],
+  "07-santanightmare--SantaNightmare": [
+    "q",
+    "a",
+    "o",
+    "p",
+    "space",
+    "q",
+    "o"
+  ],
+  "26-boxing--Boxing-Spectrum": [
+    "p",
+    "text:ACE",
+    "Return",
+    "5",
+    "8",
+    "0"
+  ],
+  "30-chickens--chickens": [
+    "text:12",
+    "Return",
+    "text:10",
+    "Return",
+    "5",
+    "8"
+  ],
+  "34-redcarpet--RedCarpet": [
+    "space",
+    "s",
+    "5",
+    "8",
+    "0"
+  ],
+  "37-spaceinv--SpaceInv-FINAL": [
+    "text:ace",
+    "Return",
+    "text:n",
+    "Return",
+    "5",
+    "0"
+  ],
+  "39-compspacegames-SpaceGames-01": [
+    "text:100",
+    "Return",
+    "text:200",
+    "Return",
+    "text:50",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-02": [
+    "text:45",
+    "Return",
+    "text:18000",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-03": [
+    "text:3",
+    "Return",
+    "text:5",
+    "Return",
+    "text:2",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-04": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "39-compspacegames-SpaceGames-05": [
+    "space",
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "39-compspacegames-SpaceGames-06": [
+    "text:10",
+    "Return",
+    "text:20",
+    "Return",
+    "text:5",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-07": [
+    "text:1",
+    "Return",
+    "text:2",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-08": [
+    "text:4",
+    "Return",
+    "a",
+    "Return",
+    "b",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-09": [
+    "text:3",
+    "Return",
+    "text:5",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-10": [
+    "text:0.7",
+    "Return",
+    "text:100",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-11": [
+    "text:12",
+    "Return",
+    "text:6",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-12": [
+    "text:12",
+    "Return",
+    "text:6",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-13": [
+    "text:20",
+    "Return",
+    "text:10",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-14": [
+    "text:n",
+    "Return",
+    "text:100",
+    "Return",
+    "text:20",
+    "Return"
+  ],
+  "39-compspacegames-SpaceGames-15": [
+    "text:10",
+    "Return",
+    "text:5",
+    "Return"
+  ],
+  "40-barels-BarrelsFinal-01": [
+    "space",
+    "5",
+    "8",
+    "0"
+  ],
+  "41-amaze--Amaze": [
+    "5",
+    "8",
+    "6",
+    "7"
+  ],
+  "42-robot-final--ROBOT-FINAL": [
+    "text:y",
+    "Return",
+    "text:5",
+    "Return",
+    "t",
+    "f"
+  ],
+  "43-dungeonfix-DungeonFinal-02": [
+    "space",
+    "c",
+    "Return",
+    "1",
+    "Return"
+  ],
+  "45-astrocrash--AstroCrash": [
+    "space",
+    "text:y",
+    "Return",
+    "z",
+    "x",
+    "Return"
+  ],
+  "46-chasm-final--Chasm-Final": [
+    "m",
+    "p",
+    "o",
+    "p",
+    "space"
+  ],
+  "48-quackattack--QuackAttack": [
+    "1",
+    "2",
+    "3",
+    "m"
+  ],
+  "06-santamissionfixed2--SantaMissionfixed2": [
+    "x",
+    "z",
+    "a",
+    "q"
+  ]
+}
