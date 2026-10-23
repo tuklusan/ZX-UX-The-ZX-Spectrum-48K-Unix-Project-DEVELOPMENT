@@ -1,4 +1,4 @@
-name: Spectrum Show single-runner Fuse screenshots
+name: Spectrum Show single-runner Fuse follow-up
 
 on:
   push:
@@ -86,10 +86,12 @@ jobs:
             --tapes spectrum-show-all-tapes.zip \
             --rom "$ROM" \
             --out screenshot_output \
+            --select-file tools/spectrum-show-targets.json \
+            --key-map tools/spectrum-show-target-keys.json \
             --speed 400 \
-            --base-wait 1.2 \
-            --intro-wait 2.25 \
-            --step-wait 1.25
+            --base-wait 2.5 \
+            --intro-wait 1.6 \
+            --step-wait 1.0
       - name: Save screenshot ZIP and per-game report
         if: always()
         uses: actions/upload-artifact@v4
@@ -107,6 +109,6 @@ jobs:
           python3 - <<'PY'
           import json
           x=json.load(open('screenshot_output/report.json'))
-          assert len(x['records'])==73,(len(x['records']),x['counts'])
+          assert len(x['records'])==11,(len(x['records']),x['counts'])
           print('Completed sequential attempts:',len(x['records']),x['counts'])
           PY
