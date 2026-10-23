@@ -69,3 +69,52 @@ claim full compatibility from compilation, emulator boot, or screen changes.
 
 Read the latest branch commit and tree before any further publication.
 Keep the full private checker and case-insensitive restricted list unchanged.
+
+## Later native compiler changes (2026-10-22)
+
+The live development branch gained a separate SSX1 variable relocation
+correction in `stage/bss_layout.py`, linked into `stage/prepare_rbc.py`.
+The compiler previously mapped HiSoft variables into its embedded font and
+process UDG data. The corrected code maps variables beyond the complete
+SSX1 image. The independent variable relocation tests are in
+`tests/test_bss_layout.py`.
+
+A second temporary-source transformation now handles leading literal
+`PAUSE 0` statements. `stage/pause_zero.py` substitutes a polling loop based
+on `INKEY$`; when further statements follow the wait, it inserts a free
+continuation line. Galaxians line 8050 is the target case. Other PAUSE
+expressions, nested statements, and line-number conflicts are left intact.
+The original BASIC tape and listing bytes are never changed. The compiler
+report records each transformed line. This still requires a fresh native
+build and gameplay verification before calling Galaxians fixed.
+
+The native game runner now presses SPACE at the start, then tests the actual
+source-program controls: Galaxians z/x/m; Invaders 5/8/0. It records nine
+actual display frames for each game, with separate start and control inputs.
+On the historical, previously compiled SSX1 images, Galaxians remains at
+its opening screen after SPACE. Invaders changes display but is still not
+visually faithful to the original FUSE pictures.
+
+The full local Python suite now passes 27 of 27 checks, including the
+five new PAUSE cases and a check of the exact game controls. The full
+private checker self-test remains 305 passing text cases. These tests are
+not a new run of the full BASIC collection.
+
+For an isolated check of the variable relocation defect, the saved older
+HiSoft-generated SSX1 games were copied and their already-listed compiler
+variable references corrected. No recompilation took place. The experiment
+moved 208 Galaxians and 363 Invaders references forward by 940 bytes,
+leaving code references and non-compiler pointers intact. Actual ZX-UX
+runs still left Galaxians at the opening screen; the Invaders score and
+reserve text became more legible, while its sprites remained incorrect.
+The isolated Invaders output hash is
+`583616404248733ffb1041e1b8957b08c16b51a5f6bccc9de3e0ba25752db271`
+(SSX1 SHA256). It is not a normal production compiler output.
+
+The newest committed compiler and tests are in the development repository.
+The current full-collection compilation baseline is still 16/121 until new
+per-input results are read from the five-shard build. Next, verify the two
+priority games from freshly built native SSX1, confirm that PAUSE exits on
+real input, compare screen states with original BASIC captures, then fix
+remaining printing and graphics behavior. Save actual new runner outputs
+in GitHub before calling any compatibility step complete.
