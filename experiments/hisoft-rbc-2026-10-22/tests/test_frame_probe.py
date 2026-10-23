@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
-from frame_probe import screen_cell, screen_letters, GAME_KEY_PLAN, check_udgs
+from frame_probe import screen_cell, screen_letters, GAME_KEY_PLAN, check_udgs, font_state
 
 
 class FrameDecoderTests(unittest.TestCase):
@@ -39,6 +39,21 @@ class FrameDecoderTests(unittest.TestCase):
         memory[base + (0x98 - 0x90) * 8] = 0
         broken = check_udgs(memory, base, '58-invaders')
         self.assertFalse(all(item['matches_original_data'] for item in broken))
+
+    def test_font_corruption_from_old_variable_layout_is_detected(self):
+        expected = bytes((i * 17) % 256 for i in range(768))
+        memory = bytearray(65536)
+        pointer = 51048
+        start = pointer + 256
+        memory[start:start + len(expected)] = expected
+        self.assertTrue(font_state(memory, pointer, expected)['font_intact'])
+        # The earlier native Invaders binary overwrote font row 136.
+        memory[start + 136] ^= 1
+        state = font_state(memory, pointer, expected)
+        self.assertFalse(state['font_intact'])
+        self.assertEqual(state['font_difference_count'], 1)
+        self.assertEqual(state['font_first_differences'], [136])
+        self.assertFalse(font_state(memory, 65535, expected)['font_intact'])
 
     def test_reject_invalid_source_lengths(self):
         with self.assertRaises(ValueError):
