@@ -33,6 +33,10 @@ class ListingBoundaries(unittest.TestCase):
         self.assertIn('m TO  x+4-m',
                       normalize_listing('LET d$(x+2-mTO x+4-m)="   "'))
 
+    def test_invaders_joined_comparison_operator(self):
+        line='IF (XS<> TAND XS<> T+T)THEN RETURN'
+        self.assertIn('T AND  XS', normalize_listing(line))
+
     def test_no_split_inside_identifiers_or_strings(self):
         s = 'FOR n=TOTAL:IF BAND=3THEN LET TOMORROW=4:REM FOR x=p*cTO 8'
         result = normalize_listing(s)

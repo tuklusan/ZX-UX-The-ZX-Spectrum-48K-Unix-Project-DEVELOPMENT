@@ -75,7 +75,9 @@ def normalize_listing(body: str) -> str:
             # lowercase variable: mAND d1, not the identifier BAND.
             for operator in ('AND', 'OR'):
                 if (body.startswith(operator, i) and i > 0 and
-                        (body[i - 1].islower() or body[i - 1] == ')') and
+                        (body[i - 1].islower() or body[i - 1] == ')' or
+                         (body[i - 1].isupper() and
+                          re.search(r'(?:<>|<=|>=|[=<>])\s*[A-Z]$', prior))) and
                         (i + len(operator) == len(body) or
                          not body[i + len(operator)].isalpha()) and
                         re.search(r'\bIF\b', prior, re.I)):
