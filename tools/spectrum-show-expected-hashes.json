@@ -1,0 +1,294 @@
+{
+  "01-searcher--Searcher": {
+    "tap_sha256": "efb96308de64a4956a17b816ef6779bd4a608e1e13b144de00d5f3d6bae20ad3",
+    "tzx_sha256": "63ea4373ac95e7ca5daea35863ac83acab6e615cf4d94594692b18fe5b5826ba"
+  },
+  "02-newyork--NewYork": {
+    "tap_sha256": "ad986ef3841fbab655a15122954f11c8cde6daa2631052c121675ea1c09d5ec9",
+    "tzx_sha256": "18ec78853da53f0529196ee30368ddbacd535b373b53ae365d2be29043c6451b"
+  },
+  "03-starswarm--StarSwarm": {
+    "tap_sha256": "a7bb2c7b21263c32c8fd9d7efa9628aec326b0390ebd2aad016761591b3a8e07",
+    "tzx_sha256": "cc14f04ec6e4b57dc86438402812e00bfdc238bcdb3a824a56b6268c014e49bc"
+  },
+  "04-beltman--beltman": {
+    "tap_sha256": "3a6344b881188c9d5467a71caeab14a4dec0fb6f0ca5406b9f37bfeb285a7167",
+    "tzx_sha256": "f7941847292f4b5e8725294616591924412f1eb5967070504f5a37d3a7dbaf35"
+  },
+  "05-moonbuggy--MoonBuggy": {
+    "tap_sha256": "c317eb3a9f7a578509636b241aaf77d73ace4d4bab3112ff1e68ed55a35bf1d1",
+    "tzx_sha256": "284ab8d4d89e6c68c0351ba15c30cbdd740dc2bd4cfb67d4fad1cb63f80202b6"
+  },
+  "06-santamissionfixed2--SantaMissionfixed2": {
+    "tap_sha256": "96ab03fa91ece3bed0a06987a7bf778195ca06a9b611c564d1e55607a01d37fe",
+    "tzx_sha256": "edb6625226f7adc43ca8e51f5b9e4194f9a1c898a7f5ac7eb0d0b9b943c8fe5e"
+  },
+  "07-santanightmare--SantaNightmare": {
+    "tap_sha256": "e322ffe1426d6801297bff9016cafa589003fe3b62610d04a7c699dfbe5ca52d",
+    "tzx_sha256": "5c8f15cfc4088dfe532b1ae5f98ccd7d81cb7015b2029316a64490cd3357be6c"
+  },
+  "08-meteorbelt--MeteorBelt": {
+    "tap_sha256": "e177b694eef4fedfe0e54adabefd9a388e27b58f3dc3547fcab9aacc30eb7904",
+    "tzx_sha256": "8321be6b84441a78f1f8cac93ddbddb23bfa876a3938e48eb97ff2267e88135c"
+  },
+  "09-escape--Escape": {
+    "tap_sha256": "838e594f1bc49f1f2bab5a035a14611dcf9b4f54e892a360348fa7bb8f591a2b",
+    "tzx_sha256": "c3d5846c10967bc7004a79dab2cd0c9ab0663390cb54b1df8201223b22cc5065"
+  },
+  "10-galaxiansfix2--GalaxiansFix2": {
+    "tap_sha256": "2309276e57fd9c360f8a6735dedf3172b25ed9106d8948cde590ae45fcdb9e55",
+    "tzx_sha256": "b948eb5e21d682da924cf40585f36cfc04ddc19ac0dc5137f87adda7c51c87cf"
+  },
+  "11-pinball--Pinball": {
+    "tap_sha256": "9538882afc461bec446ed0b42496e01980f92381c88a494d261d6c7681c75178",
+    "tzx_sha256": "bd244cd609934939c29e898eb623a668bcdab57ad14671c7e0f4cfcd589caf6a"
+  },
+  "12-fawkes-fix--fawkes-fix": {
+    "tap_sha256": "a4c2e9e2539f2daea583f5353ca7b80d8998f178b82edba59da5d7f78d1ca584",
+    "tzx_sha256": "772b90a74904f6e356ee77ed88fbf002b215ced2ae1fd768cf69858aec3dcb93"
+  },
+  "13-firefoxcomplete--FireFoxComplete": {
+    "tap_sha256": "ba30bef95440f7c8017e5516a8574d6b00d92a8c1833f1b7094e9755a352d83b",
+    "tzx_sha256": "34a56832c8425d773564409136c6e90cf22fc254f0de3fd2da1f3f109e9a044d"
+  },
+  "14-outlander--Outlander": {
+    "tap_sha256": "29d4c5c8c263fd542826a4c190308f7596f47e324939e0628fdf9e8c1f0ebf89",
+    "tzx_sha256": "f80510f187732a9aa1c5123c753be6c2f7a8f08cac9c9f629ae3fae5d541698d"
+  },
+  "15-potholefix--PotholeFix": {
+    "tap_sha256": "5607466ebe50d2d9fb0ea8ca0297e35116fdeb9e40cfc15618251f75300cb0dc",
+    "tzx_sha256": "ad3d5c316439e854ca87c586d487528851f5987f7637f1e04ce7c10d79aaebb8"
+  },
+  "16-rockattackfix--RockAttackFix": {
+    "tap_sha256": "cc5271a18ff129b326a69b42f20eb01c09468f339b907e36ad638d586816982e",
+    "tzx_sha256": "4cef42a576e47e256199802fc7f8cfbadb8990d5b95f74566fd49aa2026289da"
+  },
+  "17-defender--Defender": {
+    "tap_sha256": "2da4da8ec395846c82b75bb58fbd3892cb89177bc4055da14cf8dc28d8e64b56",
+    "tzx_sha256": "a1252c0d3de96c37955c0149ad0ceea9d9e1016a9dd24e1b2679fd0c61fab65a"
+  },
+  "18-clown--Clown": {
+    "tap_sha256": "63fef55e5b801c751aed227732ffcf505e469f6cd2ccc2412623c404006cf93e",
+    "tzx_sha256": "730fc3c31a953249af47dd824e0d93c32fa7f372f24a2e9d7145db3fef41d04f"
+  },
+  "20-spacewaste--SpaceWaste-final": {
+    "tap_sha256": "5b64681270cfcc519b84a96e47554f6ff663cf1ed1e29e91a3ca521653e7467d",
+    "tzx_sha256": "c6f50f4e4aeff4593769e8017d2bc943a911cfff4f03d666fb1a45b21933e9e3"
+  },
+  "21-mower--Mower": {
+    "tap_sha256": "86b72ea56f16d1049ae711db6d14f08e49febda5d3489a59cc54e7eecff97196",
+    "tzx_sha256": "095b00b025d94df8b1d84680f00d847282a0e51701bef5ad002078e53385e9cb"
+  },
+  "22-xmas2022--Carols": {
+    "tap_sha256": "7c51e167a43a56dbf30e1b3bfbbcbe1c66d1d7d7eaf92ae94c93b6aa399ef151",
+    "tzx_sha256": "66d4820cce982ed46cb073eb1e466460122a5a2e78ac24dddeed7837c45aac40"
+  },
+  "22-xmas2022--SleighRide": {
+    "tap_sha256": "de0562f9efb8549d4451d8904a5cb505d6fcd577a40c95648fd7b3387493b4ff",
+    "tzx_sha256": "025811da65788db35a620bb9c1089773e3bd7d1c5fdc018d520999b7775c5f0c"
+  },
+  "22-xmas2022--XmasHolly": {
+    "tap_sha256": "0ba65c72c9d2ab09526608cc42366c2e4ebefe56445e4a8cc3c1e90158bc4dfa",
+    "tzx_sha256": "a135654652d3f70574b3c06864e05f12a86183074ef533d1dc35a4f3cdb1f2ec"
+  },
+  "23-scrumping--Scrumping": {
+    "tap_sha256": "2428c96d416084efc024f96c8483665adae259283c013f38431c8cc52c425231",
+    "tzx_sha256": "3937990efe7f23a4bf8b5573ab5e0480f8eaa10fc349f0b4e46304ce60e25a91"
+  },
+  "24-diamonddigger--DiamondDigger": {
+    "tap_sha256": "b67b60fcf99ecf9f29199eac8514afd9e14beb8e57bdd9ab6633265d61d5db1f",
+    "tzx_sha256": "9fa5af1dfb11c645fb2c3363f566630a206a359252623218839692a7a85b3238"
+  },
+  "25-colonyinv--ColonyInv": {
+    "tap_sha256": "b0279ac8e18e6ad878b01f4f8b7b58b80d9eeb3c0fb2118c70f5db4600e08e8d",
+    "tzx_sha256": "0707d3d16e028e53fe9ae13c55edd064c5085a88d5a7275269c884661583c8af"
+  },
+  "26-boxing--Boxing-Spectrum": {
+    "tap_sha256": "04d17121c0e900175c5905baa1bb07bd628a7343844dea31315bdf56020627ad",
+    "tzx_sha256": "824679ce4a45730f8082e035f03583559b8db617535877f626d08a8a7e713d3b"
+  },
+  "27-donkeyape--DonkeyApe": {
+    "tap_sha256": "0181346c59000e7557ca0ac561a196e988eb8a403c3bb68b7e0e2498bead5739",
+    "tzx_sha256": "c57c06ab2764dc2d067db615e999aaf3dfdff3a8c23b8e0e1e0ed9ac5077ef32"
+  },
+  "28-mineblaster--Mineblaster": {
+    "tap_sha256": "486e51215d905a2f4d0b26f4a15370f72e409e4788ca6e50547debda08155854",
+    "tzx_sha256": "bad158168855fdf6f449130050da33e3c127ecca0d60da09a70ea8b121705dd9"
+  },
+  "29-diver--Diver": {
+    "tap_sha256": "dcd8202553415c8a76c8bcd5131d4268be87b507183d87f64f5f8926908e0d73",
+    "tzx_sha256": "1db876f12b96872fa936e7d688210463b92d2ca60d346405bc1119bf874f990e"
+  },
+  "30-chickens--chickens": {
+    "tap_sha256": "8211e4d482fbd2335ea24197f07f1cf237a6791d678d520a452762b04b45703b",
+    "tzx_sha256": "05587e5e1873f933b8d1ed013bb877e627ed84df162b9967a244f780ff62795e"
+  },
+  "31-galactoids--Galactoids": {
+    "tap_sha256": "9bf59eb6a3b842a6a643e37413140757639bf575aeaa41897ddd9b65da837140",
+    "tzx_sha256": "8766ce78eb86b783b0073df907f110cbd5cd121ca1d9f3ddfc148c2105ca1104"
+  },
+  "32-poojan--poojan": {
+    "tap_sha256": "e7d13526c63ae8c0792ead9124171a84a3cbc9e36cb236ef3d48bb230d40dc7a",
+    "tzx_sha256": "61c3bad44f8e94918767235840b8ff591dc3a836673e1830d6ef3cd2e3e2f39b"
+  },
+  "33-groto--Groto": {
+    "tap_sha256": "2f51e0478b5b449513af3531563872482c719258a71c176665f36f7bfaecfe9a",
+    "tzx_sha256": "16f020d0aa8fb9f763ab953a5903125a187d45fc959e59ca0f33274ebe7ee86e"
+  },
+  "34-redcarpet--RedCarpet": {
+    "tap_sha256": "4bb66c4134bfe8f564f5747f9a47de2b65e7979286f06b8d0a060c10a6f8d297",
+    "tzx_sha256": "17464d83f74f5fa6b135c767d0c41405381c4fa0fcc52fa495f3660ac5ae0392"
+  },
+  "35-meanmachine--MeanMachine": {
+    "tap_sha256": "024135397bd3e8222d557bd6f5cb2e40a8acbc71836eb70633921b4d25a3b0ed",
+    "tzx_sha256": "144c094878691384853dc63f65687691d2ae4b4a6d1490943cdc0cb186acac4f"
+  },
+  "36-docked--Docked": {
+    "tap_sha256": "763d59202cc872bf7fbfee1670281e1b4086f2e2096449446dcd79b9546fefc4",
+    "tzx_sha256": "5ac36e5992f9f90eb53bfd54207cafd4d57f960a52a076189f8052373ec05fee"
+  },
+  "37-spaceinv--SpaceInv-FINAL": {
+    "tap_sha256": "f04f633d680328f38024405eca86f312d9ddb29db8183e7eac113e4254610fe4",
+    "tzx_sha256": "2217f4d5eef604c82ab8cffdfe06e2c0afb58df96d85f9c8f5928596f3f48d89"
+  },
+  "38-gun--GUN": {
+    "tap_sha256": "848c8906393526a494965904ac742b2959a6cb5eefe2f30636fc8cf89323ef77",
+    "tzx_sha256": "54716d01512ba259f4230f72dcaa4e4a86b5055ebda4e895be76a5d51382d147"
+  },
+  "41-amaze--Amaze": {
+    "tap_sha256": "efa358cd3d4f393c26a0c1d086d0bf456c60db0d0d1deac98b12b6f71727fb38",
+    "tzx_sha256": "afa80c66814b3cabe7f8c9c75fe55c8e34ba4be86fa31f3335bc92a48ef54125"
+  },
+  "42-robot-final--ROBOT-FINAL": {
+    "tap_sha256": "abf3cd952d0d20567c31f91403bd792571eb03d88e90aaebe90f8431245a400b",
+    "tzx_sha256": "573c124bbc37a5bdbdd3a1965a43a363cd966b74454a4f392966c793dfc6e0bb"
+  },
+  "44-races--Races": {
+    "tap_sha256": "58b1b1f5ee46a3eda22078b86c2a9de05faeaa7dc9ae494b55df11b866565d5a",
+    "tzx_sha256": "f98aa05bd7c075ab93795de2f2a09b217d230d1e27c7c9a47080962c9e8511e2"
+  },
+  "45-astrocrash--AstroCrash": {
+    "tap_sha256": "6e1b594dbfa774804081acf0733e6475d988e300f7470c16e858338302c30ced",
+    "tzx_sha256": "c8a63afb1a8493aa4acff90552613ded46de06577b46127a9a27ee192bedc1b0"
+  },
+  "46-chasm-final--Chasm-Final": {
+    "tap_sha256": "f0b1cb48669015b20f6bd46061a0994b0a7f2f3cf18a2eca0619cd33ad79b704",
+    "tzx_sha256": "910bf56dd0ebf7673dc135060bab5996507257cd2fa5f43425dbc823d7d2afb3"
+  },
+  "48-quackattack--QuackAttack": {
+    "tap_sha256": "6f106f5bae86da999ee5fe7b5e81bf6c730b13f84a9d974f70bd989ed0b13bc9",
+    "tzx_sha256": "70ca5f6b453f942c8a68175b9b23fde9304fee3d7a42ed6313278649140f4ff2"
+  },
+  "49-bankraid--BankRaid": {
+    "tap_sha256": "ab5e3d4283aae99ad06b30cbbd8f276968267ea63983358a4c15223539069bd2",
+    "tzx_sha256": "62393442aa9750bc77a89eeeeae7e911b22643da73997eb692a130d3669a8ac2"
+  },
+  "50-monsters--Monsters": {
+    "tap_sha256": "e3d560263a67ec81e85fe7edfc91b0f30f96ceec3eb2a338c169ab6db7aaf86f",
+    "tzx_sha256": "747ec19097df79912dee2068a857487bf8cae402f4d1788b2e05fbbdae17aaa1"
+  },
+  "19-compchoice-CompChoice-01": {
+    "tap_sha256": "81bd85e475c80dece7316a55d8725ab041b2b2f2ab3334db1c167077ac939e84",
+    "tzx_sha256": "f30eaf5664f8b5ce9b8bd42a31beb97309fc7276f3971dcdd51b675f1f5d2216"
+  },
+  "19-compchoice-CompChoice-02": {
+    "tap_sha256": "b09238ab298095e94a3b18d870fe8c217513068ff0c49ecae1867ecf5d9564f4",
+    "tzx_sha256": "4ca0c445164d180027fbd7c788d73b4bcfbc495c24fd50305113f08af5a8a4cf"
+  },
+  "19-compchoice-CompChoice-03": {
+    "tap_sha256": "ca567fb67cbf1a0d1992350e6f75a1463494d2705df29ae5959dc11f3b9828bc",
+    "tzx_sha256": "b5e2bc03af4c50e684ed4528ac9705ba9a5f90dce1498c5e3d8853db82bf3a77"
+  },
+  "19-compchoice-CompChoice-04": {
+    "tap_sha256": "b77d357d4b25853fcc66f0d77c2dfc0ed4e66b3cc4cde66d74584c1cf7f3e8aa",
+    "tzx_sha256": "cf61e2ff28e7bc9f1e7a573182d3b24926e073c6d00a25860e79acdd90fd5dbf"
+  },
+  "19-compchoice-CompChoice-05": {
+    "tap_sha256": "a240edb7b2652b919cd6f8674c82e4a32fc3890d751401b19bbf7de4c0c2827e",
+    "tzx_sha256": "a235c1ba33cd8f4eb8002efd1db70dfa13ef61124d44db6b676df32e93057c86"
+  },
+  "19-compchoice-CompChoice-06": {
+    "tap_sha256": "7d83e244ebdec8083f65b733d5f3631e33a579eab199ec06531911ed26fab8c5",
+    "tzx_sha256": "102d6406d193483473faa2f5b39145eb9f09e54404258cf0dd0207cef53077b0"
+  },
+  "19-compchoice-CompChoice-07": {
+    "tap_sha256": "721b18ddd4be42ece6a91592c1162e5d94cff1f0c228b3536828547b28f892c3",
+    "tzx_sha256": "eed1673e1c18594c102f674d8d35137640f18b0ef8755f7cc4d2175acef197b3"
+  },
+  "39-compspacegames-SpaceGames-01": {
+    "tap_sha256": "78f2161f2c7930b209afaa45d1209353be549e7efcfadc18a6ce9c2a61fc774f",
+    "tzx_sha256": "654a370fe4d84cc4bfd7b67d47092e0eb2cef6cb09856dcf410dcd2d7dd67454"
+  },
+  "39-compspacegames-SpaceGames-02": {
+    "tap_sha256": "4a99b022cb0f3bb3da1cb1e172c10f9ac84b166ade5f37b2f7c8755a0bf1f2a7",
+    "tzx_sha256": "2f9f952cab89f541c2a5aaa31ed35c9facac777f456ec5f8127b7b0b717d8510"
+  },
+  "39-compspacegames-SpaceGames-03": {
+    "tap_sha256": "7ef879e345b75592d0cc9533b931939326ee3c3d329709cfa1f6fe60ba60e32e",
+    "tzx_sha256": "07e1408ffeddac13fc915f31082bbcd3e513d87f4e81bcc985dcd2a991bc97e5"
+  },
+  "39-compspacegames-SpaceGames-04": {
+    "tap_sha256": "13145a776c3b3420112ed4d9058587f0fb0ebc78f5df3de753e2979e21aa9b3f",
+    "tzx_sha256": "1d1f133ce6a7e82d504a4ebb6ce04190c0f606f38e4976cca582926696677e8a"
+  },
+  "39-compspacegames-SpaceGames-05": {
+    "tap_sha256": "818fa9cb45167b8ee55cbabe938ba6491a47374c17eff9cf8481df840bf9dc2b",
+    "tzx_sha256": "47d1f8d2e56a2e9b2fef07b905b1acc5f86c15de3554de35e2327d090089d896"
+  },
+  "39-compspacegames-SpaceGames-06": {
+    "tap_sha256": "c76a480820dbba1ed82c3c8aca837f93638d7f9cb7addedbb358aedf9e2f5409",
+    "tzx_sha256": "e1acc53460bf147d680306639c6f654602b8d8eba20005db3bcd18e0e69c5654"
+  },
+  "39-compspacegames-SpaceGames-07": {
+    "tap_sha256": "e3a11c604b71359830f20cd77605acba172dd16617925339623c7be8fa2902f0",
+    "tzx_sha256": "dc49f0fd625a786611d33b456df98f975b32385f6fc2fd19752fc8279a65c98f"
+  },
+  "39-compspacegames-SpaceGames-08": {
+    "tap_sha256": "0118dfa261c88c9029f049c5cf6b3cdcb996ca35de59c84d58198265c2e0ee9a",
+    "tzx_sha256": "0524c170f5f002fb333bfe68f327e1d1e88bce1ae054a62a45e649beeb4e8528"
+  },
+  "39-compspacegames-SpaceGames-09": {
+    "tap_sha256": "7c304234deab12b2b60e08da6a3b36b2ae5579ad31cb73533e552d4fd9d57204",
+    "tzx_sha256": "a97e4e3ac15baae1f340c49443f54d2c279bd9abbbbc0b5f22fda2bc5577e099"
+  },
+  "39-compspacegames-SpaceGames-10": {
+    "tap_sha256": "22d609ff487edd52954d6e5d9908f24e0e0dacc6684bd9b7329e4e37746eee1d",
+    "tzx_sha256": "bc6bd6c5152cc6a2093d2a343f1709ee9a54efc6638a2f5661ebd7c2d8192f13"
+  },
+  "39-compspacegames-SpaceGames-11": {
+    "tap_sha256": "4dc8c7d9478719ca4dcbeae31804e0000b1e523f992272253745411dc1e11e41",
+    "tzx_sha256": "97406c364a80927c6957417ef7c400f422725ccc22fe1b268eb6a642f8855e9e"
+  },
+  "39-compspacegames-SpaceGames-12": {
+    "tap_sha256": "5adc59fccccecf1683199b610aff169b1e2b0be6eaa217517668ce924bc62991",
+    "tzx_sha256": "e5a53806b1b6f84bb8ad7c2af8e9afc33961a530034e246aa6bc43f2b232c0fc"
+  },
+  "39-compspacegames-SpaceGames-13": {
+    "tap_sha256": "3f983bc6f39301085fcb466c10db9ebc8fbf24c2f7ee838d3f01fc434097c3d1",
+    "tzx_sha256": "2861a3dc3c4c0536706b57dab0dad9a7a147c62a5127c19d08491b2fc3cf4c67"
+  },
+  "39-compspacegames-SpaceGames-14": {
+    "tap_sha256": "9d1594a48d553d206222e2581ae2610c502677a2edba9ef3c0540741ad503f81",
+    "tzx_sha256": "c8f9f75c0350190372a43c063e06a28a5fc6ae361a04752c40e6c40d8cc1b67b"
+  },
+  "39-compspacegames-SpaceGames-15": {
+    "tap_sha256": "5ff20cccb3ee0873bbc7ea18546f5ea0d083e25fbd77871254c9bddf801e7878",
+    "tzx_sha256": "6f40c00c6ecfb1070f1df230002de391b783c747e2b3b947b2d0d1c5d8a35ebb"
+  },
+  "40-barels-BarrelsFinal-01": {
+    "tap_sha256": "37c82bfad599f09206046cd4cf69c16bf29f222346a46f1407e7021a5838cf17",
+    "tzx_sha256": "4f625cc89f084370287858d71a1328c18bcedf5cfd083fc6b06eb8312d54706d"
+  },
+  "43-dungeonfix-DungeonFinal-01": {
+    "tap_sha256": "42ca4f415df050acef1ae96e808544ccc8f82d0dd5c9f4082297f3818777e160",
+    "tzx_sha256": "066ab5c2e8c9350d407a58f3a01286c3c0788a99703a0f6c5138a55234600925"
+  },
+  "43-dungeonfix-DungeonFinal-02": {
+    "tap_sha256": "fe85292bf93cbede00f17981e72fe866539eb1bbcb32bcdda42d9ddee13db0be",
+    "tzx_sha256": "49295a74ba0b8afa3cbf540f7c601fba5fac2aee684ec8f2cbab14c60de1db40"
+  },
+  "47-he-man-HE-MAN-FINAL-01": {
+    "tap_sha256": "2ec66b8f7aaaf34eecdae47a78992a1cd63ef45cfe3fbd159aefbb57d822c558",
+    "tzx_sha256": "58f9546d62361b506e1e85546b6da4aea01d5edc4bdae76d4f827fc63e20ca38"
+  }
+}
