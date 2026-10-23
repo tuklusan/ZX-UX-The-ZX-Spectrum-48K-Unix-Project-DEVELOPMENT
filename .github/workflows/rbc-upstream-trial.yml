@@ -87,9 +87,11 @@ jobs:
           PY
       - name: Record shared source hashes
         run: |
-          sha256sum trial-result/hisoft48.tap trial-result/rbc/rbc.py \
-            trial-result/rbc/font32.bin upstream-pyhsb/compiler.py \
-            > trial-result/inputs.sha256
+          find trial-result/rbc upstream-pyhsb -type f \
+            \( -name '*.py' -o -name '*.bin' -o -name 'LICENSE.txt' \) -print0 \
+            | sort -z | xargs -0 sha256sum > trial-result/inputs.sha256
+          sha256sum trial-result/hisoft48.tap src/zx-ux-sdk/rom/48.rom \
+            >> trial-result/inputs.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: rbc-shared
@@ -168,12 +170,21 @@ jobs:
           results=[]
           conversion_errors=json.loads((out/'tape-conversion-errors.json').read_text())
           compiler_hash=hashlib.sha256((out/'rbc/rbc.py').read_bytes()).hexdigest()
+          tool_set_hash=hashlib.sha256((out/'inputs.sha256').read_bytes()).hexdigest()
           for name,source in inputs:
+              if name=='hello':
+                  original=out/'hello.bas'
+              else:
+                  folder,form=name.rsplit('-',1)
+                  original=root/folder/'BASIC'/(folder+('.bas' if form=='text' else '.tzx'))
               binary=out/(name+'.ssx')
               report=out/(name+'.json')
               row={'program':name,'input':str(source) if source else None,
                    'input_sha256':hashlib.sha256(source.read_bytes()).hexdigest() if source else None,
-                   'tool_sha256':compiler_hash,'revision':os.environ.get('GITHUB_SHA'),
+                   'original_input':str(original),
+                   'original_input_sha256':hashlib.sha256(original.read_bytes()).hexdigest() if original.is_file() else None,
+                   'tool_sha256':compiler_hash,'tool_bundle_sha256':tool_set_hash,
+                   'revision':os.environ.get('GITHUB_SHA'),
                    'output_path':str(binary),'report_path':str(report),
                    'output_sha256':None,'native_result':None,
                    'ok':False,'cause_category':None,'returncode':None,'output':''}
