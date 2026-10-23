@@ -10,7 +10,7 @@ from pause_zero import rewrite_pause_zero
 
 
 class Keywords:
-    CODE_FOR = {'PAUSE': 0xf2}
+    CODE_FOR = {'PAUSE': 0xf2, 'REM': 0xea}
 
 
 def run(rows):
@@ -31,14 +31,14 @@ class PauseZeroTests(unittest.TestCase):
         saved = list(before)
         rewritten, changes = run(before)
         self.assertEqual(before, saved)
-        self.assertEqual(changes, [(8050, 8051)])
+        self.assertEqual(changes, [(8050, 8050, 8051)])
         self.assertEqual([n for n, _ in rewritten], [8050, 8051, 9000])
         self.assertEqual(rewritten[0][1], b'IF INKEY$="" THEN GO TO 8050\r')
         self.assertEqual(rewritten[1][1], b'\xfb:\xfe\r')
 
     def test_bare_wait(self):
         rewritten, changes = run([(10, b' \xf2 0\r'), (20, b'NEXT\r')])
-        self.assertEqual(changes, [(10, None)])
+        self.assertEqual(changes, [(10, 10, None)])
         self.assertEqual(rewritten[0][1], b'IF INKEY$="" THEN GO TO 10\r')
         self.assertEqual(len(rewritten), 2)
 
@@ -47,11 +47,42 @@ class PauseZeroTests(unittest.TestCase):
                     (101, b'NEXT\r')]
         self.assertEqual(run(original), (original, []))
 
+    def test_unconditional_inline_pause_uses_two_free_lines(self):
+        original = [(120, b'\xf5"START":\xf20\x0e12345:\xfb:\xfe\r'),
+                    (150, b'NEXT\r')]
+        rewritten, changes = run(original)
+        self.assertEqual(changes, [(120, 121, 122)])
+        self.assertEqual(rewritten, [
+            (120, b'\xf5"START"\r'),
+            (121, b'IF INKEY$="" THEN GO TO 121\r'),
+            (122, b'\xfb:\xfe\r'),
+            (150, b'NEXT\r'),
+        ])
+
+    def test_nested_conditional_pause_is_not_moved(self):
+        original = [(100, b'\xfaX=1\xcb\xf5"Y":\xf20\x0e12345:\xfb\r'),
+                    (200, b'NEXT\r')]
+        self.assertEqual(run(original), (original, []))
+
+    def test_two_consecutive_waits(self):
+        original = [(300, b'\xf20\x0e12345:\xf20\x0e12345:\xfb\r'),
+                    (400, b'NEXT\r')]
+        rewritten, changes = run(original)
+        self.assertEqual(changes, [(300, 300, 301), (301, 301, 302)])
+        self.assertEqual([n for n, _ in rewritten], [300, 301, 302, 400])
+        self.assertEqual(rewritten[2][1], b'\xfb\r')
+
+    def test_quoted_text_does_not_create_false_wait(self):
+        original = [(100, b'\xf5"PAUSE 0:HI":\xf20\x0e12345:\xfb\r'),
+                    (200, b'NEXT\r')]
+        rewritten, changes = run(original)
+        self.assertEqual(changes, [(100, 101, 102)])
+        self.assertEqual(rewritten[0][1], b'\xf5"PAUSE 0:HI"\r')
+
     def test_nonzero_and_computed_waits_are_untouched(self):
         original = [(10, b'\xf2' + b'10\x0e12345\r'),
                     (20, b'\xf2' + b'0\x0e12345+N\r'),
-                    (30, b'\xf5"PAUSE 0"\r'),
-                    (40, b'\xf5"TEXT":\xf2' + b'0\x0e12345\r')]
+                    (30, b'\xf5"PAUSE 0"\r')]
         self.assertEqual(run(original), (original, []))
 
     def test_archived_galaxians_has_expected_unmodified_line(self):
