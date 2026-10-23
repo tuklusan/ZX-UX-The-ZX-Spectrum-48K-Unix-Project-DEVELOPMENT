@@ -54,6 +54,10 @@ jobs:
                   print(f'WARN: {source}: {exc}')
           Path('trial-result/hello.bas').write_text('10 PRINT "HELLO"\n')
           PY
+      - name: Verify safe waits in the 60 original BASIC tapes
+        run: |
+          python3 experiments/hisoft-rbc-2026-10-22/stage/pause_corpus_check.py \
+            src/bonus/60-programs --output trial-result/pause-zero-corpus.json
       - name: Compile BASIC sources and collect results
         run: |
           python3 - <<'PY'
