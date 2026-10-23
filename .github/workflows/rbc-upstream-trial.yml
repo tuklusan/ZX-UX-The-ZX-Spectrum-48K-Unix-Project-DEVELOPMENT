@@ -54,6 +54,24 @@ jobs:
                   print(f'WARN: {source}: {exc}')
           Path('trial-result/hello.bas').write_text('10 PRINT "HELLO"\n')
           PY
+      - name: Verify original Galaxians text and tape token parity
+        if: matrix.shard == 2
+        run: |
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path[:0] = ['upstream-pyhsb', 'trial-result/rbc']
+          import compiler, hbcimage, rbc, source, tap
+          folder = Path('src/bonus/60-programs/25-galaxians/BASIC')
+          rom = Path('src/zx-ux-sdk/rom/48.rom').read_bytes()
+          kw = source.Keywords(rom)
+          fp = compiler.Compiler(hbcimage.Image.from_tape(Path('trial-result/hisoft48.tap')), rom).fp
+          _, listing = rbc._source_program(folder/'25-galaxians.bas', source, kw, fp)
+          _, original = tap.program_of_tap(rbc._tap_from_tzx(folder/'25-galaxians.tzx'))
+          if listing != original:
+              sys.exit('Galaxians text disagrees with the original tokenized tape')
+          print('Original Galaxians BASIC lines matched:', len(tap.split_lines(original)))
+          PY
       - name: Compile BASIC sources and collect results
         run: |
           python3 - <<'PY'
