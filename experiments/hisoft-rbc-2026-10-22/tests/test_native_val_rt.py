@@ -39,7 +39,7 @@ class NativeVal(unittest.TestCase):
     def setUp(self):
         self.module = type('Module',(object,),{'rtlib': type('Runtime',(object,),{'Machine':RTModule.Machine}),
             'STRING':128, 'REAL':0, 'Compiler':type('Compiler',(CompilerClass,),{})})
-        asm=lambda s: bytes((0x06,0x18,0xC3,0xDE,0x35))
+        asm=lambda s: bytes((0x06,0x1D,0xC3,0xDE,0x35))
         with patch.dict(sys.modules, {'rtnames':types.SimpleNamespace(RT=types.SimpleNamespace(VAL=109)),
                                       'z80asm':types.SimpleNamespace(asm=asm)}):
             install(self.module)
@@ -47,7 +47,7 @@ class NativeVal(unittest.TestCase):
     def test_emit_actual_rom_val(self):
         machine=self.module.rtlib.Machine()
         self.assertEqual(machine.run_emitter(109,10,False,0),15)
-        self.assertEqual(machine.far[10:15],bytes((6,24,195,222,53)))
+        self.assertEqual(machine.far[10:15],bytes((6,29,195,222,53)))
         self.assertEqual(machine.run_emitter(109,15,True,0),20)
         self.assertEqual(machine.far[15:20],bytes(5))
         self.assertEqual(machine.run_emitter(108,20,False,0),22)
