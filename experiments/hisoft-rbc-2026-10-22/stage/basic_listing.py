@@ -100,3 +100,26 @@ def normalize_listing(body: str) -> str:
         i += 1
     # The Spectrum's power/arrow glyph is code 94 in both text and tape.
     return ''.join(out).replace('\u2191', '^')
+
+# Four original PAYPACKETS statements use AT as a numeric variable. The
+# Spectrum tape stores A,T rather than its PRINT-position keyword byte.
+# Apply this only to those exact shapes; PRINT AT remains a keyword.
+_NUMERIC_AT_FORMS = (
+    (re.compile(r'\s*LET\s+AT\s*=\s*0\s*', re.I), 1),
+    (re.compile(r'\s*LET\s+A\$\s*=\s*STR\$\s*\(\s*AT\s*\)\s*:\s*GO\s+TO\s+580\s*', re.I), 1),
+    (re.compile(r'\s*IF\s+XX\s*=\s*1\s*THEN\s+LET\s+AT\s*=\s*AT\s*\+\s*B\(J\)\*V\(J\)\s*:\s*GO\s+TO\s+580\s*', re.I), 2),
+    (re.compile(r'\s*LET\s+AT\s*=\s*AT\s*\+\s*A\(J\)\*V\(J\)\s*', re.I), 2),
+)
+
+
+def tokenize_preserving_numeric_at(body, source, kw):
+    """Keep an unambiguous archived numeric identifier out of keyword space."""
+    normalized = normalize_listing(body)
+    tokenized = source.tokenize_line(normalized, kw)
+    for pattern, count in _NUMERIC_AT_FORMS:
+        if pattern.fullmatch(normalized):
+            keyword = bytes((kw.CODE_FOR['AT'],))
+            if tokenized.count(keyword) != count:
+                raise ValueError('numeric AT identifier does not match text tokens')
+            return tokenized.replace(keyword, b'AT')
+    return tokenized
