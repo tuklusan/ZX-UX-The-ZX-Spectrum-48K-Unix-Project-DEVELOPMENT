@@ -143,6 +143,26 @@ jobs:
               sys.exit('Galaxians text disagrees with the original tokenized tape')
           print('Original Galaxians BASIC lines matched:', len(tap.split_lines(original)))
           PY
+      - name: Verify original Fall Guy joined-operator tokens
+        if: matrix.shard == 0 && (env.RBC_MODE != 'batch' || contains(env.RBC_PROGRAMS, '02-fall-guy'))
+        run: |
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path[:0] = ['upstream-pyhsb', 'trial-result/rbc']
+          import compiler, hbcimage, rbc, source, tap
+          folder = Path('src/bonus/60-programs/02-fall-guy/BASIC')
+          rom = Path('src/zx-ux-sdk/rom/48.rom').read_bytes()
+          kw = source.Keywords(rom)
+          fp = compiler.Compiler(hbcimage.Image.from_tape(Path('trial-result/hisoft48.tap')), rom).fp
+          _, listing = rbc._source_program(folder/'02-fall-guy.bas', source, kw, fp)
+          _, original = tap.program_of_tap(rbc._tap_from_tzx(folder/'02-fall-guy.tzx'))
+          for label, binary in [('text', listing), ('tape', original)]:
+              line = dict(tap.split_lines(binary)).get(5010)
+              if line is None or line.count(bytes([kw.CODE_FOR['AND']])) != 3:
+                  sys.exit('Fall Guy '+label+' input lost a joined AND token on line 5010')
+          print('Fall Guy original line 5010: three AND tokens in both input paths')
+          PY
       - name: Compile BASIC sources and collect results
         run: |
           python3 - <<'PY'
