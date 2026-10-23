@@ -10,12 +10,12 @@ def prepare(checkpoint: Path, extensions: Path):
     compiler = checkpoint / 'rbc' / 'rbc.py'
     text = compiler.read_text()
     old = 'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize'
-    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom native_scroll import adapt_scroll_counter\nfrom restore_data import resolve_restores\nfrom udg_bounds import allow_bounded_udg_loops\nfrom udg_nested import allow_nested_glyph_writes\nfrom udg_chr_bounds import allow_bounded_chr_glyphs\nfrom rom_keyread import allow_key_state_read\nfrom rom_keyboard_control import allow_rom_keyboard_controls\nfrom native_pause_rt import install as install_native_pause\nfrom native_keyread_rt import install as install_native_keyread\nfrom native_val_rt import install as install_native_val\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, save_controls, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
+    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom native_scroll import adapt_scroll_counter\nfrom restore_data import resolve_restores\nfrom constant_data import adapt_literal_data\nfrom udg_bounds import allow_bounded_udg_loops\nfrom udg_nested import allow_nested_glyph_writes\nfrom udg_chr_bounds import allow_bounded_chr_glyphs\nfrom rom_keyread import allow_key_state_read\nfrom rom_keyboard_control import allow_rom_keyboard_controls\nfrom native_pause_rt import install as install_native_pause\nfrom native_keyread_rt import install as install_native_keyread\nfrom native_val_rt import install as install_native_val\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, save_controls, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
     if text.count(old) != 1 or text.count('program = source.tokenize_directives(program,kw)') != 1:
         raise ValueError('RBC checkpoint changed; extension location needs review')
     text = text.replace(old, new, 1)
     old = 'program = source.tokenize_directives(program,kw)'
-    text = text.replace(old, old + '\n        program, scroll_lines = adapt_scroll_counter(program, kw)\n        program, next_lines = resolve_missing_targets(program, kw, initial.fp)\n        program, data_lines = resolve_restores(program, kw, initial.fp)', 1)
+    text = text.replace(old, old + '\n        program, scroll_lines = adapt_scroll_counter(program, kw)\n        program, next_lines = resolve_missing_targets(program, kw, initial.fp)\n        program, data_lines = resolve_restores(program, kw, initial.fp)\n        program, constant_data_lines = adapt_literal_data(program, kw, initial.fp, source, spectrum_tap)', 1)
     # Confirm bounded glyph writes across numbered FOR/POKE/NEXT lines.
     check_anchor = 'checks = analyze_lines(spectrum_tap.split_lines(program), kw.TOKEN)'
     if text.count(check_anchor) != 1:
@@ -144,6 +144,7 @@ def prepare(checkpoint: Path, extensions: Path):
     shutil.copyfile(extensions / 'udg_nested.py', checkpoint / 'rbc' / 'udg_nested.py')
     shutil.copyfile(extensions / 'udg_chr_bounds.py', checkpoint / 'rbc' / 'udg_chr_bounds.py')
     shutil.copyfile(extensions / 'restore_data.py', checkpoint / 'rbc' / 'restore_data.py')
+    shutil.copyfile(extensions / 'constant_data.py', checkpoint / 'rbc' / 'constant_data.py')
     shutil.copyfile(extensions / 'rom_keyread.py', checkpoint / 'rbc' / 'rom_keyread.py')
     shutil.copyfile(extensions / 'rom_keyboard_control.py', checkpoint / 'rbc' / 'rom_keyboard_control.py')
     shutil.copyfile(extensions / 'native_keyread_rt.py', checkpoint / 'rbc' / 'native_keyread_rt.py')
