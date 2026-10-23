@@ -55,6 +55,45 @@ def normalize_listing(body: str) -> str:
                 out.append(' TO ')
                 i += 2
                 continue
+            # A substring bound can join TO to its first operand.
+            if (body.startswith('TO', i) and i > 0 and
+                    (body[i - 1].islower() or body[i - 1] == ')') and
+                    (i + 2 == len(body) or not body[i + 2].isalpha()) and
+                    re.search(r'\$\([^)]*            if (body.startswith('STEP', i) and i > 0 and
+                    (body[i - 1].islower() or body[i - 1] == ')') and
+                    (i + 4 == len(body) or not body[i + 4].isalpha()) and
+                    re.search(r'\bFOR\s+[A-Za-z]\s*=\s*.+$', prior, re.I)):
+                out.append(' STEP ')
+                i += 4
+                continue
+            # In IF expressions an uppercase operator may be joined to a
+            # lowercase variable: mAND d1, not the identifier BAND.
+            for operator in ('AND', 'OR'):
+                if (body.startswith(operator, i) and i > 0 and
+                        (body[i - 1].islower() or body[i - 1] == ')') and
+                        (i + len(operator) == len(body) or
+                         not body[i + len(operator)].isalpha()) and
+                        re.search(r'\bIF\b', prior, re.I)):
+                    out.append(' ' + operator + ' ')
+                    i += len(operator)
+                    break
+            else:
+                operator = None
+            if operator is not None:
+                continue
+            if c == ':':
+                out.append(c)
+                i += 1
+                start = len(out)
+                continue
+        out.append(c)
+        i += 1
+    # The Spectrum's power/arrow glyph is code 94 in both text and tape.
+    return ''.join(out).replace('\u2191', '^')
+, prior)):
+                out.append(' TO ')
+                i += 2
+                continue
             # A FOR loop's STEP token can also touch the limit variable.
             if (body.startswith('STEP', i) and i > 0 and
                     (body[i - 1].islower() or body[i - 1] == ')') and

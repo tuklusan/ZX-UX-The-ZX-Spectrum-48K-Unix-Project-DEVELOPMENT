@@ -27,6 +27,12 @@ class ListingBoundaries(unittest.TestCase):
         self.assertIn('ni STEP  tw',
                       normalize_listing('FOR y=d(x)TO niSTEP tw'))
 
+    def test_galaxians_substring_bounds_use_original_to_keyword(self):
+        self.assertIn('y TO  x+4-y',
+                      normalize_listing('LET a$(x+2-yTO x+4-y)="   "'))
+        self.assertIn('m TO  x+4-m',
+                      normalize_listing('LET d$(x+2-mTO x+4-m)="   "'))
+
     def test_no_split_inside_identifiers_or_strings(self):
         s = 'FOR n=TOTAL:IF BAND=3THEN LET TOMORROW=4:REM FOR x=p*cTO 8'
         result = normalize_listing(s)
