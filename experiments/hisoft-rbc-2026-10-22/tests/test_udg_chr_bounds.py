@@ -38,6 +38,14 @@ class ChrGlyphs(unittest.TestCase):
              '560 FOR x=1TO 8:FOR y=0TO 7:READ a:POKE USR CHR$ (144+x)+y,a:NEXT y:NEXT x')
         self.assertEqual(probe(src,560,'USR CHR$ (144+x)+y,a'),(1,'info','info'))
 
+    def test_literal_chr_glyph_with_bounded_offset(self):
+        source='650 FOR X=0TO 7:READ A:POKE USR CHR$ (156)+X,A:NEXT X'
+        self.assertEqual(probe(source,650,'USR CHR$ (156)+X,A'),(1,'info','info'))
+        self.assertEqual(probe(source.replace('(156)','(165)'),650,
+                               'USR CHR$ (165)+X,A')[0],0)
+        self.assertEqual(probe('650 POKE USR CHR$ (156)+X,A',650,
+                               'USR CHR$ (156)+X,A')[0],0)
+
     def test_outside_udg_and_broken_bounds(self):
         for src,expr in [
           ('50 FOR x=1TO 25:FOR y=0TO 7:POKE USR CHR$ (143+x)+y,a:NEXT y:NEXT x','USR CHR$ (143+x)+y,a'),
