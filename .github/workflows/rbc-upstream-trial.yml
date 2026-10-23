@@ -90,6 +90,9 @@ jobs:
               print(f'{name}: {"PASS" if row["ok"] else "FAIL"}: {last_line[:350]}',flush=True)
           (out/f'rbc-60-results-shard-{shard}.json').write_text(json.dumps(results,indent=2)+'\n')
           if shard==0 and not results[0]['ok']:sys.exit('HELLO compiler regression')
+          if shard==1 and not any(x['program']=='23-biorhythms-text' and x['ok']
+                                  for x in results):
+              sys.exit('Biorhythms text-listing compiler regression')
           print('SHARD=',shard,'PASS=',sum(x['ok'] for x in results),'TOTAL=',len(results))
           PY
       - name: Run bounded native ZX-UX boot tests
@@ -105,7 +108,8 @@ jobs:
           system=Path('dist/zx-ux/tzx/ZX-UX.tzx')
           outcomes=[]
           for ssx in sorted(out.glob('*.ssx')):
-              if not ssx.name.endswith('-tape.ssx') and ssx.name!='hello.ssx':
+              if not ssx.name.endswith('-tape.ssx') and ssx.name not in (
+                      'hello.ssx','23-biorhythms-text.ssx'):
                   continue
               try:
                   run=rvm.run_kernel(str(ssx),system=str(system),frames=120)
@@ -113,11 +117,16 @@ jobs:
                   rvm.write_png(bitmap,str(out/(ssx.stem+'.png')),border)
                   row={'program':ssx.stem,'booted':True,'result':run.why,
                        'exit_status':run.fg.status if run.fg is not None else None,
-                       'bitmap_nonempty':any(bitmap)}
+                       'bitmap_nonempty':any(bitmap),
+                       'foreground_started': bool(run.fg and run.fg.started is not None)}
               except Exception as e:
                   row={'program':ssx.stem,'booted':False,'error':str(e)}
               outcomes.append(row)
               print('NATIVE',json.dumps(row),flush=True)
+              if ssx.stem == '23-biorhythms-text' and not (
+                      row.get('booted') and row.get('foreground_started')
+                      and row.get('bitmap_nonempty')):
+                  sys.exit('Biorhythms native launch regression')
           (out/f'rbc-runtime-shard-{shard}.json').write_text(json.dumps(outcomes,indent=2)+'\n')
           PY
       - name: Verify immediate INKEY$ press, hold, release and no-key
