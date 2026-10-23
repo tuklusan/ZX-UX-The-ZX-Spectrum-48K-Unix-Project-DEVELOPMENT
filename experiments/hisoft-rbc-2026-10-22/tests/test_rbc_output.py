@@ -24,9 +24,31 @@ class OutputTests(unittest.TestCase):
 
     def test_reject_invalid_relocation(self):
         with self.assertRaisesRegex(ValueError, 'outside'):
-            asm_from_ssx({'image': bytes([3, 0, 0]), 'bss': 0, 'entry': 0, 'relocs': [0]})
+            asm_from_ssx({'image': bytes([4, 0, 0]), 'bss': 0, 'entry': 0, 'relocs': [0]})
         with self.assertRaisesRegex(ValueError, 'overlapping'):
             asm_from_ssx({'image': bytes(10), 'bss': 0, 'entry': 0, 'relocs': [2, 3]})
+
+    def test_zero_bss_allows_pointer_to_end_of_image(self):
+        import ras, rld
+        source = """    section text
+    global start
+start:
+    ld hl,vars
+    ret
+    section bss
+vars: ds 0
+"""
+        first = ras.assemble_text(source, 'basic.s')
+        original, *_ = rld.link([rld.Obj(first, 'basic')], [], 'start', 384, 0)
+        parsed = rld.parse_ssx(original)
+        self.assertEqual(parsed['bss'], 0)
+        asm = asm_from_ssx(parsed)
+        self.assertIn('    dw vars+0', asm)
+        obj = ras.assemble_text(asm, 'reconstructed.s')
+        rebuilt, *_ = rld.link([rld.Obj(obj, 'reconstructed')], [], 'start', 384, 0)
+        reparsed = rld.parse_ssx(rebuilt)
+        for field in ('image', 'bss', 'stack', 'relocs'):
+            self.assertEqual(reparsed[field], parsed[field], field)
 
     def test_sso_is_a_real_relocatable_object(self):
         import ras, rld

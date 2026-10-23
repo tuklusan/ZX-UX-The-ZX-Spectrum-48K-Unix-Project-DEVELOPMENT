@@ -44,7 +44,7 @@ def asm_from_ssx(parsed: dict) -> str:
         value = int.from_bytes(image[site:site + 2], 'little')
         if value < len(image):
             target = 'start+' + str(value)
-        elif value < len(image) + bss:
+        elif value <= len(image) + bss:
             target = 'vars+' + str(value - len(image))
         else:
             raise ValueError('relocation points outside native image and data')
