@@ -124,4 +124,7 @@ jobs:
             trial-result/*.png
             trial-result/rbc/*.py
             trial-result/rbc/font32.bin
+            trial-result/hisoft48.tap
+            upstream-pyhsb/*.py
+            upstream-pyhsb/LICENSE.txt
           retention-days: 1
