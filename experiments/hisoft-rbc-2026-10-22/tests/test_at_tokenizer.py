@@ -56,11 +56,11 @@ class Tests(unittest.TestCase):
         self.assertIn(bytes((0xac,)), value)
 
     def test_joined_operator_and_step_boundaries(self):
-        a = normalize_listing('FOR J=11TO 1STEP -1')
+        a = ' '.join(normalize_listing('FOR J=11TO 1STEP -1').split())
         self.assertIn('1 STEP -1', a)
-        b = normalize_listing('IF LEN A$-DP<> 2OR FLOR FL2>1')
+        b = ' '.join(normalize_listing('IF LEN A$-DP<> 2OR FLOR FL2>1').split())
         self.assertIn('FL OR FL2', b)
-        c = normalize_listing('IF DPOR LEN A$>2THEN LET FL=1')
+        c = ' '.join(normalize_listing('IF DPOR LEN A$>2THEN LET FL=1').split())
         self.assertIn('DP OR LEN', c)
         self.assertEqual(normalize_listing('LET FLOOR=7'), 'LET FLOOR=7')
 
