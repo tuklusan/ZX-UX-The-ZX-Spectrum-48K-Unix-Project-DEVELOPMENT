@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
-from startup_colors import save_and_set, restore, append_slots
+from startup_colors import save_and_set, save_controls, restore, append_slots
 
 
 class Emitter:
@@ -63,6 +63,27 @@ class StartupColorTests(unittest.TestCase):
             self.assertTrue(0x5C8D <= address <= 0x5C90)
         # One private saved byte for each ROM printer setting.
         self.assertEqual(len(emitter.code) - min(int.from_bytes(emitter.code[s:s+2], 'little') for _,s,_ in records), 4)
+
+    def test_keyboard_controls_are_saved_not_overwritten_on_startup(self):
+        emitter = Emitter()
+        records = save_controls(emitter)
+        startup = bytes(emitter.code)
+        self.assertEqual([item[0] for item in records], [0x5C6A, 0x5C39])
+        self.assertEqual(startup.count(bytes([0x3A])), 2)
+        self.assertNotIn(bytes([0x3E]), startup)  # No LD A,immediate during setup
+        restore(emitter, records)
+        append_slots(emitter, records)
+        self.assertEqual(len(emitter.fixups), 4)
+        addresses = []
+        for address, save_at, read_at in records:
+            self.assertIn(address, (0x5C6A, 0x5C39))
+            slot1 = int.from_bytes(emitter.code[save_at:save_at+2], 'little')
+            slot2 = int.from_bytes(emitter.code[read_at:read_at+2], 'little')
+            self.assertEqual(slot1, slot2)
+            self.assertEqual(emitter.code[slot1], 0)
+            addresses.append(slot1)
+        self.assertEqual(len(set(addresses)), 2)
+
 
 
 if __name__ == '__main__':
