@@ -30,6 +30,16 @@ class Tests(unittest.TestCase):
         before=dict(self.rows);after=dict(new)
         self.assertEqual([n for n in before if before[n]!=after[n]],[7060])
         self.assertTrue(after[7060].startswith(b'\xe9y(36\x0e'))
+    def test_specialization_before_missing_target_remap(self):
+        # This original jump lands on line 5790 under Sinclair next-line rules.
+        # The compiler remaps it before parsing, so the bound proof must run
+        # while the input guard still has its original tokenized value.
+        originals=dict(self.rows)
+        self.assertNotIn(5780,originals)
+        self.assertIn(bytes((0xec,))+b'5780',originals[5790])
+        setup=(Path(__file__).resolve().parents[1]/'stage'/'prepare_rbc.py').read_text()
+        self.assertLess(setup.index('bounded_input_dim_lines = adapt_input_bound_dims'),
+                        setup.index('next_lines = resolve_missing_targets'))
     def test_bounds_change_rejected(self):
         rows=[(n,b.replace(b'36\x0e',b'99\x0e') if n==5790 else b) for n,b in self.rows]
         self.assertFalse(self.convert(rows)[1])
