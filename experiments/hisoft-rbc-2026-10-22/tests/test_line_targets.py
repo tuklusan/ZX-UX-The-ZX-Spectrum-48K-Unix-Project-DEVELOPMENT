@@ -63,6 +63,14 @@ class TestMissingLines(unittest.TestCase):
         self.assertEqual(changes, [(10, 70, 100), (10, 105, 110)])
         self.assertIn(b'\xed100\x0e12345:\xec110\x0e12345', result[0][1])
 
+    def test_missing_target_with_spaces_before_colon(self):
+        src = make((10, b'\xed70\x0e00000  :\xec105\x0e00000 \r'),
+                   (100, b'\xc9\r'), (110, b'\xf5"END"\r'))
+        result, changes = line_targets.resolve_missing_targets(src, Keys, None)
+        self.assertEqual(changes, [(10, 70, 100), (10, 105, 110)])
+        self.assertEqual(result[0][1],
+                         b'\xed100\x0e12345  :\xec110\x0e12345 \r')
+
 
 if __name__ == '__main__':
     unittest.main()
