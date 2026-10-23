@@ -79,6 +79,20 @@ class UDGLoops(unittest.TestCase):
         self.assertEqual(check(source,9060,'USR ("B")+F,128'),(1,'info'))
         self.assertEqual(check(source,9070,'USR ("C")+F,B'),(1,'info'))
 
+    def test_parenthesized_usr_pointer_is_not_machine_code(self):
+        rows=[(9040,b'FOR F=0 TO 7:READ A,B\r'),
+              (9050,b'POKE USR ("A")+F,A\r'),
+              (9080,b'NEXT F\r')]
+        poke=Finding(9050,'POKE','block','unbounded_memory_write',
+                     'USR ("A")+F,A')
+        pointer=Finding(9050,'USR','block','raw_machine_code_address',
+                        '("A")+F,A')
+        raw_call=Finding(9050,'USR','block','raw_machine_code_address',
+                         '3280')
+        self.assertEqual(allow_bounded_udg_loops(rows,{},[poke,pointer,raw_call]),1)
+        self.assertEqual((poke.severity,pointer.severity,raw_call.severity),
+                         ('info','info','block'))
+
     def test_other_io_stays_blocked(self):
         src='7000 FOR i=0 TO 7\n7010 POKE 60000+i,7\n7020 NEXT i'
         self.assertEqual(check(src,7010,'60000+i,7'),(0,'block'))
