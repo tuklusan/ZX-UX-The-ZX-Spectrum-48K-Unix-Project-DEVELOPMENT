@@ -105,6 +105,14 @@ the one-line-or-short exclusion notes, and meaningful test results on GitHub.
 Avoid duplicate builds, status paperwork, handover files and ceremonial
 signoffs. Never treat temporary local storage as delivery.
 
+After a GitHub Actions workflow has served its purpose, first verify
+that every needed output and test result is saved on GitHub `main`.
+Then remove its consumed workflow YAML under `.github/workflows/`
+and its completed temporary run history. Keep a reusable workflow
+only while future builds or tests still need it; remove it once
+its final output is safely stored. Never discard unfinished work,
+unsaved results, or workflows still required for ongoing checks.
+
 Report separately: Track A native passes, accepted exclusions, failures and
 unknowns out of 121; Track B accepted ports out of 60. State the next actual
 blocker and the check level really run. Work only during the active session;
