@@ -5,11 +5,16 @@
   "baseline_sha256": "3d5b45ae2c09f3346bb19792b76ea74353a2d799ce50db38463d01c587b5445c",
   "baseline_inputs": 121,
   "baseline_compiled": 16,
-  "latest_source_run": 39959452803,
-  "latest_source_sha": "c04d04978402c48a13e8e787f96b221ff51ee25e",
+  "latest_source_run": 39959445853,
+  "latest_source_sha": "9872f56beb62aae12feea8619a1d3165cb1ecfe9",
   "latest_compiled": 13,
-  "eligible_completed_runs": 3,
+  "eligible_completed_runs": 5,
   "workflow_outcomes": [
+    {
+      "workflow": "Clear processed Actions runs",
+      "conclusion": "failure",
+      "count": 1
+    },
     {
       "workflow": "Clear processed Actions runs",
       "conclusion": "success",
@@ -23,15 +28,11 @@
     {
       "workflow": "Tag beta 0.1.1",
       "conclusion": "skipped",
-      "count": 1
+      "count": 2
     }
   ],
-  "cleanup_current_run_excluded": 39959630107,
-  "cleared_run_ids": [
-    39959452803,
-    39959452744,
-    39959445803
-  ],
+  "cleanup_current_run_excluded": 39959689217,
+  "cleared_run_ids": [],
   "delete_errors": [],
   "note": "Old run logs are not proof of completed 60-program compatibility.",
   "protected_unconsumed_run_ids": []
