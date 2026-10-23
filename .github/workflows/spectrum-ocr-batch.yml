@@ -1,0 +1,95 @@
+name: ZX Spectrum raw OCR tape acceptance
+on:
+  push:
+    branches: [research/typein-scans-20261023]
+    paths:
+      - 'recovery/typein-48k/raw-basic/**'
+      - '.github/workflows/spectrum-ocr-batch.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-all-listings:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get zmakebas+ source
+        uses: actions/checkout@v4
+        with:
+          repository: tuklusan/zmakebas-plus
+          path: tools/zmakebas-plus
+      - name: Node runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build BASIC checker
+        run: |
+          cd tools/zmakebas-plus
+          npm ci --no-audit --no-fund
+          npm run build:cli
+      - name: Check each listing individually, make TZX for passes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p results/tapes results/logs results/rejected
+          printf 'program,syntax_result,tzx_result,source_sha256\n' > results/results.csv
+          shopt -s nullglob
+          programs=(recovery/typein-48k/raw-basic/*.bas)
+          test "${#programs[@]}" -eq 15
+          for src in "${programs[@]}"; do
+            name="$(basename "$src" .bas)"
+            sha="$(sha256sum "$src" | cut -d' ' -f1)"
+            if ! node tools/zmakebas-plus/dist-cli/zmakebas.js -o "results/tapes/${name}.tap" "$src" >"results/logs/${name}.txt" 2>&1; then
+              rm -f "results/tapes/${name}.tap"
+              cp "$src" "results/rejected/${name}.bas"
+              printf '%s,fail,no,%s\n' "$name" "$sha" >> results/results.csv
+              continue
+            fi
+            if ! python3 recovery/typein-48k/scripts/zx_basic_tape.py convert "results/tapes/${name}.tap" "results/tapes/${name}.tzx" >>"results/logs/${name}.txt" 2>&1; then
+              printf '%s,pass,fail,%s\n' "$name" "$sha" >> results/results.csv
+              continue
+            fi
+            if ! python3 recovery/typein-48k/scripts/zx_basic_tape.py inspect "results/tapes/${name}.tzx" >"results/logs/${name}-tape.json" 2>>"results/logs/${name}.txt"; then
+              rm -f "results/tapes/${name}.tzx"
+              printf '%s,pass,fail,%s\n' "$name" "$sha" >> results/results.csv
+              continue
+            fi
+            printf '%s,pass,pass,%s\n' "$name" "$sha" >> results/results.csv
+          done
+          find results/tapes -name '*.tap' -delete
+          python3 - <<'PY'
+          import csv,pathlib,zipfile,json,hashlib
+          root=pathlib.Path('results')
+          rows=list(csv.DictReader((root/'results.csv').open()))
+          valid=[x for x in rows if x['tzx_result']=='pass']
+          with zipfile.ZipFile(root/'accepted-individual-tzx.zip','w',zipfile.ZIP_DEFLATED) as z:
+            for row in valid:
+              p=root/'tapes'/(row['program']+'.tzx')
+              assert p.is_file() and p.stat().st_size>30
+              z.write(p,p.name)
+          (root/'summary.json').write_text(json.dumps(dict(total=len(rows),syntax_pass=sum(x['syntax_result']=='pass' for x in rows),tape_pass=len(valid),syntax_rejects=[x['program'] for x in rows if x['syntax_result']=='fail'],note='Source listings are raw OCR; successful syntax checks do not prove original-listing accuracy or gameplay.'),indent=2)+'\n')
+          assert len(rows)==15
+          PY
+          cat results/summary.json
+          cat results/results.csv
+      - name: Save accepted TZX ZIP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-raw-ocr-accepted-tzx
+          path: results/accepted-individual-tzx.zip
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Save per-program checks and rejected OCR
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-raw-ocr-check-reports
+          path: |
+            results/results.csv
+            results/summary.json
+            results/logs
+            results/rejected
+          if-no-files-found: warn
+          retention-days: 14
