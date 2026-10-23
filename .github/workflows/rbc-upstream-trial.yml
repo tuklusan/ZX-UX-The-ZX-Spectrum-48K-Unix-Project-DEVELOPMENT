@@ -309,6 +309,9 @@ jobs:
           if errors:
               sys.exit('; '.join(errors))
           PY
+      - name: Diagnose large native BASIC loading
+        if: matrix.shard == 1 && env.RBC_MODE == 'full'
+        run: python3 experiments/hisoft-rbc-2026-10-22/stage/large_native_probe.py . trial-result
       - name: Execute native dynamic VAL expression
         if: matrix.shard == 0
         run: python3 experiments/hisoft-rbc-2026-10-22/stage/val_native_probe.py . trial-result
