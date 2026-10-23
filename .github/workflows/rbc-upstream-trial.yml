@@ -116,6 +116,11 @@ jobs:
               print('NATIVE',json.dumps(row),flush=True)
           (out/f'rbc-runtime-shard-{shard}.json').write_text(json.dumps(outcomes,indent=2)+'\n')
           PY
+      - name: Verify immediate INKEY$ press, hold, release and no-key
+        if: matrix.shard == 0
+        run: |
+          python3 experiments/hisoft-rbc-2026-10-22/stage/inkey_probe.py \
+            --root . --out trial-result/rbc-game-probe
       - name: Capture Galaxians and Invaders native key sequences
         if: always()
         run: |
