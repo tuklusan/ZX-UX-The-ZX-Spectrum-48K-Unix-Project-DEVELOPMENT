@@ -15,6 +15,11 @@ from pathlib import Path
 
 
 GAMES = ((25, 'galaxians'), (58, 'invaders'))
+# These keys are read from the unchanged BASIC game controls, not guessed.
+GAME_KEY_PLAN = {
+    '25-galaxians': ('z', 'x', 'm'),
+    '58-invaders': ('5', '8', '0'),
+}
 CHARSET_OFFSET = 32
 CHARSET_SIZE = 96
 # First two sprite definitions taken from the unchanged BASIC DATA lines.
@@ -128,8 +133,15 @@ def run_game(ssx: Path, system: Path, font: bytes, original: Path, directory: Pa
               'captures': []}
     advance(runner, 70)
     report['captures'].append(capture(runner, font, directory, name, 'idle'))
+    # Both preserved demonstrations begin with a SPACE key to start the game.
+    runner.session.kb.add([('press', zxux.char_keys(' '), 24)])
+    advance(runner, 24)
+    report['captures'].append(capture(runner, font, directory, name, 'start-held'))
+    advance(runner, 36)
+    report['captures'].append(capture(runner, font, directory, name, 'start-released'))
     # These are physical matrix holds, not buffered input characters.
-    key_plan = (('5', 24), ('8', 24), ('7', 15)) if name == '58-invaders' else (('z', 24), ('x', 24), ('m', 15))
+    key_plan = tuple((key, 15 if index == 2 else 24)
+                     for index, key in enumerate(GAME_KEY_PLAN[name]))
     for letter, hold in key_plan:
         runner.session.kb.add([('press', zxux.char_keys(letter), hold)])
         advance(runner, hold)
@@ -137,7 +149,12 @@ def run_game(ssx: Path, system: Path, font: bytes, original: Path, directory: Pa
         advance(runner, 36)
         report['captures'].append(capture(runner, font, directory, name, letter + '-released'))
     report['capture_count'] = len(report['captures'])
-    report['key_plan'] = [key for key, _ in key_plan]
+    report['key_plan'] = ['SPACE'] + [key for key, _ in key_plan]
+    report['start_screen_changed'] = (
+        report['captures'][0]['screen_sha256'] !=
+        report['captures'][2]['screen_sha256'])
+    report['start_advanced_to_gameplay'] = 'not established'
+    report['original_reference_available'] = original_hash is not None
     report['sprite_data_correct_at_end'] = all(
         g['matches_original_data'] for g in report['captures'][-1]['known_udg_glyphs'])
     report['all_frames_nonblank'] = all(x['active_pixels'] > 0 for x in report['captures'])
