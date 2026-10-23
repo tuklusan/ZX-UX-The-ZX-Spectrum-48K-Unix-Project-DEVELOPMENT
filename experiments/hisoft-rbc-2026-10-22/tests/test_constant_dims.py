@@ -39,6 +39,14 @@ class Dims(unittest.TestCase):
   rows=[(3390,'LET x=10'),(3400,'DIM a(x)'),(3510,'LET x=11'),(3520,'DIM j(x)')]
   updated,proof=convert(rows)
   self.assertEqual([p['initializer_line'] for p in proof],[3390,3510])
+ def test_unrelated_simple_assignment_allowed(self):
+  rows=[(3390,'LET x=10'),(3400,'LET zxch=ch'),(3500,'LET n$="HELLO"'),
+        (3520,'DIM a(x):DIM b(x)')]
+  self.assertEqual(convert(rows)[1][0]['arrays'],2)
+ def test_intervening_machine_call_blocks(self):
+  rows=[(3390,'LET x=10'),(3500,'LET y=USR 1234'),(3520,'DIM a(x)')]
+  self.assertFalse(convert(rows)[1])
+
  def test_intervening_expression_blocks(self):
   rows=[(3390,'LET x=10'),(3500,'LET y=z+1'),(3520,'DIM j(x)')]
   self.assertFalse(convert(rows)[1])
@@ -63,9 +71,9 @@ class Dims(unittest.TestCase):
    size=int.from_bytes(data[cursor+2:cursor+4],'little')
    cursor+=4;rows.append((line,data[cursor:cursor+size]));cursor+=size
   updated,proof=specialize_literal_dims(rows,Kw(),None,Source(),Tap())
-  self.assertEqual(len(proof),2)
-  self.assertEqual([p['arrays'] for p in proof],[10,2])
-  self.assertEqual([n for n,b in updated if b!=dict(rows)[n]],[3400,3520])
+  self.assertEqual(len(proof),4)
+  self.assertEqual([p['arrays'] for p in proof],[10,2,3,1])
+  self.assertEqual([n for n,b in updated if b!=dict(rows)[n]],[3400,3520,3640,3680])
 
  def test_computed_initializer_rejects(self):
   self.assertFalse(convert([(3390,'LET x=10+a'),(3400,'DIM a(x)')])[1])
