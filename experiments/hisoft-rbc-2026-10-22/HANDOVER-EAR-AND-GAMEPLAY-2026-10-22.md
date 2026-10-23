@@ -1,3 +1,9 @@
+> Historical checkpoint only. The test-only keyboard port override described
+> below was retired after the ULA feedback fix at commit
+> `b655d67e6a519d47ff2321dacba890e330a16e5c`.
+> Follow `RBC-ULA-POSTFIX-2026-10-23.md` for current native tests and settings.
+> The earlier workaround must not be restored.
+
 # ZX-UX RBC — EAR input and native game checkpoint (2026-10-22)
 
 Project: `tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT` (branch `main`). This note records the latest game tests before work continues in a different chat. For recovery, read GitHub `main` first; no local files from an older chat are guaranteed to exist. The last verified baseline for this note was commit `bcd9c986ef2b708a5462b518e0bf6e7d12517062`, tree `6f44d68f09b9752270d591c47ad83e1345d93fbd`.

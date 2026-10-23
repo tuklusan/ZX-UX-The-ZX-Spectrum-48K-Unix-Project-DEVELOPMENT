@@ -125,7 +125,6 @@ def advance(runner, frames: int) -> None:
 def run_game(ssx: Path, system: Path, font: bytes, original: Path, directory: Path) -> dict:
     import rvm
     import zxux
-    from keyboard_ula import idle_ear_high
     options = rvm.Options()
     options.prog = str(ssx)
     options.system = str(system)
@@ -133,7 +132,10 @@ def run_game(ssx: Path, system: Path, font: bytes, original: Path, directory: Pa
     options.cache = True
     runner = rvm.Runner(options)
     runner.start()
-    idle_ear_high(runner.session.m)
+    # Galaxians relies on the Issue 2 MIC/EAR feedback level.
+    # Select a supported ULA profile, without changing reads or game code.
+    ula_issue = 2 if ssx.stem.startswith('25-galaxians') else 3
+    runner.session.m.ula_issue = ula_issue
     for _ in range(9000):
         runner.frame()
         if runner.fg and runner.fg.started is not None:
@@ -146,7 +148,7 @@ def run_game(ssx: Path, system: Path, font: bytes, original: Path, directory: Pa
               'ssx_sha256': hashlib.sha256(ssx.read_bytes()).hexdigest(),
               'original_screenshot': str(original),
               'original_screenshot_sha256': original_hash,
-              'idle_ear_high_test_only': True,
+              'ula_input': 'native emulator', 'ula_issue': ula_issue,
               'captures': []}
     advance(runner, 70)
     report['captures'].append(capture(runner, font, directory, name, 'idle'))

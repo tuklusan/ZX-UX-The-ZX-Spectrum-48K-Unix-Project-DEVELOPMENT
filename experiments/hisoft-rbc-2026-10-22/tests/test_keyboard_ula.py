@@ -1,47 +1,53 @@
-"""Check Spectrum hardware keyboard values used by the original games."""
+"""Verify Galaxians port values using the native ZX-UX ULA model."""
 import sys
 import unittest
 from pathlib import Path
 
-experiment = Path(__file__).resolve().parents[1]
 repo = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(experiment / 'stage'))
 sys.path.insert(0, str(repo / 'dist/sdk/bin/py'))
-from keyboard_ula import idle_ear_high
+from zxmachine import Machine
 
 
 class KeyboardULATests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        import zxmachine
-        cls.machine_type = zxmachine.Machine
+    def test_issue_3_native_keyboard_values(self):
+        m = Machine(ula_issue=3)
+        self.assertEqual(m.cpu.read_port(65278), 191)
+        # The normal MIC/EAR output state drives the idle input bit.
+        m._out(0x00FE, 0x10)
+        self.assertEqual(m.cpu.read_port(65278), 255)
+        for key, port, expected in (
+            ('z', 65278, 253), ('x', 65278, 251), ('m', 32766, 251)
+        ):
+            with self.subTest(key=key):
+                m.press({key})
+                self.assertEqual(m.cpu.read_port(port), expected)
+        m.press(set())
+        self.assertEqual(m.cpu.read_port(65278), 255)
+        m._out(0x00FE, 0x08)
+        self.assertEqual(m.cpu.read_port(65278), 191)
 
-    def test_galaxians_ports_and_restoration(self):
-        machine = self.machine_type()
-        self.assertEqual(machine.cpu.read_port(65278), 0xBF)
-        restore = idle_ear_high(machine)
-        try:
-            self.assertEqual(machine.cpu.read_port(65278), 255)
-            machine.press(('z',))
-            self.assertEqual(machine.cpu.read_port(65278), 253)
-            machine.press(('x',))
-            self.assertEqual(machine.cpu.read_port(65278), 251)
-            machine.press(('m',))
-            self.assertEqual(machine.cpu.read_port(32766), 251)
-        finally:
-            restore()
-        self.assertEqual(machine.cpu.read_port(65278), 191)
+    def test_issue_2_mic_audio_feedback(self):
+        m = Machine(ula_issue=2)
+        m._out(0x00FE, 0x08)
+        m.press({'x'})
+        self.assertEqual(m.cpu.read_port(65278), 251)
+        m._out(0x00FE, 0x00)
+        self.assertEqual(m.cpu.read_port(65278), 187)
 
-    def test_odd_port_and_tape_pulses_unchanged(self):
-        machine = self.machine_type()
-        original = machine.cpu.read_port
-        machine.pulses = [1000, 2000, 3000]
-        machine.tnow = 1500
-        old_value = original(65278)
-        restore = idle_ear_high(machine)
-        self.assertEqual(machine.cpu.read_port(65278), old_value)
-        self.assertEqual(machine.cpu.read_port(65279), original(65279))
-        restore()
+    def test_tape_pulses_override_idle_audio_state(self):
+        m = Machine()
+        m._out(0x00FE, 0x10)
+        m.press({'x'})
+        m.pulses = [1000, 2000, 3000]
+        for t, expected in ((500, 187), (1500, 251), (2500, 187)):
+            with self.subTest(t=t):
+                m.tnow = t
+                self.assertEqual(m.cpu.read_port(65278), expected)
+        self.assertEqual(m.cpu.read_port(65279), 255)
+
+    def test_reject_invalid_ula_issue(self):
+        with self.assertRaises(ValueError):
+            Machine(ula_issue=4)
 
 
 if __name__ == '__main__':

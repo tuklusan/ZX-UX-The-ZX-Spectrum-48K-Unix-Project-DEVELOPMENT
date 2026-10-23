@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Check genuine ZX-UX Galaxians left/right movement after SPACE starts play.
 
-Only the experimental runner's idle EAR input is adapted. The ZX-UX system,
-ROM, SSX1 program and archived BASIC sources are all loaded unchanged.
+The ZX-UX emulator reads ULA keyboard ports without input overrides.
+The ZX-UX system, ROM, SSX1 program and BASIC sources remain unchanged.
 """
 from __future__ import annotations
 
@@ -31,7 +31,6 @@ def play(root: Path, binary: Path, output: Path) -> dict:
     sys.path.insert(0, str(root / 'dist/sdk/bin/py'))
     import rvm
     import zxux
-    from keyboard_ula import idle_ear_high
 
     opts = rvm.Options()
     opts.prog = str(binary)
@@ -39,7 +38,8 @@ def play(root: Path, binary: Path, output: Path) -> dict:
     opts.headless = True
     runner = rvm.Runner(opts)
     runner.start()
-    idle_ear_high(runner.session.m)
+    # Select the supported Issue 2 hardware model; no port read is overridden.
+    runner.session.m.ula_issue = 2
     for _ in range(9000):
         runner.frame()
         if runner.fg and runner.fg.started is not None:
@@ -81,7 +81,7 @@ def play(root: Path, binary: Path, output: Path) -> dict:
     moved_right = bool(left and right and min(right) > min(left))
     result = {'game': '25-galaxians', 'source': str(binary),
               'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
-              'test_only_idle_ear_high': True, 'screen_rows': images,
+              'ula_input': 'native emulator', 'ula_issue': 2, 'screen_rows': images,
               'left_moved': moved_left, 'right_moved': moved_right,
               'fire_pressed': True, 'fire_hit_or_score': 'not established',
               'gameplay_verified': False}
