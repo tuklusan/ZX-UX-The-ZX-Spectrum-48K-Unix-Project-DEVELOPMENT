@@ -304,6 +304,10 @@ jobs:
                   if launches:
                       active=launches[-1]
                       fg=active.fg
+                      try:
+                          screen_lines=active.session.text().splitlines()[-23:]
+                      except Exception as screen_error:
+                          screen_lines=['screen read failed: '+str(screen_error)]
                       row['launch_state']={
                           'reason':active.why,
                           'machine_frame':active.session.m.frame,
@@ -311,7 +315,8 @@ jobs:
                           'foreground_started':getattr(fg,'started',None),
                           'foreground_ended':getattr(fg,'ended',None),
                           'foreground_status':getattr(fg,'status',None),
-                          'boot_messages':boot_messages[-64:]}
+                          'boot_messages':boot_messages[-64:],
+                          'screen_lines':screen_lines}
               finally:
                   rvm.Runner=original_runner
               outcomes.append(row)
