@@ -71,6 +71,12 @@ def basic_lines(tzx: bytes) -> dict[int, bytes]:
         data = next_block[1:-1]
         if len(data) != size:
             raise ValueError('BASIC length does not match tape header')
+        # The BASIC header includes the byte offset of the variable area.
+        # Stop at that boundary; the variable trailer is not BASIC code.
+        variables_at = struct.unpack_from('<H', block, 16)[0]
+        if variables_at > len(data):
+            raise ValueError('BASIC variable offset exceeds tape payload')
+        data = data[:variables_at]
         lines = {}
         pos = 0
         while pos < len(data):
