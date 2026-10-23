@@ -1,4 +1,5 @@
 name: RBC Python compiler trial
+# Push marker [run-full-rbc] selects all five compilation shards.
 on:
   push:
     paths:
