@@ -71,16 +71,19 @@ def normalize_listing(body: str) -> str:
                 out.append(' STEP ')
                 i += 4
                 continue
-            # In IF expressions an uppercase operator may be joined to a
-            # lowercase variable: mAND d1, not the identifier BAND.
+            # Spectrum AND/OR tokens may touch a string variable's $ even
+            # in LET, or a numeric expression in IF, without spaces.
+            # An ordinary alphabetic identifier (e.g. BAND) stays intact.
             for operator in ('AND', 'OR'):
                 if (body.startswith(operator, i) and i > 0 and
-                        (body[i - 1].islower() or body[i - 1] == ')' or
-                         (body[i - 1].isupper() and
-                          re.search(r'(?:<>|<=|>=|[=<>])\s*[A-Z]$', prior))) and
                         (i + len(operator) == len(body) or
                          not body[i + len(operator)].isalpha()) and
-                        re.search(r'\bIF\b', prior, re.I)):
+                        (body[i - 1] == '$' or
+                         (re.search(r'\bIF\b', prior, re.I) and
+                          (body[i - 1].islower() or
+                           body[i - 1] in ')0123456789' or
+                           (body[i - 1].isupper() and
+                            re.search(r'(?:<>|<=|>=|[=<>])\s*[A-Z]$', prior)))))):
                     out.append(' ' + operator + ' ')
                     i += len(operator)
                     break
