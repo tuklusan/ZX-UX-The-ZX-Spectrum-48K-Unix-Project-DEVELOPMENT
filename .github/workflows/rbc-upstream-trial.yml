@@ -277,7 +277,21 @@ jobs:
               if not ssx.name.endswith('-tape.ssx') and ssx.name not in (
                       'hello.ssx','23-biorhythms-text.ssx'):
                   continue
+              # Capture failed starts on the same real emulator run.
+              # The published emulator remains unchanged.
+              original_runner=rvm.Runner
+              launches=[]
+              boot_messages=[]
+              def traced_runner(options,log=None):
+                  def trace(message):
+                      boot_messages.append(str(message))
+                      if log is not None:
+                          log(message)
+                  instance=original_runner(options,log=trace)
+                  launches.append(instance)
+                  return instance
               try:
+                  rvm.Runner=traced_runner
                   run=rvm.run_kernel(str(ssx),system=str(system),frames=120)
                   bitmap,border=run.picture()
                   rvm.write_png(bitmap,str(out/(ssx.stem+'.png')),border)
@@ -287,6 +301,19 @@ jobs:
                        'foreground_started': bool(run.fg and run.fg.started is not None)}
               except Exception as e:
                   row={'program':ssx.stem,'booted':False,'error':str(e)}
+                  if launches:
+                      active=launches[-1]
+                      fg=active.fg
+                      row['launch_state']={
+                          'reason':active.why,
+                          'machine_frame':active.session.m.frame,
+                          'foreground_loading':getattr(fg,'loading',None),
+                          'foreground_started':getattr(fg,'started',None),
+                          'foreground_ended':getattr(fg,'ended',None),
+                          'foreground_status':getattr(fg,'status',None),
+                          'boot_messages':boot_messages[-64:]}
+              finally:
+                  rvm.Runner=original_runner
               outcomes.append(row)
               print('NATIVE',json.dumps(row),flush=True)
               if ssx.stem in ('08-chomper-tape', '11-defend-tape') and not (
