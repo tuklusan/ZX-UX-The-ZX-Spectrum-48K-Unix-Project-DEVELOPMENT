@@ -25,6 +25,17 @@ class ListingBoundaries(unittest.TestCase):
         line='LET AFTER=1:LET TOTAL=2:PRINT "METHOD"'
         self.assertEqual(normalize_listing(line), line)
 
+    def test_power_glyph_in_expression_and_literal(self):
+        self.assertEqual(normalize_listing('LET x=2↑(INT (RND *6))'),
+                         'LET x=2^(INT (RND *6))')
+        self.assertEqual(normalize_listing('PRINT "↑":REM ↑'),
+                         'PRINT "^":REM ^')
+
+    def test_original_source_text_unchanged(self):
+        original = 'LET z=3↑2'
+        self.assertEqual(normalize_listing(original), 'LET z=3^2')
+        self.assertEqual(original, 'LET z=3↑2')
+
 
 if __name__ == '__main__':
     unittest.main()
