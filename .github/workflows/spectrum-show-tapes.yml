@@ -6,6 +6,7 @@ on:
       - typeins-spectrum-show-20261023
     paths:
       - .github/workflows/spectrum-show-tapes.yml
+      - tools/spectrum-show-make-tapes.py
   workflow_dispatch:
 
 permissions:
