@@ -62,8 +62,26 @@ class PokeProofTests(unittest.TestCase):
         self.assertEqual(prove('PRINT "POKE 50000,1"'),[])
 
     def test_unproved_chr_graphics_fails(self):
-        with self.assertRaisesRegex(PokeAddressError,'USR argument'):
+        with self.assertRaisesRegex(PokeAddressError,'no proved bounds'):
             prove('FOR X=0 TO 7:POKE USR CHR$ (143+M)+X,1:NEXT X')
+
+    def test_proved_chr_variable_glyph_range(self):
+        p=prove('FOR M=1 TO 3:FOR L=0 TO 7:POKE USR CHR$ (143+M)+L,1:NEXT L:NEXT M')
+        self.assertEqual(p[0]['addresses'],
+                         [{'space':'process_udg','offset':i} for i in range(24)])
+
+    def test_irrelevant_outer_loop_does_not_change_address_set(self):
+        p=prove('FOR Q=1 TO 100',
+                'FOR F=USR "a" TO USR "b"+7:POKE F,0:NEXT F')
+        self.assertEqual([a['offset'] for a in p[0]['addresses']],list(range(16)))
+
+    def test_computed_branch_prevents_loop_assumption(self):
+        with self.assertRaisesRegex(PokeAddressError,'computed branch'):
+            prove('GO TO X','FOR F=0 TO 7:POKE F,0:NEXT F')
+
+    def test_constant_poke_ignores_unknown_control_flow(self):
+        p=prove('GO TO X','POKE 23658,255')
+        self.assertEqual(p[0]['addresses'],[{'space':'absolute','offset':23658}])
 
     def test_unknown_relocation_base_rejected(self):
         with self.assertRaisesRegex(PokeAddressError,'unproved memory base'):

@@ -114,6 +114,18 @@ def _value(node, env):
 def expression(s,env):
     if not s.strip():raise PokeAddressError('empty address expression')
     replaced=UDG_LITERAL.sub(_literal,s)
+    def chr_udg(match):
+        inner=match.group(1)
+        if not re.fullmatch(r'[A-Za-z0-9_+*/()\s-]+',inner):
+            raise PokeAddressError('CHR$ argument cannot be proved numeric')
+        try:
+            code_base,code=_value(ast.parse(inner,mode='eval').body,env)
+        except (SyntaxError,RecursionError,OverflowError) as ex:
+            raise PokeAddressError('CHR$ argument cannot be proved numeric') from ex
+        if code_base or not 144<=code<=164:
+            raise PokeAddressError('CHR$ character is not a process UDG')
+        return f'__udg_{(code-144)*8}'
+    replaced=re.sub(r'\bUSR\s+CHR\$\s*\(\s*([^()]*)\s*\)',chr_udg,replaced,flags=re.I)
     if re.search(r'\bUSR\b',replaced,re.I):raise PokeAddressError('USR argument has no proved graphics character')
     # Allow pure integer arithmetic only, not arbitrary Python expressions.
     if re.search(r'[^a-zA-Z_0-9+*/()\s\-]',replaced):
@@ -212,7 +224,10 @@ def prove_pokes(lines, token_names, findings):
                            'addresses':[{'space':'process_udg' if direct[0] else 'absolute',
                                          'offset':direct[1]}]})
             continue
+        address_variables=scrub_code(w.address)
         for loop in w.loops:
+            if not re.search(r'\b'+re.escape(loop.variable)+r'\b',address_variables,re.I):
+                continue
             if indirect_branch:
                 raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: computed branch could enter FOR body')
             if loop.conditional:
