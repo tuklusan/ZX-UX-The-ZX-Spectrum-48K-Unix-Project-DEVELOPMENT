@@ -7,7 +7,6 @@ line numbers are intentionally left for a later compiler implementation.
 from __future__ import annotations
 
 from bisect import bisect_left
-import tap
 
 
 def resolve_missing_targets(program: bytes, keywords, fp):
@@ -17,6 +16,7 @@ def resolve_missing_targets(program: bytes, keywords, fp):
     statement delimiter. Strings, REM text and calculated targets are skipped.
     Returns (rewritten_program, changes), with each change (source, old, new).
     """
+    import tap
     lines = tap.split_lines(program)
     numbers = sorted(n for n, _ in lines)
     direct = {keywords.CODE_FOR['GO TO'], keywords.CODE_FOR['GO SUB']}
