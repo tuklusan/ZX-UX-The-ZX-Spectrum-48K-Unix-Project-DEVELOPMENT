@@ -45,8 +45,12 @@ jobs:
           python3 experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
           cp trial-result/checkpoint/scratch/test_memory_safety.py trial-result/test_memory_safety.py
           python3 trial-result/test_memory_safety.py
-          git clone --depth 1 https://github.com/tuklusan/font8x8.git trial-result/fork-font
-          git -C trial-result/fork-font checkout --detach 8e279d2d864e79128e96188a6b9526cfa3fbfef9
+          mkdir -p trial-result/fork-font
+          git -C trial-result/fork-font init -q
+          git -C trial-result/fork-font remote add origin https://github.com/tuklusan/font8x8.git
+          git -C trial-result/fork-font fetch -q --depth 1 origin 8e279d2d864e79128e96188a6b9526cfa3fbfef9
+          git -C trial-result/fork-font checkout -q --detach FETCH_HEAD
+          test "$(git -C trial-result/fork-font rev-parse HEAD)" = 8e279d2d864e79128e96188a6b9526cfa3fbfef9
           python3 experiments/hisoft-rbc-2026-10-22/stage/font_from_fork.py trial-result/fork-font/font8x8_basic.h trial-result/rbc/font32.bin
           curl -fsSL --retry 2 --max-time 25 -o trial-result/hisoft48.tap \
             https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap
@@ -119,7 +123,7 @@ jobs:
       - name: Verify shared input hashes
         run: sha256sum -c trial-result/inputs.sha256
       - name: Verify original Galaxians text and tape token parity
-        if: matrix.shard == 2
+        if: (env.RBC_MODE == 'fast' && matrix.shard == 0) || (env.RBC_MODE == 'full' && matrix.shard == 2) || (env.RBC_MODE == 'batch' && matrix.shard == 2 && contains(env.RBC_PROGRAMS, '25-galaxians'))
         run: |
           python3 - <<'PY'
           import sys
@@ -330,6 +334,7 @@ jobs:
       RBC_MODE: ${{ github.event_name == 'push' && 'fast' || inputs.mode || 'full' }}
       RBC_PROGRAMS: ${{ inputs.programs || '' }}
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         continue-on-error: true
         with:
@@ -342,11 +347,55 @@ jobs:
           from pathlib import Path
           files=sorted(Path('results').glob('**/rbc-60-results-shard-*.json'))
           rows=[]
+          invalid=[]
           for path in files:
-              rows.extend(json.loads(path.read_text()))
+              try:
+                  group=json.loads(path.read_text())
+                  if not isinstance(group,list):
+                      raise ValueError('Expected input list')
+                  rows.extend(group)
+              except (OSError,ValueError,TypeError) as exc:
+                  invalid.append(str(path)+': '+str(exc))
           mode=os.environ['RBC_MODE']
           wanted={x.strip() for x in os.environ['RBC_PROGRAMS'].split(',') if x.strip()}
-          expected=121 if mode=='full' else 11 if mode=='fast' else 1+2*len(wanted)
+          folders=sorted(Path('src/bonus/60-programs').glob('[0-9][0-9]-*'))
+          if len(folders)!=60:
+              invalid.append('Expected 60 original program directories')
+          if mode=='full':
+              selected=folders
+          elif mode=='fast':
+              selected=[p for p in folders if p.name in
+                        {'08-chomper','11-defend','23-biorhythms',
+                         '25-galaxians','58-invaders'}]
+          elif mode=='batch':
+              selected=[p for p in folders if p.name in wanted]
+              if not wanted or len(selected)!=len(wanted):
+                  invalid.append('Invalid batch program selection')
+          else:
+              selected=[]
+              invalid.append('Unknown test mode')
+          names=['hello']
+          for folder in selected:
+              names.extend([folder.name+'-text',folder.name+'-tape'])
+          expected=len(names)
+          seen=collections.Counter(x.get('program') for x in rows if isinstance(x,dict))
+          for name in names:
+              if not seen[name]:
+                  rows.append({'program':name,'input':None,'input_sha256':None,
+                               'tool_sha256':None,'revision':os.environ.get('GITHUB_SHA'),
+                               'output_path':None,'report_path':None,
+                               'output_sha256':None,'native_result':None,
+                               'ok':False,'cause_category':'not-run',
+                               'returncode':None,
+                               'output':'No result record; check shard execution'})
+          extras=sorted((name,count) for name,count in seen.items() if name not in names or count!=1)
+          if extras:
+              invalid.append('Extra or repeated input records: '+repr(extras))
+          rows.sort(key=lambda x: str(x.get('program')))
+          Path('result-summary').mkdir(exist_ok=True)
+          Path('result-summary/inputs.json').write_text(json.dumps(
+              {'mode':mode,'revision':os.environ.get('GITHUB_SHA'),
+               'expected_inputs':expected,'invalid':invalid,'inputs':rows},indent=2)+chr(10))
           passed=sum(x['ok'] for x in rows)
           failed=len(rows)-passed
           counts=collections.Counter(x['cause_category'] or 'pass' for x in rows)
@@ -357,6 +406,13 @@ jobs:
           if summary:
               Path(summary).write_text('## RBC '+mode.upper()+' input summary'+chr(10)+text+chr(10)+
                                        'Cause groups: '+json.dumps(counts,sort_keys=True)+chr(10))
-          if len(rows)!=expected or len({x['program'] for x in rows})!=expected or failed:
+          if invalid or len(rows)!=expected or len({x['program'] for x in rows})!=expected or failed:
+              print('Invalid collection:',invalid)
               raise SystemExit(mode.upper()+' compilation checks incomplete; inspect saved shard results')
           PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rbc-input-summary
+          path: result-summary/inputs.json
+          retention-days: 1
