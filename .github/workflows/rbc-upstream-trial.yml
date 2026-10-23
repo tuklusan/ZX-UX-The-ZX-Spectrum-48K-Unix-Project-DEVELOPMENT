@@ -293,7 +293,7 @@ jobs:
           python3 - <<'PY'
           import collections, json, os
           from pathlib import Path
-          files=sorted(Path('results').glob('*/rbc-60-results-shard-*.json'))
+          files=sorted(Path('results').glob('**/rbc-60-results-shard-*.json'))
           rows=[]
           for path in files:
               rows.extend(json.loads(path.read_text()))
