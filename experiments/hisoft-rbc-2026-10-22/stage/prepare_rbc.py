@@ -10,7 +10,7 @@ def prepare(checkpoint: Path, extensions: Path):
     compiler = checkpoint / 'rbc' / 'rbc.py'
     text = compiler.read_text()
     old = 'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize'
-    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom native_scroll import adapt_scroll_counter\nfrom restore_data import resolve_restores\nfrom udg_bounds import allow_bounded_udg_loops\nfrom rom_keyread import allow_key_state_read\nfrom native_pause_rt import install as install_native_pause\nfrom native_keyread_rt import install as install_native_keyread\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
+    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom native_scroll import adapt_scroll_counter\nfrom restore_data import resolve_restores\nfrom udg_bounds import allow_bounded_udg_loops\nfrom rom_keyread import allow_key_state_read\nfrom rom_keyboard_control import allow_rom_keyboard_controls\nfrom native_pause_rt import install as install_native_pause\nfrom native_keyread_rt import install as install_native_keyread\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, save_controls, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
     if text.count(old) != 1 or text.count('program = source.tokenize_directives(program,kw)') != 1:
         raise ValueError('RBC checkpoint changed; extension location needs review')
     text = text.replace(old, new, 1)
@@ -21,7 +21,7 @@ def prepare(checkpoint: Path, extensions: Path):
     if text.count(check_anchor) != 1:
         raise ValueError('RBC memory inspection location changed')
     text = text.replace(check_anchor, check_anchor +
-                        '\n        allow_bounded_udg_loops(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_key_state_read(checks)', 1)
+                        '\n        allow_bounded_udg_loops(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_key_state_read(checks)\n        allow_rom_keyboard_controls(checks)', 1)
     # Try the compiler's in-memory line zero for a missing OPEN.
     # HiSoft needs OPEN before the first user BASIC line.
     before = '            program = source.add_directives(program, directives, True, [], kw, initial.fp)'
@@ -107,12 +107,15 @@ def prepare(checkpoint: Path, extensions: Path):
     startup_anchors = (
         ('    call=len(e.code)+1;e.call(0,rel=True)',
          '    color_records = save_and_set(e)\n'
+         '    control_records = save_controls(e)\n'
          '    call=len(e.code)+1;e.call(0,rel=True)'),
         ('    e.ldhl(0);e.lda(39);e.call(SYS)',
          '    restore(e, color_records)\n'
+         '    restore(e, control_records)\n'
          '    e.ldhl(0);e.lda(39);e.call(SYS)'),
         ('    font_start=len(e.code);e.code.extend(font)',
          '    append_slots(e, color_records)\n'
+         '    append_slots(e, control_records)\n'
          '    font_start=len(e.code);e.code.extend(font)'),
     )
     for anchor, replacement in startup_anchors:
@@ -140,6 +143,7 @@ def prepare(checkpoint: Path, extensions: Path):
     shutil.copyfile(extensions / 'udg_bounds.py', checkpoint / 'rbc' / 'udg_bounds.py')
     shutil.copyfile(extensions / 'restore_data.py', checkpoint / 'rbc' / 'restore_data.py')
     shutil.copyfile(extensions / 'rom_keyread.py', checkpoint / 'rbc' / 'rom_keyread.py')
+    shutil.copyfile(extensions / 'rom_keyboard_control.py', checkpoint / 'rbc' / 'rom_keyboard_control.py')
     shutil.copyfile(extensions / 'native_keyread_rt.py', checkpoint / 'rbc' / 'native_keyread_rt.py')
     compiler.write_text(text)
 
