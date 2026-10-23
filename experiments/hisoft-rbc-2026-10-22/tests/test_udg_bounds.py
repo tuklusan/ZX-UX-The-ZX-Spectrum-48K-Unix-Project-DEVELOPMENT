@@ -36,9 +36,9 @@ class UDGLoops(unittest.TestCase):
         self.assertEqual(check(invalid,6010,'x,n'),(0,'block'))
 
     def test_real_program_line_position(self):
-        source = ('1 PRINT "hello"\\n100 GO SUB 6000\\n'
-                  '6000 RESTORE :FOR x=USR "a" TO USR "a"+87\\n'
-                  '6010 READ n:POKE x,n\\n6020 NEXT x')
+        source = ('1 PRINT "hello"\n100 GO SUB 6000\n'
+                  '6000 RESTORE :FOR x=USR "a" TO USR "a"+87\n'
+                  '6010 READ n:POKE x,n\n6020 NEXT x')
         self.assertEqual(check(source,6010,'x,n'),(1,'info'))
 
     def test_other_index_is_not_approved(self):
