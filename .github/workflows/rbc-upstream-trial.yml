@@ -90,6 +90,13 @@ jobs:
               print(f'{name}: {"PASS" if row["ok"] else "FAIL"}: {last_line[:350]}',flush=True)
           (out/f'rbc-60-results-shard-{shard}.json').write_text(json.dumps(results,indent=2)+'\n')
           if shard==0 and not results[0]['ok']:sys.exit('HELLO compiler regression')
+          if shard==0:
+              required = {'08-chomper-text','08-chomper-tape',
+                          '11-defend-text','11-defend-tape'}
+              failed = sorted(name for name in required if not any(
+                  item['program'] == name and item['ok'] for item in results))
+              if failed:
+                  sys.exit('computed BASIC jump compile regression: '+','.join(failed))
           if shard==1 and not any(x['program']=='23-biorhythms-text' and x['ok']
                                   for x in results):
               sys.exit('Biorhythms text-listing compiler regression')
@@ -123,6 +130,10 @@ jobs:
                   row={'program':ssx.stem,'booted':False,'error':str(e)}
               outcomes.append(row)
               print('NATIVE',json.dumps(row),flush=True)
+              if ssx.stem in ('08-chomper-tape', '11-defend-tape') and not (
+                      row.get('booted') and row.get('foreground_started')
+                      and row.get('bitmap_nonempty')):
+                  sys.exit('computed BASIC jump native launch regression: '+ssx.stem)
               if ssx.stem == '23-biorhythms-text' and not (
                       row.get('booted') and row.get('foreground_started')
                       and row.get('bitmap_nonempty')):
