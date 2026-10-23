@@ -5,8 +5,8 @@
   "baseline_sha256": "3d5b45ae2c09f3346bb19792b76ea74353a2d799ce50db38463d01c587b5445c",
   "baseline_inputs": 121,
   "baseline_compiled": 16,
-  "latest_source_run": 39967123878,
-  "latest_source_sha": "6467651826e92aa2df62dfe0b97fb366f530f576",
+  "latest_source_run": 39967091503,
+  "latest_source_sha": "4c7e57c3d8566d768887bcdfece723788ef79041",
   "latest_compiled": 15,
   "eligible_completed_runs": 2,
   "workflow_outcomes": [
@@ -21,11 +21,8 @@
       "count": 1
     }
   ],
-  "cleanup_current_run_excluded": 39967292540,
-  "cleared_run_ids": [
-    39967168246,
-    39967123878
-  ],
+  "cleanup_current_run_excluded": 39967376718,
+  "cleared_run_ids": [],
   "delete_errors": [],
   "note": "Old run logs are not proof of completed 60-program compatibility.",
   "protected_unconsumed_run_ids": []
