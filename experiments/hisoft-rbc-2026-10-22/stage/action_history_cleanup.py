@@ -19,6 +19,7 @@ BASELINE_DIGEST = '3d5b45ae2c09f3346bb19792b76ea74353a2d799ce50db38463d01c587b54
 OUT = ROOT / 'results'
 SUMMARY = OUT / 'ACTIONS-CLEANUP-SUMMARY.json'
 FAST_RECORD = OUT / 'LATEST-RBC-RESULTS.json'
+FULL_RECORD = OUT / 'LATEST-RBC-FULL.json'
 
 
 def command(*args, check=True, timeout=60):
@@ -157,9 +158,13 @@ def execute(root, current_id):
     summary['protected_unconsumed_run_ids'] = sorted(protected_ids)
     folder = root / OUT
     folder.mkdir(parents=True, exist_ok=True)
-    for path, value in ((FAST_RECORD, fast_record), (SUMMARY, summary)):
+    written = [FAST_RECORD, SUMMARY]
+    if fast_record['mode'] == 'full':
+        written.append(FULL_RECORD)
+    for path in written:
+        value = summary if path == SUMMARY else fast_record
         (root / path).write_text(json.dumps(value, indent=2) + '\n')
-    stage_and_publish(root, (FAST_RECORD, SUMMARY))
+    stage_and_publish(root, tuple(written))
     # Deletion is intentionally after successful permanent publication.
     targets = [x for x in runs if x['status'] == 'completed' and x['id'] != current_id and x['id'] not in protected_ids]
     cleared, errors = [], []
