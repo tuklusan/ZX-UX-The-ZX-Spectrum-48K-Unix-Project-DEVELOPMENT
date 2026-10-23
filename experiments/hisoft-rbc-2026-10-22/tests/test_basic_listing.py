@@ -3,7 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
-from basic_listing import normalize_listing
+from basic_listing import normalize_listing, split_numbered_line
 
 
 class ListingBoundaries(unittest.TestCase):
@@ -35,6 +35,35 @@ class ListingBoundaries(unittest.TestCase):
         original = 'LET z=3↑2'
         self.assertEqual(normalize_listing(original), 'LET z=3^2')
         self.assertEqual(original, 'LET z=3↑2')
+
+
+    def test_numbered_empty_basic_line(self):
+        self.assertEqual(split_numbered_line('8 '), (8, ' '))
+        self.assertEqual(split_numbered_line('8'), (8, ' '))
+        self.assertEqual(split_numbered_line('  8  '), (8, ' '))
+
+    def test_numbered_program_statement(self):
+        self.assertEqual(split_numbered_line('10 GO SUB 70'), (10, 'GO SUB 70'))
+        self.assertEqual(split_numbered_line('0 REM : OPEN #'), (0, 'REM : OPEN #'))
+
+    def test_preserved_mushroom_line_matches_tape(self):
+        root = Path(__file__).resolve().parents[3]
+        folder = root / 'src/bonus/60-programs/59-mushroom-invasion/BASIC'
+        listing = folder / '59-mushroom-invasion.bas'
+        tape = folder / '59-mushroom-invasion.tzx'
+        if not listing.is_file() or not tape.is_file():
+            self.skipTest('read-only game sources not present in isolated test tree')
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from corpus_line_audit import basic_lines
+        raw = listing.read_text(encoding='utf-8-sig').splitlines()[2]
+        number, body = split_numbered_line(raw)
+        self.assertEqual(number, 8)
+        self.assertEqual(body.encode('latin-1') + b'\r', basic_lines(tape.read_bytes())[8])
+
+    def test_numbered_line_rejects_invalid_text(self):
+        for raw in ('PRINT HELLO', '10000 PRINT HELLO', ''):
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                split_numbered_line(raw)
 
 
 if __name__ == '__main__':
