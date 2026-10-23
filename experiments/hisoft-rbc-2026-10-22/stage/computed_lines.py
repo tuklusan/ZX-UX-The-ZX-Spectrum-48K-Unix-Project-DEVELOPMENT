@@ -2,7 +2,7 @@
 
 
 def compiler_with_computed_lines(base):
-    """Use the same flags set by HiSoft's REM : GOSUB : directive.
+    """Use flags set by HiSoft's computed GOSUB and RESTORE directives.
 
     Some original listings begin at line 1, leaving no room for two
     separate directives before the first statement. Keep every original
@@ -14,5 +14,7 @@ def compiler_with_computed_lines(base):
             super().reset(program)
             self.goto_directive = 1
             self.gosub_all = 1
+            self.restore_directive = 1
+            self.restore_all = 1
 
     return ComputedLines
