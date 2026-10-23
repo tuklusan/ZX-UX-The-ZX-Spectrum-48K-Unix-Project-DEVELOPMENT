@@ -9,7 +9,7 @@ _JUMP = re.compile(r'\bGO\s*(?:TO|SUB)\s+(\d+)\b',re.I)
 _JUMP_ANY = re.compile(r'\bGO\s*(?:TO|SUB)\b',re.I)
 _DIM_TOKEN = 0xE9
 _SAFE_DIM = re.compile(r'^\s*DIM\s+[a-z]\$?\s*\(\s*(?:\d+|[a-z])\s*\)(?:\s*:\s*DIM\s+[a-z]\$?\s*\(\s*(?:\d+|[a-z])\s*\))*\s*$',re.I)
-_SAFE_LET = re.compile(r'^\s*LET\s+([a-z])\$?\s*=\s*(?:\d+|\"[^\"]*\")\s*$',re.I)
+_SAFE_LET = re.compile(r'^\s*LET\s+([a-z][a-z0-9]*)\$?\s*=\s*(?:\d+|[a-z][a-z0-9]*|\"[^\"]*\")\s*$',re.I)
 
 
 def specialize_literal_dims(program, kw, fp, source, tap):
@@ -26,7 +26,7 @@ def specialize_literal_dims(program, kw, fp, source, tap):
         # a write to the dimension variable, or a branch blocks the proof.
         value=None
         prev=None
-        for j in range(i-1,max(-1,i-7),-1):
+        for j in range(i-1,max(-1,i-25),-1):
             line, earlier=decoded[j]
             maybe=_ASSIGN.fullmatch(earlier)
             if maybe and maybe[1].lower()==wanted:
