@@ -40,7 +40,8 @@ jobs:
           mkdir -p output/tapes output/screens output/logs
           source=recovery/typein-48k/red-carpet/red-carpet-maze-scan-guided-WIP.bas
           node tools/zmakebas-plus/dist-cli/zmakebas.js -a 5 -o output/tapes/red-carpet-maze-main.tap "$source" > output/logs/syntax-main.txt 2>&1
-          node tools/zmakebas-plus/dist-cli/zmakebas.js -a 50 -o output/tapes/red-carpet-maze-screen-test.tap "$source" > output/logs/syntax-screen-test.txt 2>&1
+          sed "/^139 /s/$/: PAUSE 0/" "$source" > output/tapes/visual-maze-only.bas
+          node tools/zmakebas-plus/dist-cli/zmakebas.js -a 50 -o output/tapes/red-carpet-maze-screen-test.tap output/tapes/visual-maze-only.bas > output/logs/syntax-screen-test.txt 2>&1
           for f in output/tapes/*.tap; do
             python recovery/typein-48k/scripts/zx_basic_tape.py convert "$f" "${f%.tap}.tzx"
           done
