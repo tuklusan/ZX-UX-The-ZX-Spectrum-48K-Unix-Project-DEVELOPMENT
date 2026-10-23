@@ -1,0 +1,6 @@
+Track A exclusion - 55-hangman
+Inputs: BASIC/55-hangman.bas and BASIC/55-hangman.tzx
+BASIC line 7080: LET I=USR 3280
+Reason: numeric USR invokes machine code. The accepted RBC safety policy
+forbids such calls. Both original input forms are rejected.
+This closes only the two original BASIC inputs, not the C48 port.
