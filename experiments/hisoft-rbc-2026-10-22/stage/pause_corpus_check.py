@@ -43,12 +43,7 @@ def _join(rows):
 
 
 def inspect(root: Path):
-    tool_path = root / 'TOOLS'
-    sys.path.insert(0, str(tool_path))
-    try:
-        from zx_basic_tape import TOKENS, encode_body, find_basic, parse_standard_tzx
-    finally:
-        sys.path.remove(str(tool_path))
+    from zx_basic_tape import TOKENS, encode_body, find_basic, parse_standard_tzx
     words = {word: code for code, word in TOKENS.items()}
     fake_tap = types.ModuleType('tap')
     fake_tap.split_lines = _rows
