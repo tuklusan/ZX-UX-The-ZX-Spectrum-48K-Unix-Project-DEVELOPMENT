@@ -11,6 +11,23 @@ m=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
 class CleanupTests(unittest.TestCase):
+    def test_cleanup_only_consumed_rbc_and_skipped_tags(self):
+        rows=[
+            dict(id=10,name='RBC Python compiler trial',status='completed',head_branch='main'),
+            dict(id=11,name='RBC Python compiler trial',status='completed',head_branch='main'),
+            dict(id=12,name='RBC Python compiler trial',status='in_progress',head_branch='main'),
+            dict(id=3,name='Build Spectrum Show BASIC tapes',status='completed'),
+            dict(id=4,name='Spectrum listing scan acquisition',status='completed'),
+            dict(id=5,name='Spectrum 48K magazine BASIC tape checks',status='completed'),
+            dict(id=6,name='Clear processed Actions runs',status='completed'),
+            dict(id=7,name='Tag beta 0.1.1',status='completed',conclusion='skipped'),
+            dict(id=8,name='Tag beta 0.1.1',status='completed',conclusion='success')]
+        chosen=[row['id'] for row in rows if m.is_consumed_run(row,6,10,set())]
+        self.assertEqual(chosen,[10,7])
+        self.assertFalse(m.is_consumed_run(rows[0],6,10,{10}))
+        self.assertTrue(m.is_consumed_run(rows[6],42,10,set()))
+        self.assertFalse(m.is_consumed_run(dict(id=1,name='RBC Python compiler trial',status='completed',head_branch='feature'),42,10,set()))
+
     def test_selects_latest_completed_candidate(self):
         runs=[{'name':'RBC Python compiler trial','id':4,'status':'completed','conclusion':'success','head_branch':'main'},
               {'name':'RBC Python compiler trial','id':5,'status':'completed','conclusion':'failure','head_branch':'main'},

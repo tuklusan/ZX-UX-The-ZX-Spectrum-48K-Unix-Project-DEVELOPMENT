@@ -161,6 +161,20 @@ def stage_and_publish(root, files):
             raise RuntimeError('Remote result bundle mismatch: ' + str(path))
 
 
+def is_consumed_run(run, current_id, saved_source_id, protected_ids):
+    """ZX-UX validation description."""
+    if (run['status'] != 'completed' or run['id'] == current_id
+            or run['id'] in protected_ids):
+        return False
+    if run['name'] == 'RBC Python compiler trial':
+        return run['id'] <= saved_source_id and run.get('head_branch') == 'main'
+    if run['name'] == 'Clear processed Actions runs':
+        return True
+    if run['name'] == 'Tag beta 0.1.1':
+        return run.get('conclusion') == 'skipped'
+    return False
+
+
 def execute(root, current_id):
     # Keep only useful current compiler results; no history rollup or audit log.
     verify_baseline(root)
@@ -184,8 +198,7 @@ def execute(root, current_id):
     stage_and_publish(root, tuple(files))
     # Only remove runs whose required reports are safely stored (or the
     # already-finished non-RBC runs). An unverified RBC run is protected.
-    targets = [x for x in runs if x['status'] == 'completed'
-               and x['id'] != current_id and x['id'] not in protected_ids]
+    targets = [x for x in runs if is_consumed_run(x, current_id, record['source_run'], protected_ids)]
     errors = []
     deleted = 0
     for run in targets:
