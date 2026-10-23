@@ -60,7 +60,11 @@ class Tests(unittest.TestCase):
         if not (upstream / 'source.py').exists():
             self.skipTest('Upstream tokenizer checkout is absent')
         sys.path.insert(0, str(upstream))
-        import source
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            'zxux_original_source', upstream / 'source.py')
+        source = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(source)
         rom = (self.root / 'src/zx-ux-sdk/rom/48.rom').read_bytes()
         kw = source.Keywords(rom)
         tape = self.tzx.read_bytes()
