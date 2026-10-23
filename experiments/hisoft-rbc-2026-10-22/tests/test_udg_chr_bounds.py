@@ -33,6 +33,11 @@ class ChrGlyphs(unittest.TestCase):
              '70 POKE USR CHR$ (143+M)+L,A(K,L*9+M)\n75 NEXT M:NEXT L')
         self.assertEqual(probe(src,70,'USR CHR$ (143+M)+L,A(K,L*9+M)'),(1,'info','info'))
 
+    def test_unrelated_earlier_branch_does_not_invalidate_loop(self):
+        src=('500 GO TO 1000\n550 RETURN\n555 POKE USR "a",0\n'
+             '560 FOR x=1TO 8:FOR y=0TO 7:READ a:POKE USR CHR$ (144+x)+y,a:NEXT y:NEXT x')
+        self.assertEqual(probe(src,560,'USR CHR$ (144+x)+y,a'),(1,'info','info'))
+
     def test_outside_udg_and_broken_bounds(self):
         for src,expr in [
           ('50 FOR x=1TO 25:FOR y=0TO 7:POKE USR CHR$ (143+x)+y,a:NEXT y:NEXT x','USR CHR$ (143+x)+y,a'),
