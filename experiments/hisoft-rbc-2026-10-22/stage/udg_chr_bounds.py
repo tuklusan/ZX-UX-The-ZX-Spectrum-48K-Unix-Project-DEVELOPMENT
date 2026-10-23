@@ -43,11 +43,11 @@ def allow_bounded_chr_glyphs(lines, token_names, findings):
                 if n == len(before)-1:
                     prefix = prefix.split('POKE', 1)[0]
                 for found in _FOR.finditer(prefix):
-                    candidates[found[1].lower()] = (int(found[2]), int(found[3]))
+                    candidates[found[1].lower()] = (int(found[2]), int(found[3]), max(0, at-3) + n)
             if charvar not in candidates or offvar not in candidates:
                 continue
-            first, last = candidates[charvar]
-            low, high = candidates[offvar]
+            first, last, char_start = candidates[charvar]
+            low, high, offset_start = candidates[offvar]
             if not (0 <= low <= high <= 7 and first <= last and
                     144 <= base + first <= base + last <= 164):
                 continue
@@ -63,7 +63,7 @@ def allow_bounded_chr_glyphs(lines, token_names, findings):
                     break
             if end is None:
                 continue
-            span_start = max(0, at-3)
+            span_start = min(char_start, offset_start)
             span_end = at+end
             span = rows[span_start:span_end+1]
             if any(n in jump_targets for n, _ in rows[span_start+1:span_end+1]):
