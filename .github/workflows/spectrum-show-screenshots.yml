@@ -1,4 +1,4 @@
-name: Spectrum Show single-runner Fuse follow-up
+name: Spectrum Show targeted screen recapture
 
 on:
   push:
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   screenshot-73:
     runs-on: ubuntu-24.04
-    timeout-minutes: 95
+    timeout-minutes: 120
     steps:
       - name: Read isolated scripts
         uses: actions/checkout@v4
@@ -86,12 +86,12 @@ jobs:
             --tapes spectrum-show-all-tapes.zip \
             --rom "$ROM" \
             --out screenshot_output \
-            --select-file tools/spectrum-show-targets.json \
-            --key-map tools/spectrum-show-target-keys.json \
+            --select-file tools/spectrum-show-cleanup-targets.json \
+            --key-map tools/spectrum-show-cleanup-keys.json \
             --speed 400 \
-            --base-wait 2.5 \
-            --intro-wait 1.6 \
-            --step-wait 1.0
+            --base-wait 3.5 \
+            --intro-wait 2.4 \
+            --step-wait 1.8
       - name: Save screenshot ZIP and per-game report
         if: always()
         uses: actions/upload-artifact@v4
@@ -109,6 +109,6 @@ jobs:
           python3 - <<'PY'
           import json
           x=json.load(open('screenshot_output/report.json'))
-          assert len(x['records'])==11,(len(x['records']),x['counts'])
+          assert len(x['records'])==29,(len(x['records']),x['counts'])
           print('Completed sequential attempts:',len(x['records']),x['counts'])
           PY
