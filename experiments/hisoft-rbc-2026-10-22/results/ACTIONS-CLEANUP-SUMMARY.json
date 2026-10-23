@@ -5,10 +5,10 @@
   "baseline_sha256": "3d5b45ae2c09f3346bb19792b76ea74353a2d799ce50db38463d01c587b5445c",
   "baseline_inputs": 121,
   "baseline_compiled": 16,
-  "latest_source_run": 39966777275,
-  "latest_source_sha": "ffe30201d3a3d7068a6e7fb47c4081457ee07b8e",
-  "latest_compiled": 47,
-  "eligible_completed_runs": 5,
+  "latest_source_run": 39966732978,
+  "latest_source_sha": "5d4272aff8fcd74685d36abde8cca45045d742d3",
+  "latest_compiled": 15,
+  "eligible_completed_runs": 2,
   "workflow_outcomes": [
     {
       "workflow": "Clear processed Actions runs",
@@ -17,23 +17,12 @@
     },
     {
       "workflow": "RBC Python compiler trial",
-      "conclusion": "failure",
+      "conclusion": "success",
       "count": 1
-    },
-    {
-      "workflow": "Tag beta 0.1.1",
-      "conclusion": "skipped",
-      "count": 3
     }
   ],
-  "cleanup_current_run_excluded": 39966920391,
-  "cleared_run_ids": [
-    39966777303,
-    39966777275,
-    39966739369,
-    39966732957,
-    39966518322
-  ],
+  "cleanup_current_run_excluded": 39966952542,
+  "cleared_run_ids": [],
   "delete_errors": [],
   "note": "Old run logs are not proof of completed 60-program compatibility.",
   "protected_unconsumed_run_ids": []
