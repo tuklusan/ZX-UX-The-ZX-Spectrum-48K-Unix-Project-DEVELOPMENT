@@ -116,6 +116,11 @@ jobs:
               print('NATIVE',json.dumps(row),flush=True)
           (out/f'rbc-runtime-shard-{shard}.json').write_text(json.dumps(outcomes,indent=2)+'\n')
           PY
+      - name: Capture Galaxians and Invaders native key sequences
+        if: always()
+        run: |
+          python3 experiments/hisoft-rbc-2026-10-22/stage/frame_probe.py \
+            --root . --trial trial-result
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -124,6 +129,8 @@ jobs:
             trial-result/*.json
             trial-result/*.ssx
             trial-result/*.png
+            trial-result/rbc-game-probe/*.json
+            trial-result/rbc-game-probe/*.png
             trial-result/rbc/*.py
             trial-result/rbc/font32.bin
             trial-result/hisoft48.tap
