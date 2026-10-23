@@ -1,0 +1,83 @@
+name: Spectrum listing scan acquisition
+
+on:
+  push:
+    branches: [research/typein-scans-20261023]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-scans:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - name: Retrieve museum scans with audit trail
+        shell: bash
+        run: |
+          mkdir -p scan-results
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import time
+          import urllib.request
+
+          items = ["28741", "28802", "35774", "35776", "35778", "35779", "35848"]
+          folder = pathlib.Path("scan-results")
+          report = []
+          for issue in items:
+              url = "https://www.computinghistory.org.uk/downloads/" + issue
+              dest = folder / (issue + ".pdf")
+              entry = {"issue": issue, "url": url}
+              for attempt in range(1, 3):
+                  try:
+                      req = urllib.request.Request(url, headers={"User-Agent": "Spectrum-listing-preservation/1.0"})
+                      with urllib.request.urlopen(req, timeout=70) as response:
+                          if response.status != 200:
+                              raise ValueError("HTTP status " + str(response.status))
+                          with dest.open("wb") as output:
+                              head = response.read(5)
+                              if head != b"%PDF-":
+                                  raise ValueError("not a PDF response")
+                              output.write(head)
+                              total = len(head)
+                              while True:
+                                  chunk = response.read(1024 * 1024)
+                                  if not chunk:
+                                      break
+                                  total += len(chunk)
+                                  if total > 130 * 1024 * 1024:
+                                      raise ValueError("download exceeds size limit")
+                                  output.write(chunk)
+                      digest = hashlib.file_digest(dest.open("rb"), "sha256").hexdigest()
+                      entry.update(status="downloaded", size_bytes=total, sha256=digest)
+                      break
+                  except Exception as err:
+                      dest.unlink(missing_ok=True)
+                      entry.update(status="failed", attempts=attempt, error=str(err))
+                      if attempt < 2:
+                          time.sleep(3)
+              report.append(entry)
+              print(json.dumps(entry), flush=True)
+              time.sleep(2)
+          (folder / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+          PY
+      - name: Retain retrieval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-scan-report
+          path: scan-results/report.json
+          if-no-files-found: warn
+          retention-days: 1
+      - name: Retain downloaded PDF scans
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-scans
+          path: scan-results/*.pdf
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 1
