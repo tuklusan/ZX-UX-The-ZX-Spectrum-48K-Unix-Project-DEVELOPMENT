@@ -1,0 +1,70 @@
+name: Prune consumed RBC Actions runs
+on:
+  push:
+    paths:
+      - 'experiments/hisoft-rbc-2026-10-22/results/consumed-runs.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify durable results before clearing run history
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CURRENT_RUN: ${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          import zipfile
+          from pathlib import Path
+
+          root = Path.cwd().resolve()
+          ledger = json.loads((root / 'experiments/hisoft-rbc-2026-10-22/results/consumed-runs.json').read_text())
+          if set(ledger) != {'schema', 'consumed_runs'} or ledger['schema'] != 1:
+              raise SystemExit('Unsupported cleanup ledger')
+          if not isinstance(ledger['consumed_runs'], list):
+              raise SystemExit('Invalid consumed runs')
+          seen = set()
+          for entry in ledger['consumed_runs']:
+              if set(entry) != {'run_id', 'archive_path', 'archive_sha256', 'expected_inputs', 'source_sha'}:
+                  raise SystemExit('Unexpected saved run entry')
+              run_id = entry['run_id']
+              if type(run_id) is not int or run_id <= 0 or run_id in seen or str(run_id) == os.environ['CURRENT_RUN']:
+                  raise SystemExit('Invalid or repeated run ID')
+              seen.add(run_id)
+              archive_name = entry['archive_path']
+              if not archive_name.startswith('experiments/hisoft-rbc-2026-10-22/') or not archive_name.endswith('.zip'):
+                  raise SystemExit('Archive outside RBC result storage')
+              archive = (root / archive_name).resolve()
+              if not archive.is_relative_to(root) or not archive.is_file():
+                  raise SystemExit('Saved result archive unavailable')
+              if hashlib.sha256(archive.read_bytes()).hexdigest() != entry['archive_sha256']:
+                  raise SystemExit('Saved result archive checksum mismatch')
+              with zipfile.ZipFile(archive) as zf:
+                  results = [name for name in zf.namelist() if Path(name).name.startswith('rbc-60-results-shard-') and name.endswith('.json')]
+                  rows = [row for name in results for row in json.loads(zf.read(name))]
+              expected = entry['expected_inputs']
+              if type(expected) is not int or not 1 <= expected <= 121:
+                  raise SystemExit('Invalid saved input count')
+              if len(rows) != expected or len({row['program'] for row in rows}) != expected or any('ok' not in row or 'output' not in row for row in rows):
+                  raise SystemExit('Saved compiler results incomplete')
+              lookup = subprocess.run(['gh', 'api', f'repos/{os.environ["GH_REPO"]}/actions/runs/{run_id}'], capture_output=True, text=True)
+              if lookup.returncode != 0:
+                  if 'HTTP 404' in lookup.stderr:
+                      print(f'Already cleared: {run_id}')
+                      continue
+                  raise SystemExit(lookup.stderr)
+              remote = json.loads(lookup.stdout)
+              if remote['status'] != 'completed' or remote['head_sha'] != entry['source_sha']:
+                  raise SystemExit('Run has not finished or its source revision differs')
+              subprocess.run(['gh', 'api', '--method', 'DELETE', f'repos/{os.environ["GH_REPO"]}/actions/runs/{run_id}'], check=True)
+              print(f'Cleared consumed run {run_id}; verified archive remains in GitHub')
+          PY
