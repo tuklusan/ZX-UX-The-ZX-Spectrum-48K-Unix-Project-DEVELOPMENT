@@ -10,12 +10,12 @@ def prepare(checkpoint: Path, extensions: Path):
     compiler = checkpoint / 'rbc' / 'rbc.py'
     text = compiler.read_text()
     old = 'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize'
-    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom pause_zero import rewrite_pause_zero\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
+    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom native_pause_rt import install as install_native_pause\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
     if text.count(old) != 1 or text.count('program = source.tokenize_directives(program,kw)') != 1:
         raise ValueError('RBC checkpoint changed; extension location needs review')
     text = text.replace(old, new, 1)
     old = 'program = source.tokenize_directives(program,kw)'
-    text = text.replace(old, old + '\n        program, pause_lines = rewrite_pause_zero(program, kw, initial.fp)\n        program, next_lines = resolve_missing_targets(program, kw, initial.fp)', 1)
+    text = text.replace(old, old + '\n        program, next_lines = resolve_missing_targets(program, kw, initial.fp)', 1)
     # Try the compiler's in-memory line zero for a missing OPEN.
     # HiSoft needs OPEN before the first user BASIC line.
     before = '            program = source.add_directives(program, directives, True, [], kw, initial.fp)'
@@ -49,6 +49,10 @@ def prepare(checkpoint: Path, extensions: Path):
     text = text.replace(original, replacement, 1)
     text = text.replace("source.tokenize_line(''.join(chunks),kw)",
                         "source.tokenize_line(normalize_listing(''.join(chunks)),kw)", 1)
+    upstream = 'compiler, hbcimage, source = _hisoft_modules(frontend)'
+    if text.count(upstream) != 1:
+        raise ValueError('RBC upstream compiler import changed')
+    text = text.replace(upstream, upstream + '\n    install_native_pause(compiler)', 1)
     # The archival listing joins a string variable to THEN without a space.
     anchor = '            if not quoted and not comment and c.isdigit():'
     if text.count(anchor) != 1:
@@ -56,7 +60,7 @@ def prepare(checkpoint: Path, extensions: Path):
     text = text.replace(anchor, "            if not quoted and not comment and c=='$' and body.startswith('THEN',i+1):\n                chunks.append('$ ');i+=1;continue\n" + anchor, 1)
     text = text.replace("'memory_policy':memory_policy, 'memory_check':memory_report}",
                         "'memory_policy':memory_policy, 'memory_check':memory_report,\n"
-                        "                        'next_line_targets':next_lines, 'pause_zero_lines':pause_lines}", 1)
+                        "                        'next_line_targets':next_lines}", 1)
     # The HiSoft variable area follows the compiler's code. RBC inserts
     # font and UDG bytes before the final SSX1 variable area, so correct
     # every compiler relocation into the variable area before packing.
@@ -119,10 +123,13 @@ def prepare(checkpoint: Path, extensions: Path):
     memory.write_text(memory_source)
     shutil.copyfile(extensions / 'basic_listing.py', checkpoint / 'rbc' / 'basic_listing.py')
     shutil.copyfile(extensions / 'line_targets.py', checkpoint / 'rbc' / 'line_targets.py')
-    shutil.copyfile(extensions / 'pause_zero.py', checkpoint / 'rbc' / 'pause_zero.py')
+    old_pause = checkpoint / 'rbc' / 'pause_zero.py'
+    if old_pause.is_file():
+        old_pause.unlink()
     shutil.copyfile(extensions / 'bss_layout.py', checkpoint / 'rbc' / 'bss_layout.py')
     shutil.copyfile(extensions / 'startup_colors.py', checkpoint / 'rbc' / 'startup_colors.py')
     shutil.copyfile(extensions / 'computed_lines.py', checkpoint / 'rbc' / 'computed_lines.py')
+    shutil.copyfile(extensions / 'native_pause_rt.py', checkpoint / 'rbc' / 'native_pause_rt.py')
     compiler.write_text(text)
 
 
