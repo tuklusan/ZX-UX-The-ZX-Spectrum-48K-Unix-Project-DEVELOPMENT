@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
-from frame_probe import screen_cell, screen_letters
+from frame_probe import screen_cell, screen_letters, check_udgs
 
 
 class FrameDecoderTests(unittest.TestCase):
@@ -20,6 +20,21 @@ class FrameDecoderTests(unittest.TestCase):
             screen[offset] = byte
         self.assertEqual(screen_cell(screen, 10, 9), rows)
         self.assertEqual(screen_letters(screen, font)[10][9], 'A')
+
+    def test_udg_pointer_and_original_sprite_bytes(self):
+        memory = bytearray(65536)
+        base = 42000
+        rows = ((0xA2, (60, 140, 115, 51, 63, 111, 193, 192)),
+                (0x98, (60, 49, 206, 204, 252, 246, 131, 3)))
+        for code, glyph in rows:
+            start = base + (code - 0x90) * 8
+            memory[start:start + 8] = bytes(glyph)
+        result = check_udgs(memory, base, '58-invaders')
+        self.assertEqual(len(result), 2)
+        self.assertTrue(all(item['matches_original_data'] for item in result))
+        memory[base + (0x98 - 0x90) * 8] = 0
+        broken = check_udgs(memory, base, '58-invaders')
+        self.assertFalse(all(item['matches_original_data'] for item in broken))
 
     def test_reject_invalid_source_lengths(self):
         with self.assertRaises(ValueError):
