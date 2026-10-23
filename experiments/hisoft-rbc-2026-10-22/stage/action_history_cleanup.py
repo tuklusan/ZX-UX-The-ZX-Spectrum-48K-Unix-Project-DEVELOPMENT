@@ -162,46 +162,41 @@ def stage_and_publish(root, files):
 
 
 def execute(root, current_id):
-    baseline_pass = verify_baseline(root)
+    # Keep only useful current compiler results; no history rollup or audit log.
+    verify_baseline(root)
     runs = list_runs()
-    fast_record = None
+    record = None
     protected_ids = set()
     for candidate in result_candidates(runs):
         try:
-            fast_record = download_result(candidate, root)
+            record = download_result(candidate, root)
             break
         except (subprocess.CalledProcessError, RuntimeError, OSError, ValueError):
             protected_ids.add(candidate['id'])
-            continue
-    if fast_record is None:
-        fast_record = read_saved_result(root)
-    summary = rollup(runs, current_id, fast_record, baseline_pass)
-    summary['protected_unconsumed_run_ids'] = sorted(protected_ids)
-    folder = root / OUT
-    folder.mkdir(parents=True, exist_ok=True)
-    written = [FAST_RECORD, SUMMARY]
-    if fast_record['mode'] == 'full':
-        written.append(FULL_RECORD)
-    for path in written:
-        value = summary if path == SUMMARY else fast_record
-        (root / path).write_text(json.dumps(value, indent=2) + '\n')
-    stage_and_publish(root, tuple(written))
-    # Deletion is intentionally after successful permanent publication.
-    targets = [x for x in runs if x['status'] == 'completed' and x['id'] != current_id and x['id'] not in protected_ids]
-    cleared, errors = [], []
+    if record is None:
+        record = read_saved_result(root)
+    (root / OUT).mkdir(parents=True, exist_ok=True)
+    files = [FAST_RECORD]
+    if record['mode'] == 'full':
+        files.append(FULL_RECORD)
+    for path in files:
+        (root / path).write_text(json.dumps(record, indent=2) + '\n')
+    stage_and_publish(root, tuple(files))
+    # Only remove runs whose required reports are safely stored (or the
+    # already-finished non-RBC runs). An unverified RBC run is protected.
+    targets = [x for x in runs if x['status'] == 'completed'
+               and x['id'] != current_id and x['id'] not in protected_ids]
+    errors = []
+    deleted = 0
     for run in targets:
         try:
             api(f"actions/runs/{run['id']}", method='DELETE')
-            cleared.append(run['id'])
+            deleted += 1
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-            errors.append({'run': run['id'], 'error': str(exc)})
-    summary['cleared_run_ids'] = cleared
-    summary['delete_errors'] = errors
-    (root / SUMMARY).write_text(json.dumps(summary, indent=2) + '\n')
-    stage_and_publish(root, (SUMMARY,))
-    print(f'Actions cleanup: {len(cleared)}/{len(targets)} completed runs deleted; {len(errors)} errors')
+            errors.append((run['id'], str(exc)))
+    print(f'Consumed Actions runs removed: {deleted}/{len(targets)}')
     if errors:
-        raise RuntimeError('Some Actions runs could not be deleted; inspect saved errors')
+        raise RuntimeError(f'Actions cleanup had {len(errors)} failures: {errors[:3]}')
 
 
 def main():
