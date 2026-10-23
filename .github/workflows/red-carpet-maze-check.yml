@@ -1,0 +1,68 @@
+name: Red Carpet maze scan review
+on:
+  push:
+    branches: [research/typein-scans-20261023]
+    paths:
+      - 'recovery/typein-48k/red-carpet/red-carpet-maze-scan-guided-WIP.bas'
+      - '.github/workflows/red-carpet-maze-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  red-carpet:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tuklusan/zmakebas-plus
+          path: tools/zmakebas-plus
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare syntax tool
+        run: |
+          cd tools/zmakebas-plus
+          npm ci --no-audit --no-fund
+          npm run build:cli
+      - name: Install 48K Fuse dependencies
+        run: |
+          sudo add-apt-repository -y universe
+          sudo add-apt-repository -y multiverse
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends fuse-emulator-sdl spectrum-roms xvfb
+          python -m pip install --disable-pip-version-check pillow python-xlib
+      - name: Compile and inspect real tapes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/tapes output/screens output/logs
+          source=recovery/typein-48k/red-carpet/red-carpet-maze-scan-guided-WIP.bas
+          node tools/zmakebas-plus/dist-cli/zmakebas.js -a 5 -o output/tapes/red-carpet-maze-main.tap "$source" > output/logs/syntax-main.txt 2>&1
+          node tools/zmakebas-plus/dist-cli/zmakebas.js -a 50 -o output/tapes/red-carpet-maze-screen-test.tap "$source" > output/logs/syntax-screen-test.txt 2>&1
+          for f in output/tapes/*.tap; do
+            python recovery/typein-48k/scripts/zx_basic_tape.py convert "$f" "${f%.tap}.tzx"
+          done
+          sha256sum output/tapes/* > output/logs/tapes-sha256.txt
+      - name: Run Spectrum 48K screens
+        shell: bash
+        run: |
+          set -euo pipefail
+          rom="$(find /usr/share -type f -name 48.rom | head -1)"
+          test -s "$rom"
+          for item in main screen-test; do
+            python recovery/typein-48k/scripts/fuse_48_capture.py \
+              "output/tapes/red-carpet-maze-$item.tzx" --rom "$rom" \
+              --out "output/screens/$item" --display :97 \
+              --boot-wait 12 --wait 6 \
+              > "output/logs/fuse-$item.log" 2>&1
+          done
+      - name: Preserve checker and genuine screen results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: red-carpet-maze-review
+          path: output/
+          if-no-files-found: warn
+          retention-days: 4
