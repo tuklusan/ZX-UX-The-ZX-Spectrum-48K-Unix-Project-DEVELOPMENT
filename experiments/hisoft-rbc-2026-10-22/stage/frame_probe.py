@@ -70,6 +70,18 @@ def screen_letters(bitmap: bytes, font: bytes) -> list[str]:
                     for c in range(32)) for r in range(24)]
 
 
+def font_state(memory, chars_pointer: int, font: bytes) -> dict:
+    """Compare the live process font with the expected source font."""
+    start = chars_pointer + 256
+    if not 0 <= start <= len(memory) - len(font):
+        return {'font_intact': False, 'font_difference_count': len(font),
+                'font_first_differences': ['pointer_outside_memory']}
+    changed = [i for i, (found, expected) in enumerate(
+        zip(memory[start:start + len(font)], font)) if found != expected]
+    return {'font_intact': not changed, 'font_difference_count': len(changed),
+            'font_first_differences': changed[:16]}
+
+
 def word_at(memory, address: int) -> int:
     return int(memory[address]) | (int(memory[address + 1]) << 8)
 
@@ -84,13 +96,15 @@ def capture(runner, font: bytes, directory: Path, name: str, label: str) -> dict
     text = screen_letters(bitmap, font)
     status = runner.fg.status if runner.fg else None
     udg_base = word_at(runner.session.m.mem, 0x5C7B)
+    charset_base = word_at(runner.session.m.mem, 0x5C36)
     return {
         'phase': label,
         'native_png': png.name,
         'screen_sha256': hashlib.sha256(bitmap).hexdigest(),
         'active_pixels': sum(int(byte).bit_count() for byte in bitmap[:6144]),
         'border': int(border),
-        'chars_pointer': word_at(runner.session.m.mem, 0x5C36),
+        'chars_pointer': charset_base,
+        'font_state': font_state(runner.session.m.mem, charset_base, font),
         'udg_pointer': udg_base,
         'known_udg_glyphs': check_udgs(runner.session.m.mem, udg_base, name),
         'keyboard_state': runner.session.kb.state,
@@ -158,6 +172,10 @@ def run_game(ssx: Path, system: Path, font: bytes, original: Path, directory: Pa
     report['sprite_data_correct_at_end'] = all(
         g['matches_original_data'] for g in report['captures'][-1]['known_udg_glyphs'])
     report['all_frames_nonblank'] = all(x['active_pixels'] > 0 for x in report['captures'])
+    report['font_intact_across_all_frames'] = all(
+        frame['font_state']['font_intact'] for frame in report['captures'])
+    if not report['font_intact_across_all_frames']:
+        raise AssertionError(f'{name}: native process modified its character font')
     report['screen_changed_after_input'] = any(
         x['screen_sha256'] != report['captures'][0]['screen_sha256']
         for x in report['captures'][1:])
