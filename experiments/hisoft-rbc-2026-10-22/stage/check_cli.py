@@ -70,6 +70,17 @@ def check(root: Path):
     assert 'unavailable' in unsupported.stderr
     assert not too_big.exists()
     assert source.read_bytes() == original
+    outcome = {'status': 'pass', 'source': str(source.relative_to(root)),
+               'default_output': str(default.relative_to(root)),
+               'assembly_output': str(assembly.relative_to(root)),
+               'object_output': str(obj_path.relative_to(root)),
+               'rom_font_bytes_saved': 768,
+               'default_native_memory': info['memory_required'],
+               'default_limit': info['memory_limit'],
+               'linkable_object': True, 'source_unchanged': True,
+               'oversize_failure_checked': True,
+               'unsupported_bytecode_rejected': True}
+    (root / 'trial-result/rbc-cli-validation.json').write_text(json.dumps(outcome, indent=2)+'\n')
     print('CHECK native RBC CLI and fitting PASS')
 
 

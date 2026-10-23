@@ -383,6 +383,9 @@ jobs:
           python3 experiments/hisoft-rbc-2026-10-22/stage/color_probe.py \
             --root . --binary trial-result/58-invaders-tape.ssx \
             --output trial-result/rbc-game-probe
+      - name: Check RBC native CLI outputs and default fitting
+        if: matrix.shard == 0
+        run: python3 experiments/hisoft-rbc-2026-10-22/stage/check_cli.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -398,9 +401,6 @@ jobs:
             trial-result/rbc-native-pause-controls/*.json
             trial-result/rbc-native-pause-controls/*.png
           retention-days: 1
-      - name: Check RBC native CLI outputs and default fitting
-        if: matrix.shard == 0
-        run: python3 experiments/hisoft-rbc-2026-10-22/stage/check_cli.py
   summarize:
     if: always()
     needs: [prepare, trial]
@@ -423,6 +423,20 @@ jobs:
           files=sorted(Path('results').glob('**/rbc-60-results-shard-*.json'))
           rows=[]
           invalid=[]
+          cli_files=sorted(Path('results').glob('**/rbc-cli-validation.json'))
+          cli_check=None
+          if len(cli_files)!=1:
+              invalid.append('Expected one successful native CLI report, got '+str(len(cli_files)))
+          else:
+              try:
+                  cli_check=json.loads(cli_files[0].read_text())
+                  if (cli_check.get('status')!='pass' or
+                      not cli_check.get('linkable_object') or
+                      not cli_check.get('source_unchanged') or
+                      not cli_check.get('oversize_failure_checked')):
+                      invalid.append('Native CLI report failed required checks')
+              except (OSError,ValueError,TypeError) as exc:
+                  invalid.append('Native CLI report cannot be read: '+str(exc))
           for path in files:
               try:
                   group=json.loads(path.read_text())
@@ -470,7 +484,8 @@ jobs:
           Path('result-summary').mkdir(exist_ok=True)
           Path('result-summary/inputs.json').write_text(json.dumps(
               {'mode':mode,'revision':os.environ.get('GITHUB_SHA'),
-               'expected_inputs':expected,'invalid':invalid,'inputs':rows},indent=2)+chr(10))
+               'expected_inputs':expected,'invalid':invalid,
+               'native_cli_check':cli_check,'inputs':rows},indent=2)+chr(10))
           passed=sum(x['ok'] for x in rows)
           failed=len(rows)-passed
           counts=collections.Counter(x['cause_category'] or 'pass' for x in rows)
