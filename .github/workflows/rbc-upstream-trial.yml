@@ -31,6 +31,8 @@ jobs:
           unzip -oq experiments/hisoft-rbc-2026-10-22/rbc-fresh-chat-2026-10-22.zip -d trial-result/checkpoint
           cp -R trial-result/checkpoint/scratch/rbc trial-result/rbc
           python3 experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
+          cp trial-result/checkpoint/scratch/test_memory_safety.py trial-result/test_memory_safety.py
+          python3 trial-result/test_memory_safety.py
           git clone --depth 1 https://github.com/tuklusan/font8x8.git trial-result/fork-font
           git -C trial-result/fork-font checkout --detach 8e279d2d864e79128e96188a6b9526cfa3fbfef9
           python3 experiments/hisoft-rbc-2026-10-22/stage/font_from_fork.py trial-result/fork-font/font8x8_basic.h trial-result/rbc/font32.bin
@@ -89,7 +91,7 @@ jobs:
           python3 - <<'PY'
           import json, os, sys
           from pathlib import Path
-          sys.path.insert(0,'src/zx-ux-sdk')
+          sys.path.insert(0,'dist/sdk/bin/py')
           import rvm
           out=Path('trial-result')
           shard=int(os.environ['RBC_SHARD'])

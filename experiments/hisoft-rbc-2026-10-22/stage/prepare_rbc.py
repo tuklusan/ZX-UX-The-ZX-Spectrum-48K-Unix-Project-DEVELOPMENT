@@ -19,6 +19,14 @@ def prepare(checkpoint: Path, extensions: Path):
     text = text.replace("'memory_policy':memory_policy, 'memory_check':memory_report}",
                         "'memory_policy':memory_policy, 'memory_check':memory_report,\n"
                         "                        'next_line_targets':next_lines}", 1)
+    memory = checkpoint / 'rbc' / 'memory_safety.py'
+    memory_source = memory.read_text()
+    old_target = 'target=_target(address)'
+    if memory_source.count(old_target) != 1:
+        raise ValueError('RBC memory guard changed; UDG fix needs review')
+    memory_source = memory_source.replace(
+        old_target, "target=_target(('USR ' if op=='USR' else '') + address)", 1)
+    memory.write_text(memory_source)
     shutil.copyfile(extensions / 'line_targets.py', checkpoint / 'rbc' / 'line_targets.py')
     compiler.write_text(text)
 
