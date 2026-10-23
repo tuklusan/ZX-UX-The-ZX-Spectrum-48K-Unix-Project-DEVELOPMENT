@@ -14,7 +14,8 @@ ZX-UX tests use (tests/rvm_machine.py compares the two).
 
 Ports (even addresses are the ULA):
   IN   bits 0-4 the keyboard half-rows selected by the address's high
-       byte, bit 6 the cassette EAR input (0 with no tape playing),
+       byte, bit 6 the cassette EAR input (or idle MIC/EAR output
+       feedback, which differs on Issue 2 and Issue 3 boards),
        bits 5 and 7 set.  Odd addresses read FFh.
   OUT  bits 0-2 the border, bit 3 MIC, bit 4 the beeper (EAR).
 Every border and beeper change is logged with its T-state, so a frame
@@ -151,7 +152,10 @@ class Frame:
 
 
 class Machine:
-    def __init__(self, rom=None):
+    def __init__(self, rom=None, ula_issue=3):
+        if ula_issue not in (2, 3):
+            raise ValueError('ULA issue must be 2 or 3')
+        self.ula_issue = ula_issue
         self.mem = Memory(0x10000)
         data = open(rom or zxcore.ROM48, 'rb').read()
         if len(data) != 0x4000:
@@ -228,10 +232,15 @@ class Machine:
         for r in range(8):
             if not hi & (1 << r):
                 v &= rows[r]
-        ear = 0
         if self.pulses:
-            ear = (bisect.bisect_right(self.pulses, self.tnow) & 1) << 6
-        return v | 0xA0 | ear
+            # Leave the cassette pulse path unchanged while tape is present.
+            ear_in = bisect.bisect_right(self.pulses, self.tnow) & 1
+        else:
+            # Without a tape signal, the ULA reads its shared audio pin.
+            # Issue 3: bit 4 high. Issue 2: bit 4 or bit 3 high.
+            mic_out = self.mic[-1][1] if self.mic else 0
+            ear_in = self.ear | (mic_out if self.ula_issue == 2 else 0)
+        return v | 0xA0 | (ear_in << 6)
 
     def _out(self, port, value):
         if port & 1:
