@@ -10,7 +10,7 @@ def prepare(checkpoint: Path, extensions: Path):
     compiler = checkpoint / 'rbc' / 'rbc.py'
     text = compiler.read_text()
     old = 'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize'
-    new = 'from basic_listing import normalize_listing\nfrom line_targets import resolve_missing_targets\n' + old
+    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\n' + old
     if text.count(old) != 1 or text.count('program = source.tokenize_directives(program,kw)') != 1:
         raise ValueError('RBC checkpoint changed; extension location needs review')
     text = text.replace(old, new, 1)
@@ -31,6 +31,22 @@ def prepare(checkpoint: Path, extensions: Path):
     if text.count(anchor) != 1:
         raise ValueError('RBC source reader changed')
     text = text.replace(anchor, "def _read_basic_text(src):\n    try:\n        return src.read_text(encoding='utf-8-sig')\n    except UnicodeDecodeError:\n        return src.read_text(encoding='latin-1')\n\n\n" + anchor, 1)
+    # Keep numbered blank lines such as 59 Mushroom Invasion's line 8.
+    original = (
+        "        match=re.match(r'^(\\d+)\\s+(.*)$',raw)\n"
+        "        if not match:\n"
+        "            raise ValueError(f'{src.name}: invalid BASIC text line {file_line}')\n"
+        "        number=int(match.group(1)); body=match.group(2)"
+    )
+    replacement = (
+        "        try:\n"
+        "            number, body = split_numbered_line(raw)\n"
+        "        except ValueError as exc:\n"
+        "            raise ValueError(f'{src.name}: invalid BASIC text line {file_line}') from exc"
+    )
+    if text.count(original) != 1:
+        raise ValueError('RBC text line reader changed; blank line patch needs review')
+    text = text.replace(original, replacement, 1)
     text = text.replace("source.tokenize_line(''.join(chunks),kw)",
                         "source.tokenize_line(normalize_listing(''.join(chunks)),kw)", 1)
     # The archival listing joins a string variable to THEN without a space.
