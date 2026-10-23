@@ -31,6 +31,21 @@ class CleanupTests(unittest.TestCase):
         report['inputs']=report['inputs'][:12]
         with self.assertRaises(RuntimeError): m.verify_result(report,'abc')
 
+    def test_uses_permanent_report_when_no_runs_remain(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            stored=root/m.FAST_RECORD
+            stored.parent.mkdir(parents=True)
+            body={'mode':'fast','revision':'abc','expected_inputs':13,
+                  'invalid':[],'inputs':[{'program':str(i),'ok':True} for i in range(13)]}
+            record={'source_run':41,'source_sha':'abc','mode':'fast',
+                    'expected_inputs':13,'passed_inputs':13,'result':body}
+            stored.write_text(json.dumps(record))
+            self.assertEqual(m.read_saved_result(root)['source_run'],41)
+            record['passed_inputs']=14
+            stored.write_text(json.dumps(record))
+            with self.assertRaises(RuntimeError):m.read_saved_result(root)
+
     def test_separate_permanent_full_result_path(self):
         self.assertNotEqual(m.FAST_RECORD, m.FULL_RECORD)
         self.assertEqual(m.FULL_RECORD.name, 'LATEST-RBC-FULL.json')
