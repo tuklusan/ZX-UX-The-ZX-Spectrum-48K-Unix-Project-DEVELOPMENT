@@ -58,7 +58,7 @@ _SHAPES = {
     },
 }
 
-_READ_INDEX = re.compile(r'([PBE])\s*\(\s*([^)]*?)\s*\)', re.I)
+_READ_INDEX = re.compile(r'(?<![A-Z0-9$])([PBE])\s*\(\s*([^)]*?)\s*\)', re.I)
 _WRITE = re.compile(r'\b(?:LET|INPUT|READ|FOR)\s+A\s*(?:=|[,:;]|$)', re.I)
 
 
@@ -74,14 +74,14 @@ def adapt_numeric_input_dims(program, kw, fp, source, tap):
     bodies=dict(rows)
     if len(rows)!=len(bodies):
         return program, []
-    texts={n:re.sub(r'\s+', '', _line_text(b, kw.TOKEN)).upper()
-           for n,b in rows}
+    decoded={n:_line_text(b, kw.TOKEN) for n,b in rows}
+    texts={n:re.sub(r'\s+', '', t).upper() for n,t in decoded.items()}
     name, shape=_choose(texts)
     if shape is None:
         return program, []
     wanted=shape['indices']
-    indices={n:[(a.lower(),idx.lower()) for a,idx in _READ_INDEX.findall(t)]
-             for n,t in texts.items()}
+    indices={n:[(a.lower(),idx.strip().lower()) for a,idx in _READ_INDEX.findall(t)]
+             for n,t in decoded.items()}
     indices={n:v for n,v in indices.items() if v}
     if indices != wanted:
         return program, []

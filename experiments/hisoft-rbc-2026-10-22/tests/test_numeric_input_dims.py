@@ -6,12 +6,19 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'stage'))
 from numeric_input_dims import adapt_numeric_input_dims
 
-TOKENS={0xe7:'BORDER',0xda:'PAPER',0xd9:'INK',0xe9:'DIM',0xf1:'LET',
-        0xfa:'IF',0xcb:'THEN',0xba:'INT',0xa5:'RND',0xb1:'LEN',
-        0xeb:'FOR',0xcc:'TO',0xcd:'STEP',0xf3:'NEXT',0xc1:'STR$',
-        0xec:'GO TO',0xee:'INPUT',0xf5:'PRINT',0xfe:'RETURN',
-        0xed:'GO SUB',0xc5:'OR',0xc7:'<=',0xc9:'<>',0xc8:'>=',
-        0xfb:'CLS',0xad:'TAB',0xe2:'STOP'}
+def _token_map():
+    # Decode the full Sinclair ROM keyword table, including CODE and INKEY$.
+    rom=(Path(__file__).resolve().parents[3]/'src/zx-ux-sdk/rom/48.rom').read_bytes()
+    names=[];word='';addr=0x0095
+    while len(names)<92:
+        c=rom[addr];addr+=1
+        word+=chr(c&127)
+        if c&128:
+            names.append(word.strip());word=''
+    tokens={0xa5+i:k for i,k in enumerate(names[1:])}
+    tokens[0xa3]='SPECTRUM';tokens[0xa4]='PLAY'
+    return tokens
+TOKENS=_token_map()
 class KW:
     TOKEN=TOKENS
     CODE_FOR={v:k for k,v in TOKENS.items()}
