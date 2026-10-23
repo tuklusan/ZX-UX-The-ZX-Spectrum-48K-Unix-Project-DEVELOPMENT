@@ -4,10 +4,14 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
-from frame_probe import screen_cell, screen_letters, check_udgs
+from frame_probe import screen_cell, screen_letters, GAME_KEY_PLAN, check_udgs
 
 
 class FrameDecoderTests(unittest.TestCase):
+    def test_key_sequences_follow_original_basic(self):
+        self.assertEqual(GAME_KEY_PLAN['25-galaxians'], ('z', 'x', 'm'))
+        self.assertEqual(GAME_KEY_PLAN['58-invaders'], ('5', '8', '0'))
+
     def test_interleaved_screen_cell_round_trip(self):
         screen = bytearray(6912)
         font = bytearray(768)
