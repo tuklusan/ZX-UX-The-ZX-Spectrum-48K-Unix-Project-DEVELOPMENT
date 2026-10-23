@@ -21,7 +21,7 @@ def prepare(checkpoint: Path, extensions: Path):
     if text.count(check_anchor) != 1:
         raise ValueError('RBC memory inspection location changed')
     text = text.replace(check_anchor, check_anchor +
-                        '\\n        allow_bounded_udg_loops(spectrum_tap.split_lines(program), kw.TOKEN, checks)', 1)
+                        '\n        allow_bounded_udg_loops(spectrum_tap.split_lines(program), kw.TOKEN, checks)', 1)
     # Try the compiler's in-memory line zero for a missing OPEN.
     # HiSoft needs OPEN before the first user BASIC line.
     before = '            program = source.add_directives(program, directives, True, [], kw, initial.fp)'
