@@ -28,6 +28,12 @@ def _uses_run(lines):
             pos += 1
     return False
 
+def _run_entry(lines, requested):
+    """Sinclair's next-existing-line behavior for a constant RUN target."""
+    if not isinstance(requested, int) or requested < 0 or requested >= 0x4000:
+        return None
+    return next((number for number, _ in lines if number > 0 and number >= requested), None)
+
 
 def install(compiler):
     cls = compiler.Compiler
@@ -66,10 +72,18 @@ def install(compiler):
         return initial_entry(self)
 
     def st_run(self):
-        if not self.at_end():
-            self.not_supported('RUN argument')
         if not self._zxux_run_present or not self._zxux_run_first:
             self.not_supported('RUN entry')
+        if self.at_end():
+            requested = self._zxux_run_first
+        else:
+            # The existing HiSoft parser reads the hidden numeric constant.
+            computed, requested = self.goto_target()
+            if computed:
+                self.not_supported('computed RUN line')
+        target = _run_entry(self.lines, requested)
+        if target is None:
+            self.not_supported('RUN line outside listing')
         # Z80 ED7B restores the caller's stack even after nested GO SUB.
         self.emit_op_reloc('ld sp,(nn)', self._zxux_run_sp)
         self.ld_hl(self.vars_start)
@@ -77,7 +91,7 @@ def install(compiler):
         self.emit('ld a,0')
         self.call_rt(compiler.RT.MEM_FILL)
         self.emit_restore()
-        self.emit_goto('jp nn', self._zxux_run_first)
+        self.emit_goto('jp nn', target)
 
     def dispatch(self):
         result = initial_dispatch(self)

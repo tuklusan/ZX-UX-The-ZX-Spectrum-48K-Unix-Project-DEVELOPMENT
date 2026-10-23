@@ -2,7 +2,7 @@
 import sys, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
-from native_run_rt import install, _uses_run
+from native_run_rt import install, _uses_run, _run_entry
 
 
 class FakeCompiler:
@@ -23,6 +23,8 @@ class FakeCompiler:
         return {}
     def at_end(self):
         return self.end
+    def goto_target(self):
+        return self.target
     def not_supported(self, detail):
         raise ValueError(detail)
     def emit_op_reloc(self, op, addr):
@@ -86,12 +88,49 @@ class RunTests(unittest.TestCase):
         self.assertEqual(obj.pc, 125)
         self.assertEqual(obj.calls, [('entry',)])
 
-    def test_run_arguments_rejected(self):
-        obj = Module.Compiler(12)
-        obj.reset([(1, b'\xf7 100\r')])
+    def test_run_130_restarts_at_requested_original_line(self):
+        obj = Module.Compiler(50)
+        obj.reset([(1,b'\xf5\r'),(130,b'\xe3\r'),(8030,b'\xfa\xf7 130\r')])
         obj.layout_vars()
         obj.end = False
-        with self.assertRaisesRegex(ValueError, 'RUN argument'):
+        obj.target = (False,130)
+        obj.st_run()
+        self.assertEqual(obj.calls[-1], ('goto','jp nn',130))
+        self.assertIn(('rel','ld sp,(nn)',150),obj.calls)
+        self.assertIn(('bc',49),obj.calls)
+
+    def test_missing_run_target_uses_next_existing_line(self):
+        obj = Module.Compiler()
+        obj.reset([(1,b'\xf5\r'),(130,b'\xf7 129\r'),(200,b'\xf5\r')])
+        obj.layout_vars()
+        obj.end = False
+        obj.target = (False,129)
+        obj.st_run()
+        self.assertEqual(obj.calls[-1],('goto','jp nn',130))
+
+    def test_run_entry_bounds(self):
+        lines = [(1,b''),(130,b''),(200,b'')]
+        self.assertEqual(_run_entry(lines, 0),1)
+        self.assertEqual(_run_entry(lines,129),130)
+        for invalid in (-1, 0x4000, 9999, 1.5, None):
+            self.assertIsNone(_run_entry(lines, invalid))
+
+    def test_computed_run_target_rejected(self):
+        obj = Module.Compiler(12)
+        obj.reset([(1, b'\xf7 X\r')])
+        obj.layout_vars()
+        obj.end = False
+        obj.target = (True,None)
+        with self.assertRaisesRegex(ValueError, 'computed RUN line'):
+            obj.st_run()
+
+    def test_past_final_line_rejected(self):
+        obj = Module.Compiler(12)
+        obj.reset([(1, b'\xf7 9999\r')])
+        obj.layout_vars()
+        obj.end = False
+        obj.target = (False,9999)
+        with self.assertRaisesRegex(ValueError, 'RUN line outside listing'):
             obj.st_run()
 
     def test_install_is_repeatable(self):
