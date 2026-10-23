@@ -10,7 +10,7 @@ def prepare(checkpoint: Path, extensions: Path):
     compiler = checkpoint / 'rbc' / 'rbc.py'
     text = compiler.read_text()
     old = 'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize'
-    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom pause_zero import rewrite_pause_zero\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, restore, append_slots\n' + old
+    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom pause_zero import rewrite_pause_zero\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
     if text.count(old) != 1 or text.count('program = source.tokenize_directives(program,kw)') != 1:
         raise ValueError('RBC checkpoint changed; extension location needs review')
     text = text.replace(old, new, 1)
@@ -68,6 +68,30 @@ def prepare(checkpoint: Path, extensions: Path):
     if text.count(original_target) != 1:
         raise ValueError('RBC SSX1 variable relocation changed; review needed')
     text = text.replace(original_target, replacement_target, 1)
+    # Retain the upstream line-table/search implementation for computed jumps.
+    # Enable it only on the upstream compiler's existing diagnostic.
+    exact = (
+        '        builds=[]\n'
+        '        for n,top in enumerate((ramtop,ramtop-389,ramtop-617)):',
+        '            c=compiler.Compiler(img,rom,ramtop=top)\n'
+        '            res=c.compile_whole(program)',
+    )
+    substitutions = (
+        '        builds=[]\n'
+        '        computed_line_compiler = None\n'
+        '        for n,top in enumerate((ramtop,ramtop-389,ramtop-617)):',
+        '            c=(computed_line_compiler or compiler.Compiler)(img,rom,ramtop=top)\n'
+        '            res=c.compile_whole(program)\n'
+        "            if (not res.ok and res.detail == 'computed line number'\n"
+        '                    and computed_line_compiler is None):\n'
+        '                computed_line_compiler = compiler_with_computed_lines(compiler.Compiler)\n'
+        '                c=computed_line_compiler(img,rom,ramtop=top)\n'
+        '                res=c.compile_whole(program)',
+    )
+    for before, after in zip(exact, substitutions):
+        if text.count(before) != 1:
+            raise ValueError('RBC compiler loop changed; computed lookup needs review')
+        text = text.replace(before, after, 1)
     # Initialise the program with the 48K BASIC printer colours, but return
     # the surrounding ZX-UX display defaults when this program exits.
     startup_anchors = (
@@ -98,6 +122,7 @@ def prepare(checkpoint: Path, extensions: Path):
     shutil.copyfile(extensions / 'pause_zero.py', checkpoint / 'rbc' / 'pause_zero.py')
     shutil.copyfile(extensions / 'bss_layout.py', checkpoint / 'rbc' / 'bss_layout.py')
     shutil.copyfile(extensions / 'startup_colors.py', checkpoint / 'rbc' / 'startup_colors.py')
+    shutil.copyfile(extensions / 'computed_lines.py', checkpoint / 'rbc' / 'computed_lines.py')
     compiler.write_text(text)
 
 
