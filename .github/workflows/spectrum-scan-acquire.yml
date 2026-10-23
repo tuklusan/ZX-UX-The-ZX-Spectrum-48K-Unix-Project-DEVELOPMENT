@@ -1,8 +1,6 @@
 name: Spectrum listing scan acquisition
 
 on:
-  push:
-    branches: [research/typein-scans-20261023]
   workflow_dispatch:
 
 permissions:
