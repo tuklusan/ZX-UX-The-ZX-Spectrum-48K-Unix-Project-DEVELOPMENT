@@ -8,8 +8,8 @@ scratch directory, installed tool or previous chat container may be assumed to e
 
 Checkpoint push was verified at commit
 `b2197a886b9bb270db7c6ee269b7d0fbb758ff3e`, tree
-`758a458c8efb8b57ac8d99248e7ec051b6b6757a`. This handover is to be
-published in a subsequent commit, so read the newer branch head on restart.
+`758a458c8efb8b57ac8d99248e7ec051b6b6757a`. This handover and the archived full runner outputs were published after that
+checkpoint, so read the newer branch head on restart.
 Do not reset to the checkpoint or overwrite intervening changes.
 
 Current complete runnable source checkpoint:
@@ -84,6 +84,13 @@ valid BASIC where the next-line behavior applies, not as missing source.
   its restricted-word list remain private outside GitHub. Never weaken it.
 - Nine focused tests passed locally: missing-line jumps, text keyword handling,
   8x8 font conversion, and string/comment handling.
+- Complete, permanent five-shard run bundle:
+  `experiments/hisoft-rbc-2026-10-22/rbc-run-39878801410-results.zip`.
+  SHA256: `3d5b45ae2c09f3346bb19792b76ea74353a2d799ce50db38463d01c587b5445c`.
+  Size: 138,165 bytes; 126 members. The full checker passed the ZIP.
+  It preserves all five raw per-input result JSON files, individual build
+  reports, generated SSX1 output and actual runner PNG captures. This closes
+  the earlier risk of temporary GitHub runner outputs expiring.
 - GitHub Actions run `39878801410` succeeded on all five shards at commit
   `5a5e0ee2ec1b77c4fa49fa3f0361e7718d87d6d9`.
   Compilation counts were shard 0: 7/25; shard 1: 1/24; shard 2: 4/24;
@@ -91,9 +98,9 @@ valid BASIC where the next-line behavior applies, not as missing source.
   121 tested**, not 121 passes. That workflow deliberately collects per-input
   errors without failing its run for every unsupported BASIC program. A green
   runner does not establish full BASIC source coverage or game parity.
-  Its five runner archives retain `.json`, `.ssx`, screenshot and source
-  outputs, but runner downloads are temporary. The saved GitHub ZIP supplies
-  persistent core files and some test outputs.
+  The new permanent run ZIP preserves the compiler outputs and display
+  captures from all five shards; the checkpoint ZIP keeps the source and
+  tests. Temporary runner downloads are no longer needed to resume.
 - Current text and tape versions compiled locally with the full fork:
   Galaxians text: 7,080 HiSoft bytes -> 9,115-byte SSX1, 1,011 relocations;
   Galaxians tape: 7,132 -> 9,173-byte SSX1, 1,017 relocations;
