@@ -1,0 +1,41 @@
+name: Spectrum Show type-in acquisition
+
+on:
+  push:
+    branches:
+      - typeins-spectrum-show-20261023
+    paths:
+      - .github/workflows/spectrum-show-typeins.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Check out runner code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download and convert listed tapes
+        id: download
+        continue-on-error: true
+        run: python3 tools/spectrum-show-typeins.py --output typeins_output
+      - name: Save all downloaded files and failure logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-show-typeins-${{ github.run_id }}
+          path: typeins_output/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Fail on incomplete downloads
+        if: steps.download.outcome != 'success'
+        run: |
+          echo 'At least one download failed. See the uploaded index.json.'
+          exit 1
