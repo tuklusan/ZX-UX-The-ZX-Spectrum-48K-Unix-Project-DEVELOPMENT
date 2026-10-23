@@ -46,11 +46,37 @@ def normalize_listing(body: str) -> str:
                 out.append(' THEN ')
                 i += 4
                 continue
-            if body.startswith('TO', i) and re.search(
-                r'\bFOR\s+[A-Za-z]\s*=\s*[A-Za-z]$', prior, re.I
-            ):
+            # The original token can touch the last operand of a FOR
+            # expression, including a product rather than just one variable.
+            if (body.startswith('TO', i) and i > 0 and
+                    (body[i - 1].isalnum() or body[i - 1] == ')') and
+                    (i + 2 == len(body) or not body[i + 2].isalpha()) and
+                    re.search(r'\bFOR\s+[A-Za-z]\s*=\s*.+$', prior, re.I)):
                 out.append(' TO ')
                 i += 2
+                continue
+            # A FOR loop's STEP token can also touch the limit variable.
+            if (body.startswith('STEP', i) and i > 0 and
+                    (body[i - 1].islower() or body[i - 1] == ')') and
+                    (i + 4 == len(body) or not body[i + 4].isalpha()) and
+                    re.search(r'\bFOR\s+[A-Za-z]\s*=\s*.+$', prior, re.I)):
+                out.append(' STEP ')
+                i += 4
+                continue
+            # In IF expressions an uppercase operator may be joined to a
+            # lowercase variable: mAND d1, not the identifier BAND.
+            for operator in ('AND', 'OR'):
+                if (body.startswith(operator, i) and i > 0 and
+                        (body[i - 1].islower() or body[i - 1] == ')') and
+                        (i + len(operator) == len(body) or
+                         not body[i + len(operator)].isalpha()) and
+                        re.search(r'\bIF\b', prior, re.I)):
+                    out.append(' ' + operator + ' ')
+                    i += len(operator)
+                    break
+            else:
+                operator = None
+            if operator is not None:
                 continue
             if c == ':':
                 out.append(c)

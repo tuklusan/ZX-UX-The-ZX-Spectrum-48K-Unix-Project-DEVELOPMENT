@@ -17,6 +17,24 @@ class ListingBoundaries(unittest.TestCase):
         self.assertIn('=U TO  P', result)
         self.assertIn('=U THEN  NEXT', result)
 
+    def test_biorhythms_original_keyword_boundaries(self):
+        self.assertIn('p*c TO  (p*c)',
+                      normalize_listing('FOR n=p*cTO (p*c)+255'))
+        self.assertIn('m AND  d1',
+                      normalize_listing('IF m1=mAND d1=dTHEN GO SUB 5000'))
+        self.assertIn('e*c TO  (e*c)',
+                      normalize_listing('FOR n=e*cTO (e*c)+255'))
+        self.assertIn('ni STEP  tw',
+                      normalize_listing('FOR y=d(x)TO niSTEP tw'))
+
+    def test_no_split_inside_identifiers_or_strings(self):
+        s = 'FOR n=TOTAL:IF BAND=3THEN LET TOMORROW=4:REM FOR x=p*cTO 8'
+        result = normalize_listing(s)
+        self.assertIn('FOR n=TOTAL:', result)
+        self.assertIn('IF BAND=3', result)
+        self.assertIn('LET TOMORROW=4', result)
+        self.assertIn('REM FOR x=p*cTO 8', result)
+
     def test_strings_and_rem_not_rewritten(self):
         line='PRINT "IF aTHEN FOR X=UTO P":REM IF aTHEN FOR X=UTO P'
         self.assertEqual(normalize_listing(line), line)
