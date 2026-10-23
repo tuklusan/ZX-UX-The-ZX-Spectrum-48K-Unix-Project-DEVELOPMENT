@@ -152,7 +152,7 @@ class Frame:
 
 
 class Machine:
-    def __init__(self, rom=None, ula_issue=3):
+    def __init__(self, rom=None, ula_issue=2):
         if ula_issue not in (2, 3):
             raise ValueError('ULA issue must be 2 or 3')
         self.ula_issue = ula_issue

@@ -19,6 +19,13 @@ class UlaEarTests(unittest.TestCase):
         m._out(0x00FE, 0x18)
         self.assertEqual(m._in(0xFEFE), 0xFB)
 
+    def test_default_is_issue_2(self):
+        m = Machine()
+        self.assertEqual(m.ula_issue, 2)
+        m.press({'x'})
+        m._out(0x00FE, 0x08)
+        self.assertEqual(m._in(65278), 251)
+
     def test_issue_2_mic_feedback(self):
         m = Machine(ula_issue=2)
         m.press({'x'})
