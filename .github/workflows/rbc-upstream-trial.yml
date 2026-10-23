@@ -278,7 +278,8 @@ jobs:
             trial-result/rbc-movement/*.png
             trial-result/rbc-native-pause-controls/*.json
             trial-result/rbc-native-pause-controls/*.png
-          retention-days: 1  summarize:
+          retention-days: 1
+  summarize:
     if: always()
     needs: [prepare, trial]
     runs-on: ubuntu-latest
