@@ -1,4 +1,4 @@
-"""Specialize only literal array sizes that dominate the next DIM-only line."""
+"""Specialize array sizes with a proven preceding literal assignment."""
 from __future__ import annotations
 import re
 from udg_bounds import _line_text
@@ -8,6 +8,8 @@ _DIM_LINE = re.compile(r'^\s*DIM\s+[a-z]\$?\s*\(\s*([a-z])\s*\)(?:\s*:\s*DIM\s+[
 _JUMP = re.compile(r'\bGO\s*(?:TO|SUB)\s+(\d+)\b',re.I)
 _JUMP_ANY = re.compile(r'\bGO\s*(?:TO|SUB)\b',re.I)
 _DIM_TOKEN = 0xE9
+_SAFE_DIM = re.compile(r'^\s*DIM\s+[a-z]\$?\s*\(\s*(?:\d+|[a-z])\s*\)(?:\s*:\s*DIM\s+[a-z]\$?\s*\(\s*(?:\d+|[a-z])\s*\))*\s*$',re.I)
+_SAFE_LET = re.compile(r'^\s*LET\s+([a-z])\$?\s*=\s*(?:\d+|\"[^\"]*\")\s*$',re.I)
 
 
 def specialize_literal_dims(program, kw, fp, source, tap):
@@ -15,11 +17,29 @@ def specialize_literal_dims(program, kw, fp, source, tap):
     decoded = [(n,_line_text(body, kw.TOKEN)) for n,body in rows]
     changed={};proof=[]
     for i in range(1,len(rows)):
-        prev, text = decoded[i-1]
         num, statement = decoded[i]
-        value=_ASSIGN.fullmatch(text)
         dims=_DIM_LINE.fullmatch(statement)
-        if value is None or dims is None or value[1].lower()!=dims[1].lower():
+        if dims is None:
+            continue
+        wanted=dims[1].lower()
+        # Scan only a short, straight-line setup. A different command,
+        # a write to the dimension variable, or a branch blocks the proof.
+        value=None
+        prev=None
+        for j in range(i-1,max(-1,i-7),-1):
+            line, earlier=decoded[j]
+            maybe=_ASSIGN.fullmatch(earlier)
+            if maybe and maybe[1].lower()==wanted:
+                value=maybe
+                prev=line
+                break
+            safe_let=_SAFE_LET.fullmatch(earlier)
+            if _SAFE_DIM.fullmatch(earlier):
+                continue
+            if safe_let and safe_let[1].lower()!=wanted:
+                continue
+            break
+        if value is None:
             continue
         if not (1 <= int(value[2]) <= 1024):
             continue
