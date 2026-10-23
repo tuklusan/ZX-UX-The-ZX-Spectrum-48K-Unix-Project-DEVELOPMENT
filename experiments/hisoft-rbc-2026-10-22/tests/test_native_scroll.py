@@ -59,11 +59,23 @@ class ScrollTests(unittest.TestCase):
         self.assertEqual(changed,[100])
 
     def test_no_change_to_other_system_addresses(self):
-        for code in [b'23658,255',b'23692,0',b'23692,-1',b'23692,X',b'23700,255']:
+        for code in [b'23658,255',b'23692,0',b'23692,-2',b'23692,X',b'23700,255']:
             src=bytes([POKE])+code+b'\r'
             rows,changed=self.update([(10,src)])
             self.assertEqual(rows,[(10,src)])
             self.assertEqual(changed,[])
+
+    def test_negative_one_is_exact_byte_255(self):
+        # Sinclair BASIC adds 256 to negative POKE values; -1 writes 255.
+        statement=bytes([POKE])+b'23692,-1'
+        src=statement+b':PRINT AT 21,0;" "\r'
+        rows,changed=self.update([(3015,src)])
+        self.assertEqual(rows,[(3015,b'PRINT AT 21,0;" "\r')])
+        self.assertEqual(changed,[3015])
+        conditional=b'IF n=1 THEN '+statement+b'\r'
+        rows,changed=self.update([(30,conditional)])
+        self.assertEqual(rows,[(30,conditional)])
+        self.assertEqual(changed,[])
 
     def test_keep_conditional_and_quoted_text(self):
         src=b'IF Z=1 THEN '+bytes([POKE])+b'23692,255:PRINT "x:y"\r'
