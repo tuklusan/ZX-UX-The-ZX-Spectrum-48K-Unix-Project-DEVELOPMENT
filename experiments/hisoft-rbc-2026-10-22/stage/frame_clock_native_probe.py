@@ -34,8 +34,22 @@ def probe(root: Path, binary: Path, control: str, budget: int=4800):
         original=runner.session.m.hooks[sysaddr]
         def inspect_call(machine):
             if machine.cpu.a == 38:
-                state['tick_calls'].append({'frame':machine.frame,
-                                             'after_start':runner.fg.started is not None})
+                tick_event={'frame':machine.frame,
+                            'after_start':runner.fg.started is not None}
+                state['tick_calls'].append(tick_event)
+                sp=machine.cpu.sp
+                return_address=machine.mem[sp] | (machine.mem[(sp+1)&65535]<<8)
+                old_return_hook=machine.hooks.get(return_address)
+                def measure_return(mm):
+                    # Remove the hook on its first invocation. Otherwise
+                    # a hot game loop would count thousands of false returns.
+                    if old_return_hook is None:
+                        mm.hooks.pop(return_address,None)
+                    else:
+                        mm.hooks[return_address]=old_return_hook
+                    tick_event['ticks_returned']=(mm.cpu.h<<8)|mm.cpu.l
+                    return old_return_hook(mm) if old_return_hook else False
+                machine.hooks[return_address]=measure_return
             return original(machine)
         runner.session.m.hooks[sysaddr]=inspect_call
         initial=None
@@ -64,9 +78,15 @@ def probe(root: Path, binary: Path, control: str, budget: int=4800):
         state['keypresses_sent']=sent
         state['foreground_ended']=runner.fg.ended
         state['foreground_status']=runner.fg.status
-        state['tick_calls_after_start']=sum(x['after_start'] for x in state['tick_calls'])
-        if state['tick_calls_after_start']:
-            state['validation']='native-kernel-tick-syscall-observed'
+        native_calls=[x for x in state['tick_calls'] if x['after_start']]
+        ticks=[x['ticks_returned'] for x in native_calls if 'ticks_returned' in x]
+        state['tick_calls_after_start']=len(native_calls)
+        state['distinct_returned_ticks']=len(set(ticks))
+        state['timer_measurement_passed']=(first_start is not None
+            and state['screen_changed'] and len(native_calls)>=3
+            and len(ticks)==len(native_calls) and len(set(ticks))>=2)
+        if state['timer_measurement_passed']:
+            state['validation']='native-tick-values-advance-with-gameplay'
     except Exception as exc:
         state['error']=type(exc).__name__+': '+str(exc)
     return state
@@ -92,8 +112,20 @@ def main():
     path.write_text(json.dumps(results,indent=2)+'\n')
     for item in results:
         print('CLOCK_NATIVE',json.dumps(item),flush=True)
-    # Diagnostics do not claim a pass without seeing genuine syscall events;
-    # scorekeeping remains the strict compiler/native-start checks.
+    # Put native execution readings beside the corresponding per-input record.
+    shard_records=args.trial/f'rbc-60-results-shard-{args.shard}.json'
+    if shard_records.exists():
+        rows=json.loads(shard_records.read_text())
+        for item in results:
+            for row in rows:
+                if row['program']==item['program'].removesuffix('.ssx'):
+                    row['frame_clock_native']=item
+        shard_records.write_text(json.dumps(rows,indent=2)+'\n')
+    failures=[item for item in results if item.get('validation')!='not-run'
+              and not item.get('timer_measurement_passed')]
+    if failures:
+        raise RuntimeError('Native game frame clock did not advance: '+
+                           ', '.join(x['program'] for x in failures))
 
 if __name__=='__main__':
     main()
