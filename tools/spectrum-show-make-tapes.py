@@ -95,13 +95,46 @@ def build_tzx(blocks):
     return bytes(tzx)
 
 
-def write_source(out, name, text):
+KNOWN_REPAIRS = {
+    '13-firefoxcomplete--FireFoxComplete.bas': 'aae1e57b0376d1f4acf795e70320cb87e26a0580cd7b3123fc3f75cc69a059fd',
+    '14-outlander--Outlander.bas': '5ba9be2d78e46bf030a62cd2079434be4767af5e39e7ef6e5d5ad7aefc9ef870',
+    '31-galactoids--Galactoids.bas': '3124a9a3b3e1ca3f7dd8e3914a40f6130f0e0e306e91c79f847c69212ae45d50',
+}
+
+
+def prepare_listing(name, raw):
+    """Apply three explicit, logged repairs to unchanged SkoolKit source dumps."""
+    if name not in KNOWN_REPAIRS:
+        return raw, []
+    actual=hashlib.sha256(raw.encode('utf-8')).hexdigest()
+    if actual != KNOWN_REPAIRS[name]:
+        raise ValueError(f'Snapshot text changed: {name}, expected {KNOWN_REPAIRS[name]}, found {actual}')
+    if name.startswith('13-firefox'):
+        before='3000 RESTORE : INPUT ("You scored ";s;" Another game ?");a$'
+        after='3000 RESTORE : INPUT "You scored ";s;" Another game ?";a$'
+        if raw.count(before)!=1:raise ValueError('Cannot locate INPUT line')
+        return raw.replace(before,after), ['Replaced parenthesized INPUT prompt with equivalent ungrouped INPUT form for the strict compiler']
+    if name.startswith('14-outlander'):
+        lines=raw.splitlines()
+        if len(lines)<4 or not all(x.lstrip().startswith('0 REM ') for x in lines[:4]):
+            raise ValueError('Expected four duplicate zero-numbered comment lines')
+        one='   0 REM '+' | '.join(x.split('REM ',1)[1].strip() for x in lines[:4])
+        return '\n'.join([one]+lines[4:])+'\n',['Combined four zero-numbered REM comment lines; BASIC commands unchanged']
+    if name.startswith('31-galactoids'):
+        lines=raw.splitlines()
+        if len(lines)<2 or not lines[-2].lstrip().startswith('660 DATA 62,254,219,254') or not lines[-1].startswith('15874 '):
+            raise ValueError('Expected damaged final snapshot BASIC line')
+        return '\n'.join(lines[:-2]+[' 660 DATA 62,254,219,254'])+'\n', ['Damaged line 660 and unparseable remainder replaced by its readable DATA prefix; program is incomplete']
+    raise ValueError('Unexpected listed repair')
+
+
+def write_source(out, name, text, build_text):
     path = out/'basic-original'/name
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(text, encoding='utf-8')
     normalized=out/'basic-for-zmakebas'/name
     normalized.parent.mkdir(parents=True,exist_ok=True)
-    normalized.write_text(normalize_listing(text), encoding='utf-8')
+    normalized.write_text(normalize_listing(build_text), encoding='utf-8')
     return path,normalized
 
 
@@ -158,8 +191,14 @@ def main():
             record_issue(rec,'name_collision','Duplicate output filename: '+name)
             records.append(rec);continue
         known.add(name)
-        raw,normalized=write_source(out,name,text)
-        check=validate_line_numbers(text)
+        try:
+            build_text,adjustments=prepare_listing(name,text)
+        except Exception as e:
+            record_issue(rec,'repair_failed',str(e))
+            records.append(rec);print('REPAIR FAIL',name,rec['error'],flush=True);continue
+        rec['adjustments']=adjustments
+        raw,normalized=write_source(out,name,text,build_text)
+        check=validate_line_numbers(build_text)
         rec.update({'raw_bas_sha256':hash_file(raw),'normalized_bas_sha256':hash_file(normalized),
                     'line_check':check})
         if 'error' in check:
@@ -180,7 +219,9 @@ def main():
                 tzx=out/'tzx'/Path(name).with_suffix('.tzx')
                 tzx.parent.mkdir(parents=True,exist_ok=True)
                 tzx.write_bytes(build_tzx(blocks))
-                rec.update({'status':'compiled_not_run','tap_sha256':hash_file(tap),
+                result_status = ('compiled_partial' if name.startswith('31-galactoids') else
+                                 'compiled_with_adjustments' if adjustments else 'compiled_not_run')
+                rec.update({'status':result_status,'tap_sha256':hash_file(tap),
                             'tzx_sha256':hash_file(tzx),'tap_blocks':len(blocks),
                             'tap_file':str(tap.relative_to(out)),'tzx_file':str(tzx.relative_to(out))})
         except Exception as e:
@@ -189,13 +230,14 @@ def main():
         records.append(rec)
 
     statuses=Counter(r['status'] for r in records)
+    total_tapes=sum(1 for r in records if r['status'].startswith('compiled_'))
     report={'source_url':'https://www.thespectrumshow.net/type-in-games.html',
             'generation_utc':datetime.now(timezone.utc).isoformat(),
             'zmakebas_repo':'https://github.com/tuklusan/zmakebas-plus',
             'zmakebas_commit':ns.tool_sha,
             'source_run':'GitHub Actions run 39986062137',
             'snapshot_count':len(origs),'source_tape_listings':len(originals),
-            'records':records,'status_counts':dict(statuses),
+            'records':records,'status_counts':dict(statuses), 'tape_count':total_tapes,
             'note':'Generated TAP/TZX has BASIC content only. No Spectrum Fuse run or complete game check was performed. Snapshot machine code, variables and runtime state are not restored by BASIC-only tapes. ZX81 .z81 game snapshot is separate from the Spectrum set.'}
     (out/'build-report.json').write_text(json.dumps(report,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
     (out/'README.txt').write_text(
@@ -203,8 +245,11 @@ def main():
         f'Original Z80 snapshot programs: {len(origs)}\n'
         f'Existing tape-extracted BASIC programs: {len(originals)}\n'
         f'Total candidate listings: {len(inputs)}\n'
-        f'TAP and TZX converted: {statuses["compiled_not_run"]}\n'
-        f'Failures: {len(records)-statuses["compiled_not_run"]}\n\n'
+        f'TAP and TZX converted: {total_tapes}\n'
+        f'Untouched listings compiled: {statuses["compiled_not_run"]}\n'
+        f'Listings needing repair: {statuses["compiled_with_adjustments"]}\n'
+        f'Damaged snapshot partial tape: {statuses["compiled_partial"]}\n'
+        f'Failures: {len(records)-total_tapes}\n\n'
         'basic-original/       Raw SkoolKit text listings or original tape BASIC dumps\n'
         'basic-for-zmakebas/  Plain text, with graphic and byte notation adjusted\n'
         'tap/                  TAP files built using zmakebas-plus\n'
@@ -217,7 +262,7 @@ def main():
     with ZipFile(bundle,'w',compression=ZIP_DEFLATED,compresslevel=8) as z:
         for file in sorted(out.rglob('*')):
             if file.is_file():z.write(file,file.relative_to(out))
-    print('SUMMARY',dict(statuses),'bundle',bundle,'bytes',bundle.stat().st_size,flush=True)
+    print('SUMMARY',dict(statuses),'tapes',total_tapes,'bundle',bundle,'bytes',bundle.stat().st_size,flush=True)
     return 0
 
 if __name__=='__main__':sys.exit(main())
