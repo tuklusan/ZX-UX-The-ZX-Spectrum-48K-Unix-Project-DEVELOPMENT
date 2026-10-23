@@ -117,8 +117,23 @@ def allow_bounded_udg_loops(lines, token_names, findings):
                     m = _OFFSET.match(addr)
                     if m and m.group(2).lower() == variable:
                         allowed.add(id(item))
+    paired_pointers = set()
     for item in findings:
         if id(item) in allowed:
             item.severity = 'info'
             item.classification = 'bounded_process_udg_write'
+            expr = item.expression.strip()
+            if re.match(r'^USR\b', expr, re.I):
+                paired_pointers.add((item.line, expr[3:].strip()))
+    # A parenthesized glyph address can look like a numeric USR call in
+    # the old scanner. Accept it only when it belongs to a proven POKE.
+    glyph_address = re.compile(
+        r'^\(\s*"[a-u]"\s*\)\s*\+\s*[a-z]\s*,', re.I)
+    for item in findings:
+        if (item.operation == 'USR' and
+                item.classification == 'raw_machine_code_address' and
+                (item.line, item.expression.strip()) in paired_pointers and
+                glyph_address.match(item.expression)):
+            item.severity = 'info'
+            item.classification = 'process_udg_pointer'
     return len(allowed)
