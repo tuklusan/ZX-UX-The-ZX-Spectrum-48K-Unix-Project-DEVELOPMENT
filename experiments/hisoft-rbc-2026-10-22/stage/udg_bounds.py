@@ -38,7 +38,7 @@ _FOR_OFFSET = re.compile(r'\bFOR\s+([a-z])\s*=\s*0\s*TO\s*7\b', re.I)
 _POINTER = re.compile(r'^\s*([a-z])\s*,', re.I)
 _OFFSET = re.compile(
     r'^\s*USR\s*\(?\s*"([a-u])"\s*\)?\s*\+\s*([a-z])\s*,', re.I)
-_FLOW = re.compile(r'\b(?:GO\s*TO|GO\s*SUB|RETURN|STOP|RUN|CONTINUE|IF|NEXT)\b', re.I)
+_FLOW = re.compile(r'\b(?:GO\s*TO|GO\s*SUB|RETURN|STOP|RUN|CONTINUE|NEXT)\b', re.I)
 _GOTO = re.compile(r'\bGO\s*(?:TO|SUB)\s+(\d+)\b', re.I)
 _NEXT = re.compile(r'\bNEXT\s+([a-z])\b', re.I)
 
@@ -56,6 +56,15 @@ def allow_bounded_udg_loops(lines, token_names, findings):
     for _, text in decoded:
         targets.update(int(m.group(1)) for m in _GOTO.finditer(text))
     allowed = set()
+    # A literal glyph plus a fixed byte offset is safe even outside a FOR.
+    literal = re.compile(r'^USR\s*\(\s*"([a-u])"\s*\)\s*'
+                         r'(?:\+\s*(\d+))?\s*,', re.I)
+    for item in findings:
+        if item.operation != 'POKE' or item.classification != 'unbounded_memory_write':
+            continue
+        match = literal.match(item.expression.strip())
+        if match and (match.group(2) is None or int(match.group(2)) <= 7):
+            allowed.add(id(item))
     for start, (line, text) in enumerate(decoded):
         candidates = []
         for match in _FOR_POINTER.finditer(text):
@@ -67,7 +76,7 @@ def allow_bounded_udg_loops(lines, token_names, findings):
             candidates.append((match.group(1).lower(), 'offset'))
         for variable, kind in candidates:
             end = None
-            for j in range(start, min(len(decoded), start + 5)):
+            for j in range(start, min(len(decoded), start + 26)):
                 if j > start and _FOR_POINTER.search(decoded[j][1]):
                     break
                 if j > start and _FOR_OFFSET.search(decoded[j][1]):
@@ -87,7 +96,7 @@ def allow_bounded_udg_loops(lines, token_names, findings):
                 continue
             # No conditional branches or early exits inside these simple loops.
             if any(_FLOW.search(t) and (i != len(span)-1 or re.search(
-                    r'\b(?:GO\s*TO|GO\s*SUB|RETURN|STOP|RUN|CONTINUE|IF)\b', t, re.I))
+                    r'\b(?:GO\s*TO|GO\s*SUB|RETURN|STOP|RUN|CONTINUE)\b', t, re.I))
                    for i, (_, t) in enumerate(span)):
                 continue
             if any(re.search(r'\bLET\s+' + re.escape(variable) + r'\b\s*=', t, re.I)
@@ -128,7 +137,7 @@ def allow_bounded_udg_loops(lines, token_names, findings):
     # A parenthesized glyph address can look like a numeric USR call in
     # the old scanner. Accept it only when it belongs to a proven POKE.
     glyph_address = re.compile(
-        r'^\(\s*"[a-u]"\s*\)\s*\+\s*[a-z]\s*,', re.I)
+        r'^\(\s*"[a-u]"\s*\)\s*(?:\+\s*(?:[a-z]|\d+))?\s*,', re.I)
     for item in findings:
         if (item.operation == 'USR' and
                 item.classification == 'raw_machine_code_address' and
