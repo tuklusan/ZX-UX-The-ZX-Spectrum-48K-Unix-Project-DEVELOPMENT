@@ -54,8 +54,11 @@ def resolve_missing_targets(program: bytes, keywords, fp):
                 end = i
                 if i + 6 <= len(body) and body[i] == 0x0e:
                     end = i + 6
-                # Never alter expressions such as GO TO 100+X.
-                if begin < digits_end and (end == len(body) or body[end] in (13, 58)):
+                # Spaces after a constant do not make it a computed jump.
+                delimiter = end
+                while delimiter < len(body) and body[delimiter] == 32:
+                    delimiter += 1
+                if begin < digits_end and (delimiter == len(body) or body[delimiter] in (13, 58)):
                     target = int(body[begin:digits_end])
                     at = bisect_left(numbers, target)
                     if at < len(numbers) and numbers[at] != target:
@@ -63,8 +66,9 @@ def resolve_missing_targets(program: bytes, keywords, fp):
                         out.extend(body[spaces:begin])
                         import source
                         out.extend(source.hide_numbers(str(replacement).encode('ascii'), fp))
+                        out.extend(body[end:delimiter])
                         changed.append((line_number, target, replacement))
-                        i = end
+                        i = delimiter
                         continue
                 out.extend(body[spaces:end])
                 i = end
