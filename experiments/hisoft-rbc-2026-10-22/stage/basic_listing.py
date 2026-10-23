@@ -44,4 +44,5 @@ def normalize_listing(body: str) -> str:
                 continue
         out.append(c)
         i += 1
-    return ''.join(out)
+    # The Spectrum's power/arrow glyph is code 94 in both text and tape.
+    return ''.join(out).replace('\u2191', '^')
