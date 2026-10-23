@@ -1,0 +1,119 @@
+name: Spectrum 48K magazine BASIC tape checks
+on:
+  push:
+    branches: [research/typein-scans-20261023]
+    paths:
+      - 'recovery/typein-48k/**'
+      - '.github/workflows/spectrum-typein-48k.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check-and-capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout Sinclair BASIC checker
+        uses: actions/checkout@v4
+        with:
+          repository: tuklusan/zmakebas-plus
+          path: tools/zmakebas-plus
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build checker
+        run: |
+          cd tools/zmakebas-plus
+          npm ci --no-audit --no-fund
+          npm run build:cli
+      - name: Install 48K emulator
+        run: |
+          sudo add-apt-repository -y universe
+          sudo add-apt-repository -y multiverse
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends fuse-emulator-sdl spectrum-roms xvfb xdotool imagemagick zip
+          find /usr/share -name 48.rom -print
+      - name: Validate tapes and capture independent Fuse screens
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/tapes output/screens output/logs output/rejected
+          rom="$(find /usr/share -type f -name 48.rom | head -1)"
+          test -s "$rom"
+          : > output/logs/results.csv
+          echo 'program,checker,tape,fuse,screenshot' > output/logs/results.csv
+          x=91
+          for src in recovery/typein-48k/programs/*.bas; do
+            name="$(basename "$src" .bas)"
+            if ! node tools/zmakebas-plus/dist-cli/zmakebas.js -o "output/tapes/$name.tap" "$src" >"output/logs/$name-checker.txt" 2>&1; then
+              cp "$src" "output/rejected/$name.bas"
+              echo "$name,fail,no,not-run,no" >> output/logs/results.csv
+              continue
+            fi
+            if ! python3 recovery/typein-48k/scripts/zx_basic_tape.py convert "output/tapes/$name.tap" "output/tapes/$name.tzx" >>"output/logs/$name-checker.txt" 2>&1; then
+              echo "$name,pass,fail,not-run,no" >> output/logs/results.csv
+              continue
+            fi
+            python3 recovery/typein-48k/scripts/zx_basic_tape.py inspect "output/tapes/$name.tzx" >"output/logs/$name-tape.json"
+            mkdir -p "output/screens/$name"
+            export DISPLAY=":$x"
+            Xvfb "$DISPLAY" -screen 0 1024x768x24 -nolisten tcp -ac >"output/logs/$name-xvfb.log" 2>&1 &
+            xpid=$!
+            sleep 1
+            SDL_VIDEODRIVER=x11 SDL_AUDIODRIVER=dummy fuse-sdl --machine 48 --speed 100 --no-sound --no-auto-load --traps --rom-48 "$rom" --tape "$(pwd)/output/tapes/$name.tzx" >"output/logs/$name-fuse.log" 2>&1 &
+            fpid=$!
+            sleep 3
+            win="$(xdotool search --onlyvisible --name '[Ff]use' | head -1 || true)"
+            if [[ -z "$win" ]]; then
+              echo "$name,pass,pass,no,no" >> output/logs/results.csv
+            else
+              xdotool windowfocus "$win" || true
+              import -window "$win" "output/screens/$name/01-boot.png" || true
+              xdotool key --clearmodifiers j ctrl+p ctrl+p Return
+              sleep 8
+              import -window "$win" "output/screens/$name/02-after-load.png" || true
+              xdotool key --clearmodifiers r Return
+              sleep 4
+              import -window "$win" "output/screens/$name/03-after-run.png" || true
+              if [[ "$name" == 'spectrum-says' ]]; then
+                xdotool type --clearmodifiers --delay 90 '1'
+                xdotool key Return
+                sleep 4
+                import -window "$win" "output/screens/$name/04-after-skill.png" || true
+                xdotool key --clearmodifiers space
+                sleep 4
+                import -window "$win" "output/screens/$name/05-after-play-key.png" || true
+              fi
+              count="$(find "output/screens/$name" -name '*.png' -size +500c | wc -l)"
+              if [[ "$count" -ge 3 ]]; then echo "$name,pass,pass,started,yes" >> output/logs/results.csv
+              else echo "$name,pass,pass,attempted,no" >> output/logs/results.csv; fi
+            fi
+            kill "$fpid" "$xpid" 2>/dev/null || true
+            wait "$fpid" "$xpid" 2>/dev/null || true
+            x=$((x+1))
+          done
+          find output/tapes -name '*.tap' -delete
+          sha256sum output/tapes/*.tzx > output/logs/tape-sha256.txt || true
+          (cd output/tapes && zip -9 -q ../spectrum-48k-individual-tzx.zip ./*.tzx) || true
+          cat output/logs/results.csv
+      - name: Upload per-program tapes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-48k-tzx
+          path: output/spectrum-48k-individual-tzx.zip
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload Fuse screens and checks
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-48k-verification
+          path: |
+            output/screens
+            output/logs
+            output/rejected
+          if-no-files-found: warn
+          retention-days: 14
