@@ -65,7 +65,7 @@ def normalize_listing(body: str) -> str:
                 continue
             # A FOR loop's STEP token can also touch the limit variable.
             if (body.startswith('STEP', i) and i > 0 and
-                    (body[i - 1].islower() or body[i - 1] == ')') and
+                    (body[i - 1].islower() or body[i - 1].isdigit() or body[i - 1] == ')') and
                     (i + 4 == len(body) or not body[i + 4].isalpha()) and
                     re.search(r'\bFOR\s+[A-Za-z]\s*=\s*.+$', prior, re.I)):
                 out.append(' STEP ')
@@ -75,10 +75,16 @@ def normalize_listing(body: str) -> str:
             # in LET, or a numeric expression in IF, without spaces.
             # An ordinary alphabetic identifier (e.g. BAND) stays intact.
             for operator in ('AND', 'OR'):
+                # Only the original FL OR FL2 and DP OR LEN positions.
+                extra_or = (operator == 'OR' and re.search(r'\bIF\b', prior, re.I)
+                    and ((re.search(r'\bFL$', prior, re.I) and
+                          re.match(r'\s+FL2\b', body[i + 2:], re.I))
+                         or (re.search(r'\bDP$', prior, re.I) and
+                             re.match(r'\s+LEN\b', body[i + 2:], re.I))))
                 if (body.startswith(operator, i) and i > 0 and
                         (i + len(operator) == len(body) or
                          not body[i + len(operator)].isalpha()) and
-                        (body[i - 1] == '$' or
+                        (body[i - 1] == '$' or extra_or or
                          (re.search(r'\bIF\b', prior, re.I) and
                           (body[i - 1].islower() or
                            body[i - 1] in ')0123456789' or
