@@ -67,7 +67,7 @@ jobs:
           known={path.parent.parent.name for path in sources}
           if mode=='fast':
               wanted={'02-fall-guy','08-chomper','11-defend','23-biorhythms',
-                      '25-galaxians','58-invaders'}
+                      '25-galaxians','58-invaders','59-mushroom-invasion'}
           elif mode=='batch':
               if not wanted or not wanted <= known:
                   sys.exit('batch needs existing program folder names')
@@ -180,7 +180,7 @@ jobs:
           inputs=[('hello',out/'hello.bas')] if shard==0 else []
           if mode=='fast':
               selected=[p for p in folders if p.name in (
-                  '02-fall-guy','08-chomper','11-defend','23-biorhythms','25-galaxians','58-invaders')]
+                  '02-fall-guy','08-chomper','11-defend','23-biorhythms','25-galaxians','58-invaders','59-mushroom-invasion')]
           elif mode=='batch':
               selected=[p for p in folders[shard*12:(shard+1)*12] if p.name in wanted]
           else:
@@ -397,7 +397,7 @@ jobs:
           elif mode=='fast':
               selected=[p for p in folders if p.name in
                         {'02-fall-guy','08-chomper','11-defend','23-biorhythms',
-                         '25-galaxians','58-invaders'}]
+                         '25-galaxians','58-invaders','59-mushroom-invasion'}]
           elif mode=='batch':
               selected=[p for p in folders if p.name in wanted]
               if not wanted or len(selected)!=len(wanted):
