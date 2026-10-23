@@ -20,7 +20,7 @@ import zipfile
 from collections import Counter
 
 from PIL import Image, ImageChops, ImageGrab, ImageStat
-from Xlib import XK, display
+from Xlib import X, XK, display
 from Xlib.ext import xtest
 
 START_KEYS = {
@@ -131,11 +131,18 @@ def main():
     ap.add_argument('--intro-wait',type=float,default=2.25)
     ap.add_argument('--step-wait',type=float,default=1.35)
     ap.add_argument('--fuse',default='fuse')
+    ap.add_argument('--select-file',default='')
+    ap.add_argument('--key-map',default='')
     args=ap.parse_args()
     root=Path(args.out);root.mkdir(parents=True,exist_ok=True)
     z=zipfile.ZipFile(args.tapes)
     tapes=sorted(x for x in z.namelist() if x.startswith('tap/') and x.lower().endswith('.tap'))
+    if args.select_file:
+        selected=set(json.loads(Path(args.select_file).read_text()))
+        tapes=[x for x in tapes if Path(x).stem in selected]
+        assert len(tapes)==len(selected),(len(tapes),len(selected))
     if args.limit:tapes=tapes[:args.limit]
+    key_overrides=json.loads(Path(args.key_map).read_text()) if args.key_map else {}
     d=display.Display(os.environ.get('DISPLAY',':99'))
     records=[]
     for idx, member in enumerate(tapes,1):
@@ -148,7 +155,7 @@ def main():
         listing=z.read(src).decode('utf8','replace') if src in z.namelist() else ''
         cues=[line.strip()[:200] for line in listing.splitlines() if re.search('PRESS|INPUT|PAUSE 0|KEYS|START',line,re.I)][:20]
         rec={'name':name,'tape':member,'tape_sha256':hash_bytes(content),'source_listing':src,'notes':detect_source_issues(listing),
-             'instruction_cues':cues,'input_plan':plan_for(name),'captures':[], 'errors':[], 'state':'not_started'}
+             'instruction_cues':cues,'input_plan':key_overrides.get(name, plan_for(name)),'captures':[], 'errors':[], 'state':'not_started'}
         proc=None
         print(f'[{idx}/{len(tapes)}] {name}',flush=True)
         try:
@@ -157,6 +164,16 @@ def main():
                 '--no-sound','--speed',str(args.speed),'--tape',str(local.resolve())],
                 stdout=(sub/'fuse.log').open('wb'),stderr=subprocess.STDOUT,env=env)
             time.sleep(args.base_wait)
+            # Focus the newest SDL Spectrum window on the shared Xvfb desktop.
+            for window in reversed(d.screen().root.query_tree().children):
+                try:
+                    geometry=window.get_geometry()
+                    if geometry.width>=250 and geometry.height>=200:
+                        window.set_input_focus(X.RevertToParent,X.CurrentTime)
+                        d.sync()
+                        break
+                except Exception:
+                    continue
             if proc.poll() is not None:raise RuntimeError('Fuse exited immediately with code '+str(proc.returncode))
             # Sinclair 48K editor: J generates LOAD; Symbol Shift + P generates the quotation mark.
             do_key(d,'j');symbol_quote(d);symbol_quote(d);do_key(d,'Return');time.sleep(1.10)
