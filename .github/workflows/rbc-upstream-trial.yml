@@ -80,7 +80,8 @@ jobs:
               run=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=100)
               row={'program':name,'input':str(source),'ok':run.returncode==0,'output':run.stdout.strip()}
               results.append(row)
-              print(f'{name}: {"PASS" if row["ok"] else "FAIL"}: {row["output"][:250]}',flush=True)
+              last_line=row["output"].splitlines()[-1] if row["output"] else ''
+              print(f'{name}: {"PASS" if row["ok"] else "FAIL"}: {last_line[:350]}',flush=True)
           (out/f'rbc-60-results-shard-{shard}.json').write_text(json.dumps(results,indent=2)+'\n')
           if shard==0 and not results[0]['ok']:sys.exit('HELLO compiler regression')
           print('SHARD=',shard,'PASS=',sum(x['ok'] for x in results),'TOTAL=',len(results))
