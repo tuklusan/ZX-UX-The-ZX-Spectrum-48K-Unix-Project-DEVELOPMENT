@@ -53,6 +53,22 @@ class UDGLoops(unittest.TestCase):
         source='6000 FOR x=USR "a" TO USR "a"+7\n6010 IF n THEN POKE x,n\n6020 NEXT x'
         self.assertEqual(check(source,6010,'x,n'),(0,'block'))
 
+    def test_address_variable_cannot_be_read_into(self):
+        source='6000 FOR x=USR "a" TO USR "a"+7\n6010 READ x:POKE x,n\n6020 NEXT x'
+        self.assertEqual(check(source,6010,'x,n'),(0,'block'))
+
+    def test_original_tape_token_bytes(self):
+        # Representative raw Sinclair tokens from the original tape.
+        tokens={0xe5:'RESTORE', 0xeb:'FOR', 0xc0:'USR',
+                0xcc:'TO', 0xe3:'READ', 0xf4:'POKE', 0xf3:'NEXT'}
+        rows=[(100,b'PRINT "Ready"\r'),
+              (6000,b'\xe5:\xebx=\xc0"a"\xcc\xc0"a"+87\x0e\x00\x00\x57\x00\x00\r'),
+              (6010,b'\xe3n:\xf4x,n\r'),
+              (6020,b'\xf3x\r')]
+        f=Finding(6010,'POKE','block','unbounded_memory_write','x,n')
+        self.assertEqual(allow_bounded_udg_loops(rows,tokens,[f]),1)
+        self.assertEqual(f.severity,'info')
+
     def test_literal_system_address_stays_blocked(self):
         source='6000 FOR x=USR "a" TO USR "a"+7\n6010 POKE 23658,n\n6020 NEXT x'
         self.assertEqual(check(source,6010,'23658,n'),(0,'block'))
