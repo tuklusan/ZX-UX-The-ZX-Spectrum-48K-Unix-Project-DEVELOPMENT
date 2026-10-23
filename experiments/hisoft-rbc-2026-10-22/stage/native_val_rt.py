@@ -1,7 +1,7 @@
 """Support HiSoft v1.1's omitted dynamic VAL routine on Spectrum 48K.
 
 The stock v1.1 compiler leaves runtime slot 109 empty. The 48K ROM provides
-VAL X$ at 0x35DE with B=0x18. Emit an actual native tail call to that ROM
+VAL X$ at 0x35DE with B=0x1D. Emit an actual native tail call to that ROM
 entry so the same syntax checks and expression evaluator are used as BASIC.
 """
 from __future__ import annotations
@@ -10,8 +10,8 @@ from __future__ import annotations
 def install(compiler):
     from rtnames import RT
     from z80asm import asm
-    native_val = asm('ld b,$18; jp $35de')
-    assert bytes(native_val) == bytes((0x06, 0x18, 0xC3, 0xDE, 0x35))
+    native_val = asm('ld b,$1d; jp $35de')
+    assert bytes(native_val) == bytes((0x06, 0x1D, 0xC3, 0xDE, 0x35))
     base = compiler.rtlib.Machine
     if not getattr(base, '_zxux_native_val', False):
         class ZXUXValMachine(base):
