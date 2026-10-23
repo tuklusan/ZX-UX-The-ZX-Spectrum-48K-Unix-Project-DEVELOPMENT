@@ -25,7 +25,7 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     env:
-      RBC_MODE: ${{ github.event_name == 'push' && 'fast' || inputs.mode || 'full' }}
+      RBC_MODE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[run-full-rbc]') && 'full' || github.event_name == 'push' && 'fast' || inputs.mode || 'full' }}
       RBC_PROGRAMS: ${{ inputs.programs || '' }}
     timeout-minutes: 15
     steps:
@@ -111,10 +111,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON((github.event_name == 'push' || inputs.mode == 'fast') && '[0]' || '[0,1,2,3,4]') }}
+        shard: ${{ fromJSON((github.event_name == 'push' && !contains(github.event.head_commit.message, '[run-full-rbc]') || inputs.mode == 'fast') && '[0]' || '[0,1,2,3,4]') }}
     env:
       RBC_SHARD: ${{ matrix.shard }}
-      RBC_MODE: ${{ github.event_name == 'push' && 'fast' || inputs.mode || 'full' }}
+      RBC_MODE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[run-full-rbc]') && 'full' || github.event_name == 'push' && 'fast' || inputs.mode || 'full' }}
       RBC_PROGRAMS: ${{ inputs.programs || '' }}
     steps:
       - uses: actions/checkout@v4
@@ -341,7 +341,7 @@ jobs:
     needs: [prepare, trial]
     runs-on: ubuntu-latest
     env:
-      RBC_MODE: ${{ github.event_name == 'push' && 'fast' || inputs.mode || 'full' }}
+      RBC_MODE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[run-full-rbc]') && 'full' || github.event_name == 'push' && 'fast' || inputs.mode || 'full' }}
       RBC_PROGRAMS: ${{ inputs.programs || '' }}
     steps:
       - uses: actions/checkout@v4
