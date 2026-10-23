@@ -93,6 +93,18 @@ def allow_bounded_udg_loops(lines, token_names, findings):
             if any(re.search(r'\bLET\s+' + re.escape(variable) + r'\b\s*=', t, re.I)
                    for _, t in span):
                 continue
+            # Input or READ must not overwrite the address variable.
+            changing_address = False
+            for _, statement in span:
+                for part in statement.split(':'):
+                    if re.search(r'\bINPUT\b', part, re.I):
+                        changing_address = True
+                    rd = re.search(r'\bREAD\b', part, re.I)
+                    if rd and re.search(r'\b' + re.escape(variable) + r'\b',
+                                        part[rd.end():], re.I):
+                        changing_address = True
+            if changing_address:
+                continue
             for item in findings:
                 if item.operation != 'POKE' or item.classification != 'unbounded_memory_write':
                     continue
