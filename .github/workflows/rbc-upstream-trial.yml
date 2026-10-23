@@ -443,9 +443,20 @@ jobs:
           if summary:
               Path(summary).write_text('## RBC '+mode.upper()+' input summary'+chr(10)+text+chr(10)+
                                        'Cause groups: '+json.dumps(counts,sort_keys=True)+chr(10))
-          if invalid or len(rows)!=expected or len({x['program'] for x in rows})!=expected or failed:
+          missing_native=[]
+          if mode=='full':
+              for item in rows:
+                  if item['ok'] and item['program'].endswith('-tape'):
+                      native=item.get('native_result') or {}
+                      if not (native.get('booted') and native.get('foreground_started')):
+                          missing_native.append(item['program'])
+              if missing_native:
+                  print('Compiled tapes failing native start:',missing_native)
+          if (invalid or len(rows)!=expected or
+              len({x['program'] for x in rows})!=expected or
+              failed or missing_native):
               print('Invalid collection:',invalid)
-              raise SystemExit(mode.upper()+' compilation checks incomplete; inspect saved shard results')
+              raise SystemExit(mode.upper()+' checks incomplete; inspect saved shard results')
           PY
       - uses: actions/upload-artifact@v4
         if: always()
