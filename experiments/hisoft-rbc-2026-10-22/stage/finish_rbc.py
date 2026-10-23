@@ -35,13 +35,21 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            '    install_native_run(compiler)\n    install_scuba_charset(compiler)')
     change("'scroll_counter_lines':scroll_lines}",
            "'scroll_counter_lines':scroll_lines, 'scuba_charset_mapping':scuba_lines}")
+    # The independently agreed machine-code ban must be enforced after
+    # all memory classifiers and safe glyph rewrites, for every CLI mode.
+    change('from bss_layout import target_offset',
+           'from safety_usr import enforce_numeric_usr\nfrom bss_layout import target_offset')
+    change('        memory_report = summarize(checks)',
+           '        enforce_numeric_usr(spectrum_tap.split_lines(program), checks)\n'
+           '        memory_report = summarize(checks)')
     text = patched(text)
     # Original Scuba needs a private font to preserve its printable graphics.
     before = '        ssx,diagnostics=build_ssx(builds,font,rld,args.stack,'
     change(before,
            "        if meta.get('scuba_charset_mapping'):\n"
            "            font = rom_font(args.rom.read_bytes())\n" + before)
-    for name in ('scuba_charset.py', 'rbc_fit.py', 'rbc_output.py'):
+    for name in ('scuba_charset.py', 'rbc_fit.py', 'rbc_output.py',
+                 'safety_usr.py', 'audit_policy.py'):
         shutil.copyfile(extensions / name, checkpoint / 'rbc' / name)
     source.write_text(text)
 
