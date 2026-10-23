@@ -1,0 +1,112 @@
+name: Spectrum Show single-runner Fuse screenshots
+
+on:
+  push:
+    branches: [typeins-spectrum-show-20261023]
+    paths:
+      - .github/workflows/spectrum-show-screenshots.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zxux-spectrum-show-one-fuse-runner
+  cancel-in-progress: false
+
+jobs:
+  screenshot-73:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    steps:
+      - name: Read isolated scripts
+        uses: actions/checkout@v4
+      - name: Read exact tape exporter version
+        uses: actions/checkout@v4
+        with:
+          repository: tuklusan/zmakebas-plus
+          ref: eb02e0cdf64a0ef51bffa9e691fc6420692563e2
+          path: zmakebas-plus
+      - name: Install Python and Node.js
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install actual Fuse display tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y fuse-emulator-sdl xvfb
+          python -m pip install skoolkit==10.1 pillow python-xlib
+          fuse --version
+      - name: Download the 50 original ZIPs
+        run: python3 tools/spectrum-show-typeins.py --output source_data
+      - name: Build the known zmakebas-plus source
+        working-directory: zmakebas-plus
+        run: |
+          npm ci
+          npm run build:cli
+      - name: Recreate all TAP and TZX files
+        run: |
+          python3 tools/spectrum-show-make-tapes.py \
+            --source source_data \
+            --output tape_output \
+            --cli zmakebas-plus/dist-cli/zmakebas.js \
+            --tool-sha eb02e0cdf64a0ef51bffa9e691fc6420692563e2
+      - name: Match original 73 tape digests
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,zipfile
+          old=json.load(open('tools/spectrum-show-expected-hashes.json'))
+          with zipfile.ZipFile('spectrum-show-all-tapes.zip') as z:
+            assert len(old)==73, len(old)
+            for name,part in old.items():
+              for ext in ('tap','tzx'):
+                content=z.read(ext+'/'+name+'.'+ext)
+                actual=hashlib.sha256(content).hexdigest()
+                assert actual==part[ext+'_sha256'],(name,ext,actual,part[ext+'_sha256'])
+          print('All 73 TAP and TZX files match the previous ZIP byte for byte')
+          PY
+      - name: Launch a single Xvfb display
+        run: |
+          mkdir -p "$RUNNER_TEMP/xauth"
+          touch "$RUNNER_TEMP/xauth/empty"
+          Xvfb :99 -screen 0 800x600x24 -ac -nolisten tcp > "$RUNNER_TEMP/xvfb.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/xvfb.pid"
+          sleep 2
+      - name: Drive Fuse games one by one and capture screens
+        env:
+          DISPLAY: ':99'
+          SDL_AUDIODRIVER: dummy
+        run: |
+          ROM=$(python3 -c 'import skoolkit,pathlib;print(pathlib.Path(skoolkit.__file__).parent/"resources"/"48.rom")')
+          echo "ROM path: $ROM"
+          python3 tools/spectrum-show-capture.py \
+            --tapes spectrum-show-all-tapes.zip \
+            --rom "$ROM" \
+            --out screenshot_output \
+            --speed 400 \
+            --base-wait 1.2 \
+            --intro-wait 2.25 \
+            --step-wait 1.25
+      - name: Save screenshot ZIP and per-game report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-show-fuse-screenshots-${{ github.run_id }}
+          path: |
+            spectrum-show-fuse-screenshots.zip
+            screenshot_output/report.json
+            screenshot_output/contact-sheet-*.png
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Confirm all games were attempted
+        if: success()
+        run: |
+          python3 - <<'PY'
+          import json
+          x=json.load(open('screenshot_output/report.json'))
+          assert len(x['records'])==73,(len(x['records']),x['counts'])
+          print('Completed sequential attempts:',len(x['records']),x['counts'])
+          PY
