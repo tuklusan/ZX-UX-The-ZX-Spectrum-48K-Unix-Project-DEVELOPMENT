@@ -15,7 +15,7 @@ def prepare(checkpoint: Path, extensions: Path):
         raise ValueError('RBC checkpoint changed; extension location needs review')
     text = text.replace(old, new, 1)
     old = 'program = source.tokenize_directives(program,kw)'
-    text = text.replace(old, old + '\n        program, scroll_lines = adapt_scroll_counter(program, kw)\n        program, next_lines = resolve_missing_targets(program, kw, initial.fp)\n        program, data_lines = resolve_restores(program, kw, initial.fp)\n        program, constant_data_lines = adapt_literal_data(program, kw, initial.fp, source, spectrum_tap)', 1)
+    text = text.replace(old, old + '\n        program, scroll_lines = adapt_scroll_counter(program, kw)\n        program, next_lines = resolve_missing_targets(program, kw, initial.fp)\n        program, data_lines = resolve_restores(program, kw, initial.fp)\n        program, constant_data_lines = adapt_literal_data(program, kw, initial.fp, source, source.tap)', 1)
     # Confirm bounded glyph writes across numbered FOR/POKE/NEXT lines.
     check_anchor = 'checks = analyze_lines(spectrum_tap.split_lines(program), kw.TOKEN)'
     if text.count(check_anchor) != 1:
