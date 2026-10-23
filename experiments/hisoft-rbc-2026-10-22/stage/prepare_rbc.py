@@ -10,7 +10,7 @@ def prepare(checkpoint: Path, extensions: Path):
     compiler = checkpoint / 'rbc' / 'rbc.py'
     text = compiler.read_text()
     old = 'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize'
-    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom native_scroll import adapt_scroll_counter\nfrom restore_data import resolve_restores\nfrom constant_data import adapt_literal_data\nfrom glyph_data import specialize_glyph_data\nfrom constant_dims import specialize_literal_dims\nfrom duplicate_for import remove_duplicate_for\nfrom udg_bounds import allow_bounded_udg_loops\nfrom udg_nested import allow_nested_glyph_writes\nfrom udg_chr_bounds import allow_bounded_chr_glyphs\nfrom rom_keyread import allow_key_state_read\nfrom rom_keyboard_control import allow_rom_keyboard_controls\nfrom native_pause_rt import install as install_native_pause\nfrom native_keyread_rt import install as install_native_keyread\nfrom native_val_rt import install as install_native_val\nfrom for_restart import install as install_for_restart\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, save_controls, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
+    new = 'from basic_listing import normalize_listing, split_numbered_line\nfrom line_targets import resolve_missing_targets\nfrom native_scroll import adapt_scroll_counter\nfrom restore_data import resolve_restores\nfrom constant_data import adapt_literal_data\nfrom glyph_data import specialize_glyph_data\nfrom constant_dims import specialize_literal_dims\nfrom duplicate_for import remove_duplicate_for\nfrom udg_bounds import allow_bounded_udg_loops\nfrom udg_nested import allow_nested_glyph_writes\nfrom udg_chr_bounds import allow_bounded_chr_glyphs\nfrom rom_keyread import allow_key_state_read\nfrom rom_keyboard_control import allow_rom_keyboard_controls\nfrom rom_scroll import allow_rom_screen_scroll\nfrom native_pause_rt import install as install_native_pause\nfrom native_keyread_rt import install as install_native_keyread\nfrom native_val_rt import install as install_native_val\nfrom for_restart import install as install_for_restart\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, save_controls, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
     if text.count(old) != 1 or text.count('program = source.tokenize_directives(program,kw)') != 1:
         raise ValueError('RBC checkpoint changed; extension location needs review')
     text = text.replace(old, new, 1)
@@ -21,7 +21,7 @@ def prepare(checkpoint: Path, extensions: Path):
     if text.count(check_anchor) != 1:
         raise ValueError('RBC memory inspection location changed')
     text = text.replace(check_anchor, check_anchor +
-                        '\n        allow_bounded_udg_loops(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_nested_glyph_writes(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_bounded_chr_glyphs(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_key_state_read(checks)\n        allow_rom_keyboard_controls(checks)', 1)
+                        '\n        allow_bounded_udg_loops(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_nested_glyph_writes(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_bounded_chr_glyphs(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_key_state_read(checks)\n        allow_rom_keyboard_controls(checks)\n        allow_rom_screen_scroll(checks)', 1)
     # Try the compiler's in-memory line zero for a missing OPEN.
     # HiSoft needs OPEN before the first user BASIC line.
     before = '            program = source.add_directives(program, directives, True, [], kw, initial.fp)'
@@ -150,6 +150,7 @@ def prepare(checkpoint: Path, extensions: Path):
     shutil.copyfile(extensions / 'duplicate_for.py', checkpoint / 'rbc' / 'duplicate_for.py')
     shutil.copyfile(extensions / 'rom_keyread.py', checkpoint / 'rbc' / 'rom_keyread.py')
     shutil.copyfile(extensions / 'rom_keyboard_control.py', checkpoint / 'rbc' / 'rom_keyboard_control.py')
+    shutil.copyfile(extensions / 'rom_scroll.py', checkpoint / 'rbc' / 'rom_scroll.py')
     shutil.copyfile(extensions / 'native_keyread_rt.py', checkpoint / 'rbc' / 'native_keyread_rt.py')
     shutil.copyfile(extensions / 'native_val_rt.py', checkpoint / 'rbc' / 'native_val_rt.py')
     shutil.copyfile(extensions / 'for_restart.py', checkpoint / 'rbc' / 'for_restart.py')
