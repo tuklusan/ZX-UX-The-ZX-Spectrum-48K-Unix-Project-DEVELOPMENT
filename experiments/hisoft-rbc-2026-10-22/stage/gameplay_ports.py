@@ -38,8 +38,8 @@ def play(root: Path, binary: Path, output: Path) -> dict:
     opts.headless = True
     runner = rvm.Runner(opts)
     runner.start()
-    # Select the supported Issue 2 hardware model; no port read is overridden.
-    runner.session.m.ula_issue = 2
+    # Use the native ULA profile configured by ZX-UX.
+    ula_issue = runner.session.m.ula_issue
     for _ in range(9000):
         runner.frame()
         if runner.fg and runner.fg.started is not None:
@@ -81,7 +81,7 @@ def play(root: Path, binary: Path, output: Path) -> dict:
     moved_right = bool(left and right and min(right) > min(left))
     result = {'game': '25-galaxians', 'source': str(binary),
               'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
-              'ula_input': 'native emulator', 'ula_issue': 2, 'screen_rows': images,
+              'ula_input': 'native emulator', 'ula_issue': ula_issue, 'screen_rows': images,
               'left_moved': moved_left, 'right_moved': moved_right,
               'fire_pressed': True, 'fire_hit_or_score': 'not established',
               'gameplay_verified': False}

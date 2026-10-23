@@ -132,10 +132,8 @@ def run_game(ssx: Path, system: Path, font: bytes, original: Path, directory: Pa
     options.cache = True
     runner = rvm.Runner(options)
     runner.start()
-    # Galaxians relies on the Issue 2 MIC/EAR feedback level.
-    # Select a supported ULA profile, without changing reads or game code.
-    ula_issue = 2 if ssx.stem.startswith('25-galaxians') else 3
-    runner.session.m.ula_issue = ula_issue
+    # Observe the emulator's current native hardware profile.
+    ula_issue = runner.session.m.ula_issue
     for _ in range(9000):
         runner.frame()
         if runner.fg and runner.fg.started is not None:
