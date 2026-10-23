@@ -341,6 +341,11 @@ jobs:
           if errors:
               sys.exit('; '.join(errors))
           PY
+      - name: Capture native kernel tick calls for frame-clock games
+        if: (matrix.shard == 0 && (env.RBC_MODE == 'full' || contains(env.RBC_PROGRAMS, '06-motocross'))) || (matrix.shard == 2 && (env.RBC_MODE == 'full' || contains(env.RBC_PROGRAMS, '32-buzzy-bee')))
+        run: |
+          python3 experiments/hisoft-rbc-2026-10-22/stage/frame_clock_native_probe.py \
+            --root . --trial trial-result --shard ${{ matrix.shard }}
       - name: Execute native dynamic VAL expression
         if: matrix.shard == 0
         run: python3 experiments/hisoft-rbc-2026-10-22/stage/val_native_probe.py . trial-result
