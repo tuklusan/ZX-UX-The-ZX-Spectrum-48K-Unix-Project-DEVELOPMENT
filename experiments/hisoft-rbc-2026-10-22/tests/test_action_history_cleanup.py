@@ -23,6 +23,14 @@ class CleanupTests(unittest.TestCase):
         self.assertIs(m.verify_result(good,'abc'),good)
         good['inputs'][0]['ok']=False
         self.assertIs(m.verify_result(good,'abc'),good)
+    def test_fast_allows_added_original_program_pairs(self):
+        report={'mode':'fast','revision':'abc','expected_inputs':13,'invalid':[],
+                'inputs':[{'program':str(i),'ok':True} for i in range(13)]}
+        self.assertIs(m.verify_result(report,'abc'),report)
+        report['expected_inputs']=12
+        report['inputs']=report['inputs'][:12]
+        with self.assertRaises(RuntimeError): m.verify_result(report,'abc')
+
     def test_rollup_only_completed_and_excludes_current(self):
         runs=[{'id':1,'name':'A','status':'completed','conclusion':'success'}, {'id':2,'name':'A','status':'queued','conclusion':None},{'id':3,'name':'B','status':'completed','conclusion':'failure'}]
         data=m.rollup(runs,3,{'source_run':1,'source_sha':'s','passed_inputs':11},16)
