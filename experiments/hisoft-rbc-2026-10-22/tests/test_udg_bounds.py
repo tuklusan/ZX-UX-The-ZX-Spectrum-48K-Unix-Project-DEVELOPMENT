@@ -49,9 +49,9 @@ class UDGLoops(unittest.TestCase):
         source='10 GO TO 6010\n6000 FOR x=USR "a" TO USR "a"+7\n6010 POKE x,n\n6020 NEXT x'
         self.assertEqual(check(source,6010,'x,n'),(0,'block'))
 
-    def test_conditional_in_body_blocks_approval(self):
+    def test_conditional_in_body_preserves_bound(self):
         source='6000 FOR x=USR "a" TO USR "a"+7\n6010 IF n THEN POKE x,n\n6020 NEXT x'
-        self.assertEqual(check(source,6010,'x,n'),(0,'block'))
+        self.assertEqual(check(source,6010,'x,n'),(1,'info'))
 
     def test_address_variable_cannot_be_read_into(self):
         source='6000 FOR x=USR "a" TO USR "a"+7\n6010 READ x:POKE x,n\n6020 NEXT x'
@@ -92,6 +92,33 @@ class UDGLoops(unittest.TestCase):
         self.assertEqual(allow_bounded_udg_loops(rows,{},[poke,pointer,raw_call]),1)
         self.assertEqual((poke.severity,pointer.severity,raw_call.severity),
                          ('info','info','block'))
+
+    def test_long_glyph_loop(self):
+        rows=[(100,b'PRINT "heading"\r'),
+              (9140,b'FOR F=0 TO 7\r')]
+        rows.extend((9150+i*10,('POKE USR ("'+chr(72+i)+'")+F,0\r').encode())
+                    for i in range(12))
+        rows.append((9280,b'NEXT F\r'))
+        findings=[Finding(9150+i*10,'POKE','block','unbounded_memory_write',
+                          'USR ("'+chr(72+i)+'")+F,0') for i in range(12)]
+        self.assertEqual(allow_bounded_udg_loops(rows,{},findings),12)
+        self.assertTrue(all(f.severity=='info' for f in findings))
+
+    def test_literal_glyph_bytes_and_nested_usr(self):
+        rows=[(9490,b'POKE USR ("H"),255\r')]
+        poke=Finding(9490,'POKE','block','unbounded_memory_write',
+                     'USR ("H"),255')
+        nested=Finding(9490,'USR','block','raw_machine_code_address',
+                       '("H"),255')
+        self.assertEqual(allow_bounded_udg_loops(rows,{},[poke,nested]),1)
+        self.assertEqual((poke.severity,nested.severity),('info','info'))
+        forbidden=Finding(9490,'POKE','block','unbounded_memory_write',
+                          'USR ("H")+8,255')
+        self.assertEqual(allow_bounded_udg_loops(rows,{},[forbidden]),0)
+
+    def test_branch_outside_graphics_loop_stays_blocked(self):
+        text='6000 FOR x=USR "a" TO USR "b"+7\n6010 IF n THEN GO TO 6500\n6020 POKE x,n\n6030 NEXT x'
+        self.assertEqual(check(text,6020,'x,n'),(0,'block'))
 
     def test_other_io_stays_blocked(self):
         src='7000 FOR i=0 TO 7\n7010 POKE 60000+i,7\n7020 NEXT i'
