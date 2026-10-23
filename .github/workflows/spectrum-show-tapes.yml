@@ -19,13 +19,6 @@ jobs:
     steps:
       - name: Checkout isolated runner source
         uses: actions/checkout@v4
-      - name: Fetch previously downloaded original games
-        uses: actions/download-artifact@v4
-        with:
-          name: spectrum-show-typeins-39986062137
-          run-id: 39986062137
-          github-token: ${{ github.token }}
-          path: source_data
       - name: Checkout zmakebas-plus exact source revision
         uses: actions/checkout@v4
         with:
@@ -40,6 +33,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Fetch the 50 original game archives
+        run: python3 tools/spectrum-show-typeins.py --output source_data
       - name: Install snapshot reader
         run: python -m pip install skoolkit==10.1
       - name: Build zmakebas-plus command-line program
