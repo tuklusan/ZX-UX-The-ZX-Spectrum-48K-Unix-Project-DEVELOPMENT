@@ -44,6 +44,7 @@ jobs:
           unzip -oq experiments/hisoft-rbc-2026-10-22/rbc-fresh-chat-2026-10-22.zip -d trial-result/checkpoint
           cp -R trial-result/checkpoint/scratch/rbc trial-result/rbc
           python3 experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
+          python3 experiments/hisoft-rbc-2026-10-22/stage/finish_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
           cp trial-result/checkpoint/scratch/test_memory_safety.py trial-result/test_memory_safety.py
           python3 trial-result/test_memory_safety.py
           mkdir -p trial-result/fork-font

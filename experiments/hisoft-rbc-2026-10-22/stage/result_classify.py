@@ -21,6 +21,8 @@ def classify(output: str) -> str:
             'tape_or_external_io': 'external-io',
         }
         return classes.get(operation, 'memory-other')
+    if re.search(r'needs \d+ bytes of native memory \(limit \d+\)', text):
+        return 'native-memory-limit'
     if 'no spectrum character for' in text:
         return 'character-encoding'
     if 'computed line number' in text:
