@@ -31,6 +31,10 @@ class CleanupTests(unittest.TestCase):
         report['inputs']=report['inputs'][:12]
         with self.assertRaises(RuntimeError): m.verify_result(report,'abc')
 
+    def test_separate_permanent_full_result_path(self):
+        self.assertNotEqual(m.FAST_RECORD, m.FULL_RECORD)
+        self.assertEqual(m.FULL_RECORD.name, 'LATEST-RBC-FULL.json')
+
     def test_rollup_only_completed_and_excludes_current(self):
         runs=[{'id':1,'name':'A','status':'completed','conclusion':'success'}, {'id':2,'name':'A','status':'queued','conclusion':None},{'id':3,'name':'B','status':'completed','conclusion':'failure'}]
         data=m.rollup(runs,3,{'source_run':1,'source_sha':'s','passed_inputs':11},16)
