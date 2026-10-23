@@ -28,6 +28,24 @@ def save_and_set(e):
     return records
 
 
+# ROM keyboard mode (FLAGS2) and key click (PIP). Save the exact existing
+# process state; the original BASIC source sets the desired value itself.
+_ROM_KEYBOARD_STATE = (0x5C6A, 0x5C39)
+
+
+def save_controls(e):
+    """Emit relocatable save-only operations for the two ROM input settings."""
+    records = []
+    for address in _ROM_KEYBOARD_STATE:
+        e.emit(0x3A)
+        e.word(address)
+        e.emit(0x32)
+        slot_save = len(e.code)
+        e.relative(0)
+        records.append([address, slot_save])
+    return records
+
+
 def restore(e, records):
     """Emit restoration before releasing the display to ZX-UX."""
     for record in records:
