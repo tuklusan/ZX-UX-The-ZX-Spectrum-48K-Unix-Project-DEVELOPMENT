@@ -35,6 +35,15 @@ def archive_rows():
 
 
 class ScubaTests(unittest.TestCase):
+    def test_original_keyword_boundary_before_rem(self):
+        # The actual archived listing has a colon immediately before REM.
+        root = Path(__file__).resolve().parents[3]
+        source = root / 'src/bonus/60-programs/14-scuba/BASIC/14-scuba.bas'
+        lines = source.read_text(encoding='utf-8-sig').splitlines()
+        line5 = next(line for line in lines if line.startswith('5 '))
+        self.assertIn('POKE 23658,255:REM', line5)
+        self.assertEqual(_ORIGINAL[5], 'POKE23658,255:')
+
     def test_rejects_unrelated_or_changed_programs(self):
         rows = archive_rows()
         self.assertTrue(_shape(rows, FakeKeywords.TOKEN, False))

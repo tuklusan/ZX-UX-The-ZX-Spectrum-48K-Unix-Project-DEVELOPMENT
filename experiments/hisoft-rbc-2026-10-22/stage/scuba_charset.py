@@ -11,7 +11,7 @@ from udg_bounds import _line_text
 
 # All entries are compared after token-aware decoding and space removal.
 _ORIGINAL = {
-    5: 'POKE23658,255',
+    5: 'POKE23658,255:',
     632: '''POKE23606,0:POKE23607,60:PRINTAT0,0;INVERSE1;"NOFISH!YOU'RETHESUPPER!"''',
     3000: 'POKE23606,0:POKE23607,60:',
     3270: 'POKE23606,96:POKE23607,235:RETURN',

@@ -67,7 +67,7 @@ jobs:
           wanted={x.strip() for x in os.environ['RBC_PROGRAMS'].split(',') if x.strip()}
           known={path.parent.parent.name for path in sources}
           if mode=='fast':
-              wanted={'02-fall-guy','08-chomper','11-defend','23-biorhythms',
+              wanted={'02-fall-guy','08-chomper','11-defend','14-scuba','23-biorhythms',
                       '25-galaxians','58-invaders','59-mushroom-invasion'}
           elif mode=='batch':
               if not wanted or not wanted <= known:
@@ -181,7 +181,7 @@ jobs:
           inputs=[('hello',out/'hello.bas')] if shard==0 else []
           if mode=='fast':
               selected=[p for p in folders if p.name in (
-                  '02-fall-guy','08-chomper','11-defend','23-biorhythms','25-galaxians','58-invaders','59-mushroom-invasion')]
+                  '02-fall-guy','08-chomper','11-defend','14-scuba','23-biorhythms','25-galaxians','58-invaders','59-mushroom-invasion')]
           elif mode=='batch':
               selected=[p for p in folders[shard*12:(shard+1)*12] if p.name in wanted]
           else:
@@ -358,7 +358,7 @@ jobs:
       - name: Capture Galaxians and Invaders native key sequences
         if: always() && ((env.RBC_MODE == 'fast' && matrix.shard == 0) || (matrix.shard == 2 && (env.RBC_MODE == 'full' || contains(env.RBC_PROGRAMS, '25-galaxians'))) || (matrix.shard == 4 && (env.RBC_MODE == 'full' || contains(env.RBC_PROGRAMS, '58-invaders'))))
         run: |
-          python3 experiments/hisoft-rbc-2026-10-22/stage/frame_probe.py \
+          python3 experiments/hisoft-rbc-2026-10-22/stage/frame_probe_rom.py \
             --root . --trial trial-result
       - name: Check Galaxians ship movement with physical keys
         if: (matrix.shard == 2 && (env.RBC_MODE == 'full' || contains(env.RBC_PROGRAMS, '25-galaxians'))) || (matrix.shard == 0 && env.RBC_MODE == 'fast')
@@ -398,6 +398,9 @@ jobs:
             trial-result/rbc-native-pause-controls/*.json
             trial-result/rbc-native-pause-controls/*.png
           retention-days: 1
+      - name: Check RBC native CLI outputs and default fitting
+        if: matrix.shard == 0
+        run: python3 experiments/hisoft-rbc-2026-10-22/stage/check_cli.py
   summarize:
     if: always()
     needs: [prepare, trial]
@@ -437,7 +440,7 @@ jobs:
               selected=folders
           elif mode=='fast':
               selected=[p for p in folders if p.name in
-                        {'02-fall-guy','08-chomper','11-defend','23-biorhythms',
+                        {'02-fall-guy','08-chomper','11-defend','14-scuba','23-biorhythms',
                          '25-galaxians','58-invaders','59-mushroom-invasion'}]
           elif mode=='batch':
               selected=[p for p in folders if p.name in wanted]
