@@ -123,4 +123,5 @@ jobs:
           path: |
             build/tmp/rbc-round2/results.json
             build/tmp/rbc-round2/*/comparison.json
+            build/tmp/rbc-round2/published
           if-no-files-found: warn
