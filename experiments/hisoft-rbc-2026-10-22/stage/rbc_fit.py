@@ -26,15 +26,16 @@ def patched(source: str) -> str:
     change('font_start=len(e.code);e.code.extend(font)',
            'font_start=len(e.code)\n'
            '    if not use_rom_font:\n'
+           '        e.code.extend(bytes(256))\n'
            '        e.code.extend(font)')
     change('(fontptr,font_start-256),(udgptr,udg_start)',
-           '(fontptr,0x3C00 if use_rom_font else font_start-256),(udgptr,udg_start)')
+           '(fontptr,0x3C00 if use_rom_font else font_start),(udgptr,udg_start)')
     change('    reloc=sorted(e.fixups)',
            '    if use_rom_font:\n'
            '        e.fixups.remove(fontptr)\n'
            '    reloc=sorted(e.fixups)')
     change("'font_bytes':len(font),'udg_bytes':21*8,",
-           "'font_bytes':0 if use_rom_font else len(font),'udg_bytes':21*8,\n"
+           "'font_bytes':0 if use_rom_font else len(font)+256,'udg_bytes':21*8,\n"
            "                 'font_source':'spectrum_rom' if use_rom_font else 'process_image',")
     change("ap.add_argument('-o','--output',type=Path,required=True,help='target SSX1 executable')",
            "ap.add_argument('-o','--output',type=Path,help='output path (default: next to BASIC input)')\n"
@@ -72,7 +73,7 @@ def patched(source: str) -> str:
            "    try:")
     change('        ssx,diagnostics=build_ssx(builds,font,rld,args.stack)',
            "        ssx,diagnostics=build_ssx(builds,font,rld,args.stack,\n"
-           "               use_rom_font=args.fit)\n"
+           "               use_rom_font=args.fit and not meta.get('private_font_requested',False))\n"
            "        measured = memory_required(rld.parse_ssx(ssx), len(ssx))\n"
            "        diagnostics['memory_required'] = measured\n"
            "        diagnostics['memory_limit'] = args.max\n"

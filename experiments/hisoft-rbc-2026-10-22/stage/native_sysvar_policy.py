@@ -7,8 +7,9 @@ from __future__ import annotations
 import re
 
 from spectrum_sysvars import PRIVATE
+from spectrum_fonts import CHARS_LOW, CHARS_HIGH
 
-_ADDRESS = re.compile(r'^\s*(23609|23658|23672|23673|23674)(?!\d)')
+_ADDRESS = re.compile(r'^\s*(23606|23607|23609|23658|23672|23673|23674)(?!\d)')
 
 
 def allow_private_sysvars(findings):
@@ -17,7 +18,7 @@ def allow_private_sysvars(findings):
         if item.operation not in ('PEEK','POKE') or item.severity != 'block':
             continue
         m = _ADDRESS.match(item.expression)
-        if not m or int(m[1]) not in PRIVATE:
+        if not m or int(m[1]) not in PRIVATE | {CHARS_LOW, CHARS_HIGH}:
             continue
         suffix = item.expression[m.end():].lstrip()
         if (item.operation == 'POKE' and not suffix.startswith(',')) or (

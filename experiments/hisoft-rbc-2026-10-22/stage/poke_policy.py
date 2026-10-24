@@ -5,7 +5,7 @@ class ProtectedPoke(ValueError):
     pass
 
 
-def apply_poke_policy(findings, proofs):
+def apply_poke_policy(findings, proofs, font_alias=None):
     by_line = {}
     for item in proofs:
         by_line.setdefault(item['line'], []).append(item)
@@ -20,8 +20,9 @@ def apply_poke_policy(findings, proofs):
         # The native POKE runtime redirects all five virtual addresses into
         # process BSS. Require exact proof even for computed constant forms.
         from spectrum_sysvars import PRIVATE
+        from spectrum_fonts import CHARS_LOW, CHARS_HIGH
         private = bool(locations) and all(
-            x['space'] == 'absolute' and x['offset'] in PRIVATE for x in locations)
+            x['space'] == 'absolute' and x['offset'] in PRIVATE | {CHARS_LOW, CHARS_HIGH} for x in locations)
         if private:
             finding.classification = 'process_sysvar_poke'
             finding.severity = 'info'
@@ -33,6 +34,10 @@ def apply_poke_policy(findings, proofs):
             if target['space'] == 'process_udg':
                 if not 0 <= location < 168:
                     raise ProtectedPoke(f'Line {finding.line}: UDG offset {location} outside 0..167')
+            elif target['space'] == 'absolute' and font_alias is not None and font_alias <= location < font_alias + 1024:
+                # PEEK/POKE thunk relocates this virtual CHARS bank to the
+                # process-owned SSX font, never to the underlying RAM address.
+                continue
             elif target['space'] != 'absolute' or not 0x4000 <= location <= 0x5AFF:
                 raise ProtectedPoke(f'Line {finding.line}: POKE {location} targets protected machine state')
         finding.severity = 'info' if locations and all(

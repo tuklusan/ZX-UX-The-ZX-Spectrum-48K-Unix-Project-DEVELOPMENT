@@ -23,6 +23,22 @@ class PokeRules(unittest.TestCase):
         for addr in (0,0x5b00,0xffff):
             with self.subTest(addr=addr),self.assertRaises(ProtectedPoke):
                 apply_poke_policy([F()],[{'line':100,'addresses':[{'space':'absolute','offset':addr}]}])
+    def test_virtual_font_bank_only_allows_private_1024_bytes(self):
+        for offset in (60256,60512,61279):
+            with self.subTest(offset=offset):
+                f=F()
+                apply_poke_policy([f],[{'line':100,'addresses':[{'space':'absolute','offset':offset}]}],60256)
+                self.assertEqual(f.severity,'review')
+        for offset in (60255,61280,0xffff):
+            with self.subTest(offset=offset),self.assertRaises(ProtectedPoke):
+                apply_poke_policy([F()],[{'line':100,'addresses':[{'space':'absolute','offset':offset}]}],60256)
+
+    def test_virtual_chars_registers_are_not_kernel_writes(self):
+        for addr in (23606,23607):
+            f=F()
+            apply_poke_policy([f],[{'line':100,'addresses':[{'space':'absolute','offset':addr}]}])
+            self.assertEqual(f.severity,'info')
+
     def test_bounded_udg(self):
         for addr in (0,167):
             f=F()

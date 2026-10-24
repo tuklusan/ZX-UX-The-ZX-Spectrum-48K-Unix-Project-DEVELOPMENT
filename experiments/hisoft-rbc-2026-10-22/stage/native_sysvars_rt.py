@@ -12,7 +12,7 @@ from spectrum_sysvars import FLAGS2, PIP, FRAMES, PRIVATE
 PEEK_RT = 42
 POKE_RT = 43
 # flags2, pip, three FRAMES bytes, last 16-bit tick, initialized marker
-BSS_BYTES = 8
+BSS_BYTES = 14
 
 
 class _Code:
@@ -22,6 +22,7 @@ class _Code:
         self.labels = {}
         self.jumps = []
         self.absrefs = []
+        self.absjumps = []
 
     def op(self, text):
         self.code.extend(self.asm(text))
@@ -43,7 +44,12 @@ class _Code:
         self.jumps.append((len(self.code), target))
         self.code.extend((opcode,0))
 
-    def build(self, base, load):
+    def jp(self, name, condition=''):
+        opcode = {'':0xc3,'z':0xca,'nz':0xc2,'c':0xda,'nc':0xd2}[condition]
+        self.absjumps.append((len(self.code)+1,name))
+        self.code.extend((opcode,0,0))
+
+    def build(self, base, load, entry=0):
         data = bytearray(self.code)
         for pos, target in self.jumps:
             if target not in self.labels:
@@ -52,6 +58,11 @@ class _Code:
             if not -128 <= delta <= 127:
                 raise AssertionError(f'native Z80 branch out of range: {target} {delta}')
             data[pos+1] = delta & 255
+        for pos, name in self.absjumps:
+            if name not in self.labels:
+                raise AssertionError('missing absolute native label: '+name)
+            address=(load+entry+self.labels[name]) & 65535
+            data[pos:pos+2] = address.to_bytes(2,'little')
         for pos, index in self.absrefs:
             ptr = (base + load + index) & 65535
             data[pos:pos+2] = bytes((ptr & 255, ptr >> 8))
@@ -86,7 +97,7 @@ def _clock_sync(e):
     e.op('pop hl; pop de; pop bc; pop af')
 
 
-def _process_address_check(e, base, total, accepted):
+def _process_address_check(e, base, total, accepted, prefix=""):
     """Let unmodified RAM instructions see only native process-owned memory."""
     if total < 1:
         # Counting passes may not yet know BSS bounds; code length is stable.
@@ -94,25 +105,102 @@ def _process_address_check(e, base, total, accepted):
     e.op('push de; push hl')
     e.address('ld de,$0000', -base)
     e.op('or a; sbc hl,de; pop hl')
-    e.jr('out_of_process', 'c')
+    e.jr('out_of_process'+prefix, 'c')
     e.op('push hl')
     e.address('ld de,$0000', total-1-base)
     e.op('or a; sbc hl,de; pop hl')
-    e.jr('range_ok','c')
-    e.jr('range_ok','z')
-    e.label('out_of_process')
+    e.jr('range_ok'+prefix,'c')
+    e.jr('range_ok'+prefix,'z')
+    e.label('out_of_process'+prefix)
     e.op('pop de; rst 8; defb $0b')
-    e.label('range_ok')
+    e.label('range_ok'+prefix)
     e.op('pop de')
     e.jr(accepted)
 
 
-def _native_peek(asm, base, load, total=0):
+def _cache_font_pointer(e, suffix):
+    """Save SSX startup's real private font pointer before BASIC switches CHARS."""
+    e.address('ld a,($0000)',13)
+    e.op('or a')
+    e.jr('font_cached_'+suffix,'nz')
+    e.op('push hl')
+    e.op('ld hl,($5c36)')
+    e.address('ld ($0000),hl',11)
+    e.op('ld a,1')
+    e.address('ld ($0000),a',13)
+    e.op('pop hl')
+    e.label('font_cached_'+suffix)
+
+
+def _select_print_font(e):
+    """ROM CHARS selects ROM printing; all other values select private font."""
+    _cache_font_pointer(e, 'write')
+    e.address('ld a,($0000)',10)
+    e.op('or a')
+    e.jr('font_hi_override','nz')
+    e.op('ld a,$3c')
+    e.jr('font_hi_ready')
+    e.label('font_hi_override')
+    e.address('ld a,($0000)',9)
+    e.label('font_hi_ready')
+    e.op('cp $3c')
+    e.jr('font_private','nz')
+    e.address('ld a,($0000)',8)
+    e.op('or a')
+    e.jr('font_private','nz')
+    e.op('ld hl,$3c00; ld ($5c36),hl; ret')
+    e.label('font_private')
+    e.address('ld hl,($0000)',11)
+    e.op('ld ($5c36),hl; ret')
+
+
+def _font_address_alias(e, base, total, action, font_alias=None):
+    """Translate virtual CHARS glyph address to the process-owned glyph bank.
+
+    The private font is selected by the SSX startup entry, not by a pointer
+    supplied by BASIC. If the program has not selected a virtual font or
+    the SSX does not carry a private bank, fall through to memory protection.
+    """
+    if action not in ('peek','poke'):
+        raise ValueError('invalid font action')
+    e.op('push bc; push de; push hl')
+    if font_alias is None:
+        e.address('ld a,($0000)',10)
+        e.op('or a')
+        e.jr('font_nomap', 'z')
+        e.address('ld de,($0000)',8)
+    else:
+        e.op(f'ld de,${font_alias:04x}')
+    e.op('or a; sbc hl,de')
+    e.jr('font_nomap', 'c')
+    e.op('ld a,h; cp 4')
+    e.jr('font_nomap', 'nc')
+    _cache_font_pointer(e,'alias')
+    e.address('ld de,($0000)',11)
+    e.op('ld a,d; cp $5d')
+    e.jr('font_nomap', 'c')
+    e.op('add hl,de')
+    _process_address_check(e, base, total, 'font_mapped', 'font')
+    e.label('font_mapped')
+    e.op('pop de; pop de; pop bc')
+    if action == 'peek':
+        e.op('ld l,(hl); ld h,0; ret')
+    else:
+        e.op('ld (hl),e; ret')
+    e.label('font_nomap')
+    e.op('pop hl; pop de; pop bc')
+
+
+def _native_peek(asm, base, load, total=0, font_alias=None, entry=0):
     e = _Code(asm)
     e.op('ld a,h; cp $5c')
-    e.jr('ordinary_bridge','nz')
-    e.op('ld a,l; cp $04')
-    e.jr('kstate','z')
+    e.jr('ordinary_trampoline','nz')
+    e.op('ld a,l; cp $36')
+    e.jr('chars0','z')
+    e.op('cp $37')
+    e.jr('chars1','z')
+    e.op('cp $04')
+    e.jr('kbd_trampoline','z')
     e.op('cp $39')
     e.jr('pip','z')
     e.op('cp $6a')
@@ -121,6 +209,12 @@ def _native_peek(asm, base, load, total=0):
     e.jr('ordinary_bridge','c')
     e.op('cp $7b')
     e.jr('ordinary_bridge','nc')
+    e.jr('after_trampolines')
+    e.label('ordinary_trampoline')
+    e.jr('ordinary_bridge')
+    e.label('kbd_trampoline')
+    e.jr('kstate')
+    e.label('after_trampolines')
     _clock_sync(e)
     e.op('ld a,l; cp $78')
     e.jr('frames0','z')
@@ -133,6 +227,18 @@ def _native_peek(asm, base, load, total=0):
     e.jr('result')
     e.label('frames1')
     e.address('ld a,($0000)',3)
+    e.jr('result')
+    e.label('chars0')
+    e.address('ld a,($0000)',8)
+    e.jr('result')
+    e.label('chars1')
+    e.address('ld a,($0000)',10)
+    e.op('or a')
+    e.jr('read_chars_hi','nz')
+    e.op('ld a,$3c')
+    e.jr('result')
+    e.label('read_chars_hi')
+    e.address('ld a,($0000)',9)
     e.jr('result')
     e.label('pip')
     e.address('ld a,($0000)',1)
@@ -149,6 +255,7 @@ def _native_peek(asm, base, load, total=0):
     e.op('push bc; push de; push hl; call $02bf; pop hl; pop de; pop bc')
     e.op('ld l,(hl); ld h,0; ret')
     e.label('ordinary')
+    _font_address_alias(e, base, total, 'peek', font_alias)
     # ROM and bitmap/attribute reads are public; other addresses must be
     # inside the process's compiler-allocated image/BSS, never ZX-UX globals.
     e.op('ld a,h; cp $5b')
@@ -156,14 +263,18 @@ def _native_peek(asm, base, load, total=0):
     _process_address_check(e, base, total, 'read_public')
     e.label('read_public')
     e.op('ld l,(hl); ld h,0; ret')
-    return e.build(base,load)
+    return e.build(base,load,entry)
 
 
-def _native_poke(asm, base, load, total=0):
+def _native_poke(asm, base, load, total=0, font_alias=None, entry=0):
     e = _Code(asm)
     e.op('ld a,h; cp $5c')
-    e.jr('ordinary','nz')
-    e.op('ld a,l; cp $39')
+    e.jr('poke_trampoline','nz')
+    e.op('ld a,l; cp $36')
+    e.jp('chars0','z')
+    e.op('cp $37')
+    e.jp('chars1','z')
+    e.op('cp $39')
     e.jr('pip','z')
     e.op('cp $6a')
     e.jr('flags','z')
@@ -171,6 +282,10 @@ def _native_poke(asm, base, load, total=0):
     e.jr('ordinary','c')
     e.op('cp $7b')
     e.jr('ordinary','nc')
+    e.jr('poke_after_trampoline')
+    e.label('poke_trampoline')
+    e.jr('ordinary')
+    e.label('poke_after_trampoline')
     _clock_sync(e)
     e.op('ld a,l; cp $78')
     e.jr('frames0','z')
@@ -196,6 +311,7 @@ def _native_poke(asm, base, load, total=0):
     e.address('ld ($0000),a',0)
     e.op('ret')
     e.label('ordinary')
+    _font_address_alias(e, base, total, 'poke', font_alias)
     # Writes to ROM or protected machine state must never reach physical RAM.
     # Screen bitmap/attributes and private executable memory are separate.
     e.op('ld a,h; cp $40')
@@ -207,7 +323,18 @@ def _native_poke(asm, base, load, total=0):
     e.op('ld (hl),e; ret')
     e.label('blocked_rom')
     e.op('rst 8; defb $0b')
-    return e.build(base,load)
+    e.label('chars0')
+    e.op('ld a,e')
+    e.address('ld ($0000),a',8)
+    e.jr('chars_sync')
+    e.label('chars1')
+    e.op('ld a,e')
+    e.address('ld ($0000),a',9)
+    e.op('ld a,1')
+    e.address('ld ($0000),a',10)
+    e.label('chars_sync')
+    _select_print_font(e)
+    return e.build(base,load,entry)
 
 
 def install(compiler):
@@ -228,7 +355,8 @@ def install(compiler):
                 if not getattr(self.img,'v11',False):
                     raise ValueError('RBC system virtualization requires HiSoft 48K v1.1')
                 fn = _native_peek if n == PEEK_RT else _native_poke
-                emitted = fn(asm, self._zxux_sysvar_base, code_base, self._zxux_total)
+                emitted = fn(asm, self._zxux_sysvar_base, code_base, self._zxux_total,
+                             getattr(self, '_zxux_font_alias', None), pc)
                 if not counting and not self.de_flags & 1:
                     self.far[pc:pc+len(emitted)] = emitted
                 return pc + len(emitted)
@@ -244,6 +372,10 @@ def install(compiler):
         self._zxux_sysvar_base = 0
         self.m._zxux_sysvar_base = 0
         self.m._zxux_total = 0
+        from spectrum_fonts import detect_font_bank
+        import source
+        alias, has_poke = detect_font_bank(self.lines, source.Keywords(self.rom).TOKEN)
+        self.m._zxux_font_alias = alias
 
     def layout_vars(self):
         old_layout(self)

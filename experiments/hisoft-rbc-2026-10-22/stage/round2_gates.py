@@ -69,6 +69,21 @@ def suite_gate(root: Path, stage: str):
                   'sysvar_native_link_check.py')]
         subprocess.run(command,cwd=root,check=True)
         count += native_count
+    if stage == 'fonts':
+        for pattern,minimum in (('test_native_font_rt.py',9),
+                                ('test_native_font_link.py',1),
+                                ('test_spectrum_fonts.py',5)):
+            native_suite = unittest.defaultTestLoader.discover(
+                str(suite_path.parent), pattern=pattern)
+            count_native = native_suite.countTestCases()
+            if count_native < minimum:
+                raise RuntimeError(f'fonts: missing executable proof {pattern}')
+            native_result = unittest.TextTestRunner(verbosity=2).run(native_suite)
+            if not native_result.wasSuccessful() or native_result.testsRun != count_native:
+                raise RuntimeError(f'fonts: native font behavior failed in {pattern}')
+            count += count_native
+        subprocess.run([sys.executable,str(suite_path.parents[1] / 'stage' /
+                       'font_native_link_check.py')],cwd=root,check=True)
     return count
 
 
