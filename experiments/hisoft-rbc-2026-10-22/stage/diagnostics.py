@@ -250,6 +250,7 @@ def from_exception(exc: Exception, source: Path | None = None) -> Diagnostic:
         keyword = 'GO TO' if 'go to' in low else 'DIM' if 'dim' in low else None
     elif 'numbered ascii' in low or 'missing line number' in low: mnemonic = 'BAS_NO_LINE_NUMBER'
     elif 'line number outside' in low or 'exceeds 9999' in low: mnemonic = 'BAS_LINE_RANGE'
+    elif 'missing whitespace before to in for' in low: mnemonic, keyword = 'BAS_UNEXPECTED_KEYWORD', 'TO'
     elif 'duplicate or unordered' in low:
         # The emitter does not say which condition failed. Distinguish by
         # counting source-record numbers, not a guessed failure class.

@@ -29,6 +29,14 @@ class StrictInput(unittest.TestCase):
             with self.subTest(line=line), self.assertRaises(ValueError):
                 split_numbered_line(line)
 
+    def test_for_numeric_keyword_boundary_is_not_invented(self):
+        with self.assertRaisesRegex(ValueError, 'missing whitespace before TO'):
+            encode_strict_listing('10 FOR I=1TO10')
+        self.assertTrue(encode_strict_listing('10 FOR I=1 TO 10'))
+        self.assertTrue(encode_strict_listing('10 PRINT "FOR I=1TO10"'))
+        self.assertTrue(encode_strict_listing('10 REM FOR I=1TO10'))
+        self.assertTrue(encode_strict_listing('10 DATA FOR I=1TO10: PRINT 5'))
+
     def test_escaped_large_line_uses_upstream_lexer(self):
         long_source = '10 PRINT "' + ('AB' * 550) + '"'
         self.assertGreater(len(encode_strict_listing(long_source)), 1000)
