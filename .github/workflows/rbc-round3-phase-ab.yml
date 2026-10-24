@@ -250,17 +250,17 @@ jobs:
                   except Exception as err:
                       print('RUN trampoline test error',label,type(err).__name__,str(err),flush=True)
               old_runner=runtime.read_text()
-              for strategy in ('none','bytewise','xor_ldir','mem_fill'):
+              for strategy in ('none','byte0','byte1','byte2','byte3','byte4','byte5'):
                   start=old_runner.index('        if self._zxux_run_clear_bytes == 1:')
                   finish=old_runner.index('        self.emit_restore()',start)
                   if strategy=='none':
                       new='        pass\n'
-                  elif strategy=='bytewise':
-                      new=("        self.ld_hl(self.vars_start)\n"
-                           "        self.emit('xor a')\n"
-                           "        for k in range(self._zxux_run_clear_bytes):\n"
-                           "            self.emit('ld (hl),a')\n"
-                           "            if k+1<self._zxux_run_clear_bytes: self.emit('inc hl')\n")
+                  elif strategy.startswith('byte'):
+                      count=int(strategy[4:])
+                      new="        self.ld_hl(self.vars_start)\n"
+                      for n in range(count):
+                          if n: new+="        self.emit('inc hl')\n"
+                          new+="        self.emit('ld (hl),0')\n"
                   elif strategy=='xor_ldir':
                       new=("        self.ld_hl(self.vars_start)\n"
                            "        self.emit('xor a; ld (hl),a')\n"
@@ -271,9 +271,7 @@ jobs:
                   else:
                       new=old_runner[start:finish]
                   runtime.write_text(old_runner[:start]+new+old_runner[finish:])
-                  for label,listing in (('var_stop','10 LET A=7\n20 RUN 100\n100 STOP\n'),
-                                       ('var_equal','10 LET A=7\n20 RUN 100\n100 IF A=0 THEN GO TO 110\n105 GO TO 105\n110 STOP\n'),
-                                       ('var_print','10 LET A=7\n20 RUN 100\n100 PRINT A\n110 STOP\n')):
+                  for label,listing in (('var_stop','10 LET A=7\n20 RUN 100\n100 STOP\n'),):
                       try:
                           ssx=compile_one('rbc-r3-reset-'+strategy+'-'+label,listing)
                           data=rld.parse_ssx(ssx.read_bytes())
