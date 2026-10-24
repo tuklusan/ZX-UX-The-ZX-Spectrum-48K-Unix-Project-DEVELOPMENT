@@ -85,6 +85,36 @@ jobs:
           assert len(parsed['image']) > 0
           print('Linked SSX1 executable:', len(payload), 'bytes')
           PY
+      - name: Focused native VAL and FOR NEXT semantic compilation
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH="build/tmp/rbc-round2/upstream:build/tmp/rbc-round2/current/rbc:src/zx-ux-sdk" python - <<'PY'
+          from pathlib import Path
+          import subprocess,sys
+          root=Path('build/tmp/rbc-round2')
+          cases={
+            'val-dynamic':'10 LET A$="7"\n20 LET N=VAL A$\n30 PRINT N\n',
+            'val-expression':'10 PRINT VAL "2+3"\n',
+            'for-with-computed-jump':'10 LET B=30\n20 FOR I=1 TO 4\n30 IF I=1 THEN GO TO B+10\n40 NEXT I\n',
+            'for-without-next':'10 FOR I=1 TO 2: PRINT I\n20 STOP\n'
+          }
+          failed=[]
+          for name,source in cases.items():
+              listing=root/(name+'.bas')
+              target=root/(name+'.ssx')
+              listing.write_text(source,encoding='ascii')
+              command=[sys.executable,str(root/'current/rbc/rbc.py'),str(listing),
+                '--frontend',str(root/'upstream'),'--sdk','src/zx-ux-sdk',
+                '--rom','src/zx-ux-sdk/rom/48.rom','--tape',str(root/'hisoft48.tap'),
+                '-o',str(target)]
+              p=subprocess.run(command,capture_output=True,text=True)
+              print(name, 'exit',p.returncode,'linked',target.exists(), 'detail',p.stderr.strip()[-300:],flush=True)
+              if p.returncode or not target.is_file():
+                  failed.append(name)
+          if failed:
+              raise SystemExit('Focused native compiler failures: '+', '.join(failed))
+          PY
       - name: Independently recover all 60 TZX input listings
         shell: bash
         run: |
