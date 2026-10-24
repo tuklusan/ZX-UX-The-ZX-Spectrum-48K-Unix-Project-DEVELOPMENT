@@ -40,8 +40,8 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change('from bss_layout import target_offset',
            'from safety_usr import enforce_numeric_usr\nfrom poke_proof import prove_pokes\nfrom val_guard import guard_val\nfrom bss_layout import target_offset')
     change('        memory_report = summarize(checks)',
-           '        enforce_numeric_usr(spectrum_tap.split_lines(program), checks)\n'
            '        poke_proofs = prove_pokes(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n'
+           '        enforce_numeric_usr(spectrum_tap.split_lines(program), checks, poke_proofs, kw.TOKEN)\n'
            '        safe_vals = guard_val(spectrum_tap.split_lines(program), kw.TOKEN)\n'
            '        memory_report = summarize(checks)')
     change("'memory_policy':memory_policy, 'memory_check':memory_report,",

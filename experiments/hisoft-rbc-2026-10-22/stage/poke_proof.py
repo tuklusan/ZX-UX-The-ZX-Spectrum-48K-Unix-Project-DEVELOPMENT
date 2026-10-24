@@ -3,7 +3,7 @@
 Only straight-line, normally bounded FOR/NEXT regions and literal arithmetic
 are supported. A process UDG address is represented as an exact relocatable
 offset; this is not an absolute RAM grant. Existing memory policy decides
-whether every proved write is supported. Unknown or ambiguous flow fails.
+whether every proved write is supported. Unknown ordinary addresses remain the programmer's responsibility.
 """
 from __future__ import annotations
 
@@ -166,11 +166,7 @@ def _loop_values(loop):
 
 
 def prove_pokes(lines, token_names, findings):
-    """Proofs are required even in --memory-policy review mode.
-
-    A missing POKE, ambiguous branch, index mutation, or unproved expression
-    causes a specific failure. Successful proof is NOT a memory-policy permit.
-    """
+    """UDG writes require exact finite addresses; ordinary POKEs may be dynamic."""
     rows=_segments(lines,token_names)
     stack=[];loops=[];writes=[]
     for index,(line,src,mask) in enumerate(rows):
@@ -213,59 +209,73 @@ def prove_pokes(lines, token_names, findings):
     )
     proved=[]
     for w in writes:
-        target_sets=[];variables=set()
-        # A literal target needs no flow proof: branches cannot change it.
         try:
-            direct=expression(w.address,{})
-        except PokeAddressError:
-            direct=None
-        if direct is not None:
-            proved.append({'line':w.line,'expression':w.address,
-                           'addresses':[{'space':'process_udg' if direct[0] else 'absolute',
-                                         'offset':direct[1]}]})
-            continue
-        address_variables=scrub_code(w.address)
-        for loop in w.loops:
-            if not re.search(r'\b'+re.escape(loop.variable)+r'\b',address_variables,re.I):
+            target_sets=[];variables=set()
+            # A literal target needs no flow proof: branches cannot change it.
+            try:
+                direct=expression(w.address,{})
+            except PokeAddressError:
+                direct=None
+            if direct is not None:
+                proved.append({'line':w.line,'expression':w.address,
+                               'addresses':[{'space':'process_udg' if direct[0] else 'absolute',
+                                             'offset':direct[1]}]})
                 continue
-            if indirect_branch:
-                raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: computed branch could enter FOR body')
-            if loop.conditional:
-                raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: conditional FOR cannot be proved')
-            if loop.end is None or not loop.begin<w.position<loop.end:
-                raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: loop has no proved NEXT')
-            body=rows[loop.begin+1:loop.end]
-            if any(line in incoming and line!=loop.line for line,_,_ in body):
-                raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: jump may bypass FOR')
-            if any(TRANSFER_RE.search(mask) for _,_,mask in body):
-                raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: branch in FOR body')
-            if any(re.search(r'\bIF\b',mask,re.I) for _,_,mask in body):
-                raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: conditional FOR body')
-            # Every loop index is private to its own FOR/NEXT region.
-            for _,_,mask in body:
-                for match in SET_RE.finditer(mask):
-                    if match.group(1).lower()==loop.variable:
-                        raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: FOR variable may be reassigned')
-                if any(re.search(r'\b'+loop.variable+r'\b',mask,re.I)
-                       for _ in re.finditer(r'\b(?:INPUT|READ)\b',mask,re.I)):
-                    raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: FOR index may receive input')
-            if loop.variable in variables:
-                raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: reused loop variable')
-            variables.add(loop.variable)
-            target_sets.append((loop.variable,_loop_values(loop)))
-        sizes=1
-        for _,values in target_sets:sizes*=len(values)
-        if sizes>8192:
-            raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: finite set too large for exact proof')
-        try:
-            destinations=set()
-            for combination in itertools.product(*(a for _,a in target_sets)):
-                env={name:value for (name,_),value in zip(target_sets,combination)}
-                destinations.add(expression(w.address,env))
-        except PokeAddressError as ex:
-            raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: cannot prove POKE {w.address!r}; {ex}') from ex
-        if not destinations:raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: empty address set')
-        proved.append({'line':w.line,'expression':w.address,
-                       'addresses':[{'space':'process_udg' if b else 'absolute','offset':n}
-                                    for b,n in sorted(destinations)]})
+            address_variables=scrub_code(w.address)
+            for loop in w.loops:
+                if not re.search(r'\b'+re.escape(loop.variable)+r'\b',address_variables,re.I):
+                    continue
+                if indirect_branch:
+                    raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: computed branch could enter FOR body')
+                if loop.conditional:
+                    raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: conditional FOR cannot be proved')
+                if loop.end is None or not loop.begin<w.position<loop.end:
+                    raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: loop has no proved NEXT')
+                body=rows[loop.begin+1:loop.end]
+                if any(line in incoming and line!=loop.line for line,_,_ in body):
+                    raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: jump may bypass FOR')
+                if any(TRANSFER_RE.search(mask) for _,_,mask in body):
+                    raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: branch in FOR body')
+                if any(re.search(r'\bIF\b',mask,re.I) for _,_,mask in body):
+                    raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: conditional FOR body')
+                # Every loop index is private to its own FOR/NEXT region.
+                for _,_,mask in body:
+                    for match in SET_RE.finditer(mask):
+                        if match.group(1).lower()==loop.variable:
+                            raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: FOR variable may be reassigned')
+                    if any(re.search(r'\b'+loop.variable+r'\b',mask,re.I)
+                           for _ in re.finditer(r'\b(?:INPUT|READ)\b',mask,re.I)):
+                        raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: FOR index may receive input')
+                if loop.variable in variables:
+                    raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: reused loop variable')
+                variables.add(loop.variable)
+                target_sets.append((loop.variable,_loop_values(loop)))
+            sizes=1
+            for _,values in target_sets:sizes*=len(values)
+            if sizes>8192:
+                raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: finite set too large for exact proof')
+            try:
+                destinations=set()
+                for combination in itertools.product(*(a for _,a in target_sets)):
+                    env={name:value for (name,_),value in zip(target_sets,combination)}
+                    destinations.add(expression(w.address,env))
+            except PokeAddressError as ex:
+                raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: cannot prove POKE {w.address!r}; {ex}') from ex
+            if not destinations:raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: empty address set')
+            proved.append({'line':w.line,'expression':w.address,
+                           'addresses':[{'space':'process_udg' if b else 'absolute','offset':n}
+                                        for b,n in sorted(destinations)]})
+
+        except PokeAddressError:
+            has_udg = bool(re.search(r'\bUSR\b', w.address, re.I)) or any(
+                re.search(r'\bUSR\b', value, re.I)
+                for loop in w.loops for value in (loop.first, loop.last, loop.step))
+            if has_udg:
+                raise
+            proved.append({'line':w.line,'expression':w.address,
+                           'addresses':[], 'status':'dynamic_programmer_responsibility'})
+    for entry in proved:
+        for address in entry['addresses']:
+            if address['space']=='process_udg' and not 0 <= address['offset'] < 168:
+                raise PokeAddressError(f"RBC E_UDG_RANGE: Line {entry['line']}: UDG byte offset outside 0..167")
     return proved

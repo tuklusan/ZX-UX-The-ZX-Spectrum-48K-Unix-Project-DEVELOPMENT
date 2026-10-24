@@ -129,6 +129,18 @@ def prepare(checkpoint: Path, extensions: Path):
         raise ValueError('RBC memory guard changed; UDG fix needs review')
     memory_source = memory_source.replace(
         old_target, "target=_target(('USR ' if op=='USR' else '') + address)", 1)
+    # Keep known ROM and system writes restricted. Dynamic and ordinary RAM
+    # POKEs are the programmer's responsibility; UDG writes are proved apart.
+    old = "        return 'system_or_kernel'\n    return 'unknown'"
+    if memory_source.count(old) != 1:
+        raise ValueError('memory target classifier changed')
+    memory_source = memory_source.replace(
+        old, "        return 'system_or_kernel' if n < 0x5D00 else 'ordinary_ram'\n    return 'unknown'", 1)
+    old = "else:sev,cl='block','unbounded_memory_write'"
+    if memory_source.count(old) != 1:
+        raise ValueError('dynamic POKE classifier changed')
+    memory_source = memory_source.replace(
+        old, "else:sev,cl='review','programmer_managed_write'", 1)
     memory.write_text(memory_source)
     shutil.copyfile(extensions / 'basic_listing.py', checkpoint / 'rbc' / 'basic_listing.py')
     shutil.copyfile(extensions / 'line_targets.py', checkpoint / 'rbc' / 'line_targets.py')
