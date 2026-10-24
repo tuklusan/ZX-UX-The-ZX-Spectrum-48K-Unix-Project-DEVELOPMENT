@@ -110,10 +110,9 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            "        int.from_bytes(p.code[site:site+2], 'little') == bss_sp_abs\n"
            "        for site in sites)\n"
            "    if has_restart_slot:\n"
-           "        e.emit(0xf5, 0xe5, 0x21, 0x02, 0x00, 0x39, 0x22)\n"
+           "        e.emit(0xed, 0x73)\n"
            "        run_stack_site = len(e.code)\n"
            "        e.relative(0)\n"
-           "        e.emit(0xe1, 0xf1)\n"
            '    call=len(e.code)+1;e.call(0,rel=True)')
     change('    e.ldhl(0);e.lda(39);e.call(SYS)',
            '    restore(e, color_records)\n'
