@@ -243,6 +243,9 @@ jobs:
                       mem=run.session.m.mem
                       chars=mem[0x5c36]+256*mem[0x5c37]
                       print('RUN trampoline test',label,'why',run.why,'status',run.fg.status,'BSS',data['bss'],'ED73',data['image'].find(b'\xed\x73'),'ED7B',data['image'].find(b'\xed\x7b'),'CHARS',hex(chars),'syscalls',run.session.syscalls,flush=True)
+                      if label in ('var_stop','full_probe'):
+                          idx=data['image'].find(b'\xed\x7b')
+                          print('RUN compiled clear',label,'BSS',data['bss'],'code',data['image'][idx:idx+80].hex(),'relocs',data['relocs'][:30],flush=True)
                       if label=='full_probe':
                           from zxscreen import screen_text
                           picture,_=run.picture()
@@ -257,6 +260,23 @@ jobs:
                               print('RUN variable snapshot',label,'load',hex(load),'bss_at',hex(bss_at),'vars',bytes(mem[bss_at:bss_at+data['bss']]).hex(),'saveSP',hex(int.from_bytes(bytes(mem[bss_at+data['bss']-2:bss_at+data['bss']]),'little')),flush=True)
                   except Exception as err:
                       print('RUN trampoline test error',label,type(err).__name__,str(err),flush=True)
+              for count in (1,5):
+                  baseline=runtime.read_text()
+                  target='for index in range(self._zxux_run_clear_bytes):'
+                  if baseline.count(target)!=1: raise RuntimeError('missing byte loop')
+                  runtime.write_text(baseline.replace(target,'for index in range('+str(count)+'):',1))
+                  try:
+                      for label,listing in (('var_stop','10 LET A=7\n20 RUN 100\n100 STOP\n'),('var_print','10 LET A=7\n20 RUN 100\n100 PRINT A\n110 STOP\n')):
+                          try:
+                              ssx=compile_one('rbc-r3-force-'+str(count)+'-'+label,listing)
+                              data=rld.parse_ssx(ssx.read_bytes())
+                              idx=data['image'].find(b'\xed\x7b')
+                              result=rvm.run_kernel(ssx,frames=180,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
+                              print('RUN forced clear',count,label,'why',result.why,'status',result.fg.status,'BSS',data['bss'],'code',data['image'][idx:idx+55].hex(),flush=True)
+                          except Exception as exc:
+                              print('RUN forced clear error',count,label,type(exc).__name__,str(exc),flush=True)
+                  finally:
+                      runtime.write_text(baseline)
           finally:
               runtime.write_text(original_runtime)
               wrapper.write_text(original_wrapper)
