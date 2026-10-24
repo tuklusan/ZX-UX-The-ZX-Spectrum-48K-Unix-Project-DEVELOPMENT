@@ -260,6 +260,8 @@ jobs:
       - name: Stage 13 — verify exact 60 result files before writing
         run: |
           python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py corpus
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --quiet
           python3 - <<'PY'
           import pathlib, shutil
           root = pathlib.Path('src/bonus/60-programs')
@@ -272,8 +274,6 @@ jobs:
               assert not list(target.parent.iterdir()), f'{target.parent}: unexpected old outcome'
               shutil.copyfile(f, target)
           PY
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          git diff --quiet
           git add src/bonus/60-programs
           test "$(git diff --cached --name-only | wc -l)" -eq 60
       - name: Require unchanged private checker on staged files and commit text
