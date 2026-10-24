@@ -208,6 +208,9 @@ jobs:
               'no_rest': [('        self.emit_restore()\\n', '')],
               'no_fill': [('        self.ld_hl(self.vars_start)\\n        self.ld_bc_abs((self._zxux_run_clear_bytes - 1) & 0xffff)\\n        self.emit(\'ld a,0\')\\n        self.call_rt(compiler.RT.MEM_FILL)\\n', '')],
               'no_stack': [('        self.emit_op_reloc(\'ld sp,(nn)\', self._zxux_run_sp)\\n', '')],
+              'stack_only': [('        self.ld_hl(self.vars_start)\\n        self.ld_bc_abs((self._zxux_run_clear_bytes - 1) & 0xffff)\\n        self.emit(\'ld a,0\')\\n        self.call_rt(compiler.RT.MEM_FILL)\\n', ''), ('        self.emit_restore()\\n','')],
+              'fill_only': [('        self.emit_op_reloc(\'ld sp,(nn)\', self._zxux_run_sp)\\n',''), ('        self.emit_restore()\\n','')],
+              'rest_only': [('        self.emit_op_reloc(\'ld sp,(nn)\', self._zxux_run_sp)\\n', ''), ('        self.ld_hl(self.vars_start)\\n        self.ld_bc_abs((self._zxux_run_clear_bytes - 1) & 0xffff)\\n        self.emit(\'ld a,0\')\\n        self.call_rt(compiler.RT.MEM_FILL)\\n', '')],
               'jump_only': [('        self.emit_op_reloc(\'ld sp,(nn)\', self._zxux_run_sp)\\n', ''), ('        self.ld_hl(self.vars_start)\\n        self.ld_bc_abs((self._zxux_run_clear_bytes - 1) & 0xffff)\\n        self.emit(\'ld a,0\')\\n        self.call_rt(compiler.RT.MEM_FILL)\\n', ''), ('        self.emit_restore()\\n','')],
           }
           for name,changes in sequences.items():
