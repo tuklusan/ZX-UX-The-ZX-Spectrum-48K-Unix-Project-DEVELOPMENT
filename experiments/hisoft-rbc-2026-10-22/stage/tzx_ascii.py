@@ -1,67 +1,59 @@
-"""Convert original tokenized 48K BASIC to strictly numbered ASCII.
+"""Render tokenized Spectrum BASIC into unambiguous numbered ASCII input.
 
-No BASIC text is repaired, and this converter never reads the paired .bas.
-The caller must tokenize the result through RBC and compare every original
-program byte before attempting compilation.
+Executable Sinclair tokens are spelled from the ROM token table, while all
+other bytes use BAS2TAP's {HH} escape. The byte escapes keep spaces inside
+remarks and strings and keep exact numeric metadata unchanged. No source
+keyword is inferred by examining ordinary characters.
 """
-
 
 class LosslessConversionError(ValueError):
     pass
 
 
 def to_ascii_listing(lines, token_names):
-    """Render existing Sinclair tokens without guessing any keyword boundary.
-
-    The {HH} representation is an explicit byte literal handled by the
-    existing RBC input adapter. Actual token bytes determine word boundaries.
-    Literal spaces are written as {20}; spaces around rendered keywords are
-    syntax-only separators and are discarded by the original keyword encoder.
-    Numeric caches are supplied afresh by the original ROM number encoder;
-    callers must compare their exact bytes after round-trip tokenization.
-    """
     if not token_names:
         raise LosslessConversionError('missing original Sinclair token table')
-    result = []
+    output = []
     for number, body in lines:
         if not isinstance(number, int) or not 0 <= number <= 9999:
             raise LosslessConversionError(f'BASIC line number {number!r} outside 0..9999')
         if not body or body[-1] != 13:
             raise LosslessConversionError(f'Line {number}: missing end-of-line marker')
-        quoted = False
-        rem = False
-        rendered = []
-        index = 0
-        body = body[:-1]
-        while index < len(body):
-            value = body[index]
-            if value == 14 and not quoted and not rem:
-                if index + 6 > len(body):
+        quoted = rem = False
+        text = []
+        i = 0
+        raw = body[:-1]
+        while i < len(raw):
+            c = raw[i]
+            if not quoted and not rem and c == 14:
+                if i + 6 > len(raw):
                     raise LosslessConversionError(f'Line {number}: incomplete Sinclair numeric cache')
-                index += 6
+                text.extend('{%02X}' % b for b in raw[i:i + 6])
+                i += 6
                 continue
-            if value == 34 and not rem:
+            if not rem and c == 34:
                 quoted = not quoted
-            if not quoted and not rem and value in token_names:
-                word = token_names[value].strip()
-                if not word:
-                    raise LosslessConversionError(f'Line {number}: empty Sinclair token name {value:02X}')
-                rendered.append(' ' + word + ' ')
-                if value == 0xEA:  # REM: the rest of the line is literal text.
+                text.append('"')
+            elif not quoted and not rem and c == 58:
+                text.append(':')
+            elif not quoted and not rem and c in (40, 41):
+                text.append(chr(c))
+            elif not quoted and not rem and c in token_names:
+                token = token_names[c].strip()
+                if not token:
+                    raise LosslessConversionError(f'Line {number}: empty keyword for {c:02X}')
+                text.append(token)
+                if c == 0xea:
                     rem = True
             else:
-                # Encode every ordinary byte as an explicit literal. Raw
-                # variable names can spell keyword text (such as AT), and
-                # the keyword encoder must not silently retokenize them.
-                rendered.append('{' + format(value, '02X') + '}')
-            index += 1
+                text.append('{%02X}' % c)
+            i += 1
         if quoted:
             raise LosslessConversionError(f'Line {number}: unmatched quoted string')
-        result.append(str(number) + ' ' + ''.join(rendered))
-    if not result:
+        output.append(str(number) + ' ' + ''.join(text))
+    if not output:
         raise LosslessConversionError('empty original BASIC program')
-    return '\n'.join(result) + '\n'
-
+    return '\n'.join(output) + '\n'
 
 def confirm_roundtrip(original, recreated, split_lines):
     """Demand an exact byte match including numeric caches and quoted bytes."""

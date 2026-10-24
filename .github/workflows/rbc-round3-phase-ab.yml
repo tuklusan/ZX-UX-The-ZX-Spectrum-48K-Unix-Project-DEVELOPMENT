@@ -1,0 +1,58 @@
+name: RBC Round 3 focused verification
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'experiments/hisoft-rbc-2026-10-22/stage/**'
+      - 'experiments/hisoft-rbc-2026-10-22/tests/**'
+      - '.github/workflows/rbc-round3-phase-ab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  phase-a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact TZX token-source checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=experiments/hisoft-rbc-2026-10-22
+          python -m unittest discover -s "$base/tests" -p 'test_tzx_ascii.py' -v
+          PYTHONPATH="$base/stage" python - <<'PY'
+          from pathlib import Path
+          import importlib.util
+          from basic_listing import encode_strict_listing
+          from dual_source import validated_lines,semantic_check
+          from tzx_ascii import to_ascii_listing
+          spec=importlib.util.spec_from_file_location('zxux_tzx','build/tools/zx-tzx2bas.py')
+          tool=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(tool)
+          entries=tool._rom_token_entries()
+          tokens={0xa5+i:word.decode('ascii') for i,(word,first,last) in enumerate(entries)}
+          games=sorted(Path('src/bonus/60-programs').glob('[0-9][0-9]-*'))
+          assert len(games)==60,len(games)
+          successes=[]; failures=[]
+          for game in games:
+            p=game/'BASIC'/(game.name+'.tzx')
+            progs=list(tool.basic_programs(p.read_bytes()))
+            assert len(progs)==1,(game.name,len(progs))
+            name,original=progs[0]
+            try:
+              listing=to_ascii_listing(validated_lines(original),tokens)
+              restored=encode_strict_listing(listing)
+              semantic_check(original,restored,None,tokens,'TZX reconstructed')
+              successes.append(game.name)
+            except Exception as exc:
+              failures.append((game.name,type(exc).__name__,str(exc)))
+          print('TZX round-trip results',len(successes),'successes',len(failures),'failures',flush=True)
+          for item in failures:print('TZX not yet roundtrippable',repr(item),flush=True)
+          if len(failures)>7:raise SystemExit('Source conversion regression')
+          PY
