@@ -71,6 +71,15 @@ jobs:
                     'reloc_match',pa['relocs']==pb['relocs'],
                     'bas_hex',lhs[loc:loc+24].hex() if loc>=0 else '',
                     'tzx_hex',rhs[loc:loc+24].hex() if loc>=0 else '',flush=True)
+          unstandardized=[]
+          for game,item in sorted(outcomes.items()):
+              for channel in ('bas','tzx'):
+                  result=item[channel]
+                  if result['exit_status'] and not result['stderr'].lstrip().startswith('%RBC '):
+                      unstandardized.append((game,channel,result['stderr'][:160]))
+          print('RBC_UNSTANDARDIZED_DIAGNOSTICS',repr(unstandardized),flush=True)
+          if unstandardized:
+              raise SystemExit('corpus contains non-standardized errors')
           print('RBC_ALL_OUTCOMES',len(outcomes),sum(x['bas']['native_linked'] for x in outcomes.values()),
                 sum(x['tzx']['native_linked'] for x in outcomes.values()),flush=True)
           check=subprocess.run([sys.executable,
