@@ -77,3 +77,15 @@ jobs:
           for pattern in test_round3_scroll_sysvar.py test_native_sysvars_rt.py test_round2_sysvars.py test_poke_policy.py test_poke_proof.py; do
             PYTHONPATH=build/tmp/rbc-round3/upstream python -m unittest discover -s "$base" -p "$pattern" -v
           done
+
+      - name: Boot all published RBC SSX in the real ZX-UX rvm
+        shell: bash
+        run: |
+          set -euo pipefail
+          python experiments/hisoft-rbc-2026-10-22/stage/round3_runtime_smoke.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rbc-round3-runtime-15
+          path: build/tmp/rbc-round3/runtime-15.json
+          if-no-files-found: warn
