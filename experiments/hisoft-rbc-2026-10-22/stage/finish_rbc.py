@@ -34,7 +34,15 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            "'memory_policy':memory_policy, 'memory_check':memory_report, "
            "'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested}")
     text = patched(text)
-    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py'):
+    change('from rbc_output import output_path, memory_required, write_mode',
+           'from diagnostics import format_failure, RbcArgumentParser\n'
+           'from rbc_output import output_path, memory_required, write_mode')
+    change('ap=argparse.ArgumentParser(description=__doc__)',
+           'ap=RbcArgumentParser(description=__doc__)')
+    change("except (ValueError,OSError) as exc:\n        print('rbc: '+str(exc),file=sys.stderr)",
+           "except (ValueError,OSError) as exc:\n"
+           "        print(format_failure(exc,args.source),file=sys.stderr)")
+    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py'):
         shutil.copyfile(extensions / module, checkpoint / 'rbc' / module)
     source.write_text(text)
 
