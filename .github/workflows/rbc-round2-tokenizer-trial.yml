@@ -1,0 +1,60 @@
+name: RBC upstream tokenizer verification
+on:
+  push:
+    branches: [rbc-round2-tokenizer-trial]
+permissions:
+  contents: read
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify vendored upstream revisions and prepared adapter source
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage=experiments/hisoft-rbc-2026-10-22/stage
+          test "$(git hash-object "$stage/bas2tap.py")" = 0bfe1f9ef8669e4fd264d3222a4e427628e62323
+          test "$(git hash-object "$stage/bas2tap_syntax.py")" = 353878813d46d8f3722a2ddec5764fa2e1a0b72c
+          python -m compileall -q "$stage"/basic_listing.py "$stage"/prepare_rbc.py
+      - name: Verify 48K ROM and strict input tests (first fresh pass)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in test_basic_listing test_at_tokenizer test_round2_fidelity test_rom_syntax test_dual_source; do
+            python -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p "$test.py" -v
+          done
+      - name: Verify 48K ROM and strict input tests (second fresh pass)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in test_basic_listing test_at_tokenizer test_round2_fidelity test_rom_syntax test_dual_source; do
+            python -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p "$test.py" -v
+          done
+      - name: Independently recover all 60 TZX input listings
+        shell: bash
+        run: |
+          set -euo pipefail
+          python build/tools/zx-tzx2bas.py --corpus src/bonus/60-programs --out-dir build/tmp/rbc-tokenizer-tzx
+          PYTHONPATH=experiments/hisoft-rbc-2026-10-22/stage python - <<'PY'
+          from pathlib import Path
+          from basic_listing import encode_strict_listing
+          base = Path('src/bonus/60-programs')
+          games = sorted(p for p in base.iterdir() if p.is_dir() and p.name[:2].isdigit())
+          assert len(games) == 60
+          total = 0
+          for game in games:
+              bas = game / 'BASIC' / (game.name + '.bas')
+              from_tzx = Path('build/tmp/rbc-tokenizer-tzx') / game.name / 'BASIC' / (game.name + '.bas')
+              for path in (bas, from_tzx):
+                  text = path.read_text(encoding='ascii')
+                  encoded = encode_strict_listing(text)
+                  assert encoded, f'Empty input: {path}'
+                  total += 1
+          assert total == 120, total
+          print('Verified 60 independent BAS and 60 TZX-derived token streams')
+          PY

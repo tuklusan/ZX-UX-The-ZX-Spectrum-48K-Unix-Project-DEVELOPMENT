@@ -1,28 +1,27 @@
-"""A keyword used as a variable is not quietly rewritten to BASIC text."""
+"""Token bytes must be created only by upstream BAS2TAP, not pyhsb."""
 import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
-from basic_listing import tokenize_preserving_numeric_at
+from basic_listing import encode_strict_listing
+from bas2tap import encode_program
 
-class OriginalTokenizer:
-    @staticmethod
-    def tokenize_line(body, kw):
-        return body.replace('AT', chr(0xac)).encode('latin-1')
 
 class StrictKeywords(unittest.TestCase):
-    def test_reserved_keyword_not_reinterpreted(self):
-        self.assertIn(bytes([0xac]), tokenize_preserving_numeric_at(
-            'LET AT=123', OriginalTokenizer(), None))
-
     def test_print_position_keyword(self):
-        self.assertIn(bytes([0xac]), tokenize_preserving_numeric_at(
-            'PRINT AT 2,0;"HI"', OriginalTokenizer(), None))
+        p = encode_strict_listing('10 PRINT AT 2,0;"HI"')
+        self.assertIn(b'\xac', p)
+        self.assertEqual(p, encode_program('10 PRINT AT 2,0;"HI"'))
 
-    def test_joined_tokens_not_repaired(self):
-        line='IF DPOR LEN A$>2THEN LET FL=1'
-        self.assertEqual(tokenize_preserving_numeric_at(line, OriginalTokenizer(), None),
-                         line.encode('ascii'))
-
-if __name__ == '__main__':
-    unittest.main()
+    def test_no_user_source_rewriting(self):
+        for line in ('10 IF DPOR LEN A$>2THEN LET FL=1',
+                     '10 PRINT "AT PRINT THEN"',
+                     '10 LET AT=123'):
+            with self.subTest(line=line):
+                try:
+                    produced = encode_strict_listing(line)
+                except ValueError:
+                    with self.assertRaises((ValueError,)):
+                        encode_program(line)
+                else:
+                    self.assertEqual(produced, encode_program(line))
