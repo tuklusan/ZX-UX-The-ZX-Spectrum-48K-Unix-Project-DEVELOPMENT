@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""List Sinclair Spectrum 48K BASIC from TZX tapes using ROM LIST spacing.
+"""List Sinclair Spectrum 48K BASIC from TZX tapes using ROM LLIST.
 
 This standalone reader does not edit the tape or any original BASIC listing.
 The 48K ROM's token table at 0096h supplies the spelling of each keyword.
-Spacing follows PO_SEARCH/PO_TABLE (0C41h/0C14h), PO_CHAR (0B65h),
-OUT_LINE/OUT_CHAR (1855h/1937h) and PO_TOKENS (0C10h).
+This is a direct translation of the shared LLIST/ LIST source code path:
+17F5/17FB, 1855, 18B6, 1937, 0C10, 0C41, 0C22, 0C35 and 0B65.
+The actual 48K ROM supplies the complete token table, including its bit-7
+terminators. Use llist_codes() for the literal pre-printer character stream.
 
 The output is an ASCII source representation, not a pixel-perfect recreation
 of the LIST screen. Non-ASCII character and control bytes use BAS2TAP's {HH}
@@ -162,101 +164,156 @@ def numbered_lines(program: bytes):
 
 
 def rom_keywords(rom: bytes) -> dict[int, bytes]:
-    """Read the actual ROM's bit-7-terminated keyword table, 0096h onwards."""
-    if len(rom) != 16384 or rom[0x95] != 0xbf:
-        raise TapeError('expected a standard 16 KiB Spectrum 48K ROM keyword table')
-    words = {}
-    pos = 0x96
-    for token in range(0xa5, 0x100):
-        word = bytearray()
-        while True:
-            if pos >= len(rom):
-                raise TapeError('truncated ROM keyword table')
-            ch = rom[pos]
-            pos += 1
-            word.append(ch & 127)
-            if ch & 128:
-                break
-            if len(word) > 40:
-                raise TapeError('invalid ROM keyword length')
-        if not word or any(not 32 <= c < 127 for c in word):
-            raise TapeError(f'invalid ROM keyword {token:02X}')
-        words[token] = bytes(word)
-    if words[0xa5] != b'RND' or words[0xcb] != b'THEN' or words[0xff] != b'COPY':
-        raise TapeError('unexpected ROM keyword sequence')
-    return words
+    """Expose the 91 ROM-table entries without spelling a keyword in Python."""
+    return {0xA5 + n: word for n, (word, _, _) in enumerate(_rom_token_entries(rom))}
 
 
-def list_line(number: int, body: bytes, tokens: dict[int, bytes]) -> str:
-    """ROM OUT_LINE/PO_SEARCH spacing, with safe ASCII escapes for glyphs.
+def llist_segments(number: int, body: bytes, rom: bytes):
+    """Translate the ROM LLIST character-output path (excluding printer pixels).
 
-    The ROM prints a four-character line number and a space. It tracks bit 0
-    of FLAGS: a printed space suppresses the *next* token's optional leading
-    space. RND, INKEY$ and PI do not acquire their usual trailing space.
+    17F5 LLIST -> 17FB LIST-1 -> 1833 LIST-ALL -> 1855 OUT-LINE:
+    1A28 OUT-NUM-2 emits a four-column number; 1874 resets FLAGS.0.
+    18A5/18B6 NUMBER skips the five-byte numeric representation.
+    1937 OUT-CHAR sends each source code to RST 10.
+    0B52 PO-T-UDG routes A5..FF to 0C10 PO-TOKENS.
+    0C41 PO-SEARCH checks index and original first ROM table byte.
+    0C22 PO-EACH reads and emits characters until high-bit termination.
+    0C2D..0C39 PO-TR-SP determines whether to add a trailing space.
+    0B65 PO-CHAR resets FLAGS.0 for ordinary printable characters and sets
+    it for space; nonprintable/UDG codes do not alter that flag.
+
+    Each result is (emitted bytes, original BASIC byte, token expansion flag).
+    No keyword spelling, whitespace or lexical boundary is inferred.
     """
-    result = [f'{number:4d}']
-    # OUT_LINE resets FLAGS.0 after printing the four-column number.
-    suppress_lead = False
-    quoted = rem = in_data = False
-    i = 0
-    while i < len(body):
-        c = body[i]
-        if c == 14 and not (quoted or rem):
-            if i + 6 > len(body):
-                raise TapeError(f'Line {number}: truncated five-byte numeric value at offset {i}')
-            i += 6  # ROM NUMBER (18B6h), even inside string/REM.
+    if not 0 <= number <= 9999:
+        raise TapeError(f'invalid BASIC line number {number}')
+    token_entries = _rom_token_entries(rom)
+    # OUT-NUM-2/OUT-SP-NO: number is printed in four columns.
+    parts = [(f'{number:4d}'.encode('ascii'), None, False)]
+    # OUT-LINE at 1874 sets FLAGS.0 to permit a leading space.
+    flags_0 = False
+
+    def emit(byte: int) -> None:
+        nonlocal flags_0
+        # 0B65 PO-CHAR: only ordinary printable characters alter FLAGS.0;
+        # characters less than 20h are dispatched as printer controls.
+        if 32 <= byte < 128:
+            flags_0 = (byte == 32)
+
+    p = 0
+    while p < len(body):
+        value = body[p]
+        if value == 14:  # 18B6 NUMBER: skip its full hidden five-byte form.
+            if p + 6 > len(body):
+                raise TapeError(f'Line {number}: truncated five-byte numeric value at offset {p}')
+            p += 6
             continue
-        if c == 34 and not rem:
-            quoted = not quoted
-        if c == 58 and not quoted and not rem:
-            in_data = False
-        if c >= 0xa5 and (quoted or rem or in_data):
-            # The screen LIST expands these too. In a *source file* that
-            # would destroy the byte when re-imported, so emit its escape.
-            result.append('{' + f'{c:02X}' + '}')
-            suppress_lead = False
-            i += 1
-            continue
-        if c >= 0xa5:
-            if c == 0xea:
-                rem = True
-            if c == 0xe4:
-                in_data = True
-            word = tokens[c]
-            tnum = c - 0xa5
-            # ROM PO_SEARCH: index < 32 suppresses leading space;
-            # otherwise the token text must begin with A or later.
-            if tnum >= 32 and word[0] >= ord('A') and not suppress_lead:
-                result.append(' ')
-            result.append(word.decode('ascii'))
-            suppress_lead = False
-            # ROM PO_TOKENS tests the final original table character's
-            # high bit and subtracts: '$' or letter ending => trailing
-            # space except for the first three tokens (RND/INKEY$/PI).
-            if tnum >= 3 and (word.endswith(b'$') or word[-1] >= ord('A')):
-                result.append(' ')
-                suppress_lead = True
-            i += 1
-            continue
-        if 32 <= c <= 126 and c not in (123, 125):
-            ch = chr(c) if c != 96 else '{60}'  # Spectrum code 60h is pound sign
-            result.append(ch)
-            suppress_lead = c == 32
+        if value < 0xA5:
+            emit(value)
+            parts.append((bytes([value]), value, False))
         else:
-            # Raw Spectrum bytes require a reversible ASCII notation. Literal
-            # braces must be escaped so {HH} in a string is never mistaken for
-            # an expansion when importing with BAS2TAP.
-            result.append('{' + f'{c:02X}' + '}')
-            if c in (123, 125) or 0x7f <= c <= 0xa4:
-                suppress_lead = False
-        i += 1
+            index = value - 0xA5
+            word, first, last = token_entries[index]
+            out = bytearray()
+            # 0C41: carry set for 00..1F; otherwise subtract 'A' from
+            # the *original* first (possibly high-bit-set) table byte.
+            if index >= 0x20 and first >= 0x41 and not flags_0:
+                out.append(32)
+                emit(32)
+            for character in word:
+                out.append(character)
+                emit(character)
+            # 0C2A doubles the last original byte and tests 48h ('$')
+            # or >=82h ('A' through letters); index 0..2 never follows.
+            last_doubled = (last << 1) & 255
+            if index >= 3 and (last_doubled == 0x48 or last_doubled >= 0x82):
+                out.append(32)
+                emit(32)
+            parts.append((bytes(out), value, True))
+        p += 1
+    return parts
+
+
+def _rom_token_entries(rom: bytes) -> list[tuple[bytes, int, int]]:
+    """Read 0C10's exact bit-7-terminated ROM table at 0096h, including ends.
+
+    0C41 starts scanning from 0095h, the byte immediately before RND.
+    The scanner advances to the following byte after the terminator.
+    """
+    if len(rom) != 0x4000 or rom[0x95] != 0xBF:
+        raise TapeError('expected a standard 16 KiB Spectrum 48K ROM keyword table')
+    pos = 0x96
+    out = []
+    for token in range(0xA5, 0x100):
+        start = pos
+        while pos < len(rom) and not (rom[pos] & 128):
+            pos += 1
+        if pos >= len(rom) or pos - start > 40:
+            raise TapeError(f'ROM keyword {token:02X} has no valid high-bit terminator')
+        raw = rom[start:pos + 1]
+        pos += 1
+        word = bytes(c & 0x7f for c in raw)
+        if not word or any(not 32 <= c < 127 for c in word):
+            raise TapeError(f'ROM keyword {token:02X} contains invalid characters')
+        out.append((word, raw[0], raw[-1]))
+    if out[0][0] != b'RND' or out[0xCB-0xA5][0] != b'THEN' or out[-1][0] != b'COPY':
+        raise TapeError('unexpected 48K ROM keyword sequence')
+    return out
+
+
+def llist_codes(number: int, body: bytes, rom: bytes) -> bytes:
+    """ROM LLIST emitted character codes, prior to printer bitmap wrapping.
+
+    The physical ZX Printer represents characters as dots in 32-column rows;
+    this logical code stream is the relevant output for BASIC regeneration.
+    """
+    return b''.join(output for output, _, _ in llist_segments(number, body, rom))
+
+
+def list_line(number: int, body: bytes, rom: bytes) -> str:
+    """Safely serialize the ROM LLIST listing into BAS2TAP-compatible ASCII.
+
+    ROM LLIST's *exact* emitted character stream is available via llist_codes.
+    This adapter alone escapes bytes which ROM's printer cannot transcribe
+    reversibly: graphics/controls, braces, the Spectrum pound glyph, and
+    keyword bytes originally inside quoted literals, REM or DATA. It never
+    alters the ROM's keyword spacing decisions. TZX remains authoritative.
+    """
+    parts = llist_segments(number, body, rom)
+    quoted = rem = data = False
+    rendered = []
+    for segment, original, expanded in parts:
+        if original is None:
+            rendered.append(segment.decode('ascii'))
+            continue
+        if expanded:
+            if quoted or rem or data:
+                # The actual printer expands the token regardless of mode.
+                # Keep original bytes instead of corrupting a string/REM/DATA.
+                rendered.append(f'{{{original:02X}}}')
+            else:
+                rendered.append(segment.decode('ascii'))
+            if not quoted and not rem and original == 0xEA:
+                rem = True
+            if not quoted and not rem and original == 0xE4:
+                data = True
+        elif original == 34 and not rem:
+            quoted = not quoted
+            rendered.append('"')
+        elif original == 58 and not quoted and not rem:
+            data = False
+            rendered.append(':')
+        elif original == 96 or original in (123, 125) or original < 32 or original >= 127:
+            rendered.append(f'{{{original:02X}}}')
+        else:
+            rendered.append(chr(original))
     if quoted:
         raise TapeError(f'Line {number}: unterminated quoted string')
-    return ''.join(result)
+    return ''.join(rendered)
 
 
 def listing(tape: bytes, rom: bytes, *, program_index: int | None = None) -> str:
-    words = rom_keywords(rom)
+    _rom_token_entries(rom)
     programs = list(basic_programs(tape))
     if not programs:
         raise TapeError('TZX contains no Spectrum BASIC program header/data pair')
@@ -267,7 +324,7 @@ def listing(tape: bytes, rom: bytes, *, program_index: int | None = None) -> str
     if not 0 <= program_index < len(programs):
         raise TapeError(f'program index {program_index} outside 0..{len(programs) - 1}')
     name, program = programs[program_index]
-    result = [list_line(n, body, words) for n, body in numbered_lines(program)]
+    result = [list_line(n, body, rom) for n, body in numbered_lines(program)]
     if not result:
         raise TapeError(f'BASIC program {name!r} has no lines')
     return '\n'.join(result) + '\n'
