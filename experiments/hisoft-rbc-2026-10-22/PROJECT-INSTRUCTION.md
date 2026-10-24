@@ -1,85 +1,39 @@
-# ZX-UX 60 games - current work
+# ZX-UX - RBC 60-program completion
 
-Only GitHub DEVELOPMENT main is authoritative:
+## Goal
+
+No paperwork. No bureaucracy. Quick, direct, surgical.
+
+1. Refactor RBC; run focused checks; commit and push the refactor immediately.
+2. Process all 60 preserved Spectrum BASIC games through RBC. In each numbered game's `C48/`, save either the successfully linked native `.ssx` or a short `README` stating the precise reason compilation failed. One outcome per game; no extra deliverables.
+3. Stop when all 60 outcomes are committed to DEVELOPMENT `main`.
+
+## Repository and boundaries
+
+The only working repository is
 https://github.com/tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT
-Never use the similarly named other repository. At every session read current
-HEAD/tree, workflow, tests and port cursor before changes. Preserve original
-games and frozen ZX-UX beta-0.2.0, SDK, kernel, emulator and release.
+on `main`; never use the similarly named repository without `-DEVELOPMENT`.
+At session start read current remote HEAD/tree and applicable RBC source before edits. Reconcile newer work. GitHub `main`, not a temporary checkout, is delivery.
+Preserve every original BASIC/TZX byte and the frozen ZX-UX beta-0.2.0, SDK, kernel, emulator and release. Do not modify the private checker or its rules.
 
-## RBC: original 48K Sinclair BASIC only
+## RBC input and syntax
 
-The RBC command-line input is numbered ASCII Spectrum 48K BASIC. A strict
-adapter converts only unambiguously delimited keywords and valid Spectrum
-characters, numbers, DATA, REM, strings and DEF FN into original tokenized
-line records. An isolated ORIGINAL 48K ROM then syntax-checks every line,
-without running the program. Reject invalid or ambiguous source with line and
-reason. Never insert spaces, guess syntax, repair source or accept extensions.
-FOR I=1TO10 fails as an incomplete FOR; FOR I=1 TO 10 passes the tokenizer.
-The compiler core accepts ONLY the resulting ROM-validated Sinclair tokens.
+RBC's external input is numbered ASCII Sinclair ZX Spectrum 48K BASIC only. A strict adapter recognizes the original keywords and converts ASCII to genuine Sinclair tokens; the compiler core sees tokens only. Validate the tokenized lines with the original 48K ROM syntax checker without executing the program. Abort invalid or ambiguous input with line and clear reason. Never guess keyword boundaries, insert spaces, repair source or accept another BASIC dialect: `FOR I=1TO10` fails; `FOR I=1 TO 10` is valid.
 
-For each original TZX: extract its already-tokenized BASIC, detokenize
-accurately to explicitly unambiguous ASCII and re-tokenize through the SAME
-gate. Check exact significant token bytes, numeric caches, quoted data,
-control characters and user graphics. If representation is not lossless,
-report a conversion failure; do not silently use the paired BAS instead.
+When using an original TZX input, extract its already-tokenized BASIC, convert faithfully to unambiguous ASCII and round-trip check the tokens before feeding that ASCII to RBC. Preserve numeric encodings, quoted token bytes, control codes, UDG characters and line meaning. If lossless conversion is impossible, fail with the reason; never substitute the paired `.bas` silently.
 
-All 48K keywords are valid syntax. RBC must explicitly reject unsupported
-ZX-UX behavior (including LPRINT, LLIST, Interface 1 storage/peripherals).
-Never silently replace, ignore or emulate unsupported functionality.
+Recognize genuine 48K BASIC syntax, but refuse operations unsupported by ZX-UX (`LPRINT`, `LLIST`, Interface 1 storage/peripherals, etc.) with a clear compiler error; no silent substitutes.
 
-## Safety, without overengineering
+## Simple safety policy
 
-Ban executable numeric USR token 0xC0 in every context. The ONLY exception
-is proven UDG-address use in POKE, such as USR "a", USR "a"+8 or bounded
-equivalent expressions. Spectrum 48K UDG A-U use 21 x 8 bytes; resolve ALL
-possible destinations and relocate proven offsets into ZX-UX process UDG
-storage. Reject any unproved or out-of-UDG USR expression. Token checks
-must distinguish actual executable tokens from quoted text, REM, hidden
-number caches and other non-code data. No machine-code entry is permitted.
+Reject executable numeric `USR` token `0xC0` and any machine-code calls. Permit `USR "a"` through `USR "u"` only as compile-time-resolvable UDG address calculations for `POKE`, including provably bounded offsets such as `USR "a"+8`; relocate all proved bytes into process-owned UDG storage (168 bytes). Fail unresolved or out-of-range UDG address expressions. Ignore tokens in non-executable quoted messages and remarks. Do not allow `VAL` to execute prohibited machine-code calls.
 
-Ordinary POKE is allowed except for destinations known at compile time to
-hit dangerous protected machine or ZX-UX state. Unknown dynamic addresses
-are the programmer's responsibility: never require exhaustive proofs for
-ordinary POKE. Keep actual UDG writes working. VAL must not evaluate a
-forbidden numeric USR at runtime; safe numeric VAL remains supported.
-GO TO, GO SUB and RUN target BASIC lines, not machine addresses.
+Allow ordinary `POKE`, including dynamic addresses, except locations known at compile time to be dangerous to protected ZX-UX or machine state. The programmer is responsible for other crashes. Keep BASIC line-number `GO TO`, `GO SUB` and `RUN` working.
 
-## A - original BASIC: reverify all 121 inputs from zero
+## Execution and finish
 
-60 BAS, 60 original TZX and HELLO each need a new outcome: verified native
-pass, justified exclusion or OPEN. All earlier runs and exclusions are
-non-credit. A native pass proves adapter/ROM gate, compilation, SSX linking,
-48K fit and startup, gameplay, controls, timing, graphics/remnants and
-creation/loading of a NEW ZX-UX executable TZX. HELLO has smoke checks.
-Unknown or incomplete checks stay OPEN. An unavoidable rejection may be
-closed only with a short game-local C48/BASIC-EXCLUSION.txt giving exact
-input, line and cause; exclusions never finish C48 ports.
+Fix shared RBC defects first. Check in the working refactor immediately, then process each of the 60 games. Keep only its final `.ssx` or short failure `C48/README`; do not add screenshots, TZX outputs, C48 porting work, historical reports, acceptance ledgers, handovers, or signoffs. A failed conversion, unsupported feature, or compiler failure is a README outcome, not a fabricated pass. Do not overwrite the original game inputs.
 
-Run FAST focused checks after a change, paired BATCH checks after fixes,
-and FULL on all 121 inputs across all five shards at milestones and closure.
-Do not mistake compiler success, CI green or boot screen for gameplay proof.
+Before publishing, check exact changes and commit text with the unchanged private checker. Fix checker rejections within four attempts; fast-forward only. Read back remote HEAD and files. Do not claim compilation passed without an actual compiled, linked `.ssx`.
 
-## B - faithful C48: independently reaccept 60 ports from zero
-
-src/bonus/60-programs/PORTING-PROGRESS.json is the only acceptance cursor.
-Start with 01-minelay. Existing source/tests may save work, but none of the
-earlier accepted ports or pilots carry new acceptance. Work in order, one
-fully checked port per commit. Compare actual original and native gameplay,
-math, controls, edge cases, timing, sprites, screen remnants and real SSX/TZX.
-Follow src/bonus/60-programs/build/PORTING-WORKFLOW.md.
-
-## Minimal publication and end condition
-
-Keep useful code, fresh program outputs and meaningful machine results;
-delete obsolete reports, checkpoints, old builds and consumed Actions files.
-Do not produce handovers or dated status paperwork. Preserve original BAS/TZX
-bytes and all frozen beta files. Before push check exact paths, proposed text
-and commit message with unchanged private checker; fix rejection in at most
-four attempts. Recheck remote HEAD; fast-forward only; read back new remote
-commit/tree, changed files and cursor. Remove completed workflow YAML and
-run history only after verifying required outputs are saved on main.
-
-Finish when A has zero OPEN inputs and every permitted input passes real
-native gates, and B has 60/60 independently verified ports. Report A native
-passes/exclusions/failures/unknowns out of 121 and B accepted/60, with next
-blocker and actual check level. Work only in active sessions.
+Finished means exactly 60 game outcomes, each saved under its `C48/` and verified on DEVELOPMENT `main`. Report the number of SSX outputs and failure READMEs, then stop. No other completion criteria or background work.
