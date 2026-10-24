@@ -19,13 +19,13 @@ class TapeAsciiTests(unittest.TestCase):
     def test_printable_characters_and_spaces_survive(self):
         result = to_ascii_listing([(10, b'\xf5 "Hi {90} \xf5"\r')], TOKENS)
         self.assertIn('{20}', result)
-        self.assertIn('{7B}90{7D}', result)
+        self.assertIn('{7B}{39}{30}{7D}', result)
         self.assertIn('{F5}', result)
 
     def test_rem_does_not_create_keywords(self):
         result = to_ascii_listing([(10, b'\xea \xf5 SAVE\r')], TOKENS)
         self.assertIn('{F5}', result)
-        self.assertIn('{20}SAVE', result)
+        self.assertIn('{20}{53}{41}{56}{45}', result)
 
     def test_identical_program_is_accepted(self):
         confirm_roundtrip(b'abc', b'abc', lambda _: [])

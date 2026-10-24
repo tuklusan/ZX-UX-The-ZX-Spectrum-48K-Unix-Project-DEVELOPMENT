@@ -49,9 +49,10 @@ def to_ascii_listing(lines, token_names):
                 rendered.append(' ' + word + ' ')
                 if value == 0xEA:  # REM: the rest of the line is literal text.
                     rem = True
-            elif 33 <= value <= 126 and value not in (123, 125):
-                rendered.append(chr(value))
             else:
+                # Encode every ordinary byte as an explicit literal. Raw
+                # variable names can spell keyword text (such as AT), and
+                # the keyword encoder must not silently retokenize them.
                 rendered.append('{' + format(value, '02X') + '}')
             index += 1
         if quoted:

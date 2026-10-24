@@ -69,7 +69,7 @@ def prepare(checkpoint: Path, extensions: Path):
     anchor = '        if not source.open_lines(program):'
     if text.count(anchor) != 1:
         raise ValueError('RBC syntax-check injection location changed')
-    text = text.replace(anchor, '        validate_rom_lines(program, rom)\n        reject_tape_operations(spectrum_tap.split_lines(program), kw.TOKEN)\n' + anchor, 1)
+    text = text.replace(anchor, '        validate_rom_lines(program, rom)\n        reject_tape_operations(source.tap.split_lines(program), kw.TOKEN)\n' + anchor, 1)
     text = text.replace("'memory_policy':memory_policy, 'memory_check':memory_report}",
                         "'memory_policy':memory_policy, 'memory_check':memory_report,\n"
                         "                        'next_line_targets':next_lines, 'scroll_counter_lines':scroll_lines}", 1)
