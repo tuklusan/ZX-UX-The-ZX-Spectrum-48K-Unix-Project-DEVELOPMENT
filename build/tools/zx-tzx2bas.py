@@ -32,10 +32,10 @@ numeric representations, control bytes, quotes and comments; do not substitute
 the exported ASCII for archival tape bytes without an independent round trip.
 
 Example, one tape:
-    python3 zx-tzx2bas.py game.tzx -o staged/game.bas
+    python3 build/tools/zx-tzx2bas.py game.tzx -o staged/game.bas
 
 Example, preserved 60-program collection (no original files are touched):
-    python3 zx-tzx2bas.py --corpus src/bonus/60-programs \
+    python3 build/tools/zx-tzx2bas.py --corpus src/bonus/60-programs \
         --out-dir build/tmp/tzx-basic-listings
 
 For license attribution and version information, run --about.

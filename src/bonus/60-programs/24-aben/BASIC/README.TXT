@@ -17,7 +17,7 @@ times, open KEYS-AND-TIMING.TXT.
 
 FILES IN THIS FOLDER
   24-aben.tzx - the non-auto-run Spectrum tape.
-  24-aben.bas - the decoded BASIC source (data block: 4042 bytes).
+  24-aben.bas - the LLIST-formatted BASIC text from the matching TZX (data block: 4042 bytes).
   README.TXT - this guide and the book page reference.
   KEYS-AND-TIMING.TXT - the actual input and capture log.
   REPLAY.sh - the Linux FUSE demonstration script.
@@ -33,4 +33,5 @@ part of this set. Some programs need fewer than three images.
 
 These captures demonstrate a short working session, not every possible
 path through the program. Exact frames can vary with input timing or the
-program's choices. The listing and tape data are unchanged from v21.
+program's choices. The tape is unchanged from v21. The BAS listing was regenerated
+from that tape using build/tools/zx-tzx2bas.py (Spectrum 48K ROM LLIST formatting).

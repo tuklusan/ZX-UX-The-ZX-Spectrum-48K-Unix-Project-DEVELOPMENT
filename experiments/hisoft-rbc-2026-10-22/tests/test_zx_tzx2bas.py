@@ -19,7 +19,7 @@ import tempfile
 import unittest
 
 HERE = Path(__file__).resolve().parent
-TOOL = HERE.parent / 'stage' / 'zx-tzx2bas.py'
+TOOL = HERE.parents[2] / 'build' / 'tools' / 'zx-tzx2bas.py'
 SPEC = importlib.util.spec_from_file_location('zx_tzx2bas', TOOL)
 LISTER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(LISTER)
