@@ -96,7 +96,7 @@ jobs:
           import osbuild,turbo_boot_build
           text=Path('build/src/unix.sym').read_text()
           syms={m.group(1):int(m.group(2),16) for line in text.splitlines()
-                if (m:=re.match(r'(\\S+): EQU 0x([0-9A-Fa-f]+)',line))}
+                if (m:=re.match(r'(\S+): EQU 0x([0-9A-Fa-f]+)',line))}
           _,_,free,_=osbuild.mkfs(syms,osbuild.program_list())
           turbo_boot_build.create_tzx(str(Path('build/tmp/rbc-round3/sjasmplus-src/sjasmplus').resolve()),syms,syms['kend']-0x6000,
                                       free,output_name='ZX-UX.tzx')
