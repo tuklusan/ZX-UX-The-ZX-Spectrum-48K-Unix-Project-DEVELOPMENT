@@ -77,7 +77,7 @@ jobs:
           print('Diagnostic-positive native SSX linked',target.stat().st_size)
           cases=[
             ('invalid.bas','10 FOR I=1TO10\n','BAS_UNEXPECTED_KEYWORD'),
-            ('rom.bas','10 PRINT "HELLO" GO TO\n','ROM_C_SYNTAX'),
+            ('rom.bas','10 PRINT 1+\n','ROM_C_SYNTAX'),
             ('tape.bas','10 LOAD "PART2"\n','RBC_TAPE_LOAD'),
             ('usr.bas','10 RANDOMIZE USR 32768\n','RBC_USR_MACHINE_CODE'),
           ]

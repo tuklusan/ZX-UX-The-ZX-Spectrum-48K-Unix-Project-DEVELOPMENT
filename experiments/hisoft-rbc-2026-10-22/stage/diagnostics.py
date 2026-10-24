@@ -248,6 +248,12 @@ def from_exception(exc: Exception, source: Path | None = None) -> Diagnostic:
         name = HIS_BY_NUMBER.get(int(code.group(1)) if code else -1)
         mnemonic = 'HIS_' + (name or ('UNSUPPORTED' if ('not supported' in low or 'dim again' in low) else 'INTERNAL'))
         keyword = 'GO TO' if 'go to' in low else 'DIM' if 'dim' in low else None
+    elif 'unexpected keyword' in low:
+        mnemonic = 'BAS_UNEXPECTED_KEYWORD'
+        match = re.search(r'unexpected keyword\s+([^:\n]+)', detail, re.I)
+        keyword = match.group(1).strip() if match else None
+    elif 'expecting statement' in low or 'expected keyword' in low:
+        mnemonic = 'BAS_EXPECT_KEYWORD'
     elif 'numbered ascii' in low or 'missing line number' in low: mnemonic = 'BAS_NO_LINE_NUMBER'
     elif 'line number outside' in low or 'exceeds 9999' in low: mnemonic = 'BAS_LINE_RANGE'
     elif 'missing whitespace before to in for' in low: mnemonic, keyword = 'BAS_UNEXPECTED_KEYWORD', 'TO'
