@@ -82,11 +82,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y sjasmplus
+          git clone --recursive --branch v1.24.0 --depth 1 https://github.com/z00m128/sjasmplus.git build/tmp/rbc-round3/sjasmplus-src
+          make -C build/tmp/rbc-round3/sjasmplus-src -j2 USE_LUA=0
+          export SJASM="$(find build/tmp/rbc-round3/sjasmplus-src -type f -name sjasmplus -perm -111 | head -1)"
+          test -x "$SJASM"
+          "$SJASM" --version
           mkdir -p build/src build/out
           cp -a src/zx-ux/. build/src/
-          python src/zx-ux-sdk/tools/osbuild.py "$(command -v sjasmplus)"
+          python src/zx-ux-sdk/tools/osbuild.py "$SJASM"
           PYTHONPATH=src/zx-ux-sdk/tools python - <<'PY'
           from pathlib import Path
           import re
@@ -95,7 +98,7 @@ jobs:
           syms={m.group(1):int(m.group(2),16) for line in text.splitlines()
                 if (m:=re.match(r'(\\S+): EQU 0x([0-9A-Fa-f]+)',line))}
           _,_,free,_=osbuild.mkfs(syms,osbuild.program_list())
-          turbo_boot_build.create_tzx('sjasmplus',syms,syms['kend']-0x6000,
+          turbo_boot_build.create_tzx(str(Path('build/tmp/rbc-round3/sjasmplus-src/sjasmplus').resolve()),syms,syms['kend']-0x6000,
                                       free,output_name='ZX-UX.tzx')
           original=Path('dist/zx-ux/tzx/ZX-UX.tzx').read_bytes()
           recreated=Path('build/out/ZX-UX.tzx').read_bytes()
