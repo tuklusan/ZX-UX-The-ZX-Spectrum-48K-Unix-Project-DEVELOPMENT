@@ -1,199 +1,145 @@
 #!/usr/bin/env python3
-"""Apply the development extensions to the preserved RBC checkpoint."""
+"""Install only ZX-UX boundaries around the preserved pyhsb compiler.
+
+Never edit the upstream pyhsb modules or rewrite a tokenized BASIC statement
+for the benefit of a particular game. Unsupported HiSoft constructs must
+produce compiler diagnostics, not an invented BASIC implementation.
+"""
+from __future__ import annotations
+
 from pathlib import Path
 import shutil
-import sys
 
 
-def prepare(checkpoint: Path, extensions: Path):
-    # The checkout and the source tape collection remain untouched.
+BOUNDARY = (
+    'basic_listing.py', 'rom_syntax.py', 'tape_policy.py',
+    'bss_layout.py', 'startup_colors.py',
+    'native_pause_rt.py', 'native_keyread_rt.py', 'native_val_rt.py',
+    'native_sysvars_rt.py', 'native_sysvar_policy.py', 'spectrum_sysvars.py',
+    'poke_policy.py', 'poke_proof.py', 'safety_usr.py', 'val_guard.py',
+    'udg_bounds.py', 'udg_nested.py', 'udg_chr_bounds.py',
+    'rom_keyread.py', 'rom_keyboard_control.py', 'rom_scroll.py',
+)
+
+
+def prepare(checkpoint: Path, extensions: Path) -> None:
     compiler = checkpoint / 'rbc' / 'rbc.py'
     text = compiler.read_text()
-    old = 'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize'
-    new = 'from basic_listing import split_numbered_line, tokenize_preserving_numeric_at\nfrom rom_syntax import validate_rom_lines\nfrom tape_policy import reject_tape_operations\nfrom line_targets import resolve_missing_targets\nfrom native_scroll import adapt_scroll_counter\nfrom restore_data import resolve_restores\nfrom constant_data import adapt_literal_data\nfrom glyph_data import specialize_glyph_data\nfrom constant_dims import specialize_literal_dims\nfrom input_bound_dims import adapt_input_bound_dims\nfrom input_string_dims import adapt_input_string_dims\nfrom numeric_input_dims import adapt_numeric_input_dims\nfrom picture_attrs import adapt_picture_attrs, allow_bounded_picture_attributes\nfrom stellar_charset import adapt_stellar_charset, install as install_stellar_charset\nfrom udg_data_literals import allow_literal_data_udgs\nfrom evolution_tape_chain import allow_native_evolution_load, install as install_evolution_tape_chain\nfrom evolution_glyph_data import adapt_evolution_glyph_data\nfrom string_dim_flatten import adapt_flat_string_dims\nfrom data_grid import adapt_numeric_data_grid\nfrom fixed_data import specialize_fixed_data\nfrom redim_capacity import adapt_bounded_redim\nfrom duplicate_for import remove_duplicate_for\nfrom udg_bounds import allow_bounded_udg_loops\nfrom udg_nested import allow_nested_glyph_writes\nfrom udg_chr_bounds import allow_bounded_chr_glyphs\nfrom rom_keyread import allow_key_state_read\nfrom rom_keyboard_control import allow_rom_keyboard_controls\nfrom rom_scroll import allow_rom_screen_scroll\nfrom spectrum_sysvars import ProcessSystemVariables\nfrom native_sysvar_policy import allow_private_sysvars\nfrom native_sysvars_rt import install as install_native_sysvars\nfrom native_pause_rt import install as install_native_pause\nfrom native_keyread_rt import install as install_native_keyread\nfrom native_val_rt import install as install_native_val\nfrom for_restart import install as install_for_restart\nfrom native_run_rt import install as install_native_run\nfrom dynamic_string_width import install as install_dynamic_string_width\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, save_controls, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
-    if text.count(old) != 1 or text.count('program = source.tokenize_directives(program,kw)') != 1:
-        raise ValueError('RBC checkpoint changed; extension location needs review')
-    text = text.replace(old, new, 1)
-    old = 'program = source.tokenize_directives(program,kw)'
-    text = text.replace(old, old + '\n        program, scroll_lines = adapt_scroll_counter(program, kw)\n        program, evolution_data_lines = adapt_evolution_glyph_data(program, kw, initial.fp, source, source.tap)\n        program, stellar_char_lines = adapt_stellar_charset(program, kw, initial.fp, source, source.tap)\n        program, bounded_input_dim_lines = adapt_input_bound_dims(program, kw, initial.fp, source, source.tap)\n        program, string_input_dim_lines = adapt_input_string_dims(program, kw, initial.fp, source, source.tap)\n        program, numeric_input_dim_lines = adapt_numeric_input_dims(program, kw, initial.fp, source, source.tap)\n        program, attribute_guard_lines = adapt_picture_attrs(program, kw, initial.fp, source, source.tap)\n        program, next_lines = resolve_missing_targets(program, kw, initial.fp)\n        program, data_lines = resolve_restores(program, kw, initial.fp)\n        program, constant_data_lines = adapt_literal_data(program, kw, initial.fp, source, source.tap)\n        program, glyph_data_lines = specialize_glyph_data(program, kw, initial.fp, source, source.tap)\n        program, literal_dim_lines = specialize_literal_dims(program, kw, initial.fp, source, source.tap)\n        program, string_dim_lines = adapt_flat_string_dims(program, kw, initial.fp, source, source.tap)\n        program, dynamic_grid_lines = adapt_numeric_data_grid(program, kw, initial.fp, source, source.tap)\n        program, fixed_data_lines = specialize_fixed_data(program, kw, initial.fp, source, source.tap)\n        program, redim_lines = adapt_bounded_redim(program, kw, initial.fp, source, source.tap)\n        program, repeated_for_lines = remove_duplicate_for(program, kw, source.tap)', 1)
-    # Confirm bounded glyph writes across numbered FOR/POKE/NEXT lines.
-    check_anchor = 'checks = analyze_lines(spectrum_tap.split_lines(program), kw.TOKEN)'
-    if text.count(check_anchor) != 1:
-        raise ValueError('RBC memory inspection location changed')
-    text = text.replace(check_anchor, check_anchor +
-                        '\n        allow_bounded_udg_loops(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_nested_glyph_writes(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_bounded_chr_glyphs(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_key_state_read(checks)\n        allow_rom_screen_scroll(checks)\n        allow_private_sysvars(checks)\n        allow_bounded_picture_attributes(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_literal_data_udgs(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n        allow_native_evolution_load(spectrum_tap.split_lines(program), checks)', 1)
-    # Try the compiler's in-memory line zero for a missing OPEN.
-    # HiSoft needs OPEN before the first user BASIC line.
-    before = '            program = source.add_directives(program, directives, True, [], kw, initial.fp)'
-    after = "            try:\n                program = source.add_directives(program, directives, True, [], kw, initial.fp)\n            except source.SourceError as exc:\n                if directives or 'no free line numbers' not in str(exc):\n                    raise\n                program = source.add_directives(program, [], False,\n                                                ['0 REM : OPEN #'], kw, initial.fp)"
-    if text.count(before) != 1:
-        raise ValueError('RBC OPEN directive placement changed')
-    text = text.replace(before, after, 1)
-    old_read = "src.read_text(encoding='latin-1').splitlines()"
-    if text.count(old_read) != 1:
-        raise ValueError('RBC text input reader changed')
-    text = text.replace(old_read, "_read_basic_text(src).splitlines()", 1)
-    text = text.replace("        raw=raw.strip()\n        if not raw:continue", "        if not raw.strip():continue", 1)
-    anchor = 'def _source_program(src: Path, source, kw, fp):'
-    if text.count(anchor) != 1:
-        raise ValueError('RBC source reader changed')
-    text = text.replace(anchor, "def _read_basic_text(src):\n    try:\n        return src.read_text(encoding='utf-8-sig')\n    except UnicodeDecodeError:\n        return src.read_text(encoding='latin-1')\n\n\n" + anchor, 1)
-    # Keep numbered blank lines such as 59 Mushroom Invasion's line 8.
-    original = (
-        "        match=re.match(r'^(\\d+)\\s+(.*)$',raw)\n"
-        "        if not match:\n"
-        "            raise ValueError(f'{src.name}: invalid BASIC text line {file_line}')\n"
-        "        number=int(match.group(1)); body=match.group(2)"
-    )
-    replacement = (
-        "        try:\n"
-        "            number, body = split_numbered_line(raw)\n"
-        "        except ValueError as exc:\n"
-        "            raise ValueError(f'{src.name}: invalid BASIC text line {file_line}') from exc"
-    )
-    if text.count(original) != 1:
-        raise ValueError('RBC text line reader changed; blank line patch needs review')
-    text = text.replace(original, replacement, 1)
-    text = text.replace("source.tokenize_line(''.join(chunks),kw)",
-                        "tokenize_preserving_numeric_at(''.join(chunks),source,kw)", 1)
-    upstream = 'compiler, hbcimage, source = _hisoft_modules(frontend)'
-    if text.count(upstream) != 1:
-        raise ValueError('RBC upstream compiler import changed')
-    text = text.replace(upstream, upstream + '\n    install_native_pause(compiler)\n    install_native_keyread(compiler)\n    install_native_val(compiler)\n    install_for_restart(compiler)\n    install_native_run(compiler)\n    install_dynamic_string_width(compiler)\n    install_native_sysvars(compiler)\n    install_stellar_charset(compiler)\n    install_evolution_tape_chain(compiler)', 1)
-    # Strict adapter: never insert missing keyword boundaries or rewrite body.
+
+    def change(before: str, after: str) -> None:
+        nonlocal text
+        if text.count(before) != 1:
+            raise ValueError('Preserved RBC checkpoint changed: ' + before[:80])
+        text = text.replace(before, after, 1)
+
+    change('from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize',
+           'from basic_listing import split_numbered_line, tokenize_preserving_numeric_at\n'
+           'from rom_syntax import validate_rom_lines\n'
+           'from tape_policy import reject_tape_operations\n'
+           'from native_pause_rt import install as install_native_pause\n'
+           'from native_keyread_rt import install as install_native_keyread\n'
+           'from native_val_rt import install as install_native_val\n'
+           'from native_sysvars_rt import install as install_native_sysvars\n'
+           'from native_sysvar_policy import allow_private_sysvars\n'
+           'from udg_bounds import allow_bounded_udg_loops\n'
+           'from udg_nested import allow_nested_glyph_writes\n'
+           'from udg_chr_bounds import allow_bounded_chr_glyphs\n'
+           'from rom_keyread import allow_key_state_read\n'
+           'from rom_keyboard_control import allow_rom_keyboard_controls\n'
+           'from rom_scroll import allow_rom_screen_scroll\n'
+           'from bss_layout import target_offset\n'
+           'from startup_colors import save_and_set, save_controls, restore, append_slots\n'
+           'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize')
+    change('compiler, hbcimage, source = _hisoft_modules(frontend)',
+           'compiler, hbcimage, source = _hisoft_modules(frontend)\n'
+           '    install_native_pause(compiler)\n'
+           '    install_native_keyread(compiler)\n'
+           '    install_native_val(compiler)\n'
+           '    install_native_sysvars(compiler)')
+
+    # Input adapter: preserve the original BASIC bytes and exact keyword
+    # boundaries; do not repair spacing, identifier names or expressions.
+    change("src.read_text(encoding='latin-1').splitlines()",
+           "src.read_text(encoding='ascii').splitlines()")
+    change('        raw=raw.strip()\n        if not raw:continue',
+           '        if not raw.strip():continue')
+    change("        match=re.match(r'^(\\d+)\\s+(.*)$',raw)\n"
+           "        if not match:\n"
+           "            raise ValueError(f'{src.name}: invalid BASIC text line {file_line}')\n"
+           "        number=int(match.group(1)); body=match.group(2)",
+           "        try:\n"
+           "            number, body = split_numbered_line(raw)\n"
+           "        except ValueError as exc:\n"
+           "            raise ValueError(f'{src.name}: invalid BASIC text line {file_line}') from exc")
+    change("source.tokenize_line(''.join(chunks),kw)",
+           "tokenize_preserving_numeric_at(''.join(chunks),source,kw)")
     start = text.index('        # Preserve quoted text and REMs verbatim. Only adjust digit-adjacent')
     end = text.index('        # Replace archival {HH} byte notation', start)
-    text = (text[:start] + '        encoded=tokenize_preserving_numeric_at(body,source,kw)\n'
-            + text[end:])
-    # Read the original listing through the ROM before any compiler rewrites.
-    anchor = '        if not source.open_lines(program):'
-    if text.count(anchor) != 1:
-        raise ValueError('RBC syntax-check injection location changed')
-    text = text.replace(anchor, '        validate_rom_lines(program, rom)\n        reject_tape_operations(source.tap.split_lines(program), kw.TOKEN)\n' + anchor, 1)
-    text = text.replace("'memory_policy':memory_policy, 'memory_check':memory_report}",
-                        "'memory_policy':memory_policy, 'memory_check':memory_report,\n"
-                        "                        'next_line_targets':next_lines, 'scroll_counter_lines':scroll_lines}", 1)
-    # The HiSoft variable area follows the compiler's code. RBC inserts
-    # font and UDG bytes before the final SSX1 variable area, so correct
-    # every compiler relocation into the variable area before packing.
-    original_target = 'target=entry_image+(orig-p.base)'
-    replacement_target = (
-        'target=target_offset(orig,p.base,len(p.code),entry_image,'
-        'len(e.code),p.bss)'
-    )
-    if text.count(original_target) != 1:
-        raise ValueError('RBC SSX1 variable relocation changed; review needed')
-    text = text.replace(original_target, replacement_target, 1)
-    # Retain the upstream line-table/search implementation for computed jumps.
-    # Enable it only on the upstream compiler's existing diagnostic.
-    exact = (
-        '        builds=[]\n'
-        '        for n,top in enumerate((ramtop,ramtop-389,ramtop-617)):',
-        '            c=compiler.Compiler(img,rom,ramtop=top)\n'
-        '            res=c.compile_whole(program)',
-    )
-    substitutions = (
-        '        builds=[]\n'
-        '        computed_line_compiler = None\n'
-        '        for n,top in enumerate((ramtop,ramtop-389,ramtop-617)):',
-        '            c=(computed_line_compiler or compiler.Compiler)(img,rom,ramtop=top)\n'
-        '            res=c.compile_whole(program)\n'
-        "            if (not res.ok and res.detail == 'computed line number'\n"
-        '                    and computed_line_compiler is None):\n'
-        '                computed_line_compiler = compiler_with_computed_lines(compiler.Compiler)\n'
-        '                c=computed_line_compiler(img,rom,ramtop=top)\n'
-        '                res=c.compile_whole(program)',
-    )
-    for before, after in zip(exact, substitutions):
-        if text.count(before) != 1:
-            raise ValueError('RBC compiler loop changed; computed lookup needs review')
-        text = text.replace(before, after, 1)
-    # Initialise the program with the 48K BASIC printer colours, but return
-    # the surrounding ZX-UX display defaults when this program exits.
-    startup_anchors = (
-        ('    call=len(e.code)+1;e.call(0,rel=True)',
-         '    color_records = save_and_set(e)\n'
-         '    control_records = save_controls(e)\n'
-         '    call=len(e.code)+1;e.call(0,rel=True)'),
-        ('    e.ldhl(0);e.lda(39);e.call(SYS)',
-         '    restore(e, color_records)\n'
-         '    restore(e, control_records)\n'
-         '    e.ldhl(0);e.lda(39);e.call(SYS)'),
-        ('    font_start=len(e.code);e.code.extend(font)',
-         '    append_slots(e, color_records)\n'
-         '    append_slots(e, control_records)\n'
-         '    font_start=len(e.code);e.code.extend(font)'),
-    )
-    for anchor, replacement in startup_anchors:
-        if text.count(anchor) != 1:
-            raise ValueError('RBC display startup sequence changed; review needed')
-        text = text.replace(anchor, replacement, 1)
+    text = text[:start] + '        encoded=tokenize_preserving_numeric_at(body,source,kw)\n' + text[end:]
+    change('        if not source.open_lines(program):',
+           '        validate_rom_lines(program, rom)\n'
+           '        reject_tape_operations(source.tap.split_lines(program), kw.TOKEN)\n'
+           '        if not source.open_lines(program):')
+    # HiSoft needs OPEN for standalone listings whose first numbered line
+    # has no room for an inserted compiler directive. No BASIC statement is
+    # rewritten; the directive belongs to HiSoft, not the user's source.
+    change('            program = source.add_directives(program, directives, True, [], kw, initial.fp)',
+           "            try:\n"
+           "                program = source.add_directives(program, directives, True, [], kw, initial.fp)\n"
+           "            except source.SourceError as exc:\n"
+           "                if directives or 'no free line numbers' not in str(exc):\n"
+           "                    raise\n"
+           "                program = source.add_directives(program, [], False,\n"
+           "                                                ['0 REM : OPEN #'], kw, initial.fp)")
+    # Memory policy examines tokens, but never changes control flow or
+    # substitutes BASIC statements for the compiler to consume.
+    change('checks = analyze_lines(spectrum_tap.split_lines(program), kw.TOKEN)',
+           'checks = analyze_lines(spectrum_tap.split_lines(program), kw.TOKEN)\n'
+           '        allow_bounded_udg_loops(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n'
+           '        allow_nested_glyph_writes(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n'
+           '        allow_bounded_chr_glyphs(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n'
+           '        allow_key_state_read(checks)\n'
+           '        allow_rom_keyboard_controls(checks)\n'
+           '        allow_rom_screen_scroll(checks)\n'
+           '        allow_private_sysvars(checks)')
+    # The generated HiSoft variable area is placed after the ZX-UX runtime,
+    # process font, and UDG storage when packing the native SSX image.
+    change('target=entry_image+(orig-p.base)',
+           'target=target_offset(orig,p.base,len(p.code),entry_image,len(e.code),p.bss)')
+    change('    call=len(e.code)+1;e.call(0,rel=True)',
+           '    color_records = save_and_set(e)\n'
+           '    control_records = save_controls(e)\n'
+           '    call=len(e.code)+1;e.call(0,rel=True)')
+    change('    e.ldhl(0);e.lda(39);e.call(SYS)',
+           '    restore(e, color_records)\n'
+           '    restore(e, control_records)\n'
+           '    e.ldhl(0);e.lda(39);e.call(SYS)')
+    change('    font_start=len(e.code);e.code.extend(font)',
+           '    append_slots(e, color_records)\n'
+           '    append_slots(e, control_records)\n'
+           '    font_start=len(e.code);e.code.extend(font)')
+
     memory = checkpoint / 'rbc' / 'memory_safety.py'
-    memory_source = memory.read_text()
-    old_target = 'target=_target(address)'
-    if memory_source.count(old_target) != 1:
-        raise ValueError('RBC memory guard changed; UDG fix needs review')
-    memory_source = memory_source.replace(
-        old_target, "target=_target(('USR ' if op=='USR' else '') + address)", 1)
-    # Preserve current dynamic POKE handling and source-memory rules.
-    old = "        return 'system_or_kernel'\n    return 'unknown'"
-    if memory_source.count(old) != 1:
-        raise ValueError('memory target classifier changed')
-    memory_source = memory_source.replace(
-        old, "        return 'system_or_kernel' if n < 0x5D00 else 'ordinary_ram'\n    return 'unknown'", 1)
-    old = "else:sev,cl='block','unbounded_memory_write'"
-    if memory_source.count(old) != 1:
-        raise ValueError('dynamic POKE classifier changed')
-    memory_source = memory_source.replace(
-        old, "else:sev,cl='review','programmer_managed_write'", 1)
-    memory.write_text(memory_source)
-    shutil.copyfile(extensions / 'basic_listing.py', checkpoint / 'rbc' / 'basic_listing.py')
-    shutil.copyfile(extensions / 'rom_syntax.py', checkpoint / 'rbc' / 'rom_syntax.py')
-    shutil.copyfile(extensions / 'tape_policy.py', checkpoint / 'rbc' / 'tape_policy.py')
-    shutil.copyfile(extensions / 'line_targets.py', checkpoint / 'rbc' / 'line_targets.py')
-    old_pause = checkpoint / 'rbc' / 'pause_zero.py'
-    if old_pause.is_file():
-        old_pause.unlink()
-    shutil.copyfile(extensions / 'bss_layout.py', checkpoint / 'rbc' / 'bss_layout.py')
-    shutil.copyfile(extensions / 'startup_colors.py', checkpoint / 'rbc' / 'startup_colors.py')
-    shutil.copyfile(extensions / 'computed_lines.py', checkpoint / 'rbc' / 'computed_lines.py')
-    shutil.copyfile(extensions / 'native_pause_rt.py', checkpoint / 'rbc' / 'native_pause_rt.py')
-    shutil.copyfile(extensions / 'native_scroll.py', checkpoint / 'rbc' / 'native_scroll.py')
-    shutil.copyfile(extensions / 'udg_bounds.py', checkpoint / 'rbc' / 'udg_bounds.py')
-    shutil.copyfile(extensions / 'udg_nested.py', checkpoint / 'rbc' / 'udg_nested.py')
-    shutil.copyfile(extensions / 'udg_chr_bounds.py', checkpoint / 'rbc' / 'udg_chr_bounds.py')
-    shutil.copyfile(extensions / 'restore_data.py', checkpoint / 'rbc' / 'restore_data.py')
-    shutil.copyfile(extensions / 'constant_data.py', checkpoint / 'rbc' / 'constant_data.py')
-    shutil.copyfile(extensions / 'glyph_data.py', checkpoint / 'rbc' / 'glyph_data.py')
-    shutil.copyfile(extensions / 'constant_dims.py', checkpoint / 'rbc' / 'constant_dims.py')
-    shutil.copyfile(extensions / 'input_bound_dims.py', checkpoint / 'rbc' / 'input_bound_dims.py')
-    shutil.copyfile(extensions / 'input_string_dims.py', checkpoint / 'rbc' / 'input_string_dims.py')
-    shutil.copyfile(extensions / 'numeric_input_dims.py', checkpoint / 'rbc' / 'numeric_input_dims.py')
-    shutil.copyfile(extensions / 'picture_attrs.py', checkpoint / 'rbc' / 'picture_attrs.py')
-    shutil.copyfile(extensions / 'stellar_charset.py', checkpoint / 'rbc' / 'stellar_charset.py')
-    shutil.copyfile(extensions / 'udg_data_literals.py', checkpoint / 'rbc' / 'udg_data_literals.py')
-    shutil.copyfile(extensions / 'evolution_tape_chain.py', checkpoint / 'rbc' / 'evolution_tape_chain.py')
-    shutil.copyfile(extensions / 'evolution_glyph_data.py', checkpoint / 'rbc' / 'evolution_glyph_data.py')
-    shutil.copyfile(extensions / 'string_dim_flatten.py', checkpoint / 'rbc' / 'string_dim_flatten.py')
-    shutil.copyfile(extensions / 'data_grid.py', checkpoint / 'rbc' / 'data_grid.py')
-    shutil.copyfile(extensions / 'fixed_data.py', checkpoint / 'rbc' / 'fixed_data.py')
-    shutil.copyfile(extensions / 'redim_capacity.py', checkpoint / 'rbc' / 'redim_capacity.py')
-    shutil.copyfile(extensions / 'duplicate_for.py', checkpoint / 'rbc' / 'duplicate_for.py')
-    shutil.copyfile(extensions / 'rom_keyread.py', checkpoint / 'rbc' / 'rom_keyread.py')
-    shutil.copyfile(extensions / 'rom_keyboard_control.py', checkpoint / 'rbc' / 'rom_keyboard_control.py')
-    shutil.copyfile(extensions / 'rom_scroll.py', checkpoint / 'rbc' / 'rom_scroll.py')
-    shutil.copyfile(extensions / 'native_keyread_rt.py', checkpoint / 'rbc' / 'native_keyread_rt.py')
-    shutil.copyfile(extensions / 'native_val_rt.py', checkpoint / 'rbc' / 'native_val_rt.py')
-    shutil.copyfile(extensions / 'for_restart.py', checkpoint / 'rbc' / 'for_restart.py')
-    shutil.copyfile(extensions / 'native_run_rt.py', checkpoint / 'rbc' / 'native_run_rt.py')
-    shutil.copyfile(extensions / 'dynamic_string_width.py', checkpoint / 'rbc' / 'dynamic_string_width.py')
-    shutil.copyfile(extensions / 'process_frame_clock.py', checkpoint / 'rbc' / 'process_frame_clock.py')
-    for module in ('spectrum_sysvars.py', 'native_sysvar_policy.py', 'native_sysvars_rt.py'):
+    source = memory.read_text()
+    for before, after in (
+        ('target=_target(address)', "target=_target(('USR ' if op=='USR' else '') + address)"),
+        ("        return 'system_or_kernel'\n    return 'unknown'",
+         "        return 'system_or_kernel' if n < 0x5D00 else 'ordinary_ram'\n    return 'unknown'"),
+        ("else:sev,cl='block','unbounded_memory_write'",
+         "else:sev,cl='review','programmer_managed_write'"),
+    ):
+        if source.count(before) != 1:
+            raise ValueError('Preserved RBC memory policy changed: ' + before)
+        source = source.replace(before, after, 1)
+    memory.write_text(source)
+    for module in BOUNDARY:
         shutil.copyfile(extensions / module, checkpoint / 'rbc' / module)
+    (checkpoint / 'rbc' / 'pause_zero.py').unlink(missing_ok=True)
     compiler.write_text(text)
 
 
 if __name__ == '__main__':
+    import sys
     if len(sys.argv) != 3:
         raise SystemExit('usage: prepare_rbc.py CHECKPOINT_DIR EXTENSIONS_DIR')
     prepare(Path(sys.argv[1]), Path(sys.argv[2]))

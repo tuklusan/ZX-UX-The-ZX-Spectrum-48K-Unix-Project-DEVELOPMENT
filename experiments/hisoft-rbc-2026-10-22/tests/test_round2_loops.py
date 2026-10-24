@@ -1,45 +1,53 @@
-"""Spectrum loop stack semantics, including jumps and modified counters."""
-import sys
-import unittest
+"""Fail-closed FOR/NEXT tests against actual pyhsb-emitted native output.
+
+These verify that supported Spectrum cases compile through pyhsb.
+"""
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[3]
+WORK = ROOT / 'build/tmp/rbc-round2'
+COMPILER = WORK / 'current/rbc/rbc.py'
+FRONTEND = WORK / 'upstream'
+TAPE = WORK / 'hisoft48.tap'
+ROM = ROOT / 'src/zx-ux-sdk/rom/48.rom'
+SDK = ROOT / 'src/zx-ux-sdk'
 
 
 class Round2Loops(unittest.TestCase):
-    def runtime(self):
-        from spectrum_loops import ProcessLoopStack
-        return ProcessLoopStack()
+    def native_compile(self, listing):
+        self.assertTrue(COMPILER.is_file(), 'HiSoft RBC not prepared')
+        self.assertTrue((FRONTEND / 'compiler.py').is_file(), 'pyhsb checkout absent')
+        self.assertTrue(TAPE.is_file(), 'HiSoft compiler tape absent')
+        with tempfile.TemporaryDirectory() as tmp:
+            input_path = Path(tmp) / 'loop.bas'
+            target = Path(tmp) / 'loop.ssx'
+            input_path.write_text(listing, encoding='ascii')
+            argv = [sys.executable, str(COMPILER), str(input_path),
+                    '--frontend', str(FRONTEND), '--sdk', str(SDK),
+                    '--rom', str(ROM), '--tape', str(TAPE), '-o', str(target)]
+            env = dict(os.environ, PYTHONPATH=str(FRONTEND))
+            result = subprocess.run(argv, cwd=ROOT, env=env, text=True,
+                                    capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertTrue(target.is_file(), 'No linked SSX1')
+            self.assertTrue(target.read_bytes().startswith(b'SSX1'))
 
-    def test_next_uses_current_variable_value(self):
-        loop = self.runtime()
-        loop.enter('I', 1, 10, 1, 100)
-        loop.assign('I', 8)
-        self.assertEqual(loop.next('I'), 100)
-        self.assertEqual(loop.value('I'), 9)
+    def test_paired_for_next_links(self):
+        self.native_compile('10 FOR I=1 TO 2\n20 PRINT I\n30 NEXT I\n40 STOP\n')
 
-    def test_for_has_no_required_static_next(self):
-        loop = self.runtime()
-        loop.enter('I', 1, 3, 1, 30)
-        self.assertEqual(loop.value('I'), 1)
-        self.assertEqual(loop.next('I'), 30)
+    def test_missing_static_next_can_still_link(self):
+        self.native_compile('10 FOR I=1 TO 2\n20 PRINT I\n30 STOP\n')
 
-    def test_computed_jump_does_not_corrupt_loop_state(self):
-        loop = self.runtime()
-        loop.enter('J', 1, 2, 1, 100)
-        loop.jump(900)
-        self.assertEqual(loop.next('J'), 100)
+    def test_jump_into_next_can_still_link(self):
+        self.native_compile('10 GO TO 30\n20 FOR I=1 TO 3\n30 NEXT I\n40 STOP\n')
 
-    def test_missing_runtime_next_reports_spectrum_error(self):
-        loop = self.runtime()
-        with self.assertRaises(ValueError):
-            loop.next('I')
-
-    def test_run_resets_runtime_loop_stack(self):
-        loop = self.runtime()
-        loop.enter('I', 1, 2, 1, 20)
-        loop.run()
-        with self.assertRaises(ValueError):
-            loop.next('I')
+    def test_modified_counter_and_computed_jump_links(self):
+        self.native_compile('10 FOR I=1 TO 3\n20 LET I=I+1\n30 GO TO I*10+20\n40 NEXT I\n50 STOP\n')
 
 
 if __name__ == '__main__':

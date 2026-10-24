@@ -70,16 +70,17 @@ def suite_gate(root: Path, stage: str):
         subprocess.run(command,cwd=root,check=True)
         count += native_count
     if stage == 'loops':
+        suite_file = suite_path.parent / 'test_native_loop_execution.py'
+        if not suite_file.is_file():
+            raise RuntimeError('loops: required executable Z80 tests unavailable')
         native_suite = unittest.defaultTestLoader.discover(
-            str(suite_path.parent), pattern='test_spectrum_loops.py')
+            str(suite_path.parent), pattern=suite_file.name)
         native_count = native_suite.countTestCases()
-        if native_count < 9:
-            raise RuntimeError('loops: missing dynamic FOR/NEXT reference tests')
+        if native_count < 4:
+            raise RuntimeError('loops: insufficient native runtime execution cases')
         native_result = unittest.TextTestRunner(verbosity=2).run(native_suite)
         if not native_result.wasSuccessful() or native_result.testsRun != native_count:
-            raise RuntimeError('loops: dynamic control-state tests failed')
-        subprocess.run([sys.executable, str(suite_path.parents[1] / 'stage' /
-                        'loop_native_link_check.py')], cwd=root, check=True)
+            raise RuntimeError('loops: compiled native control-flow behavior failed')
         count += native_count
     return count
 

@@ -72,7 +72,7 @@ def patched(source: str) -> str:
            "    try:")
     change('        ssx,diagnostics=build_ssx(builds,font,rld,args.stack)',
            "        ssx,diagnostics=build_ssx(builds,font,rld,args.stack,\n"
-           "               use_rom_font=args.fit and not meta.get('scuba_charset_mapping'))\n"
+           "               use_rom_font=args.fit)\n"
            "        measured = memory_required(rld.parse_ssx(ssx), len(ssx))\n"
            "        diagnostics['memory_required'] = measured\n"
            "        diagnostics['memory_limit'] = args.max\n"
