@@ -4,6 +4,7 @@ on:
     paths:
       - '.github/workflows/rbc-60-completion.yml'
       - 'experiments/hisoft-rbc-2026-10-22/stage/**'
+      - 'experiments/hisoft-rbc-2026-10-22/tests/test_tzx_ascii.py'
 permissions:
   contents: read
 jobs:
@@ -33,6 +34,13 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import subprocess, sys, re, json, hashlib
+          sys.path[:0] = ['upstream-pyhsb', 'trial-result/rbc',
+                           'experiments/hisoft-rbc-2026-10-22/stage']
+          import compiler, hbcimage, rbc, source as spectrum_source, tap
+          from tzx_ascii import to_ascii_listing, confirm_roundtrip
+          rom = Path('src/zx-ux-sdk/rom/48.rom').read_bytes()
+          kw = spectrum_source.Keywords(rom)
+          fp = compiler.Compiler(hbcimage.Image.from_tape(Path('trial-result/hisoft48.tap')), rom).fp
           root = Path('src/bonus/60-programs')
           folders = sorted(root.glob('[0-9][0-9]-*'))
           if len(folders) != 60:
@@ -41,7 +49,7 @@ jobs:
           work = Path('trial-result')
           total_ok = 0
           for folder in folders:
-              inputs = sorted((folder / 'BASIC').glob('*.bas'))
+              inputs = sorted((folder / 'BASIC').glob('*.tzx'))
               target = outputs / folder.name / 'C48'
               target.mkdir(parents=True, exist_ok=True)
               src = inputs[0] if len(inputs) == 1 else None
@@ -49,9 +57,24 @@ jobs:
               report = work / (folder.name + '.json')
               reason = None
               if src is None:
-                  reason = f'Expected one numbered BASIC input, found {len(inputs)}'
+                  reason = f'Expected one original BASIC TZX tape, found {len(inputs)}'
               else:
-                  argv = [sys.executable, str(work/'rbc/rbc.py'), str(src),
+                  # TZX is the sole chosen input. Do not consult the paired .bas.
+                  # Only compile ASCII that reproduces every original BASIC byte.
+                  try:
+                      native_tape = rbc._tap_from_tzx(src)
+                      if len(tap.tap_blocks(native_tape)) != 2:
+                          raise ValueError('requires more than one tape block pair; not a standalone BASIC program')
+                      _, original = tap.program_of_tap(native_tape)
+                      listing = to_ascii_listing(tap.split_lines(original), kw.TOKEN)
+                      converted = work / (folder.name + '.bas')
+                      converted.write_text(listing, encoding='ascii')
+                      _, reproduced = rbc._source_program(converted, spectrum_source, kw, fp)
+                      confirm_roundtrip(original, reproduced, tap.split_lines)
+                  except Exception as exc:
+                      reason = 'Original TZX cannot be converted losslessly to ASCII: ' + str(exc)
+              if src is not None and reason is None:
+                  argv = [sys.executable, str(work/'rbc/rbc.py'), str(converted),
                           '--frontend', 'upstream-pyhsb', '--sdk', 'src/zx-ux-sdk',
                           '--rom', 'src/zx-ux-sdk/rom/48.rom',
                           '--tape', str(work/'hisoft48.tap'),
@@ -77,7 +100,7 @@ jobs:
               if reason is not None:
                   reason = re.sub(r'[\x00-\x1f\x7f]', ' ', reason)[:420]
                   (target / 'README.md').write_text(
-                      f'{folder.name}: RBC could not compile and link the original numbered BASIC source.\n'
+                      f'{folder.name}: RBC could not compile and link the original tokenized TZX BASIC program.\n'
                       f'Reason: {reason}\n')
               print(f'{folder.name}: {"SSX" if reason is None else "README: " + reason}', flush=True)
           outcomes = sorted(outputs.glob('*/C48/*'))
