@@ -34,7 +34,9 @@ class SpectrumRuntime(unittest.TestCase):
     def test_executable_usr_never_reaches_rom(self):
         target,cpu=self.evaluate_path(b'1+'+bytes([0xc0])+b' 32768')
         self.assertEqual(target,0x0008)
-        self.assertEqual(cpu.sp,0xe000)
+        # RST 8 pushes its own return address; the entry guard restored
+        # every saved register before entering Spectrum error dispatch.
+        self.assertEqual(cpu.sp,0xdffe)
 
     def test_nested_evaluation_never_bypasses_usr_guard(self):
         for token in (0xb0,0xae):
