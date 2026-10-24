@@ -183,7 +183,7 @@ jobs:
           original=path.read_text()
           hook='if (self._zxux_run_present and not self.pass0'
           clear="        self.emit_op_reloc('ld sp,(nn)', self._zxux_run_sp)"
-          modes=('baseline','no_entry','jump_with_slot','jump_without_slot')
+          modes=('clear_only','directclear','directclear_stack','directclear_stack_norestore','restore_only','fill_only','stack_only')
           for mode in modes:
               code=original
               if mode != 'baseline':
@@ -192,12 +192,31 @@ jobs:
               if mode.startswith('jump_'):
                   assert code.count(clear)==1
                   code=code.replace(clear,"        self.emit_goto('jp nn', target)\n        return",1)
-              if mode=='jump_without_slot':
-                  assert code.count('if not self._zxux_run_present:')==1
-                  code=code.replace('if not self._zxux_run_present:','if True:',1)
+              if mode in ('clear_only','directclear','restore_only','fill_only'):
+                  assert code.count(clear)==1
+                  code=code.replace(clear,'',1)
+              fill_start='        self.ld_hl(self.vars_start)'
+              fill_end='        self.call_rt(compiler.RT.MEM_FILL)'
+              begin=code.index(fill_start,code.index('    def st_run(self):'))
+              finish=code.index(fill_end,begin)+len(fill_end)
+              if mode in ('clear_only','restore_only','stack_only'):
+                  code=code[:begin]+code[finish:]
+              elif mode in ('directclear','directclear_stack','directclear_stack_norestore'):
+                  replacement=("        if self._zxux_run_clear_bytes:\n"
+                    "            self.ld_hl(self.vars_start)\n"
+                    "            self.emit('ld (hl),0')\n"
+                    "            if self._zxux_run_clear_bytes > 1:\n"
+                    "                self.emit('ld d,h; ld e,l; inc de')\n"
+                    "                self.ld_bc_abs(self._zxux_run_clear_bytes-1)\n"
+                    "                self.emit('ldir')")
+                  code=code[:begin]+replacement+code[finish:]
+              if mode in ('clear_only','fill_only','stack_only','directclear_stack_norestore'):
+                  restore='        self.emit_restore()'
+                  assert code.count(restore)==1
+                  code=code.replace(restore,'',1)
               try:
                   path.write_text(code)
-                  for sample,listing in (('unreached','10 STOP\n20 RUN 10\n'),('active','10 RUN 100\n100 STOP\n')):
+                  for sample,listing in (('unreached','10 STOP\n20 RUN 10\n'),('active','10 RUN 100\n100 STOP\n'),('variable','10 LET A=7\n20 RUN 100\n100 STOP\n')):
                       if mode=='no_entry' and sample=='active': continue
                       try:
                           exe=compile_one('rbc-r3-'+mode+'-'+sample,listing)
