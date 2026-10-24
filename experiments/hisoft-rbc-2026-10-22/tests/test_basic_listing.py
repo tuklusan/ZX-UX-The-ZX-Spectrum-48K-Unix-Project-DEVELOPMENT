@@ -22,6 +22,9 @@ class StrictInput(unittest.TestCase):
 
     def test_numbered_ascii_input(self):
         self.assertEqual(split_numbered_line('10 PRINT  9  '), (10,'PRINT  9  '))
+        self.assertEqual(split_numbered_line('114: FOR I=1 TO 40'), (114, ': FOR I=1 TO 40'))
+        self.assertEqual(encode_strict_listing('114: FOR I=1 TO 40'),
+                         encode_program('114: FOR I=1 TO 40'))
         for line in ('', '10000 PRINT 1', 'PRINT 1', '10PRINT 1'):
             with self.subTest(line=line), self.assertRaises(ValueError):
                 split_numbered_line(line)

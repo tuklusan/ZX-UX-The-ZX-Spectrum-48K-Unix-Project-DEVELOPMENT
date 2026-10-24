@@ -8,7 +8,7 @@ import re
 from bas2tap import BAS2TAPError, encode_program
 
 UPSTREAM_REVISION = '0ddb25e4c38ce4ccb5a43e85fb57e683bd274f59'
-LINE = re.compile(r'[ \t]*([0-9]+)(?:[ \t]+(.*))?')
+LINE = re.compile(r'[ \t]*([0-9]+)(?:(?:[ \t]+(.*))|(:.*))?')
 
 
 def split_numbered_line(raw: str) -> tuple[int, str]:
@@ -18,7 +18,7 @@ def split_numbered_line(raw: str) -> tuple[int, str]:
     n = int(match.group(1))
     if n > 9999:
         raise ValueError('BASIC line number outside 0..9999')
-    return n, match.group(2) if match.group(2) is not None else ''
+    return n, next((part for part in match.groups()[1:] if part is not None), '')
 
 
 def encode_strict_listing(listing: str) -> bytes:
