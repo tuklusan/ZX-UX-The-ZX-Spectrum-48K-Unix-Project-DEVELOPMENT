@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: 37-xmas-eve.bas: HiSoft v1.1 compile failed: Expecting a number line 5100:
-- TZX: failed (exit 1); rbc: 37-xmas-eve.bas: HiSoft v1.1 compile failed: Expecting a number line 5100:
+- BAS: failed (exit 1); %RBC HIS_EXPECT_NUMBER Line: 5100 Statement: 1 Expected a numeric value in this statement. Expecting a number | -RBC 5100 DATA z,6,z,6,c,6,z,6,z,6,c,6,z,6,z,9,z,2,z,4,1,6,z,6,z,7,z,7,z,7,z,7,z,7,z,6,z,6,z,6,z,9,z,9,z,7,z,4,c,2,c,2 |           ^
+- TZX: failed (exit 1); %RBC HIS_EXPECT_NUMBER Line: 5100 Statement: 1 Expected a numeric value in this statement. Expecting a number | -RBC 5100 DATA {7A}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{7A}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{63}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{7A}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{7A}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{63}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{7A}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{7A}{2C}{39}{0E}{00}{00}{09}{00}{00}{2C}{7A}{2C}{32}{0E}{00}{00}{02}{00}{00}{2C}{7A}{2C}{34}{0E}{00}{00}{04}{00}{00}{2C}{31}{0E}{00}{00}{01}{00}{00}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{7A}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{7A}{2C}{37}{0E}{00}{00}{07}{00}{00}{2C}{7A}{2C}{37}{0E}{00}{00}{07}{00}{00}{2C}{7A}{2C}{37}{0E}{00}{00}{07}{00}{00}{2C}{7A}{2C}{37}{0E}{00}{00}{07}{00}{00}{2C}{7A}{2C}{37}{0E}{00}{00}{07}{00}{00}{2C}{7A}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{7A}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{7A}{2C}{36}{0E}{00}{00}{06}{00}{00}{2C}{7A}{2C}{39}{0E}{00}{00}{09}{00}{00}{2C}{7A}{2C}{39}{0E}{00}{00}{09}{00}{00}{2C}{7A}{2C}{37}{0E}{00}{00}{07}{00}{00}{2C}{7A}{2C}{34}{0E}{00}{00}{04}{00}{00}{2C}{63}{2C}{32}{0E}{00}{00}{02}{00}{00}{2C}{63}{2C}{32}{0E}{00}{00}{02}{00}{00} |           ^
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

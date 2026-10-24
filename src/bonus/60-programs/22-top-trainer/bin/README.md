@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: 22-top-trainer.bas: HiSoft v1.1 compile failed: Non-existent line line 570: line 9600
-- TZX: failed (exit 1); rbc: 22-top-trainer.bas: HiSoft v1.1 compile failed: Non-existent line line 570: line 9600
+- BAS: failed (exit 1); %RBC RBC_MEMORY_LIMIT Line: - Statement: - Executable requires 21865 bytes of native memory; the configured compile limit is 11000 bytes.
+- TZX: failed (exit 1); %RBC RBC_MEMORY_LIMIT Line: - Statement: - Executable requires 21865 bytes of native memory; the configured compile limit is 11000 bytes.
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

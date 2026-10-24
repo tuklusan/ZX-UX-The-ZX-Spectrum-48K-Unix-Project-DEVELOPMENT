@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: RBC E_TAPE_UNSUPPORTED: Line 1860: LOAD requires external tape I/O; RBC supports standalone BASIC programs only
-- TZX: failed (exit 1); rbc: RBC E_TAPE_UNSUPPORTED: Line 1860: LOAD requires external tape I/O; RBC supports standalone BASIC programs only
+- BAS: failed (exit 1); %RBC RBC_TAPE_LOAD Line: 1860 Statement: 2 LOAD requires external tape input, which standalone RBC programs do not provide. | -RBC 1860 IF INKEY$="3" THEN LOAD "" |                              ^
+- TZX: failed (exit 1); %RBC RBC_TAPE_LOAD Line: 1860 Statement: 2 LOAD requires external tape input, which standalone RBC programs do not provide. | -RBC 1860 IF INKEY$ {3D}"{33}"THEN LOAD "" |                                    ^
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

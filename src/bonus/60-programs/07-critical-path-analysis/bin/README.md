@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: src/bonus/60-programs/07-critical-path-analysis/BASIC/07-critical-path-analysis.bas needs 12903 bytes of native memory (limit 11000)
-- TZX: failed (exit 1); rbc: build/tmp/rbc-round2/07-critical-path-analysis/from-tape/07-critical-path-analysis.bas needs 12903 bytes of native memory (limit 11000)
+- BAS: failed (exit 1); %RBC RBC_MEMORY_LIMIT Line: - Statement: - Executable requires 12903 bytes of native memory; the configured compile limit is 11000 bytes.
+- TZX: failed (exit 1); %RBC RBC_MEMORY_LIMIT Line: - Statement: - Executable requires 12903 bytes of native memory; the configured compile limit is 11000 bytes.
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

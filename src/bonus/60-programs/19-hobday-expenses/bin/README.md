@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: src/bonus/60-programs/19-hobday-expenses/BASIC/19-hobday-expenses.bas needs 20607 bytes of native memory (limit 11000)
-- TZX: failed (exit 1); rbc: build/tmp/rbc-round2/19-hobday-expenses/from-tape/19-hobday-expenses.bas needs 20607 bytes of native memory (limit 11000)
+- BAS: failed (exit 1); %RBC RBC_MEMORY_LIMIT Line: - Statement: - Executable requires 20634 bytes of native memory; the configured compile limit is 11000 bytes.
+- TZX: failed (exit 1); %RBC RBC_MEMORY_LIMIT Line: - Statement: - Executable requires 20634 bytes of native memory; the configured compile limit is 11000 bytes.
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

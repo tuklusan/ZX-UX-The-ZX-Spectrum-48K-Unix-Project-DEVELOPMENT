@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: 58-invaders.bas: HiSoft v1.1 compile failed: Non-existent line line 50: line 70
-- TZX: failed (exit 1); rbc: 58-invaders.bas: HiSoft v1.1 compile failed: Non-existent line line 50: line 70
+- BAS: failed (exit 1); %RBC RBC_MEMORY_LIMIT Line: - Statement: - Executable requires 13440 bytes of native memory; the configured compile limit is 11000 bytes.
+- TZX: failed (exit 1); %RBC RBC_MEMORY_LIMIT Line: - Statement: - Executable requires 13440 bytes of native memory; the configured compile limit is 11000 bytes.
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 
