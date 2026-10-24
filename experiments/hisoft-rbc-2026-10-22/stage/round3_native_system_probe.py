@@ -63,8 +63,7 @@ def main():
         '110 IF PEEK 23692<>42 THEN GO TO 400\n'
         '120 PRINT "RUN OK"\n'
         '130 STOP\n'
-        '400 PRINT "RUN FAIL"\n'
-        '410 STOP\n')
+        '400 GO TO 400\n')
     font=compile_one('rbc-r3-font',
         '10 POKE 23606,0: POKE 23607,128\n'
         '20 PRINT "FONT"\n'
@@ -74,8 +73,6 @@ def main():
     font_ptr,_,font_result=execute(font)
     if any(res.why!='exit' for res in (control_result,run_result,font_result)):
         raise RuntimeError('at least one real ZX-UX STOP did not exit')
-    if 'RUN OK' not in run_screen or 'RUN FAIL' in run_screen:
-        raise RuntimeError('RUN restart and virtual SCR_CT outcome not proved by screen')
     if len({control_ptr,run_ptr,font_ptr})!=1:
         raise RuntimeError('process CHARS state contaminated subsequent shell')
     print('Native RUN and font return-to-shell checks PASS',flush=True)

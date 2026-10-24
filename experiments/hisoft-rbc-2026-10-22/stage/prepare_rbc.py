@@ -103,11 +103,26 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
     change('    call=len(e.code)+1;e.call(0,rel=True)',
            '    color_records = save_and_set(e)\n'
            '    control_records = save_controls(e)\n'
+           "    run_stack_site = None\n"
+           "    bss_sp_abs = p.base + len(p.code) + p.bss - 2\n"
+           "    has_restart_slot = p.bss >= 2 and any(\n"
+           "        site >= 2 and p.code[site-2:site] == bytes((0xed, 0x7b)) and\n"
+           "        int.from_bytes(p.code[site:site+2], 'little') == bss_sp_abs\n"
+           "        for site in sites)\n"
+           "    if has_restart_slot:\n"
+           "        e.emit(0xf5, 0xe5, 0x21, 0x02, 0x00, 0x39, 0x22)\n"
+           "        run_stack_site = len(e.code)\n"
+           "        e.relative(0)\n"
+           "        e.emit(0xe1, 0xf1)\n"
            '    call=len(e.code)+1;e.call(0,rel=True)')
     change('    e.ldhl(0);e.lda(39);e.call(SYS)',
            '    restore(e, color_records)\n'
            '    restore(e, control_records)\n'
            '    e.ldhl(0);e.lda(39);e.call(SYS)')
+    change('    reloc=sorted(e.fixups)',
+           '    if run_stack_site is not None:\n'
+           '        e.fix(run_stack_site, len(e.code) + p.bss - 2)\n'
+           '    reloc=sorted(e.fixups)')
     change('    font_start=len(e.code);e.code.extend(font)',
            '    append_slots(e, color_records)\n'
            '    append_slots(e, control_records)\n'

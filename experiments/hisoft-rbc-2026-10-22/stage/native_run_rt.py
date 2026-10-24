@@ -60,10 +60,6 @@ def install(compiler):
         sysvar_base = getattr(self, '_zxux_sysvar_base', 0)
         user_end = sysvar_base if sysvar_base and sysvar_base >= self.vars_start else self.pc
         user_size = (user_end - self.vars_start) & 0xffff
-        if not user_size:
-            # MEM_FILL uses BC=size-1, so keep a single-byte scratch area.
-            self.pc = (self.pc + 1) & 0xffff
-            user_size = 1
         self._zxux_run_clear_bytes = user_size
         self._zxux_run_sp = self.pc
         self.pc = (self.pc + 2) & 0xffff
@@ -90,10 +86,13 @@ def install(compiler):
             self.not_supported('RUN line outside listing')
         # Z80 ED7B restores the caller's stack even after nested GO SUB.
         self.emit_op_reloc('ld sp,(nn)', self._zxux_run_sp)
-        self.ld_hl(self.vars_start)
-        self.ld_bc_abs((self._zxux_run_clear_bytes - 1) & 0xffff)
-        self.emit('ld a,0')
-        self.call_rt(compiler.RT.MEM_FILL)
+        if self._zxux_run_clear_bytes:
+            self.ld_hl(self.vars_start)
+            self.emit('ld (hl),0')
+            if self._zxux_run_clear_bytes > 1:
+                self.emit('ld d,h; ld e,l; inc de')
+                self.ld_bc_abs(self._zxux_run_clear_bytes - 1)
+                self.emit('ldir')
         self.emit_restore()
         self.emit_goto('jp nn', target)
 
