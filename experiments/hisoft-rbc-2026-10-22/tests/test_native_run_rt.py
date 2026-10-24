@@ -67,12 +67,13 @@ class RunTests(unittest.TestCase):
         self.assertEqual((obj._zxux_run_sp, obj._zxux_run_clear_bytes, obj.pc), (140,40,142))
         obj.line_no = 10
         obj.entry_point_line()
-        self.assertIn(('rel', 'ld (nn),sp', 140), obj.calls)
+        self.assertEqual(obj.calls, [('entry',)])
         obj.end = True
         obj.st_run()
-        self.assertEqual(obj.calls[-7:], [
-            ('rel','ld sp,(nn)',140),('hl',100),('bc',39),
-            ('asm','ld a,0'),('rt',55),('restore',),('goto','jp nn',10)])
+        self.assertEqual(obj.calls[-8:], [
+            ('rel','ld sp,(nn)',140),('hl',100),('asm','ld (hl),0'),
+            ('asm','ld d,h; ld e,l; inc de'),('bc',39),('asm','ldir'),
+            ('restore',),('goto','jp nn',10)])
 
     def test_run_preserves_separate_process_system_variable_bss(self):
         obj = Module.Compiler(40)
@@ -90,6 +91,9 @@ class RunTests(unittest.TestCase):
         obj.reset([(1, b'\xf7\r')])
         obj.layout_vars()
         self.assertEqual((obj._zxux_run_sp,obj._zxux_run_clear_bytes,obj.pc),(101,1,103))
+        obj.end = True
+        obj.st_run()
+        self.assertIn(('asm','nop; nop; nop; nop; nop; nop; nop; nop'),obj.calls)
 
     def test_other_programs_unchanged(self):
         obj = Module.Compiler(25)

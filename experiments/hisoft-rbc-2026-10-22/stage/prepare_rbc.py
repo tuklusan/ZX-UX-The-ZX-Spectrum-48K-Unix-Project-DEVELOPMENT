@@ -100,6 +100,14 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            '        checks = analyze_lines(')
     change('target=entry_image+(orig-p.base)',
            'target=target_offset(orig,p.base,len(p.code),entry_image,len(e.code),p.bss)')
+    change("    e=Emitter()",
+           "    saved_stack=p.base+len(p.code)+p.bss-2\n    has_restart_slot=p.bss>=2 and any(\n        site>=2 and p.code[site-2:site]==bytes((0xed,0x7b)) and\n        int.from_bytes(p.code[site:site+2],'little')==saved_stack\n        for site in sites)\n    e=Emitter()")
+    change("    entry_image=len(e.code)\n    e.code.extend(p.code)",
+           "    shim=None\n    if has_restart_slot:\n        shim=len(e.code)\n        e.emit(0xed,0x73)\n        shim_sp=len(e.code);e.relative(0)\n        e.emit(0xc3)\n        shim_jump=len(e.code);e.relative(0)\n    entry_image=len(e.code)\n    e.code.extend(p.code)")
+    change("(call,entry_image+p.entry-p.base)",
+           "(call,shim if has_restart_slot else entry_image+p.entry-p.base)")
+    change("    reloc=sorted(e.fixups)",
+           "    if has_restart_slot:\n        e.fix(shim_sp,len(e.code)+p.bss-2)\n        e.fix(shim_jump,entry_image+p.entry-p.base)\n    reloc=sorted(e.fixups)")
     change('    call=len(e.code)+1;e.call(0,rel=True)',
            '    color_records = save_and_set(e)\n'
            '    control_records = save_controls(e)\n'

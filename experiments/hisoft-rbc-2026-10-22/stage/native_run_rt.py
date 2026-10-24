@@ -41,7 +41,6 @@ def install(compiler):
         return
     initial_reset = cls.reset
     initial_layout = cls.layout_vars
-    initial_entry = cls.entry_point_line
     initial_dispatch = cls.dispatch.fget
 
     def reset(self, program):
@@ -68,13 +67,6 @@ def install(compiler):
         self._zxux_run_sp = self.pc
         self.pc = (self.pc + 2) & 0xffff
 
-    def entry_point_line(self):
-        if (self._zxux_run_present and not self.pass0
-                and self.line_no == self._zxux_run_first):
-            # Z80 ED73 stores SP without disturbing flags or registers.
-            self.emit_op_reloc('ld (nn),sp', self._zxux_run_sp)
-        return initial_entry(self)
-
     def st_run(self):
         if not self._zxux_run_present or not self._zxux_run_first:
             self.not_supported('RUN entry')
@@ -90,10 +82,15 @@ def install(compiler):
             self.not_supported('RUN line outside listing')
         # Z80 ED7B restores the caller's stack even after nested GO SUB.
         self.emit_op_reloc('ld sp,(nn)', self._zxux_run_sp)
+        # Keep the emitted width fixed across HiSoft's counting and store passes.
         self.ld_hl(self.vars_start)
-        self.ld_bc_abs((self._zxux_run_clear_bytes - 1) & 0xffff)
-        self.emit('ld a,0')
-        self.call_rt(compiler.RT.MEM_FILL)
+        self.emit('ld (hl),0')
+        if self._zxux_run_clear_bytes > 1:
+            self.emit('ld d,h; ld e,l; inc de')
+            self.ld_bc_abs(self._zxux_run_clear_bytes - 1)
+            self.emit('ldir')
+        else:
+            self.emit('nop; nop; nop; nop; nop; nop; nop; nop')
         self.emit_restore()
         self.emit_goto('jp nn', target)
 
@@ -104,7 +101,6 @@ def install(compiler):
 
     cls.reset = reset
     cls.layout_vars = layout_vars
-    cls.entry_point_line = entry_point_line
     cls.st_run = st_run
     cls.dispatch = property(dispatch)
     cls._zxux_has_native_run = True
