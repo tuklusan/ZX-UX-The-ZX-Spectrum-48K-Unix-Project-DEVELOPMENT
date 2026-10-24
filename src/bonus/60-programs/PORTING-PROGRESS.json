@@ -1,11 +1,6 @@
 {
   "schema": 2,
-  "completed": [
-    "01-minelay"
-  ],
-  "pilot_completed": [
-    "25-galaxians",
-    "58-invaders"
-  ],
-  "next_program": "02-fall-guy"
+  "completed": [],
+  "pilot_completed": [],
+  "next_program": "01-minelay"
 }

@@ -1,4 +1,4 @@
-# BASIC-to-C48 workflow — v0.7
+# BASIC-to-C48 workflow — v0.8
 
 Applies to all 60 numbered Spectrum BASIC programs, in directory order 01–60.
 Translate the real historical program, not a substitute. Continue autonomously
@@ -14,34 +14,18 @@ disposable copies. GitHub `main` is permanent storage.
 
 ## Mandatory cross-chat recovery — do this FIRST
 
-1. Read live GitHub `main` HEAD (not a remembered commit or a stale local
-   mirror). Fetch `src/bonus/60-programs/PORTING-PROGRESS.json` and this
-   workflow **from that same HEAD**. If local checkout differs, reconcile
-   safely before using it; never discard unrelated local changes.
-2. Run `python build/port_progress.py status` in the up-to-date workspace.
-   The JSON file is the committed cursor: `completed` is the continuous prefix of **non-pilot** programs,
-   `pilot_completed` contains only the accepted 25/58 historical pilots, and
-   `next_program` is the first remaining program. All are validated against
-   the 60 actual numbered directories.
-3. Confirm the last regular completed program's remote `C48/PORT-RESULT.txt` and
-   committed source/SSX/TZX/tests exist, and that its commit passed closeout.
-   If the GitHub cursor disagrees with committed results, **stop and repair
-   the record**, rather than silently skipping or redoing work.
-4. **Resume only `next_program`. Never re-port a `completed` or
-   `pilot_completed` program.** The two user-accepted migrations,
-   `25-galaxians` and `58-invaders`, are explicitly grandfathered as pilots;
-   they already have committed C48 source, executable SSX/TZX and screenshots.
-   They precede the v0.6 per-program gate, so do NOT claim historical
-   `PORT-RESULT.txt` files or the newer gate existed for them. The cursor
-   skips these two positions when it reaches them. Every other program must
-   pass the full current gate before completion. If `next_program` is null,
-   all 60 are accounted for.
-
-Historical baseline: `01-minelay` passed the program gate in commit
-`82a3514539e35641c09e659d9a31b0d9da90d9e7`. The pilot exceptions were
-added separately with the user's express acceptance of `25-galaxians` and
-`58-invaders`; `02-fall-guy` remains next. This paragraph is descriptive,
-not a substitute for reading live GitHub progress.
+1. Read live DEVELOPMENT `main` HEAD, `PORTING-PROGRESS.json`, and this
+   workflow from that same commit; reconcile any checkout before building.
+2. Run `python build/port_progress.py status` on the current tree.
+   As of the ROM BASIC gate reset, both completed arrays start empty and
+   `next_program` is `01-minelay`. Prior 01/25/58 deliveries remain usable
+   source, but are NOT accepted under the reset. No pilot bypasses survive.
+3. Verify each new accepted port has new-policy checks, native SSX/TZX,
+   genuine gameplay comparison and published results. Existing PASS reports
+   from before the reset cannot themselves grant completion.
+4. Continue only `next_program` in 01–60 order. Recheck previously ported
+   source instead of discarding it. Keep `completed` as the accepted prefix;
+   keep `pilot_completed` empty. Never advance for unfinished work.
 
 ## Six steps for each program
 
@@ -86,16 +70,11 @@ python build/check-c48.py NN-name --system PATH/ZX-UX.tzx --sdk PATH/SDK --close
 python build/port_progress.py status
 ```
 
-`complete` refuses pilots, any program other than the next one, missing C48 binaries,
-or missing `PORT-RESULT.txt` gate PASS markers. The permanent `pilot_completed`
-field is separate from normal gate results; it never bypasses checks for 02–24,
-26–57, or 59–60. The checker refuses a
-completed/out-of-order program at normal gate time. Its closeout accepts only
-the newest completed program, checks the committed progress file as well as
-that port's files, and checks remote `main` equals local HEAD. These safeguards
-prevent a new chat from restarting a finished port and stop advancement on a
-failed or unpublished port. Run `python build/test-port-progress.py` when
-changing the cursor code; it does not build or emulate games.
+A new program can be completed only after its current-version build, tape,
+gameplay and visual tests actually pass. Prior reset-era PASS reports cannot
+be reused as new acceptance. The automatic gate checks order, program files
+and the progress cursor. Run `python build/test-port-progress.py` when
+changing cursor logic.
 
 Program-specific tests must emit these lines only after real assertions:
 
