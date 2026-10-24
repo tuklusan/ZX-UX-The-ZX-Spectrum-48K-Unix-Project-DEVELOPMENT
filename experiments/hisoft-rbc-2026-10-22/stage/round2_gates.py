@@ -56,6 +56,19 @@ def suite_gate(root: Path, stage: str):
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     if not result.wasSuccessful() or result.testsRun != count:
         raise RuntimeError(f'{stage}: failed required tests')
+    if stage == 'sysvars':
+        native_suite = unittest.defaultTestLoader.discover(
+            str(suite_path.parent), pattern='test_native_sysvars_rt.py')
+        native_count = native_suite.countTestCases()
+        if native_count < 9:
+            raise RuntimeError('sysvars: missing executable Z80 memory-isolation tests')
+        native_result = unittest.TextTestRunner(verbosity=2).run(native_suite)
+        if not native_result.wasSuccessful() or native_result.testsRun != native_count:
+            raise RuntimeError('sysvars: native Z80 execution failed')
+        command = [sys.executable,str(suite_path.parents[1] / 'stage' /
+                  'sysvar_native_link_check.py')]
+        subprocess.run(command,cwd=root,check=True)
+        count += native_count
     return count
 
 

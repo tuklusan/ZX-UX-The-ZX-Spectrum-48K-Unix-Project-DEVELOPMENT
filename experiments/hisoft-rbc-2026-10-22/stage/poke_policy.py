@@ -17,6 +17,17 @@ def apply_poke_policy(findings, proofs):
             raise ProtectedPoke(f'Line {finding.line}: POKE token check mismatch')
         proof = matched.pop(0)
         locations = proof.get('addresses', [])
+        # The native POKE runtime redirects all five virtual addresses into
+        # process BSS. Require exact proof even for computed constant forms.
+        from spectrum_sysvars import PRIVATE
+        private = bool(locations) and all(
+            x['space'] == 'absolute' and x['offset'] in PRIVATE for x in locations)
+        if private:
+            finding.classification = 'process_sysvar_poke'
+            finding.severity = 'info'
+            continue
+        if finding.classification == 'process_sysvar_poke':
+            raise ProtectedPoke(f'Line {finding.line}: unproved private system variable POKE')
         for target in locations:
             location = target['offset']
             if target['space'] == 'process_udg':

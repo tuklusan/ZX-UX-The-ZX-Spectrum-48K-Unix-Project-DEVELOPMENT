@@ -68,8 +68,6 @@ jobs:
         run: python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py val
 
   system-variables:
-    # Owner-requested hold: no Stage 2 or later job runs until an explicit restart.
-    if: ${{ false }}
     needs: val-and-usr
     runs-on: ubuntu-latest
     timeout-minutes: 15
