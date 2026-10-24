@@ -1,0 +1,100 @@
+name: RBC dual-source corpus verification
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rbc-corpus-temporary.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/checkout@v4
+        with:
+          repository: imneme/pyhsb
+          ref: 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+          path: build/tmp/rbc-round2/upstream
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT
+          ref: f12650495d81df52a1835a71bef878be6a569e30
+          path: build/tmp/rbc-round2/checkpoint-ref
+          persist-credentials: false
+      - name: Prepare deterministic RBC and run all 120 compile paths
+        shell: bash
+        timeout-minutes: 32
+        run: |
+          set -euo pipefail
+          base=build/tmp/rbc-round2
+          stage=experiments/hisoft-rbc-2026-10-22/stage
+          cpdir="$base/checkpoint-ref/experiments/hisoft-rbc-2026-10-22/temporary-checkpoint"
+          mkdir -p "$base/current/rbc"
+          cp "$cpdir/rbc.py" "$base/current/rbc/rbc.py"
+          cp "$cpdir/memory_safety.py" "$base/current/rbc/memory_safety.py"
+          base64 -d "$cpdir/font32.b64" > "$base/current/rbc/font32.bin"
+          python "$stage/prepare_rbc.py" "$base/current" "$stage"
+          python "$stage/finish_rbc.py" "$base/current" "$stage"
+          curl -fsSL --retry 2 --max-time 30 -o "$base/hisoft48.tap" https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap
+          sha256sum src/zx-ux-sdk/rom/48.rom "$base/hisoft48.tap"
+          PYTHONPATH="$base/upstream:$base/current/rbc:$stage:src/zx-ux-sdk" python - <<'PY'
+          from pathlib import Path
+          import subprocess,sys,os
+          from round2_runner import run
+          root=Path.cwd()
+          base=Path('build/tmp/rbc-round2')
+          revision=os.environ['GITHUB_SHA']
+          outcomes=run(root,base/'current/rbc/rbc.py',base/'upstream',base/'hisoft48.tap',base,revision)
+          print('RBC_ALL_OUTCOMES',len(outcomes),sum(x['bas']['native_linked'] for x in outcomes.values()),
+                sum(x['tzx']['native_linked'] for x in outcomes.values()),flush=True)
+          check=subprocess.run([sys.executable,
+                'experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py','corpus',
+                '--root',str(root)],capture_output=True,text=True)
+          print('RBC_CORPUS_GATE',check.returncode,repr(check.stdout),repr(check.stderr),flush=True)
+          if check.returncode: raise SystemExit(check.returncode)
+          PY
+      - name: Publish exact evidence into log for checked GitHub commit
+        shell: bash
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64,hashlib,json
+          from pathlib import Path
+          workspace=Path('build/tmp/rbc-round2')
+          evidence=json.loads((workspace/'results.json').read_text())
+          outcomes=evidence['results']
+          assert len(outcomes)==60
+          for game,item in sorted(outcomes.items()):
+              evidence_line=json.dumps({'game':game,**item},separators=(',',':'),ensure_ascii=True)
+              print('RBC_META '+evidence_line,flush=True)
+              files=list((workspace/'published'/game/'bin').iterdir())
+              assert len(files)==1,(game,files)
+              file=files[0]
+              raw=file.read_bytes()
+              digest=hashlib.sha256(raw).hexdigest()
+              path='src/bonus/60-programs/'+game+'/bin/'+file.name
+              payload=base64.b64encode(raw).decode('ascii')
+              chunks=[payload[i:i+3000] for i in range(0,len(payload),3000)]
+              print('RBC_FILE '+path+' '+str(len(raw))+' '+digest+' '+str(len(chunks)),flush=True)
+              for idx,chunk in enumerate(chunks):
+                  print('RBC_PUB '+path+' '+str(idx)+'/'+str(len(chunks))+' '+chunk,flush=True)
+          print('RBC_CORPUS_COMPLETE '+str(len(outcomes)),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rbc-corpus-120-comparisons
+          path: |
+            build/tmp/rbc-round2/results.json
+            build/tmp/rbc-round2/*/comparison.json
+          if-no-files-found: warn
