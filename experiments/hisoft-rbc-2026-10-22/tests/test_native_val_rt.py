@@ -10,7 +10,7 @@ from native_val_rt import install, _guard_code
 class RTModule:
     class Machine:
         def __init__(self):
-            self.far = bytearray(512)
+            self.far = bytearray(1024)
             self.de_flags = 0
             self.calls = []
         def run_emitter(self, n, pc, counting, code_base):
@@ -49,9 +49,9 @@ class NativeVal(unittest.TestCase):
         machine=self.module.rtlib.Machine()
         self.assertEqual(machine.run_emitter(109,10,False,0),10+len(self.guard))
         self.assertEqual(machine.far[10:10+len(self.guard)],self.guard)
-        self.assertEqual(machine.run_emitter(109,150,True,0),150+len(self.guard))
-        self.assertEqual(machine.far[150:150+len(self.guard)],bytes(len(self.guard)))
-        self.assertEqual(machine.run_emitter(108,300,False,0),302)
+        self.assertEqual(machine.run_emitter(109,256,True,0),256+len(self.guard))
+        self.assertEqual(machine.far[256:256+len(self.guard)],bytes(len(self.guard)))
+        self.assertEqual(machine.run_emitter(108,600,False,0),602)
         self.assertEqual(machine.calls,[108])
     def test_compile_string_expression(self):
         c=self.module.Compiler()

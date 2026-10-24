@@ -49,6 +49,22 @@ class ValNativeGuard(unittest.TestCase):
     def test_words_inside_non_executed_quotes_are_not_blocked(self):
         self.assertEqual(self.run_guard('CODE "USR VAL"')[0], 0x35DE)
 
+    def test_safe_direct_literal_nested_val(self):
+        for source in ('VAL "2+3"', 'val  "PI/2"', b'\xb0 "3*4"'):
+            with self.subTest(source=source):
+                self.assertEqual(self.run_guard(source), (0x35DE, 0x1D))
+
+    def test_nested_unsafe_code_before_rom(self):
+        for source in ('VAL "USR 32768"', 'VAL "2+USR 32768"',
+                       'VAL "VAL A$"', 'VAL "VAL \"USR 32768\""',
+                       b'\xb0 "\xc0 32768"', 'VAL A$', 'VAL ("USR 32768")'):
+            with self.subTest(source=source):
+                self.assertEqual(self.run_guard(source)[0], 0x0008)
+
+    def test_nested_numeric_literals_with_direct_machine_code_blocked(self):
+        self.assertEqual(self.run_guard('VAL "2+3" + USR 32768')[0], 0x0008)
+        self.assertEqual(self.run_guard('VAL "2+3" + VAL A$')[0], 0x0008)
+
     def test_empty_value_is_left_to_original_rom(self):
         self.assertEqual(self.run_guard('')[0], 0x35DE)
 

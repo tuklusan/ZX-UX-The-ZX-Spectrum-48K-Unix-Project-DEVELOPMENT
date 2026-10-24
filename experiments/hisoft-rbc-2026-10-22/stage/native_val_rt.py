@@ -1,10 +1,10 @@
 """Guard dynamic Sinclair VAL before entering the 48K ROM evaluator.
 
 The ROM evaluator can execute numeric USR.  The runtime must not expose that
-entry to untrusted strings.  This is a deliberately conservative first stage:
-nested runtime VAL is rejected (even when harmless) because it can construct
-USR after the initial string was checked.  The full 48K VAL language therefore
-remains an open gate until nested safe evaluation has been implemented.
+entry to untrusted strings.  Nested VAL with an immediate, non-executable
+string literal is allowed; nested dynamic VAL remains blocked because the ROM
+can construct a USR call after our preflight and provides no safe callback.
+This is not complete 48K nested VAL semantics.
 """
 from __future__ import annotations
 
@@ -35,7 +35,10 @@ def _guard_code(asm):
         out.extend((opcode, 0))
 
     emit('ld hl,($5c65); dec hl; ld b,(hl); dec hl; ld c,(hl); '
-         'dec hl; ld d,(hl); dec hl; ld e,(hl); ld h,0')
+         'dec hl; ld d,(hl); dec hl; ld e,(hl); ld h,0; ld l,0')
+    jr('scan')
+    mark('allowed')
+    emit('ld b,$1d; jp $35de')
     mark('scan')
     emit('ld a,b; or c')
     jr('allowed', 'z')
@@ -46,13 +49,21 @@ def _guard_code(asm):
     emit('ld a,(de); cp $c0')  # token USR
     jr('blocked', 'z')
     emit('cp $b0')            # token VAL
-    jr('blocked', 'z')
+    jr('val_token', 'z')
     emit('cp $ae')            # token VAL$
     jr('blocked', 'z')
     emit('and $df; cp 85')    # 'U', ASCII or lowercase
     jr('usr', 'z')
     emit('cp 86')             # 'V'
     jr('val', 'z')
+    jr('advance')
+    mark('quote')
+    emit('ld a,l; or a')
+    jr('nested_end', 'nz')
+    emit('ld a,h; xor 1; ld h,a')
+    jr('advance')
+    mark('nested_end')
+    emit('ld l,0')
     jr('advance')
     mark('usr')
     emit('ld a,b; or a')
@@ -80,19 +91,38 @@ def _guard_code(asm):
     emit('inc de; ld a,(de); and $df; cp 76')           # 'L'
     jr('val_restore', 'nz')
     emit('pop de')
-    jr('blocked')
+    jr('val_literal_ascii')
     mark('val_restore')
     emit('pop de')
     jr('advance')
-    mark('quote')
-    emit('ld a,h; xor 1; ld h,a')
+    mark('rescan')
+    jr('scan')
     mark('advance')
     emit('inc de; dec bc')
     jr('scan')
-    mark('allowed')
-    emit('ld b,$1d; jp $35de')
     mark('blocked')
     emit('rst 8; defb $0b')
+
+    # An executable nested VAL may run only on a directly quoted numeric
+    # expression; concatenated and variable-derived operands remain blocked.
+    # The body is scanned as executable code, unlike ordinary quoted text.
+    mark('val_token')
+    emit('inc de; dec bc')
+    jr('val_literal')
+    mark('val_literal_ascii')
+    emit('inc de; dec bc; inc de; dec bc; inc de; dec bc')
+    mark('val_literal')
+    emit('ld a,b; or c')
+    jr('blocked', 'z')
+    emit('ld a,(de); cp 32')
+    jr('val_space', 'z')
+    emit('cp 34')
+    jr('blocked', 'nz')
+    emit('ld l,1; inc de; dec bc')
+    jr('rescan')
+    mark('val_space')
+    emit('inc de; dec bc')
+    jr('val_literal')
     for pos, name in fixes:
         if name not in labels:
             raise ValueError(f'undefined VAL guard jump: {name}')
