@@ -76,7 +76,7 @@ class RunTests(unittest.TestCase):
 
     def test_run_preserves_separate_process_system_variable_bss(self):
         obj = Module.Compiler(40)
-        obj.reset([(10, b'\\xf7\\r')])
+        obj.reset([(10, bytes((0xf7, 13)))])
         obj._zxux_sysvar_base = 120
         obj.layout_vars()
         self.assertEqual(obj._zxux_run_clear_bytes, 20)
@@ -149,8 +149,10 @@ class RunTests(unittest.TestCase):
         path = root / 'src/bonus/60-programs/44-evolution-1/BASIC/44-evolution-1.bas'
         numbered = {}
         for line in path.read_text(encoding='utf-8-sig').splitlines():
-            number, body = line.split(' ', 1)
-            numbered[int(number)] = body.strip()
+            parts = line.strip().split(None, 1)
+            if not parts:
+                continue
+            numbered[int(parts[0])] = parts[1].strip() if len(parts)>1 else ''
         self.assertIn(130, numbered)
         self.assertIn(8030, numbered)
         self.assertEqual(numbered[130], 'GO TO 1000')
