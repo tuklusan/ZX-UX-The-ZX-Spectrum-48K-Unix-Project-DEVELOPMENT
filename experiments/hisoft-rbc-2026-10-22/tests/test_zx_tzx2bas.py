@@ -204,6 +204,22 @@ class ListSpacing(unittest.TestCase):
                 self.assertTrue(text.endswith('\n'))
                 self.assertGreater(len(text.splitlines()), 0)
 
+    def test_verified_corpus_no_output(self):
+        base = HERE.parents[2] / 'src/bonus/60-programs'
+        if not base.is_dir():
+            self.skipTest('preserved BAS/TZX corpus unavailable')
+        run = subprocess.run([sys.executable, str(TOOL), '--corpus', str(base),
+                              '--verify-corpus'], capture_output=True, text=True)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertIn('Verified 60/60', run.stderr)
+
+    def test_verify_corpus_disallows_an_output_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = subprocess.run([sys.executable, str(TOOL), '--corpus', tmp,
+                                  '--verify-corpus', '--out-dir', tmp],
+                                 capture_output=True, text=True)
+            self.assertNotEqual(run.returncode, 0)
+
     def test_no_overwrite_and_staged_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             input_path = Path(tmp) / 'test.tzx'

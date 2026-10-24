@@ -8,7 +8,8 @@ route repairs source spelling, keyword boundaries or the archival input.
 from __future__ import annotations
 
 from pathlib import Path
-from tzx_ascii import to_ascii_listing, LosslessConversionError
+from tzx_ascii import LosslessConversionError
+import importlib.util
 
 
 class SemanticDifference(LosslessConversionError):
@@ -104,7 +105,20 @@ def convert_tzx(tzx_file: Path, bas_file: Path, dst: Path, rbc, source, kw, fp):
     import tap
     src_name, program = tap.program_of_tap(rbc._tap_from_tzx(tzx_file))
     original = validated_lines(program)
-    ascii_listing = to_ascii_listing(original, kw.TOKEN)
+    # Use the ROM LLIST formatter used by the independent TZX conversion tool.
+    # A second lossy re-serializer can add token-adjacent whitespace, changing
+    # compiler input and SSX bytes even when all executable tokens agree.
+    tool = Path(__file__).resolve().parents[2] / 'build/tools/zx-tzx2bas.py'
+    spec = importlib.util.spec_from_file_location('zx_tzx2bas_rbc', tool)
+    if spec is None or spec.loader is None:
+        raise LosslessConversionError('original ROM TZX converter is unavailable')
+    converter = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(converter)
+    tape_bytes = tzx_file.read_bytes()
+    recovered = list(converter.basic_programs(tape_bytes))
+    if len(recovered) != 1 or recovered[0][1] != program:
+        raise LosslessConversionError('independent TZX BASIC extractors disagree')
+    ascii_listing = converter.listing(tape_bytes)
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(ascii_listing, encoding='ascii')
     _, rebuilt = rbc._source_program(dst, source, kw, fp)

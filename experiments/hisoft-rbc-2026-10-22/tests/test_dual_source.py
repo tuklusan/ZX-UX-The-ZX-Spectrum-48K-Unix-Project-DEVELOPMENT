@@ -39,6 +39,28 @@ class Fidelity(unittest.TestCase):
         with self.assertRaises(SemanticDifference):
             self.compare(b'\xf510\r', b'\xf511\r')
 
+    def test_all_original_tzx_listings_match_authoritative_bas_bytes(self):
+        from pathlib import Path
+        import importlib.util
+        root = Path(__file__).resolve().parents[3]
+        tool = root / 'build/tools/zx-tzx2bas.py'
+        spec = importlib.util.spec_from_file_location('zx_tzx2bas_audit', tool)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        games = root / 'src/bonus/60-programs'
+        if not games.is_dir():
+            self.skipTest('original BAS/TZX corpus unavailable')
+        checked = 0
+        for folder in sorted(games.iterdir()):
+            if not folder.is_dir() or not folder.name[:2].isdigit():
+                continue
+            with self.subTest(game=folder.name):
+                tape = (folder / 'BASIC' / (folder.name + '.tzx')).read_bytes()
+                bas = (folder / 'BASIC' / (folder.name + '.bas')).read_bytes()
+                self.assertEqual(module.listing(tape).encode('ascii'), bas)
+                checked += 1
+        self.assertEqual(checked, 60)
+
     def test_rejects_bad_line_structure(self):
         with self.assertRaisesRegex(LosslessConversionError, 'non-increasing'):
             validated_lines(pack([(10, b'\xf5\r'), (10, b'\xf5\r')]))

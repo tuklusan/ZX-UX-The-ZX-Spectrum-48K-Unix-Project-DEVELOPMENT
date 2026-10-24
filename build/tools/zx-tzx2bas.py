@@ -524,6 +524,8 @@ def main(argv=None):
                     help='staging directory for --corpus (never the original BASIC tree)')
     ap.add_argument('--program-index', type=int, default=None,
                     help='zero-based BASIC program on tape')
+    ap.add_argument('--verify-corpus', action='store_true',
+                    help='compare TZX listings to original BAS bytes, without writing')
     args = ap.parse_args(argv)
     if args.about:
         print('zx-tzx2bas — ZX-UX Spectrum 48K ROM LLIST BASIC exporter')
@@ -534,8 +536,11 @@ def main(argv=None):
         return 0
     if bool(args.tzx) == bool(args.corpus):
         ap.error('specify either one TZX or --corpus')
-    if args.corpus and (args.output or not args.out_dir):
-        ap.error('--corpus requires --out-dir and does not accept --output')
+    if args.corpus and (args.output or (not args.out_dir and not args.verify_corpus)
+                        or (args.out_dir and args.verify_corpus)):
+        ap.error('--corpus requires --out-dir, or --verify-corpus alone')
+    if args.verify_corpus and not args.corpus:
+        ap.error('--verify-corpus requires --corpus')
     if args.tzx and args.out_dir:
         ap.error('--out-dir is for --corpus only')
     try:
@@ -556,19 +561,33 @@ def main(argv=None):
                            and p.name[:2].isdigit() and p.name[2] == '-')
             if len(games) != 60:
                 raise TapeError(f'expected 60 numbered game directories; found {len(games)}')
-            out = args.out_dir.resolve()
+            out = args.out_dir.resolve() if args.out_dir else None
             planned = []
             for game in games:
                 tape = game / 'BASIC' / (game.name + '.tzx')
-                dest = out / game.name / 'BASIC' / (game.name + '.bas')
-                if _protected_listing_destination(dest) or dest.exists():
-                    raise TapeError(f'protected or existing output: {dest}')
                 content = listing(tape.read_bytes(),
                                   program_index=args.program_index)
-                planned.append((tape, dest, content))
-            for tape, dest, content in planned:
-                _write_listing(dest, content, (tape,))
-            print(f'Listed 60 TZX programs under {out}', file=sys.stderr)
+                if args.verify_corpus:
+                    original = game / 'BASIC' / (game.name + '.bas')
+                    expected = original.read_bytes()
+                    recovered = content.encode('ascii')
+                    if recovered != expected:
+                        first = next((i for i in range(min(len(recovered), len(expected)))
+                                      if recovered[i] != expected[i]),
+                                     min(len(recovered), len(expected)))
+                        raise TapeError(f'{game.name}: recovered ASCII differs from BAS at byte {first}; '
+                                        f'BAS size {len(expected)}, TZX listing size {len(recovered)}')
+                else:
+                    dest = out / game.name / 'BASIC' / (game.name + '.bas')
+                    if _protected_listing_destination(dest) or dest.exists():
+                        raise TapeError(f'protected or existing output: {dest}')
+                    planned.append((tape, dest, content))
+            if args.verify_corpus:
+                print('Verified 60/60 independent TZX listings against preserved BAS bytes', file=sys.stderr)
+            else:
+                for tape, dest, content in planned:
+                    _write_listing(dest, content, (tape,))
+                print(f'Listed 60 TZX programs under {out}', file=sys.stderr)
     except (OSError, TapeError, UnicodeError) as exc:
         print(f'zx-tzx2bas: {exc}', file=sys.stderr)
         return 1
