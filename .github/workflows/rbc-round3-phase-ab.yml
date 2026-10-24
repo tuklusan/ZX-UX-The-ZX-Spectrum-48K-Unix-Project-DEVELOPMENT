@@ -273,6 +273,41 @@ jobs:
               runner=rvm.run_kernel(path,frames=140,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
               print('RUN startup kernel result',name,'why',runner.why,'status',runner.fg.status,'PC',hex(runner.session.m.cpu.pc),'SP',hex(runner.session.m.cpu.sp),flush=True)
           PY
+      - name: Compare RUN code entry with and without stack-save wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk python - <<'PY'
+          from round3_native_system_probe import compile_one,ROOT
+          import rvm,rld
+          path=ROOT/'build/tmp/rbc-round3/current/rbc/rbc.py'
+          original=path.read_text()
+          for variant in ('withsave','withoutsave'):
+              try:
+                  if variant=='withoutsave':
+                      needle='    if has_restart_slot:\n'
+                      if original.count(needle)!=1: raise RuntimeError('save hook not unique in generated RBC')
+                      path.write_text(original.replace(needle,'    if False and has_restart_slot:\n',1))
+                  source='10 STOP\n20 RUN 10\n'
+                  ssx=compile_one('rbc-r3-'+variant,source)
+                  parsed=rld.parse_ssx(ssx.read_bytes())
+                  img=parsed['image']
+                  prefix=img.find(b'\xed\x73')
+                  dest=int.from_bytes(img[prefix+2:prefix+4],'little') if prefix>=0 else None
+                  print('RUN direct compare',variant,'image',len(img),'BSS',parsed['bss'],'ED73',prefix,'save_target',dest,'entry_bytes',img[145:240].hex(),flush=True)
+                  runner=rvm.run_kernel(ssx,frames=125,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
+                  mem=bytes(runner.session.m.mem)
+                  physical=mem.find(b'\xed\x73')
+                  if physical>=0 and dest is not None:
+                      load=physical-prefix
+                      absolute=load+dest
+                      stored=int.from_bytes(mem[absolute:absolute+2],'little') if 0<=absolute<len(mem)-2 else None
+                  else:
+                      load=absolute=stored=None
+                  print('RUN direct compare result',variant,'why',runner.why,'status',runner.fg.status,'runtime_ED73',physical,'load',load,'slot',absolute,'storedSP',stored,flush=True)
+              finally:
+                  path.write_text(original)
+          PY
       - name: Prove RUN restart and font restoration in the real ZX-UX kernel
         shell: bash
         run: |
