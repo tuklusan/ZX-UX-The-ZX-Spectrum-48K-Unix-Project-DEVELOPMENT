@@ -54,6 +54,8 @@ jobs:
           base64 -d "$cpdir/font32.b64" > "$base/current/rbc/font32.bin"
           python "$stage/prepare_rbc.py" "$base/current" "$stage"
           python "$stage/finish_rbc.py" "$base/current" "$stage"
+          mkdir -p build/tmp/rbc-round2
+          ln -s ../rbc-diagnostics/current build/tmp/rbc-round2/current
           PYTHONPATH="$base/upstream" python -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_thin_wrapper.py' -v
           python -m py_compile "$base/current/rbc/rbc.py"
           curl -fsSL --retry 2 --max-time 30 -o "$base/hisoft48.tap" https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap
