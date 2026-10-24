@@ -20,9 +20,12 @@ def main():
     targets=sorted(p for game in games for p in (game/'bin').glob('*.ssx'))
     if len(games)!=60 or len(targets)!=15:
         raise RuntimeError(f'expected 60 game directories and 15 linked SSX files, got {len(games)} and {len(targets)}')
-    system=ROOT/'dist/zx-ux/tzx/ZX-UX.tzx'
-    if not system.is_file():
-        raise RuntimeError('missing frozen ZX-UX system tape')
+    system=ROOT/'build/out/ZX-UX.tzx'
+    if not system.is_file() or not system.with_name('kernel.json').is_file():
+        raise RuntimeError('missing verified locally rebuilt system tape and kernel metadata')
+    frozen=ROOT/'dist/zx-ux/tzx/ZX-UX.tzx'
+    if system.read_bytes()!=frozen.read_bytes():
+        raise RuntimeError('reconstructed system TZX differs from frozen ZX-UX release')
     rows=[]
     for p in targets:
         data=p.read_bytes()
@@ -48,7 +51,7 @@ def main():
               'reason',row['reason'],'status',row.get('runtime_status'),flush=True)
     out=ROOT/'build/tmp/rbc-round3'
     out.mkdir(parents=True,exist_ok=True)
-    (out/'runtime-15.json').write_text(json.dumps({'system_tape':'dist/zx-ux/tzx/ZX-UX.tzx',
+    (out/'runtime-15.json').write_text(json.dumps({'system_tape':'build/out/ZX-UX.tzx',
                                                    'frames_per_game':300,'results':rows},indent=2)+'\n')
     print('Runtime smoke counts',sum(x['started'] for x in rows),'started;',
           sum(x['runtime_finished'] for x in rows),'finished;',len(rows),'attempted')
