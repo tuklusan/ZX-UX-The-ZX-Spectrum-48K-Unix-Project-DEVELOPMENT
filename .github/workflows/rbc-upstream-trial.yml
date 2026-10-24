@@ -1,25 +1,6 @@
 name: RBC Python compiler trial
-# Push marker [run-full-rbc] selects all five compilation shards.
 on:
-  push:
-    paths:
-      - '.github/workflows/rbc-upstream-trial.yml'
-      - 'experiments/hisoft-rbc-2026-10-22/stage/**'
-      - 'experiments/hisoft-rbc-2026-10-22/tests/**'
   workflow_dispatch:
-    inputs:
-      mode:
-        description: Test selection
-        type: choice
-        default: full
-        options:
-          - fast
-          - batch
-          - full
-      programs:
-        description: Comma-separated program folder names for batch
-        required: false
-        type: string
 permissions:
   contents: read
 jobs:

@@ -1,14 +1,5 @@
 name: Clear processed Actions runs
 on:
-  push:
-    paths:
-      - '.github/workflows/rbc-consumed-run-cleanup.yml'
-      - 'experiments/hisoft-rbc-2026-10-22/stage/action_history_cleanup.py'
-  workflow_run:
-    workflows:
-      - RBC Python compiler trial
-    types:
-      - completed
   workflow_dispatch:
 permissions:
   contents: write
