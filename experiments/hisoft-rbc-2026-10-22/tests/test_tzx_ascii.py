@@ -33,6 +33,11 @@ class TapeAsciiTests(unittest.TestCase):
         self.assertIn('{32}{30}{20}{0E}',result)
         self.assertIn('TO {33}{30}',result)
 
+    def test_leading_blank_is_only_omitted_before_keyword(self):
+        self.assertTrue(to_ascii_listing([(10,b' \xf5"A"\r')],TOKENS).startswith('10 PRINT '))
+        self.assertTrue(to_ascii_listing([(20,b' \r')],TOKENS).startswith('20 \n'))
+        self.assertIn('REM '+'{20}'*5,to_ascii_listing([(30,b'\xea     X\r')],TOKENS))
+
     def test_identical_program_is_accepted(self):
         confirm_roundtrip(b'abc',b'abc',lambda _: [])
 

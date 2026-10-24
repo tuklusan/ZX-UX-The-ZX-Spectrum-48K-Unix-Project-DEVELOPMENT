@@ -23,6 +23,17 @@ def to_ascii_listing(lines, token_names):
         text = []
         i = 0
         raw = body[:-1]
+        # Leading blanks before the first executable keyword are whitespace
+        # only; BAS2TAP consumes them before reading a line's statement.
+        # Keep every byte *after* the token, especially in REM and strings.
+        if raw.strip(b' ') and raw.lstrip(b' ')[0] in token_names:
+            raw = raw.lstrip(b' ')
+        # A line containing only blanks is a legitimate nonexecuting record.
+        # Preserve its line number; the semantic comparator verifies that only
+        # nonexecuting whitespace differs from the tape record.
+        if not raw.strip(b' '):
+            output.append(str(number) + ' ')
+            continue
         while i < len(raw):
             c = raw[i]
             if not quoted and not rem and c == 14:
@@ -54,6 +65,7 @@ def to_ascii_listing(lines, token_names):
     if not output:
         raise LosslessConversionError('empty original BASIC program')
     return '\n'.join(output) + '\n'
+
 def confirm_roundtrip(original, recreated, split_lines):
     """Demand an exact byte match including numeric caches and quoted bytes."""
     if original == recreated:

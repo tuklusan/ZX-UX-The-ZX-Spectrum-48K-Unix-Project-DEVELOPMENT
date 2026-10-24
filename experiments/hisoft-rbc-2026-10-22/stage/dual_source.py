@@ -46,6 +46,8 @@ def _canonical(body: bytes, n: int, names: dict):
     preserved. The visible digits stay, so different numeric values fail.
     """
     body = body.rstrip(b'\r') if body.endswith(b'\r') else body
+    if not body.strip(b' '):
+        return b''  # Same numbered line, no executable content
     out = bytearray()
     p = 0
     quoted = rem = data = False

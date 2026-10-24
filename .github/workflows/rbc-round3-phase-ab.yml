@@ -26,6 +26,7 @@ jobs:
           set -euo pipefail
           base=experiments/hisoft-rbc-2026-10-22
           python -m unittest discover -s "$base/tests" -p 'test_tzx_ascii.py' -v
+          python -m unittest discover -s "$base/tests" -p 'test_round3_fidelity.py' -v
           PYTHONPATH="$base/stage" python - <<'PY'
           from pathlib import Path
           import importlib.util
@@ -54,5 +55,5 @@ jobs:
               failures.append((game.name,type(exc).__name__,str(exc)))
           print('TZX round-trip results',len(successes),'successes',len(failures),'failures',flush=True)
           for item in failures:print('TZX not yet roundtrippable',repr(item),flush=True)
-          if len(failures)>7:raise SystemExit('Source conversion regression')
+          if failures:raise SystemExit('Unresolved TZX reconstruction differences')
           PY
