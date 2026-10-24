@@ -192,7 +192,14 @@ jobs:
               text=swap(text,'if (self._zxux_run_present and not self.pass0',
                             'if (False and self._zxux_run_present and not self.pass0')
               begin="        self.ld_hl(self.vars_start)\n        self.ld_bc_abs((self._zxux_run_clear_bytes - 1) & 0xffff)\n        self.emit('ld a,0')\n        self.call_rt(compiler.RT.MEM_FILL)"
-              end="        if self._zxux_run_clear_bytes == 1:\n            self.ld_hl(self.vars_start)\n            self.emit('ld (hl),0')\n        else:\n            self.ld_hl(self.vars_start)\n            self.ld_bc_abs(self._zxux_run_clear_bytes - 1)\n            self.emit('ld a,0')\n            self.call_rt(compiler.RT.MEM_FILL)"
+              end=("        self.emit('push af; push bc; push de; push hl')\\n"
+                "        self.ld_hl(self.vars_start)\\n"
+                "        self.emit('ld (hl),0')\\n"
+                "        if self._zxux_run_clear_bytes > 1:\\n"
+                "            self.emit('ld d,h; ld e,l; inc de')\\n"
+                "            self.ld_bc_abs(self._zxux_run_clear_bytes - 1)\\n"
+                "            self.emit('ldir')\\n"
+                "        self.emit('pop hl; pop de; pop bc; pop af')\\n")
               runtime.write_text(swap(text,begin,end))
               text=original_wrapper
               entry="    e=Emitter()"
@@ -230,6 +237,7 @@ jobs:
                  'nested': '10 GO SUB 300\n20 STOP\n100 STOP\n300 RUN 100\n310 GO TO 310\n',
                  'system': '10 POKE 23692,42\n20 RUN 100\n100 IF PEEK 23692<>42 THEN GO TO 200\n110 STOP\n200 GO TO 200\n',
                  'font': '10 POKE 23606,0: POKE 23607,128\n20 RUN 100\n100 STOP\n',
+                 'full_probe': '10 LET A=7\n20 POKE 23692,42\n30 RUN 100\n40 PRINT "BAD0"\n50 STOP\n100 IF A<>0 THEN GO TO 400\n110 IF PEEK 23692<>42 THEN GO TO 400\n120 PRINT "RUN OK"\n130 STOP\n400 PRINT "RUN FAIL"\n410 STOP\n',
               }
               for label,listing in fixtures.items():
                   try:
@@ -239,6 +247,10 @@ jobs:
                       mem=run.session.m.mem
                       chars=mem[0x5c36]+256*mem[0x5c37]
                       print('RUN trampoline test',label,'why',run.why,'status',run.fg.status,'BSS',data['bss'],'ED73',data['image'].find(b'\xed\x73'),'ED7B',data['image'].find(b'\xed\x7b'),'CHARS',hex(chars),'syscalls',run.session.syscalls,flush=True)
+                      if label=='full_probe':
+                          from zxscreen import screen_text
+                          picture,_=run.picture()
+                          print('RUN full screen',repr(screen_text(picture)[-180:]),flush=True)
                       if label in ('variable','var_equal','var_stop','var_print','var_control'):
                           shim_at=data['image'].find(b'\xed\x73')
                           in_memory=[i for i in range(0x8000,0xf000) if bytes(mem[i:i+2])==b'\xed\x73']
@@ -249,44 +261,6 @@ jobs:
                               print('RUN variable snapshot',label,'load',hex(load),'bss_at',hex(bss_at),'vars',bytes(mem[bss_at:bss_at+data['bss']]).hex(),'saveSP',hex(int.from_bytes(bytes(mem[bss_at+data['bss']-2:bss_at+data['bss']]),'little')),flush=True)
                   except Exception as err:
                       print('RUN trampoline test error',label,type(err).__name__,str(err),flush=True)
-              old_runner=runtime.read_text()
-              for strategy in ('none','byte0','byte1','byte2','byte3','byte4','byte5'):
-                  start=old_runner.index('        if self._zxux_run_clear_bytes == 1:')
-                  finish=old_runner.index('        self.emit_restore()',start)
-                  if strategy=='none':
-                      new='        pass\n'
-                  elif strategy.startswith('byte'):
-                      count=int(strategy[4:])
-                      new="        self.ld_hl(self.vars_start)\n"
-                      for n in range(count):
-                          if n: new+="        self.emit('inc hl')\n"
-                          new+="        self.emit('ld (hl),0')\n"
-                  elif strategy=='xor_ldir':
-                      new=("        self.ld_hl(self.vars_start)\n"
-                           "        self.emit('xor a; ld (hl),a')\n"
-                           "        if self._zxux_run_clear_bytes>1:\n"
-                           "            self.emit('ld d,h; ld e,l; inc de')\n"
-                           "            self.ld_bc_abs(self._zxux_run_clear_bytes-1)\n"
-                           "            self.emit('ldir')\n")
-                  else:
-                      new=old_runner[start:finish]
-                  runtime.write_text(old_runner[:start]+new+old_runner[finish:])
-                  for label,listing in (('var_stop','10 LET A=7\n20 RUN 100\n100 STOP\n'),):
-                      try:
-                          ssx=compile_one('rbc-r3-reset-'+strategy+'-'+label,listing)
-                          data=rld.parse_ssx(ssx.read_bytes())
-                          img=data['image']
-                          site=img.find(b'\xed\x7b')
-                          save_site=img.find(b'\xed\x73')
-                          saved=int.from_bytes(img[site+2:site+4],'little')
-                          operand_pos=site+5
-                          clear=int.from_bytes(img[operand_pos:operand_pos+2],'little') if strategy!='none' else None
-                          print('RUN image pointers',strategy,label,'image',len(img),'BSS',data['bss'],'save',saved,'save_expected',len(img)+data['bss']-2,'clear',clear,'clear_expected',len(img),'saveRel',site+2 in data['relocs'],'clearRel',operand_pos in data['relocs'],'shimSave',int.from_bytes(img[save_site+2:save_site+4],'little'),'shimRel',save_site+2 in data['relocs'],'code',img[site:site+35].hex(),flush=True)
-                          res=rvm.run_kernel(ssx,frames=220,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
-                          print('RUN reset strategy',strategy,label,res.why,res.fg.status,'syscalls',res.session.syscalls,'PC',hex(res.session.m.cpu.pc),'SP',hex(res.session.m.cpu.sp),flush=True)
-                      except Exception as err:
-                          print('RUN reset strategy error',strategy,label,str(err),flush=True)
-              runtime.write_text(old_runner)
           finally:
               runtime.write_text(original_runtime)
               wrapper.write_text(original_wrapper)
