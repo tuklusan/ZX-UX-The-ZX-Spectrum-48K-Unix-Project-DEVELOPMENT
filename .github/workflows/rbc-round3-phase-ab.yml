@@ -192,14 +192,14 @@ jobs:
               text=swap(text,'if (self._zxux_run_present and not self.pass0',
                             'if (False and self._zxux_run_present and not self.pass0')
               begin="        self.ld_hl(self.vars_start)\n        self.ld_bc_abs((self._zxux_run_clear_bytes - 1) & 0xffff)\n        self.emit('ld a,0')\n        self.call_rt(compiler.RT.MEM_FILL)"
-              end=("        self.emit('push af; push bc; push de; push hl')\\n"
-                "        self.ld_hl(self.vars_start)\\n"
-                "        self.emit('ld (hl),0')\\n"
-                "        if self._zxux_run_clear_bytes > 1:\\n"
-                "            self.emit('ld d,h; ld e,l; inc de')\\n"
-                "            self.ld_bc_abs(self._zxux_run_clear_bytes - 1)\\n"
-                "            self.emit('ldir')\\n"
-                "        self.emit('pop hl; pop de; pop bc; pop af')\\n")
+              end=("        self.emit('push af; push bc; push de; push hl')\n"
+                "        self.ld_hl(self.vars_start)\n"
+                "        self.emit('ld (hl),0')\n"
+                "        if self._zxux_run_clear_bytes > 1:\n"
+                "            self.emit('ld d,h; ld e,l; inc de')\n"
+                "            self.ld_bc_abs(self._zxux_run_clear_bytes - 1)\n"
+                "            self.emit('ldir')\n"
+                "        self.emit('pop hl; pop de; pop bc; pop af')\n")
               runtime.write_text(swap(text,begin,end))
               text=original_wrapper
               entry="    e=Emitter()"
