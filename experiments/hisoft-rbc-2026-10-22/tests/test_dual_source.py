@@ -61,6 +61,50 @@ class Fidelity(unittest.TestCase):
                 checked += 1
         self.assertEqual(checked, 60)
 
+    def test_tzx_exports_pass_strict_rbc_reader_without_repair(self):
+        """The converter supplies syntactically tokenizable source, not a waiver.
+
+        Tape-byte/authoritative-BAS divergences still fail independent
+        fidelity checks; unsupported USR/POKE restrictions stay downstream.
+        """
+        import importlib.util
+        from basic_listing import encode_strict_listing
+        root = Path(__file__).resolve().parents[3]
+        tool = root / 'build/tools/zx-tzx2bas.py'
+        spec = importlib.util.spec_from_file_location('zx_tzx2bas_reader', tool)
+        converter = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(converter)
+        collection = root / 'src/bonus/60-programs'
+        if not collection.is_dir():
+            self.skipTest('preserved BAS/TZX corpus unavailable')
+        passed = rejected = 0
+        affected = {}
+        for game in sorted(collection.iterdir()):
+            if not game.is_dir() or not game.name[:2].isdigit():
+                continue
+            with self.subTest(game=game.name):
+                original = game / 'BASIC' / (game.name + '.bas')
+                tape = game / 'BASIC' / (game.name + '.tzx')
+                text = converter.listing(tape.read_bytes())
+                assert text.isascii()
+                tokens = encode_strict_listing(text)
+                self.assertEqual(tokens, encode_strict_listing(original.read_text('ascii')))
+                self.assertEqual(text.encode('ascii'), original.read_bytes())
+                program = list(converter.basic_programs(tape.read_bytes()))[0][1]
+                try:
+                    semantic_check(program, tokens, None,
+                                   converter.rom_keywords(), 'TZX conversion')
+                    passed += 1
+                except SemanticDifference as exc:
+                    rejected += 1
+                    affected[game.name] = str(exc)
+        self.assertEqual((passed, rejected), (54, 6))
+        self.assertEqual(set(affected), {
+            '02-fall-guy', '13-radio-power', '14-scuba',
+            '17-paypackets', '48-energy-field', '54-swordsman'
+        })
+        self.assertTrue(all('Line ' in reason for reason in affected.values()))
+
     def test_rejects_bad_line_structure(self):
         with self.assertRaisesRegex(LosslessConversionError, 'non-increasing'):
             validated_lines(pack([(10, b'\xf5\r'), (10, b'\xf5\r')]))
