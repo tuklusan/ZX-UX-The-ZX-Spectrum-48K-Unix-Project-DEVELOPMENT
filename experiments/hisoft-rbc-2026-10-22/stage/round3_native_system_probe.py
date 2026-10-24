@@ -37,8 +37,10 @@ def execute(ssx: Path):
     result=rvm.run_kernel(ssx,frames=850,
                           system=ROOT/'build/out/ZX-UX.tzx',cache=True)
     if result.why!='exit':
-        raise RuntimeError(f'{ssx.name} real ZX-UX reason {result.why}; '
-                           f'program status {result.fg.status}')
+        print(ssx.stem,'unexpected runtime state:',result.why,
+              'PC',hex(result.session.m.cpu.pc),'SP',hex(result.session.m.cpu.sp),
+              'program',result.fg.describe(),
+              'syscalls',result.session.syscalls,flush=True)
     low=result.session.m.mem[0x5c36]
     high=result.session.m.mem[0x5c37]
     picture,_=result.picture()
@@ -46,7 +48,7 @@ def execute(ssx: Path):
     screen=screen_text(picture)
     print(ssx.stem,'kernel exit',result.fg.status,'CHARS',hex(low+(high<<8)),
           'screen',repr(screen[-250:]),flush=True)
-    return low+(high<<8),screen
+    return low+(high<<8),screen,result
 
 
 def main():
@@ -67,9 +69,11 @@ def main():
         '10 POKE 23606,0: POKE 23607,128\n'
         '20 PRINT "FONT"\n'
         '30 STOP\n')
-    control_ptr,_=execute(basic)
-    run_ptr,run_screen=execute(run)
-    font_ptr,_=execute(font)
+    control_ptr,_,control_result=execute(basic)
+    run_ptr,run_screen,run_result=execute(run)
+    font_ptr,_,font_result=execute(font)
+    if any(res.why!='exit' for res in (control_result,run_result,font_result)):
+        raise RuntimeError('at least one real ZX-UX STOP did not exit')
     if 'RUN OK' not in run_screen or 'RUN FAIL' in run_screen:
         raise RuntimeError('RUN restart and virtual SCR_CT outcome not proved by screen')
     if len({control_ptr,run_ptr,font_ptr})!=1:

@@ -181,5 +181,7 @@ jobs:
         if: always()
         with:
           name: rbc-round3-runtime-15
-          path: build/tmp/rbc-round3/runtime-15.json
+          path: |
+            build/tmp/rbc-round3/runtime-15.json
+            build/tmp/rbc-round3/rbc-r3-*.ssx
           if-no-files-found: warn
