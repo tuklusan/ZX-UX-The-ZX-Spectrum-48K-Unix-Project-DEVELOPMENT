@@ -14,8 +14,11 @@ class NativeSysvars(unittest.TestCase):
         self.base = 0x8000
         self.peek_addr = 0x7000
         self.poke_addr = 0x7200
-        self.mem[self.peek_addr:self.peek_addr+256] = _native_peek(asm,self.base,0)
-        self.mem[self.poke_addr:self.poke_addr+256] = _native_poke(asm,self.base,0)
+        # The Z80 helpers contain absolute branches; place them at their
+        # actual test addresses and share the process BSS base.
+        offset = self.base - self.peek_addr
+        self.mem[self.peek_addr:self.peek_addr+256] = _native_peek(asm,offset,self.peek_addr)
+        self.mem[self.poke_addr:self.poke_addr+256] = _native_poke(asm,offset,self.peek_addr,entry=self.poke_addr-self.peek_addr)
         self.cpu = Z80(self.mem)
         self.cpu.sp = 0x9000
         self.ticks = 0
@@ -78,7 +81,7 @@ class NativeSysvars(unittest.TestCase):
         # The native linker relocates original offsets from a code base.
         # Simulate code at 0x7000 and a process BSS offset of 0x1000.
         self.mem[self.peek_addr:self.peek_addr+256] = _native_peek(asm,0x1000,0x7000,0x1008)
-        self.mem[self.poke_addr:self.poke_addr+256] = _native_poke(asm,0x1000,0x7000,0x1008)
+        self.mem[self.poke_addr:self.poke_addr+256] = _native_poke(asm,0x1000,0x7000,0x1008,entry=self.poke_addr-self.peek_addr)
         self.cpu.hooks[8] = lambda cpu: (_ for _ in ()).throw(PermissionError('out of process'))
         self.mem[self.base] = 0x66
         self.assertEqual(self.peek(self.base), 0x66)

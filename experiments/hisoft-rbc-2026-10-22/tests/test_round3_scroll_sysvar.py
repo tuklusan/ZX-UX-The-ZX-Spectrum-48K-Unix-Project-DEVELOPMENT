@@ -37,8 +37,8 @@ class ScrollCounterIsolation(unittest.TestCase):
         mem[SCR_CT]=0xcc
         peek_addr=0x7000
         poke_addr=0x7400
-        peek_code=_native_peek(asm,0x8000,0)
-        poke_code=_native_poke(asm,0x8000,0)
+        peek_code=_native_peek(asm,0x1000,peek_addr)
+        poke_code=_native_poke(asm,0x1000,peek_addr,entry=poke_addr-peek_addr)
         mem[peek_addr:peek_addr+len(peek_code)]=peek_code
         mem[poke_addr:poke_addr+len(poke_code)]=poke_code
         cpu=Z80(mem);cpu.sp=0x9000
