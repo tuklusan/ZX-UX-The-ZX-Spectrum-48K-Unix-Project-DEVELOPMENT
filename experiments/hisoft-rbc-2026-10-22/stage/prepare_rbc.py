@@ -10,7 +10,7 @@ def prepare(checkpoint: Path, extensions: Path):
     compiler = checkpoint / 'rbc' / 'rbc.py'
     text = compiler.read_text()
     old = 'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize'
-    new = 'from basic_listing import normalize_listing, split_numbered_line, tokenize_preserving_numeric_at\nfrom line_targets import resolve_missing_targets\nfrom native_scroll import adapt_scroll_counter\nfrom restore_data import resolve_restores\nfrom constant_data import adapt_literal_data\nfrom glyph_data import specialize_glyph_data\nfrom constant_dims import specialize_literal_dims\nfrom input_bound_dims import adapt_input_bound_dims\nfrom input_string_dims import adapt_input_string_dims\nfrom numeric_input_dims import adapt_numeric_input_dims\nfrom picture_attrs import adapt_picture_attrs, allow_bounded_picture_attributes\nfrom stellar_charset import adapt_stellar_charset, install as install_stellar_charset\nfrom udg_data_literals import allow_literal_data_udgs\nfrom evolution_tape_chain import allow_native_evolution_load, install as install_evolution_tape_chain\nfrom evolution_glyph_data import adapt_evolution_glyph_data\nfrom string_dim_flatten import adapt_flat_string_dims\nfrom data_grid import adapt_numeric_data_grid\nfrom fixed_data import specialize_fixed_data\nfrom redim_capacity import adapt_bounded_redim\nfrom duplicate_for import remove_duplicate_for\nfrom udg_bounds import allow_bounded_udg_loops\nfrom udg_nested import allow_nested_glyph_writes\nfrom udg_chr_bounds import allow_bounded_chr_glyphs\nfrom rom_keyread import allow_key_state_read\nfrom rom_keyboard_control import allow_rom_keyboard_controls\nfrom rom_scroll import allow_rom_screen_scroll\nfrom process_frame_clock import allow_virtual_frame_clock, install as install_virtual_frame_clock\nfrom native_pause_rt import install as install_native_pause\nfrom native_keyread_rt import install as install_native_keyread\nfrom native_val_rt import install as install_native_val\nfrom for_restart import install as install_for_restart\nfrom native_run_rt import install as install_native_run\nfrom dynamic_string_width import install as install_dynamic_string_width\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, save_controls, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
+    new = 'from basic_listing import split_numbered_line, tokenize_preserving_numeric_at\nfrom rom_syntax import validate_rom_lines\nfrom line_targets import resolve_missing_targets\nfrom native_scroll import adapt_scroll_counter\nfrom restore_data import resolve_restores\nfrom constant_data import adapt_literal_data\nfrom glyph_data import specialize_glyph_data\nfrom constant_dims import specialize_literal_dims\nfrom input_bound_dims import adapt_input_bound_dims\nfrom input_string_dims import adapt_input_string_dims\nfrom numeric_input_dims import adapt_numeric_input_dims\nfrom picture_attrs import adapt_picture_attrs, allow_bounded_picture_attributes\nfrom stellar_charset import adapt_stellar_charset, install as install_stellar_charset\nfrom udg_data_literals import allow_literal_data_udgs\nfrom evolution_tape_chain import allow_native_evolution_load, install as install_evolution_tape_chain\nfrom evolution_glyph_data import adapt_evolution_glyph_data\nfrom string_dim_flatten import adapt_flat_string_dims\nfrom data_grid import adapt_numeric_data_grid\nfrom fixed_data import specialize_fixed_data\nfrom redim_capacity import adapt_bounded_redim\nfrom duplicate_for import remove_duplicate_for\nfrom udg_bounds import allow_bounded_udg_loops\nfrom udg_nested import allow_nested_glyph_writes\nfrom udg_chr_bounds import allow_bounded_chr_glyphs\nfrom rom_keyread import allow_key_state_read\nfrom rom_keyboard_control import allow_rom_keyboard_controls\nfrom rom_scroll import allow_rom_screen_scroll\nfrom process_frame_clock import allow_virtual_frame_clock, install as install_virtual_frame_clock\nfrom native_pause_rt import install as install_native_pause\nfrom native_keyread_rt import install as install_native_keyread\nfrom native_val_rt import install as install_native_val\nfrom for_restart import install as install_for_restart\nfrom native_run_rt import install as install_native_run\nfrom dynamic_string_width import install as install_dynamic_string_width\nfrom bss_layout import target_offset\nfrom startup_colors import save_and_set, save_controls, restore, append_slots\nfrom computed_lines import compiler_with_computed_lines\n' + old
     if text.count(old) != 1 or text.count('program = source.tokenize_directives(program,kw)') != 1:
         raise ValueError('RBC checkpoint changed; extension location needs review')
     text = text.replace(old, new, 1)
@@ -33,6 +33,7 @@ def prepare(checkpoint: Path, extensions: Path):
     if text.count(old_read) != 1:
         raise ValueError('RBC text input reader changed')
     text = text.replace(old_read, "_read_basic_text(src).splitlines()", 1)
+    text = text.replace("        raw=raw.strip()\n        if not raw:continue", "        if not raw.strip():continue", 1)
     anchor = 'def _source_program(src: Path, source, kw, fp):'
     if text.count(anchor) != 1:
         raise ValueError('RBC source reader changed')
@@ -59,11 +60,16 @@ def prepare(checkpoint: Path, extensions: Path):
     if text.count(upstream) != 1:
         raise ValueError('RBC upstream compiler import changed')
     text = text.replace(upstream, upstream + '\n    install_native_pause(compiler)\n    install_native_keyread(compiler)\n    install_native_val(compiler)\n    install_for_restart(compiler)\n    install_native_run(compiler)\n    install_dynamic_string_width(compiler)\n    install_virtual_frame_clock(compiler)\n    install_stellar_charset(compiler)\n    install_evolution_tape_chain(compiler)', 1)
-    # The archival listing joins a string variable to THEN without a space.
-    anchor = '            if not quoted and not comment and c.isdigit():'
+    # Strict adapter: never insert missing keyword boundaries or rewrite body.
+    start = text.index('        # Preserve quoted text and REMs verbatim. Only adjust digit-adjacent')
+    end = text.index('        # Replace archival {HH} byte notation', start)
+    text = (text[:start] + '        encoded=tokenize_preserving_numeric_at(body,source,kw)\n'
+            + text[end:])
+    # Read the original listing through the ROM before any compiler rewrites.
+    anchor = '        if not source.open_lines(program):'
     if text.count(anchor) != 1:
-        raise ValueError('RBC token boundary handling changed')
-    text = text.replace(anchor, "            if not quoted and not comment and c=='$' and body.startswith('THEN',i+1):\n                chunks.append('$ ');i+=1;continue\n" + anchor, 1)
+        raise ValueError('RBC syntax-check injection location changed')
+    text = text.replace(anchor, '        validate_rom_lines(program, rom)\n' + anchor, 1)
     text = text.replace("'memory_policy':memory_policy, 'memory_check':memory_report}",
                         "'memory_policy':memory_policy, 'memory_check':memory_report,\n"
                         "                        'next_line_targets':next_lines, 'scroll_counter_lines':scroll_lines}", 1)
@@ -129,8 +135,7 @@ def prepare(checkpoint: Path, extensions: Path):
         raise ValueError('RBC memory guard changed; UDG fix needs review')
     memory_source = memory_source.replace(
         old_target, "target=_target(('USR ' if op=='USR' else '') + address)", 1)
-    # Keep known ROM and system writes restricted. Dynamic and ordinary RAM
-    # POKEs are the programmer's responsibility; UDG writes are proved apart.
+    # Preserve current dynamic POKE handling and source-memory rules.
     old = "        return 'system_or_kernel'\n    return 'unknown'"
     if memory_source.count(old) != 1:
         raise ValueError('memory target classifier changed')
@@ -143,6 +148,7 @@ def prepare(checkpoint: Path, extensions: Path):
         old, "else:sev,cl='review','programmer_managed_write'", 1)
     memory.write_text(memory_source)
     shutil.copyfile(extensions / 'basic_listing.py', checkpoint / 'rbc' / 'basic_listing.py')
+    shutil.copyfile(extensions / 'rom_syntax.py', checkpoint / 'rbc' / 'rom_syntax.py')
     shutil.copyfile(extensions / 'line_targets.py', checkpoint / 'rbc' / 'line_targets.py')
     old_pause = checkpoint / 'rbc' / 'pause_zero.py'
     if old_pause.is_file():

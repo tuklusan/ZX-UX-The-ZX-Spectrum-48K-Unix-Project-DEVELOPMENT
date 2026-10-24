@@ -38,9 +38,10 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     # The independently agreed machine-code ban must be enforced after
     # all memory classifiers and safe glyph rewrites, for every CLI mode.
     change('from bss_layout import target_offset',
-           'from safety_usr import enforce_numeric_usr\nfrom poke_proof import prove_pokes\nfrom val_guard import guard_val\nfrom bss_layout import target_offset')
+           'from safety_usr import enforce_numeric_usr\nfrom poke_policy import apply_poke_policy\nfrom poke_proof import prove_pokes\nfrom val_guard import guard_val\nfrom bss_layout import target_offset')
     change('        memory_report = summarize(checks)',
            '        poke_proofs = prove_pokes(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n'
+           '        apply_poke_policy(checks, poke_proofs)\n'
            '        enforce_numeric_usr(spectrum_tap.split_lines(program), checks, poke_proofs, kw.TOKEN)\n'
            '        safe_vals = guard_val(spectrum_tap.split_lines(program), kw.TOKEN)\n'
            '        memory_report = summarize(checks)')
@@ -53,7 +54,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            "        if meta.get('scuba_charset_mapping'):\n"
            "            font = rom_font(args.rom.read_bytes())\n" + before)
     for name in ('scuba_charset.py', 'rbc_fit.py', 'rbc_output.py',
-                 'safety_usr.py', 'audit_policy.py', 'poke_proof.py', 'val_guard.py'):
+                 'safety_usr.py', 'audit_policy.py', 'poke_policy.py', 'poke_proof.py', 'val_guard.py'):
         shutil.copyfile(extensions / name, checkpoint / 'rbc' / name)
     source.write_text(text)
 
