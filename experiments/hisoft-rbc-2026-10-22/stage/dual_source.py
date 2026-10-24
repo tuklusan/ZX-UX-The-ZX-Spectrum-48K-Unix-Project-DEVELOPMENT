@@ -80,8 +80,27 @@ def _canonical(body: bytes, n: int, names: dict):
             continue
         if c == 32 and not quoted and not rem and not data:
             prev = out[-1] if out else None
-            next_value = next((x for x in body[p + 1:] if x != 32), None)
+            q = p + 1
+            while q < len(body) and body[q] == 32:
+                q += 1
+            next_value = body[q] if q < len(body) else None
             if prev in names or next_value in names:
+                p += 1
+                continue
+            # A numeric cache (0E + five bytes) can sit between a visible
+            # number and the following TO token. Its position is not source
+            # meaning, and LLIST inserts the visible token boundary itself.
+            if (prev in b'0123456789.' and next_value == 14
+                    and q + 6 <= len(body)):
+                q += 6
+                while q < len(body) and body[q] == 32:
+                    q += 1
+                if q < len(body) and body[q] == 0xCC and body[q] in names:
+                    p += 1
+                    continue
+            # A space after a closing literal quote, before PRINT's separator,
+            # is outside quoted bytes and cannot change the print separator.
+            if prev == 34 and next_value == 59:
                 p += 1
                 continue
         out.append(c)

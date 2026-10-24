@@ -38,6 +38,22 @@ class Fidelity(unittest.TestCase):
         with self.assertRaises(SemanticDifference):
             self.compare(b'\xf51:\xea note\r', b'\xf52:\xea note\r')
 
+    def test_print_separator_whitespace_outside_quote(self):
+        self.compare(b'\xf5"A " ;X$\r', b'\xf5"A ";X$\r')
+        with self.assertRaises(SemanticDifference):
+            self.compare(b'\xf5"A " ;X$\r', b'\xf5"A";X$\r')
+
+    def test_number_cache_spacing_before_to_token(self):
+        cache = b'\x0e\x00\x00\x14\x00\x00'
+        self.compare(b'\xebI=20 '+cache+b'\xcc30\r',
+                     b'\xebI=20'+cache+b' \xcc30\r')
+        with self.assertRaises(SemanticDifference):
+            self.compare(b'\xebI=20 '+cache+b'\xcc30\r',
+                         b'\xebI=21'+cache+b' \xcc30\r')
+        with self.assertRaises(SemanticDifference):
+            self.compare(b'\xebI=20 '+cache+b'\xcc30\r',
+                         b'\xebI=20'+cache+b' TO 30\r')
+
     def test_regenerated_numeric_cache_is_not_source(self):
         self.compare(b'\xf510\x0e\x00\x00\x0a\x00\x00\r',
                      b'\xf510\x0e\x00\x00\x0a\x00\x00\r')
@@ -105,8 +121,8 @@ class Fidelity(unittest.TestCase):
                 except SemanticDifference as exc:
                     rejected += 1
                     affected[game.name] = str(exc)
-        self.assertEqual((passed, rejected), (58, 2))
-        self.assertEqual(set(affected), {'02-fall-guy', '54-swordsman'})
+        self.assertEqual((passed, rejected), (60, 0))
+        self.assertEqual(affected, {})
         self.assertTrue(all('Line ' in reason for reason in affected.values()))
 
     def test_rejects_bad_line_structure(self):
