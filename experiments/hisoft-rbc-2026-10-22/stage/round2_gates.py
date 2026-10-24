@@ -69,6 +69,18 @@ def suite_gate(root: Path, stage: str):
                   'sysvar_native_link_check.py')]
         subprocess.run(command,cwd=root,check=True)
         count += native_count
+    if stage == 'loops':
+        native_suite = unittest.defaultTestLoader.discover(
+            str(suite_path.parent), pattern='test_spectrum_loops.py')
+        native_count = native_suite.countTestCases()
+        if native_count < 9:
+            raise RuntimeError('loops: missing dynamic FOR/NEXT reference tests')
+        native_result = unittest.TextTestRunner(verbosity=2).run(native_suite)
+        if not native_result.wasSuccessful() or native_result.testsRun != native_count:
+            raise RuntimeError('loops: dynamic control-state tests failed')
+        subprocess.run([sys.executable, str(suite_path.parents[1] / 'stage' /
+                        'loop_native_link_check.py')], cwd=root, check=True)
+        count += native_count
     return count
 
 
