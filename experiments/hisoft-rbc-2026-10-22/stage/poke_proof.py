@@ -225,12 +225,16 @@ def prove_pokes(lines, token_names, findings):
             for loop in w.loops:
                 if not re.search(r'\b'+re.escape(loop.variable)+r'\b',address_variables,re.I):
                     continue
-                if indirect_branch:
-                    raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: computed branch could enter FOR body')
                 if loop.conditional:
                     raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: conditional FOR cannot be proved')
                 if loop.end is None or not loop.begin<w.position<loop.end:
                     raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: loop has no proved NEXT')
+                # Sinclair computed jumps target the start of a BASIC line.
+                # A FOR and all its body statements on that same line
+                # cannot be entered beyond the initialization statement.
+                if indirect_branch and any(rows[i][0] != loop.line
+                                           for i in range(loop.begin,loop.end+1)):
+                    raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: computed branch could enter FOR body')
                 body=rows[loop.begin+1:loop.end]
                 if any(line in incoming and line!=loop.line for line,_,_ in body):
                     raise PokeAddressError(f'RBC E_POKE_ADDRESS: Line {w.line}: jump may bypass FOR')

@@ -55,6 +55,17 @@ class PokePolicyTests(unittest.TestCase):
                     '{POKE} F,1','{NEXT} F')
         self.assertEqual(len(proof[0]['addresses']),16)
 
+    def test_computed_line_jump_can_enter_single_line_bounded_for(self):
+        proof=check('{GO TO} K',
+                    '{FOR} C={USR} "a" {TO} {USR} "a"+7: READ V: {POKE} C,V: {NEXT} C')
+        self.assertEqual([x['offset'] for x in proof[0]['addresses']],list(range(8)))
+
+    def test_computed_jump_into_later_line_blocks_unproved_udg(self):
+        with self.assertRaisesRegex(PokeAddressError,'computed branch could enter FOR body'):
+            check('{GO TO} K',
+                  '{FOR} C={USR} "a" {TO} {USR} "a"+7',
+                  'READ V: {POKE} C,V: {NEXT} C')
+
     def test_machine_usr_rejected(self):
         with self.assertRaises(UnsupportedUsr):
             check('{LET} X={USR} 32768')
