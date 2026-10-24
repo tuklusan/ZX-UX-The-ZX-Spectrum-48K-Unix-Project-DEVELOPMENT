@@ -50,10 +50,13 @@ jobs:
               listing=to_ascii_listing(validated_lines(original),tokens)
               restored=encode_strict_listing(listing)
               semantic_check(original,restored,None,tokens,'TZX reconstructed')
+              authoritative=game/'BASIC'/(game.name+'.bas')
+              from_bas=encode_strict_listing(authoritative.read_text(encoding='ascii'))
+              semantic_check(from_bas,restored,None,tokens,'BAS/TZX')
               successes.append(game.name)
             except Exception as exc:
               failures.append((game.name,type(exc).__name__,str(exc)))
-          print('TZX round-trip results',len(successes),'successes',len(failures),'failures',flush=True)
+          print('Paired BAS and TZX round-trip results',len(successes),'successes',len(failures),'failures',flush=True)
           for item in failures:print('TZX not yet roundtrippable',repr(item),flush=True)
           if failures:raise SystemExit('Unresolved TZX reconstruction differences')
           PY
