@@ -66,6 +66,25 @@ jobs:
           for test in test_round2_sysvars test_round2_fonts test_round2_memory test_round2_fidelity test_native_sysvars_rt test_native_font_rt test_native_font_link test_spectrum_fonts test_spectrum_sysvars test_rom_syntax test_tzx_ascii test_safety_usr test_poke_policy test_poke_proof; do
             PYTHONPATH=build/tmp/rbc-round2/upstream python -m unittest discover -s "$base" -p "$test.py" -v
           done
+      - name: Verify real HiSoft native compilation and SSX link
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=build/tmp/rbc-round2
+          curl -fsSL --retry 2 --max-time 30 -o "$root/hisoft48.tap" https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap
+          test -s "$root/hisoft48.tap"
+          printf '10 PRINT "RBC NATIVE TEST"\n' > "$root/hello.bas"
+          PYTHONPATH="$root/upstream:$root/current/rbc:src/zx-ux-sdk" python "$root/current/rbc/rbc.py" "$root/hello.bas" --frontend "$root/upstream" --sdk src/zx-ux-sdk --rom src/zx-ux-sdk/rom/48.rom --tape "$root/hisoft48.tap" -o "$root/hello.ssx" --report "$root/hello.json"
+          PYTHONPATH=src/zx-ux-sdk python - <<'PY'
+          from pathlib import Path
+          import rld
+          target=Path('build/tmp/rbc-round2/hello.ssx')
+          payload=target.read_bytes()
+          assert payload.startswith(b'SSX1'), payload[:4]
+          parsed=rld.parse_ssx(payload)
+          assert len(parsed['image']) > 0
+          print('Linked SSX1 executable:', len(payload), 'bytes')
+          PY
       - name: Independently recover all 60 TZX input listings
         shell: bash
         run: |
