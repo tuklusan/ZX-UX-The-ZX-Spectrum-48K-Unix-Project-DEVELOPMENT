@@ -253,6 +253,26 @@ jobs:
               finally:
                   file.write_text(original)
           PY
+      - name: Check whether RUN startup damages an unreached restart
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk python - <<'PY'
+          from round3_native_system_probe import compile_one, ROOT
+          import rvm,rld
+          from pathlib import Path
+          for name, source in (
+              ('rbc-r3-unreached','10 STOP\n20 RUN 10\n'),
+              ('rbc-r3-minimal','10 RUN 100\n100 STOP\n'),
+          ):
+              path=compile_one(name,source)
+              parsed=rld.parse_ssx(path.read_bytes())
+              img=parsed['image']
+              spots=[(i,img[i:i+18].hex()) for i in range(len(img)-18) if img[i:i+7]==bytes.fromhex('f5e52102003922')]
+              print('RUN startup image',name,'length',len(img),'BSS',parsed['bss'],'shims',spots,'prefix',img[:100].hex(),flush=True)
+              runner=rvm.run_kernel(path,frames=140,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
+              print('RUN startup kernel result',name,'why',runner.why,'status',runner.fg.status,'PC',hex(runner.session.m.cpu.pc),'SP',hex(runner.session.m.cpu.sp),flush=True)
+          PY
       - name: Prove RUN restart and font restoration in the real ZX-UX kernel
         shell: bash
         run: |
