@@ -276,6 +276,14 @@ jobs:
                                        ('var_print','10 LET A=7\n20 RUN 100\n100 PRINT A\n110 STOP\n')):
                       try:
                           ssx=compile_one('rbc-r3-reset-'+strategy+'-'+label,listing)
+                          data=rld.parse_ssx(ssx.read_bytes())
+                          img=data['image']
+                          site=img.find(b'\xed\x7b')
+                          save_site=img.find(b'\xed\x73')
+                          saved=int.from_bytes(img[site+2:site+4],'little')
+                          operand_pos=site+5
+                          clear=int.from_bytes(img[operand_pos:operand_pos+2],'little') if strategy!='none' else None
+                          print('RUN image pointers',strategy,label,'image',len(img),'BSS',data['bss'],'save',saved,'save_expected',len(img)+data['bss']-2,'clear',clear,'clear_expected',len(img),'saveRel',site+2 in data['relocs'],'clearRel',operand_pos in data['relocs'],'shimSave',int.from_bytes(img[save_site+2:save_site+4],'little'),'shimRel',save_site+2 in data['relocs'],'code',img[site:site+35].hex(),flush=True)
                           res=rvm.run_kernel(ssx,frames=220,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
                           print('RUN reset strategy',strategy,label,res.why,res.fg.status,'syscalls',res.session.syscalls,'PC',hex(res.session.m.cpu.pc),'SP',hex(res.session.m.cpu.sp),flush=True)
                       except Exception as err:
