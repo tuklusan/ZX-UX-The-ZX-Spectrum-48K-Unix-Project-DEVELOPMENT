@@ -1,4 +1,8 @@
-"""ROM LIST-format and original TZX extraction regressions.
+# ZX-UX — zx-tzx2bas ROM-conformance and tape-format tests.
+# Copyright (c) 2026 Supratim Sanyal of SANYALnet Labs.
+# Based on original work by Supratim Sanyal of SANYALnet Labs.
+# License: ZX-UX repository LICENSE.
+"""ZX-UX zx-tzx2bas tests: real ROM LLIST and original TZX extraction.
 
 Run using a checked-out DEVELOPMENT repository (and its frozen 48K ROM),
 or set ZX_ROM and MINELAY_TZX to local matching bytes.
@@ -14,8 +18,8 @@ import tempfile
 import unittest
 
 HERE = Path(__file__).resolve().parent
-TOOL = HERE.parent / 'stage' / 'tzx-basic-lister.py'
-SPEC = importlib.util.spec_from_file_location('tzx_basic_lister', TOOL)
+TOOL = HERE.parent / 'stage' / 'zx-tzx2bas.py'
+SPEC = importlib.util.spec_from_file_location('zx_tzx2bas', TOOL)
 LISTER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(LISTER)
 ROM_PATH = Path(os.environ.get('ZX_ROM', str(HERE.parents[2] / 'src/zx-ux-sdk/rom/48.rom')))
@@ -67,6 +71,12 @@ class ListSpacing(unittest.TestCase):
         self.assertEqual(LISTER.list_line(5, b'\xf5\xc2(147)', self.rom),
                          '   5 PRINT CHR$ (147)')
 
+    def test_rejects_unverified_rom_with_same_keyword_spelling(self):
+        wrong = bytearray(self.rom)
+        wrong[0x2000] ^= 1
+        with self.assertRaisesRegex(LISTER.TapeError, 'verified 16 KiB'):
+            LISTER.rom_keywords(bytes(wrong))
+
     def test_minelay_keyword_boundary(self):
         self.assertEqual(LISTER.list_line(700, b'\xfa\xa5>sk\xcb\xf5', self.rom),
                          ' 700 IF RND>sk THEN PRINT ')
@@ -88,6 +98,32 @@ class ListSpacing(unittest.TestCase):
                          '  12 PRINT "{92}{7B}40{7D}"')
         self.assertEqual(LISTER.list_line(13, b'\xea \xf5"', self.rom),
                          '  13 REM  {F5}"')
+
+    def test_embedded_cr_matches_llist_and_is_not_silently_exported(self):
+        # LLIST stops at a visible 0Dh, including one inside quotes.
+        self.assertEqual(LISTER.llist_codes(10, b'\xf5"Hi\rEXTRA"', self.rom),
+                         b'  10 PRINT "Hi')
+        program = line(10, b'\xf5"Hi\rEXTRA"')
+        with self.assertRaisesRegex(LISTER.TapeError, 'embedded ROM end-of-line'):
+            list(LISTER.numbered_lines(program))
+        # A carriage return *inside* a six-byte number cache is legitimate.
+        cache = line(10, b'\xf5 1\x0e\x0d\x00\x00\x00\x00')
+        self.assertEqual(len(list(LISTER.numbered_lines(cache))), 1)
+
+    def test_data_rem_token_does_not_end_statement(self):
+        # The ROM expands both tokens, even in DATA. The ASCII exporter
+        # must not mistake the REM token for a new executable remark.
+        body = bytes([0xE4, 32, 0xEA, 58, 0xF5, 32, 34, 72, 34])
+        text = LISTER.list_line(10, body, self.rom)
+        self.assertIn('{EA}', text)
+        self.assertIn('PRINT', text)
+
+    def test_about_includes_required_attribution(self):
+        result = subprocess.run([sys.executable, str(TOOL), '--about'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Based on original work by Supratim Sanyal of SANYALnet Labs.',
+                      result.stdout)
 
     def test_original_numeric_cache_skipped(self):
         data = b'\xfaa=7\x0e\x00\x00\x07\x00\x00\xcb\xf5'
@@ -195,7 +231,11 @@ class OriginalZ80LLISTConformance(unittest.TestCase):
         memory[0x8000:0x8000 + len(raw)] = raw
         # Set E-PPC, K-CUR and X-PTR so the test is an ordinary LLIST line,
         # not the editor's special current-line/cursor/error rendering mode.
-        memory[0x5C49:0x5C4B] = (9998).to_bytes(2, 'little')
+        # A standalone tape exporter is not displaying an editor's
+        # currently selected line. Choose an E-PPC outside BASIC's
+        # 0..9999 range; otherwise ROM inserts the editor cursor '>' on
+        # the line whose number happens to equal E-PPC.
+        memory[0x5C49:0x5C4B] = (0xFFFF).to_bytes(2, 'little')
         memory[0x5C5B:0x5C5D] = (0xFFFF).to_bytes(2, 'little')
         memory[0x5C5F:0x5C61] = (0xFFFF).to_bytes(2, 'little')
         cpu = self.CPU(memory.__getitem__, memory.__setitem__)
@@ -248,6 +288,17 @@ class OriginalZ80LLISTConformance(unittest.TestCase):
             with self.subTest(token=hex(token)):
                 self.verify(10, bytes([token]))
                 self.verify(700, b'\xfa a=1' + bytes([token]) + b'b')
+
+    def test_all_source_byte_values_and_space_flag_transitions(self):
+        # Exercise all 256 Sinclair source character values through the
+        # original ROM and the Python LLIST port, with differing neighbors.
+        # CR terminates a line and numeric marker 0E needs five cache bytes.
+        for code in range(256):
+            src = (b'\x0e\x00\x00\x01\x00\x00' if code == 14
+                   else bytes([code]))
+            for before in (b'\xf5', b'\xf5 ', b'\xf5A'):
+                with self.subTest(code=code, before=before.hex()):
+                    self.verify(100, before + src + b'\xcb')
 
     def test_actual_minelay_every_line(self):
         if not TZX_PATH.is_file():
