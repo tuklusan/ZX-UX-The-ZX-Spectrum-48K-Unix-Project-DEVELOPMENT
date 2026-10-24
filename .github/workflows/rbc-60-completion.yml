@@ -1,1 +1,92 @@
-The requested file reference is not currently visible. Use files.search or files.list to rediscover the file, then retry with a returned ref_id or file_id.
+name: RBC sixty-game native outcomes
+on:
+  push:
+    paths:
+      - '.github/workflows/rbc-60-completion.yml'
+permissions:
+  contents: read
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get original compiler and frozen RBC checkpoint
+        run: |
+          git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git upstream-pyhsb
+          git -C upstream-pyhsb checkout -q --detach 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+          mkdir -p trial-result
+          git show c3d270375af56768df3af6f5ceb38f83c9bd5bdd:experiments/hisoft-rbc-2026-10-22/rbc-fresh-chat-2026-10-22.zip > /tmp/rbc-checkpoint.zip
+          unzip -oq /tmp/rbc-checkpoint.zip -d trial-result/checkpoint
+          cp -R trial-result/checkpoint/scratch/rbc trial-result/rbc
+          python3 experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
+          python3 experiments/hisoft-rbc-2026-10-22/stage/finish_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
+          curl -fLsS --retry 4 --retry-all-errors --connect-timeout 20 --max-time 120 -o trial-result/hisoft48.tap https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap
+          test -s trial-result/hisoft48.tap
+      - name: Compile and link every original numbered BASIC game
+        env:
+          PYTHONPATH: src/zx-ux-sdk
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess, sys, re, json, hashlib
+          root = Path('src/bonus/60-programs')
+          folders = sorted(root.glob('[0-9][0-9]-*'))
+          if len(folders) != 60:
+              raise SystemExit(f'Expected 60 preserved programs, got {len(folders)}')
+          outputs = Path('outcomes')
+          work = Path('trial-result')
+          total_ok = 0
+          for folder in folders:
+              inputs = sorted((folder / 'BASIC').glob('*.bas'))
+              target = outputs / folder.name / 'C48'
+              target.mkdir(parents=True, exist_ok=True)
+              src = inputs[0] if len(inputs) == 1 else None
+              binary = work / (folder.name + '.ssx')
+              report = work / (folder.name + '.json')
+              reason = None
+              if src is None:
+                  reason = f'Expected one numbered BASIC input, found {len(inputs)}'
+              else:
+                  argv = [sys.executable, str(work/'rbc/rbc.py'), str(src),
+                          '--frontend', 'upstream-pyhsb', '--sdk', 'src/zx-ux-sdk',
+                          '--rom', 'src/zx-ux-sdk/rom/48.rom',
+                          '--tape', str(work/'hisoft48.tap'),
+                          '-o', str(binary), '--report', str(report)]
+                  try:
+                      run = subprocess.run(argv, stdout=subprocess.PIPE,
+                                           stderr=subprocess.STDOUT, text=True,
+                                           timeout=130)
+                      if run.returncode == 0 and binary.is_file() and binary.read_bytes().startswith(b'SSX1'):
+                          (target / (folder.name + '.ssx')).write_bytes(binary.read_bytes())
+                          total_ok += 1
+                      else:
+                          relevant = [s.strip() for s in run.stdout.splitlines() if s.strip()]
+                          best = [s for s in relevant if re.search(r'RBC E_|Line [0-9]+|[Ee]rror|unsupported|invalid|blocked', s)]
+                          reason = (best[-1] if best else relevant[-1] if relevant else
+                                    f'Compiler exited with status {run.returncode} and no diagnostic')
+                          if run.returncode == 0:
+                              reason = 'RBC returned success without a linked SSX1 executable'
+                  except subprocess.TimeoutExpired:
+                      reason = 'RBC compilation exceeded 130 seconds'
+                  except Exception as exc:
+                      reason = f'RBC invocation failed: {type(exc).__name__}: {exc}'
+              if reason is not None:
+                  reason = re.sub(r'[\x00-\x1f\x7f]', ' ', reason)[:420]
+                  (target / 'README.md').write_text(
+                      f'{folder.name}: RBC could not compile and link the original numbered BASIC source.\n'
+                      f'Reason: {reason}\n')
+              print(f'{folder.name}: {"SSX" if reason is None else "README: " + reason}', flush=True)
+          outcomes = sorted(outputs.glob('*/C48/*'))
+          if len(outcomes) != 60 or any(p.suffix.lower() not in ('.ssx','.md') for p in outcomes):
+              raise SystemExit('Not exactly one final result for each of 60 games')
+          print(f'Native linked SSX: {total_ok}; failures: {60-total_ok}')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rbc-60-final-outcomes
+          path: outcomes/
+          retention-days: 2
