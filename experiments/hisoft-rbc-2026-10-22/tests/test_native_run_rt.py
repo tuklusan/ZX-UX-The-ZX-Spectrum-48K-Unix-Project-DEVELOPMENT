@@ -156,7 +156,7 @@ class RunTests(unittest.TestCase):
         self.assertIn(130, numbered)
         self.assertIn(8030, numbered)
         self.assertEqual(numbered[130], 'GO TO 1000')
-        self.assertRegex(numbered[8030], r':\s*RUN\s+130\s*
+        self.assertEqual(numbered[8030].split(':')[-1].strip(), 'RUN 130')
         self.assertEqual(_run_entry(sorted(numbered.items()),130),130)
 
     def test_install_is_repeatable(self):
