@@ -1,4 +1,4 @@
-name: RBC Round 2 VAL-only verification (later stages paused)
+name: RBC thin pyhsb gated verification
 on:
   push:
     paths:
@@ -40,6 +40,10 @@ jobs:
           python3 experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py build/tmp/rbc-round2/current experiments/hisoft-rbc-2026-10-22/stage
           python3 experiments/hisoft-rbc-2026-10-22/stage/finish_rbc.py build/tmp/rbc-round2/current experiments/hisoft-rbc-2026-10-22/stage
           python3 -m compileall -q build/tmp/rbc-round2/current/rbc
+      - name: Stage 0b — enforce sole pyhsb compiler core
+        env:
+          PYTHONPATH: build/tmp/rbc-round2/current/rbc
+        run: python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_thin_wrapper.py' -v
       - name: Fetch exact frozen compiler dependencies
         run: |
           git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git build/tmp/rbc-round2/upstream
