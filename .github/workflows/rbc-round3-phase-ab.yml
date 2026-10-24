@@ -249,6 +249,38 @@ jobs:
                               print('RUN variable snapshot',label,'load',hex(load),'bss_at',hex(bss_at),'vars',bytes(mem[bss_at:bss_at+data['bss']]).hex(),'saveSP',hex(int.from_bytes(bytes(mem[bss_at+data['bss']-2:bss_at+data['bss']]),'little')),flush=True)
                   except Exception as err:
                       print('RUN trampoline test error',label,type(err).__name__,str(err),flush=True)
+              old_runner=runtime.read_text()
+              for strategy in ('none','bytewise','xor_ldir','mem_fill'):
+                  start=old_runner.index('        if self._zxux_run_clear_bytes == 1:')
+                  finish=old_runner.index('        self.emit_restore()',start)
+                  if strategy=='none':
+                      new='        pass\n'
+                  elif strategy=='bytewise':
+                      new=("        self.ld_hl(self.vars_start)\n"
+                           "        self.emit('xor a')\n"
+                           "        for k in range(self._zxux_run_clear_bytes):\n"
+                           "            self.emit('ld (hl),a')\n"
+                           "            if k+1<self._zxux_run_clear_bytes: self.emit('inc hl')\n")
+                  elif strategy=='xor_ldir':
+                      new=("        self.ld_hl(self.vars_start)\n"
+                           "        self.emit('xor a; ld (hl),a')\n"
+                           "        if self._zxux_run_clear_bytes>1:\n"
+                           "            self.emit('ld d,h; ld e,l; inc de')\n"
+                           "            self.ld_bc_abs(self._zxux_run_clear_bytes-1)\n"
+                           "            self.emit('ldir')\n")
+                  else:
+                      new=old_runner[start:finish]
+                  runtime.write_text(old_runner[:start]+new+old_runner[finish:])
+                  for label,listing in (('var_stop','10 LET A=7\n20 RUN 100\n100 STOP\n'),
+                                       ('var_equal','10 LET A=7\n20 RUN 100\n100 IF A=0 THEN GO TO 110\n105 GO TO 105\n110 STOP\n'),
+                                       ('var_print','10 LET A=7\n20 RUN 100\n100 PRINT A\n110 STOP\n')):
+                      try:
+                          ssx=compile_one('rbc-r3-reset-'+strategy+'-'+label,listing)
+                          res=rvm.run_kernel(ssx,frames=220,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
+                          print('RUN reset strategy',strategy,label,res.why,res.fg.status,'syscalls',res.session.syscalls,'PC',hex(res.session.m.cpu.pc),'SP',hex(res.session.m.cpu.sp),flush=True)
+                      except Exception as err:
+                          print('RUN reset strategy error',strategy,label,str(err),flush=True)
+              runtime.write_text(old_runner)
           finally:
               runtime.write_text(original_runtime)
               wrapper.write_text(original_wrapper)
