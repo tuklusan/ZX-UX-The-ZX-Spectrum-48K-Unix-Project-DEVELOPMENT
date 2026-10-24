@@ -172,6 +172,28 @@ jobs:
         run: |
           set -euo pipefail
           python experiments/hisoft-rbc-2026-10-22/stage/round3_runtime_smoke.py
+      - name: Diagnose native RUN startup and STOP
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk python - <<'PY'
+          from round3_native_system_probe import compile_one, ROOT
+          import rvm
+          samples = {
+              'rbc-r3-run-min': '10 RUN 100\\n100 STOP\\n',
+              'rbc-r3-run-print': '10 PRINT "BEFORE": RUN 100\\n100 PRINT "AFTER": STOP\\n',
+              'rbc-r3-run-let': '10 LET A=7\\n20 RUN 100\\n100 STOP\\n',
+              'rbc-r3-run-sys': '10 POKE 23692,42\\n20 RUN 100\\n100 STOP\\n',
+          }
+          for name, source in samples.items():
+              try:
+                  ssx = compile_one(name, source.replace('\\n','\n'))
+                  run = rvm.run_kernel(ssx, frames=250, system=ROOT/'build/out/ZX-UX.tzx', cache=True)
+                  fg = run.fg
+                  print('native RUN diagnostic',name,'why',run.why,'status',fg.status,'syscalls',run.session.syscalls, 'PC',hex(run.session.m.cpu.pc),'SP',hex(run.session.m.cpu.sp), flush=True)
+              except Exception as exc:
+                  print('native RUN diagnostic failed',name,type(exc).__name__,str(exc),flush=True)
+          PY
       - name: Prove RUN restart and font restoration in the real ZX-UX kernel
         shell: bash
         run: |
