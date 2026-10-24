@@ -168,15 +168,3 @@ class RunTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-)
-        self.assertEqual(_run_entry(sorted(numbered.items()),130),130)
-
-    def test_install_is_repeatable(self):
-        cls = Module.Compiler
-        first = cls.st_run
-        install(Module)
-        self.assertIs(cls.st_run, first)
-        self.assertIn(0xf7, cls().dispatch)
-
-if __name__ == '__main__':
-    unittest.main()
