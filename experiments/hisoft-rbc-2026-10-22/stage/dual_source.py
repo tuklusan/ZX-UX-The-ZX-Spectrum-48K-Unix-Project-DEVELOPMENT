@@ -108,7 +108,7 @@ def convert_tzx(tzx_file: Path, bas_file: Path, dst: Path, rbc, source, kw, fp):
     # Use the ROM LLIST formatter used by the independent TZX conversion tool.
     # A second lossy re-serializer can add token-adjacent whitespace, changing
     # compiler input and SSX bytes even when all executable tokens agree.
-    tool = Path(__file__).resolve().parents[2] / 'build/tools/zx-tzx2bas.py'
+    tool = Path(__file__).resolve().parents[3] / 'build/tools/zx-tzx2bas.py'
     spec = importlib.util.spec_from_file_location('zx_tzx2bas_rbc', tool)
     if spec is None or spec.loader is None:
         raise LosslessConversionError('original ROM TZX converter is unavailable')
