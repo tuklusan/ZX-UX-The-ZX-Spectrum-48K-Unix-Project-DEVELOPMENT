@@ -14,6 +14,8 @@ import subprocess
 import sys
 from pathlib import Path
 from dual_source import convert_tzx
+from diagnostics import Diagnostic, MESSAGES
+import re
 
 
 def sha(data):
@@ -49,17 +51,30 @@ def attempt(source_path, output_path, root, compiler, frontend, tape, revision):
                           stack_bytes=parsed['stack'])
         except Exception as exc:
             result['exit_status'] = 1
-            result['stderr'] += '\nRBC E_NATIVE_LINK: rejected invalid SSX1: ' + str(exc)
+            result['stderr'] += '\n' + Diagnostic(
+                'RBC_NATIVE_VALIDATION',
+                MESSAGES['RBC_NATIVE_VALIDATION'] + ' ' + str(exc),
+                detail=str(exc)).render()
             output_path.unlink(missing_ok=True)
     elif proc.returncode == 0:
-        result.update(exit_status=1, stderr=result['stderr'] + '\nRBC E_NATIVE_LINK: missing linked SSX1')
+        result.update(exit_status=1, stderr=result['stderr'] + '\n' +
+                      Diagnostic('RBC_NATIVE_VALIDATION',
+                                 MESSAGES['RBC_NATIVE_VALIDATION'] +
+                                 ' Missing linked SSX1 output.').render())
     return result
 
 
-def rejected_conversion(tzx, diagnostic, revision):
+def rejected_conversion(tzx, diagnostic, revision, category=None):
+    mnemonic = ('RBC_TZX_FIDELITY' if category == 'SemanticDifference'
+                else 'RBC_TZX_CONVERSION')
+    match = re.search(r'\bLine\s+(\d+)\b', diagnostic)
+    line = int(match.group(1)) if match else None
+    standardized = Diagnostic(
+        mnemonic, MESSAGES[mnemonic] + ' ' + diagnostic,
+        basic_line=line, detail=diagnostic).render()
     return {'source': str(tzx), 'sha256_input': sha(tzx.read_bytes()),
             'rbc_revision': revision, 'exit_status': 1, 'native_linked': False,
-            'stderr': diagnostic, 'stdout': '', 'failure_class': 'TZX conversion/fidelity'}
+            'stderr': standardized, 'stdout': '', 'failure_class': 'TZX conversion/fidelity'}
 
 
 def outcome_readme(game, bas, tzx, comparison):
@@ -118,7 +133,7 @@ def run(root, compiler, frontend, tape, workspace, revision):
             tzx_result['tape_sha256'] = sha(tzx.read_bytes())
             tzx_result['tape_source'] = str(tzx.relative_to(root))
         else:
-            tzx_result = rejected_conversion(tzx, converter_report['error'], revision)
+            tzx_result = rejected_conversion(tzx, converter_report['error'], revision, converter_report.get('category'))
             tzx_result['source'] = str(tzx.relative_to(root))
         if bas_result['native_linked'] and tzx_result['native_linked']:
             a, b = to_bas.read_bytes(), to_tzx.read_bytes()
@@ -129,7 +144,11 @@ def run(root, compiler, frontend, tape, workspace, revision):
                 comp = {'status': 'mismatch', 'first_difference': first,
                         'bas_size': len(a), 'tzx_size': len(b),
                         'bas_sha256': sha(a), 'tzx_sha256': sha(b),
-                        'reason': f'first differing byte at offset {first}'}
+                        'reason': Diagnostic('RBC_SSX_DIFFERENCE',
+                                  MESSAGES['RBC_SSX_DIFFERENCE'] +
+                                  f' First differing byte at offset {first}; '
+                                  f'BAS {len(a)} bytes SHA-256 {sha(a)}; '
+                                  f'TZX {len(b)} bytes SHA-256 {sha(b)}.').render()}
         else:
             comp = {'status': 'unavailable', 'first_difference': None,
                     'reason': 'at least one path failed or fidelity could not be proved'}

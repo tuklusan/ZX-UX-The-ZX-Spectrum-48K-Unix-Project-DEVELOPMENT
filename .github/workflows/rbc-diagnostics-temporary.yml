@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           root=experiments/hisoft-rbc-2026-10-22
-          for pattern in test_diagnostics.py test_basic_listing.py test_rbc_fit.py test_native_memory_failure.py test_result_classify.py test_rom_syntax.py; do
+          for pattern in test_diagnostics.py test_round2_diagnostics.py test_basic_listing.py test_rbc_fit.py test_native_memory_failure.py test_result_classify.py test_rom_syntax.py; do
             PYTHONPATH="$root/stage:src/zx-ux-sdk" python -m unittest discover -s "$root/tests" -p "$pattern" -v
           done
           python -m compileall -q "$root/stage"

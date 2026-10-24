@@ -40,6 +40,21 @@ class ClassificationTests(unittest.TestCase):
     def test_invalid_listing(self):
         self.assertEqual(result_classify.classify('invalid BASIC text line 3'), 'source-parse')
 
+    def test_standardized_failure_families(self):
+        for mnemonic, expected in (
+            ('BAS_UNEXPECTED_KEYWORD', 'source-parse'),
+            ('ROM_C_SYNTAX', 'spectrum-rom-syntax'),
+            ('HIS_UNSUPPORTED', 'hisoft-compiler'),
+            ('RBC_TAPE_LOAD', 'external-io'),
+            ('RBC_USR_MACHINE_CODE', 'machine-code-usr'),
+            ('RBC_MEMORY_LIMIT', 'native-memory-limit'),
+            ('RBC_TZX_CONVERSION', 'TZX conversion'),
+            ('RBC_TZX_FIDELITY', 'BAS/TZX semantic difference'),
+            ('RBC_SSX_DIFFERENCE', 'linked-binary-mismatch')):
+            with self.subTest(mnemonic=mnemonic):
+                self.assertEqual(result_classify.classify(
+                    '%RBC ' + mnemonic + ' Line: - Statement: - Message'), expected)
+
     def test_unexpected(self):
         self.assertEqual(result_classify.classify('strange diagnostic'), 'compiler-error')
 

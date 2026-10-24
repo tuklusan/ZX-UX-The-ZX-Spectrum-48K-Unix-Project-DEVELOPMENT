@@ -62,7 +62,8 @@ def check(root: Path):
 
     too_big = source.with_suffix('.oversize.ssx')
     failure = run(['--max', '1', '-o', str(too_big), '--report', str(report)], 1)
-    assert 'needs' in failure.stderr and 'native memory' in failure.stderr
+    assert '%RBC RBC_MEMORY_LIMIT Line: - Statement: -' in failure.stderr
+    assert 'Executable requires ' in failure.stderr and 'native memory' in failure.stderr
     assert not too_big.exists()
     assert json.loads(report.read_text())['cause_category'] == 'native-memory-limit'
 
