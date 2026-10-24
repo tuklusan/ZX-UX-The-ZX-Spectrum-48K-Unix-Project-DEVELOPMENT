@@ -351,7 +351,7 @@ def from_exception(exc: Exception, source: Path | None = None) -> Diagnostic:
             message += ' ' + context
     if mnemonic in ('RBC_PROTECTED_WRITE', 'RBC_PROTECTED_READ',
                     'RBC_USR_UNRESOLVED', 'RBC_UDG_ADDRESS',
-                    'RBC_MEMORY_POLICY', 'RBC_COMPILER_INTERNAL') and detail:
+                    'RBC_MEMORY_POLICY', 'RBC_COMPILER_INTERNAL') or 'zx-ux memory check stopped' in low:
         message += ' ' + detail
     return Diagnostic(mnemonic, message, line, statement, original, column, native, detail)
 
