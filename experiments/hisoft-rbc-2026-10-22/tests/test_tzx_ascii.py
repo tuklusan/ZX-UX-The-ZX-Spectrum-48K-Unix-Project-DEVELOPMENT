@@ -11,27 +11,27 @@ class TapeAsciiTests(unittest.TestCase):
     def test_literal_number_bytes_and_keyword_boundaries(self):
         src=b'\xfa 1\x0e\0\0\1\0\0\xcb\xf5 "OK"\r'
         result=to_ascii_listing([(10,src)],TOKENS)
-        self.assertIn('IF{20}',result)
+        self.assertIn('IF {20}',result)
         self.assertIn('{0E}{00}{00}{01}{00}{00}',result)
-        self.assertIn('THENPRINT',result)
+        self.assertIn('THEN PRINT ',result)
 
     def test_remark_preserves_spaces_and_literal_keyword_byte(self):
         src=b'\xea     PAYPACKETS                          BY  \xf5\r'
         result=to_ascii_listing([(10,src)],TOKENS)
-        self.assertIn('REM'+'{20}'*5+'{50}{41}{59}',result)
+        self.assertIn('REM '+'{20}'*5+'{50}{41}{59}',result)
         self.assertIn('{F5}',result)
         self.assertEqual(result.count('{20}'),33)
 
     def test_quote_and_semicolon_survive(self):
         result=to_ascii_listing([(10,b'\xf5"{90} \xf5";2\x0e\0\0\2\0\0\r')],TOKENS)
-        self.assertIn('PRINT"',result)
+        self.assertIn('PRINT "',result)
         self.assertIn('{7B}{39}{30}{7D}{20}{F5}"',result)
         self.assertIn('{3B}{32}{0E}',result)
 
     def test_spaces_before_keyword_preserved(self):
         result=to_ascii_listing([(10,b'\xebF=20 \x0e\0\0\x14\0\0\xcc30\r')],TOKENS)
         self.assertIn('{32}{30}{20}{0E}',result)
-        self.assertIn('TO{33}{30}',result)
+        self.assertIn('TO {33}{30}',result)
 
     def test_identical_program_is_accepted(self):
         confirm_roundtrip(b'abc',b'abc',lambda _: [])

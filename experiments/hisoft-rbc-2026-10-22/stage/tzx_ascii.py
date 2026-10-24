@@ -42,7 +42,7 @@ def to_ascii_listing(lines, token_names):
                 token = token_names[c].strip()
                 if not token:
                     raise LosslessConversionError(f'Line {number}: empty keyword for {c:02X}')
-                text.append(token)
+                text.append(token + ' ')
                 if c == 0xea:
                     rem = True
             else:
@@ -54,7 +54,6 @@ def to_ascii_listing(lines, token_names):
     if not output:
         raise LosslessConversionError('empty original BASIC program')
     return '\n'.join(output) + '\n'
-
 def confirm_roundtrip(original, recreated, split_lines):
     """Demand an exact byte match including numeric caches and quoted bytes."""
     if original == recreated:
