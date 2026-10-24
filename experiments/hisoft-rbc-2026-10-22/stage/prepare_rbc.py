@@ -14,7 +14,7 @@ BOUNDARY = (
     'native_pause_rt.py', 'native_keyread_rt.py', 'native_sysvars_rt.py',
     'native_sysvar_policy.py', 'spectrum_sysvars.py', 'spectrum_fonts.py',
     'poke_policy.py', 'poke_proof.py', 'safety_usr.py', 'udg_bounds.py',
-    'udg_nested.py', 'udg_chr_bounds.py', 'rom_keyread.py',
+    'udg_nested.py', 'udg_chr_bounds.py', 'spectrum_runtime.py', 'rom_keyread.py',
     'rom_keyboard_control.py', 'rom_scroll.py',
 )
 
@@ -35,6 +35,7 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            'from spectrum_fonts import detect_font_bank\n'
            'from tape_policy import reject_tape_operations\n'
            'from native_pause_rt import install as install_native_pause\n'
+           'from spectrum_runtime import install as install_spectrum_runtime\n'
            'from native_keyread_rt import install as install_native_keyread\n'
            'from native_sysvars_rt import install as install_native_sysvars\n'
            'from native_sysvar_policy import allow_private_sysvars\n'
@@ -68,6 +69,7 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
     change('compiler, hbcimage, source = _hisoft_modules(frontend)',
            'compiler, hbcimage, source = _hisoft_modules(frontend)\n'
            '    install_native_pause(compiler)\n'
+           '    install_spectrum_runtime(compiler)\n'
            '    install_native_keyread(compiler)\n'
            '    install_native_sysvars(compiler)')
     change('        if not source.open_lines(program):',
