@@ -223,6 +223,10 @@ jobs:
                  'simple': '10 RUN 100\n100 STOP\n',
                  'unreached': '10 PRINT "X"\n20 STOP\n30 RUN 10\n',
                  'variable': '10 LET A=7\n20 RUN 100\n100 IF A<>0 THEN GO TO 200\n110 STOP\n200 GO TO 200\n',
+                 'var_stop': '10 LET A=7\n20 RUN 100\n100 STOP\n',
+                 'var_equal': '10 LET A=7\n20 RUN 100\n100 IF A=0 THEN GO TO 110\n105 GO TO 105\n110 STOP\n',
+                 'var_print': '10 LET A=7\n20 RUN 100\n100 PRINT A\n110 STOP\n',
+                 'var_control': '10 LET A=7\n20 GO TO 100\n100 IF A<>0 THEN GO TO 110\n105 GO TO 105\n110 STOP\n',
                  'nested': '10 GO SUB 300\n20 STOP\n100 STOP\n300 RUN 100\n310 GO TO 310\n',
                  'system': '10 POKE 23692,42\n20 RUN 100\n100 IF PEEK 23692<>42 THEN GO TO 200\n110 STOP\n200 GO TO 200\n',
                  'font': '10 POKE 23606,0: POKE 23607,128\n20 RUN 100\n100 STOP\n',
@@ -235,6 +239,14 @@ jobs:
                       mem=run.session.m.mem
                       chars=mem[0x5c36]+256*mem[0x5c37]
                       print('RUN trampoline test',label,'why',run.why,'status',run.fg.status,'BSS',data['bss'],'ED73',data['image'].find(b'\xed\x73'),'ED7B',data['image'].find(b'\xed\x7b'),'CHARS',hex(chars),'syscalls',run.session.syscalls,flush=True)
+                      if label in ('variable','var_equal','var_stop','var_print','var_control'):
+                          shim_at=data['image'].find(b'\xed\x73')
+                          in_memory=[i for i in range(0x8000,0xf000) if bytes(mem[i:i+2])==b'\xed\x73']
+                          for physical in in_memory[:8]:
+                              load=physical-shim_at
+                              bss_at=load+len(data['image'])
+                              if bss_at<0x8000 or bss_at+data['bss']>0xf000: continue
+                              print('RUN variable snapshot',label,'load',hex(load),'bss_at',hex(bss_at),'vars',bytes(mem[bss_at:bss_at+data['bss']]).hex(),'saveSP',hex(int.from_bytes(bytes(mem[bss_at+data['bss']-2:bss_at+data['bss']]),'little')),flush=True)
                   except Exception as err:
                       print('RUN trampoline test error',label,type(err).__name__,str(err),flush=True)
           finally:
