@@ -172,6 +172,43 @@ jobs:
         run: |
           set -euo pipefail
           python experiments/hisoft-rbc-2026-10-22/stage/round3_runtime_smoke.py
+      - name: Isolate inactive RUN compiler setup in the kernel
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk python - <<'PY'
+          from round3_native_system_probe import compile_one, ROOT
+          import rvm, rld
+          path=ROOT/'build/tmp/rbc-round3/current/rbc/native_run_rt.py'
+          original=path.read_text()
+          hook='if (self._zxux_run_present and not self.pass0'
+          clear="        self.emit_op_reloc('ld sp,(nn)', self._zxux_run_sp)"
+          modes=('baseline','no_entry','jump_with_slot','jump_without_slot')
+          for mode in modes:
+              code=original
+              if mode != 'baseline':
+                  assert code.count(hook)==1
+                  code=code.replace(hook,'if (False and self._zxux_run_present and not self.pass0',1)
+              if mode.startswith('jump_'):
+                  assert code.count(clear)==1
+                  code=code.replace(clear,"        self.emit_goto('jp nn', target)\n        return",1)
+              if mode=='jump_without_slot':
+                  assert code.count('if not self._zxux_run_present:')==1
+                  code=code.replace('if not self._zxux_run_present:','if True:',1)
+              try:
+                  path.write_text(code)
+                  for sample,listing in (('unreached','10 STOP\n20 RUN 10\n'),('active','10 RUN 100\n100 STOP\n')):
+                      if mode=='no_entry' and sample=='active': continue
+                      try:
+                          exe=compile_one('rbc-r3-'+mode+'-'+sample,listing)
+                          obj=rld.parse_ssx(exe.read_bytes())
+                          result=rvm.run_kernel(exe,frames=180,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
+                          print('RUN differential',mode,sample,'reason',result.why,'status',result.fg.status,'syscalls',result.session.syscalls,'PC',hex(result.session.m.cpu.pc),'SP',hex(result.session.m.cpu.sp),'BSS',obj['bss'],'image',len(obj['image']),flush=True)
+                      except Exception as exc:
+                          print('RUN differential exception',mode,sample,type(exc).__name__,str(exc),flush=True)
+              finally:
+                  path.write_text(original)
+          PY
       - name: Prove RUN restart and font restoration in the real ZX-UX kernel
         shell: bash
         run: |
