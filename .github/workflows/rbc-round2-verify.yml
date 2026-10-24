@@ -61,4 +61,5 @@ jobs:
             build/tmp/rbc-round2/remote-head.tar.gz
             build/tmp/rbc-round2/compiler-state.tar.gz
             build/tmp/rbc-round2/hello.json
+            build/tmp/rbc-round2/hisoft48.tap
           retention-days: 1

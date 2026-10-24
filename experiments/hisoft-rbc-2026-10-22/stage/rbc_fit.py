@@ -44,7 +44,7 @@ def patched(source: str) -> str:
            "                    help='use 48K ROM glyphs to save native image memory (default)')\n"
            "    ap.add_argument('--no-fit',action='store_false',dest='fit',\n"
            "                    help='retain the embedded character font')\n"
-           "    ap.add_argument('--max',type=lambda n:int(n,0),default=14000,\n"
+           "    ap.add_argument('--max',type=lambda n:int(n,0),default=11000,\n"
            "                    help='maximum image, data and stack bytes (0 disables)')\n"
            "    ap.add_argument('--native',action='store_true',help='force the existing native backend')\n"
            "    ap.add_argument('--bytecode',action='store_true',\n"
