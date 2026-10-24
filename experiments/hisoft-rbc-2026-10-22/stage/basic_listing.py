@@ -31,7 +31,10 @@ def encode_strict_listing(listing: str) -> bytes:
     for index, raw in enumerate(lines, 1):
         if not raw.strip():
             continue
-        number, body = split_numbered_line(raw[:-1] if raw.endswith('\r') else raw)
+        try:
+            number, body = split_numbered_line(raw[:-1] if raw.endswith('\r') else raw)
+        except ValueError as exc:
+            raise ValueError(f'ASCII line {index}: {exc}: {raw[:48]!r}') from exc
         if number <= seen:
             raise ValueError(f'line {index}: duplicate or unordered BASIC line {number}')
         if not body.strip() and count == 0:
