@@ -81,6 +81,26 @@ class UnifiedDiagnostics(unittest.TestCase):
         self.assertIsNone(result.basic_line)
         self.assertIn('Physical ASCII file line 20.', result.message)
 
+    def test_memory_policy_block_is_also_normalized(self):
+        raw = 'ZX-UX memory check stopped line 30: USR raw_machine_code_address. 2 blocked operation(s)'
+        report = format_failure(ValueError(raw), self.source)
+        self.assertIn('%RBC RBC_USR_MACHINE_CODE Line: 30 Statement: 1', report)
+        self.assertIn('-RBC 30 RANDOMIZE USR 32768', report)
+        self.assertIn('raw_machine_code_address', report)
+
+    def test_unproved_udg_is_not_misreported_as_compiler_crash(self):
+        raw = 'RBC E_POKE_ADDRESS: Line 40: computed branch could enter FOR body'
+        report = format_failure(ValueError(raw), self.source)
+        self.assertIn('%RBC RBC_UDG_ADDRESS Line: 40', report)
+        self.assertIn('computed branch', report)
+
+    def test_hisoft_unknown_text_is_not_discarded(self):
+        raw = 'game.bas: HiSoft v1.1 compile failed: Expecting a number line 40: variable A unavailable'
+        report = format_failure(ValueError(raw), self.source)
+        self.assertIn('%RBC HIS_EXPECT_NUMBER Line: 40', report)
+        self.assertIn('variable A unavailable', report)
+        self.assertIn('Expecting a number', report)
+
     def test_file_wide_io_failure_has_one_line(self):
         report = format_failure(OSError('example.bas: no such file'), None)
         self.assertEqual(report.count('\n'), 0)

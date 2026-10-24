@@ -246,7 +246,18 @@ def from_exception(exc: Exception, source: Path | None = None) -> Diagnostic:
         native = his.group(1).strip()
         code = re.search(r'\b(10[0-9])\b', native)
         name = HIS_BY_NUMBER.get(int(code.group(1)) if code else -1)
-        mnemonic = 'HIS_' + (name or ('UNSUPPORTED' if ('not supported' in low or 'dim again' in low) else 'INTERNAL'))
+        if not name:
+            if 'expecting a number' in low or 'expected numeric' in low:
+                name = 'EXPECT_NUMBER'
+            elif 'expecting an integer' in low or 'expected integer' in low:
+                name = 'EXPECT_INTEGER'
+            elif 'not supported' in low or 'dim again' in low:
+                name = 'UNSUPPORTED'
+            elif 'line does not exist' in low or 'unknown line' in low:
+                name = 'MISSING_LINE'
+            else:
+                name = 'INTERNAL'
+        mnemonic = 'HIS_' + name
         keyword = 'GO TO' if 'go to' in low else 'DIM' if 'dim' in low else None
     elif 'unexpected keyword' in low:
         mnemonic = 'BAS_UNEXPECTED_KEYWORD'
@@ -277,6 +288,23 @@ def from_exception(exc: Exception, source: Path | None = None) -> Diagnostic:
     elif 'nonfinite' in low: mnemonic = 'BAS_NONFINITE_NUMBER'
     elif 'number outside spectrum' in low: mnemonic = 'BAS_NUMBER_RANGE'
     elif '41500' in low: mnemonic = 'BAS_PROGRAM_TOO_LARGE'
+    elif 'zx-ux memory check stopped' in low:
+        found_op = re.search(r'\b(USR|POKE|PEEK|LOAD|SAVE|MERGE|VERIFY|OUT|IN)\s+([a-z_]+)', detail, re.I)
+        operation = found_op.group(1).upper() if found_op else None
+        category = found_op.group(2).lower() if found_op else ''
+        keyword = operation
+        if operation == 'USR' and category == 'raw_machine_code_address':
+            mnemonic = 'RBC_USR_MACHINE_CODE'
+        elif operation == 'POKE' and category == 'global_memory_write':
+            mnemonic = 'RBC_PROTECTED_WRITE'
+        elif operation == 'PEEK' and category == 'global_memory_read':
+            mnemonic = 'RBC_PROTECTED_READ'
+        elif operation in ('LOAD','SAVE','MERGE','VERIFY'):
+            mnemonic = 'RBC_TAPE_' + operation
+        else:
+            mnemonic = 'RBC_MEMORY_POLICY'
+    elif 'e_poke_address' in low:
+        mnemonic, keyword = 'RBC_UDG_ADDRESS', 'POKE'
     elif 'e_tape_unsupported' in low:
         operation = re.search(r'\b(LOAD|SAVE|MERGE|VERIFY)\b', detail)
         keyword = operation.group(1) if operation else None
@@ -315,10 +343,15 @@ def from_exception(exc: Exception, source: Path | None = None) -> Diagnostic:
         physical = re.search(r'(?:ASCII |\b)line\s+(\d+)\b', detail, re.I)
         if physical:
             message += ' Physical ASCII file line ' + physical.group(1) + '.'
-    if mnemonic == 'HIS_UNSUPPORTED' and his and his.group(2):
-        message += ' ' + his.group(2).strip()
-    if mnemonic in ('RBC_PROTECTED_WRITE', 'RBC_USR_UNRESOLVED',
-                    'RBC_COMPILER_INTERNAL') and detail:
+    if mnemonic.startswith('HIS_') and his:
+        # The historical error text is essential where HiSoft returned no
+        # numeric report code, and distinct DIM/INPUT reasons share a class.
+        context = ' '.join(part.strip() for part in (his.group(1), his.group(2)) if part.strip())
+        if context:
+            message += ' ' + context
+    if mnemonic in ('RBC_PROTECTED_WRITE', 'RBC_PROTECTED_READ',
+                    'RBC_USR_UNRESOLVED', 'RBC_UDG_ADDRESS',
+                    'RBC_MEMORY_POLICY', 'RBC_COMPILER_INTERNAL') and detail:
         message += ' ' + detail
     return Diagnostic(mnemonic, message, line, statement, original, column, native, detail)
 

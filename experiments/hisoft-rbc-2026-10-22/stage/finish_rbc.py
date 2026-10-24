@@ -39,8 +39,11 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            'from rbc_output import output_path, memory_required, write_mode')
     change('ap=argparse.ArgumentParser(description=__doc__)',
            'ap=RbcArgumentParser(description=__doc__)')
+    change("        print('rbc: '+str(exc),file=sys.stderr)\n        return 1\n    except (ValueError,OSError) as exc:",
+           "        print(format_failure(exc,args.source),file=sys.stderr)\n"
+           "        return 1\n    except (ValueError,OSError) as exc:")
     change("except (ValueError,OSError) as exc:\n        print('rbc: '+str(exc),file=sys.stderr)",
-           "except (ValueError,OSError) as exc:\n"
+           "except Exception as exc:\n"
            "        print(format_failure(exc,args.source),file=sys.stderr)")
     for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py'):
         shutil.copyfile(extensions / module, checkpoint / 'rbc' / module)
