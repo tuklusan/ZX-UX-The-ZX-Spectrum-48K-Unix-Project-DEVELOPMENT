@@ -1,2 +1,8 @@
-19-hobday-expenses: RBC could not compile and link the original tokenized TZX BASIC program.
-Reason: rbc: Line 15: POKE 23609 targets protected machine state
+# 19-hobday-expenses: RBC Round 2
+
+Independent original BAS and tokenized TZX results using the same RBC revision.
+
+- BAS: failed (exit 1); rbc: non-ASCII input: cannot infer Sinclair byte values
+- TZX: failed (exit 1); non-ASCII input: cannot infer Sinclair byte values
+- Comparison: unavailable; at least one path failed or fidelity could not be proved
+

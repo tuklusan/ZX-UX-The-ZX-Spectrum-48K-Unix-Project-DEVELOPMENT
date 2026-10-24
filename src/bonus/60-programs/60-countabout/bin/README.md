@@ -1,2 +1,8 @@
-60-countabout: RBC could not compile and link the original tokenized TZX BASIC program.
-Reason: rbc: RBC E_POKE_ADDRESS: Line 9050: computed branch could enter FOR body
+# 60-countabout: RBC Round 2
+
+Independent original BAS and tokenized TZX results using the same RBC revision.
+
+- BAS: failed (exit 1); rbc: non-ASCII input: cannot infer Sinclair byte values
+- TZX: failed (exit 1); non-ASCII input: cannot infer Sinclair byte values
+- Comparison: unavailable; at least one path failed or fidelity could not be proved
+

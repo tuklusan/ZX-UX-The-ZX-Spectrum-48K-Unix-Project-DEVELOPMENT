@@ -1,2 +1,8 @@
-17-paypackets: RBC could not compile and link the original tokenized TZX BASIC program.
-Reason: rbc: RBC E_VAL_EXPR: Line 320: VAL requires a proved numeric literal; dynamic BASIC expression evaluation is unsupported.
+# 17-paypackets: RBC Round 2
+
+Independent original BAS and tokenized TZX results using the same RBC revision.
+
+- BAS: failed (exit 1); rbc: non-ASCII input: cannot infer Sinclair byte values
+- TZX: failed (exit 1); non-ASCII input: cannot infer Sinclair byte values
+- Comparison: unavailable; at least one path failed or fidelity could not be proved
+
