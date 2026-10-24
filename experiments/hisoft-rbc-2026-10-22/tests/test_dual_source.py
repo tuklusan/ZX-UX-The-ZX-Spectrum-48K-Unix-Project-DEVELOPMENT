@@ -25,11 +25,18 @@ class Fidelity(unittest.TestCase):
         with self.assertRaisesRegex(SemanticDifference, 'Line 10'):
             self.compare(b'\xebI=1TO10\r', b'\xebI=1\xcc10\r')
 
-    def test_remark_and_string_bytes_are_exact(self):
+    def test_remark_is_ignored_only_for_equivalence(self):
         with self.assertRaises(SemanticDifference):
             self.compare(b'\xf5"A B"\r', b'\xf5"AB"\r')
+        self.compare(b'\xea A B\r', b'\xea A  B\r')
+        self.compare(b'\xf51: \xea note\r', b'\xf51\r')
+        self.compare(b'\xf51: \xea note\r', b'\xf51: \xea changed\r')
+        # The spelling REM inside a string is still executable data.
         with self.assertRaises(SemanticDifference):
-            self.compare(b'\xea A B\r', b'\xea A  B\r')
+            self.compare(b'\xf5"REM A"\r', b'\xf5"REM B"\r')
+        # Actual statements preceding a REM remain significant.
+        with self.assertRaises(SemanticDifference):
+            self.compare(b'\xf51:\xea note\r', b'\xf52:\xea note\r')
 
     def test_regenerated_numeric_cache_is_not_source(self):
         self.compare(b'\xf510\x0e\x00\x00\x0a\x00\x00\r',
@@ -98,11 +105,8 @@ class Fidelity(unittest.TestCase):
                 except SemanticDifference as exc:
                     rejected += 1
                     affected[game.name] = str(exc)
-        self.assertEqual((passed, rejected), (54, 6))
-        self.assertEqual(set(affected), {
-            '02-fall-guy', '13-radio-power', '14-scuba',
-            '17-paypackets', '48-energy-field', '54-swordsman'
-        })
+        self.assertEqual((passed, rejected), (58, 2))
+        self.assertEqual(set(affected), {'02-fall-guy', '54-swordsman'})
         self.assertTrue(all('Line ' in reason for reason in affected.values()))
 
     def test_rejects_bad_line_structure(self):

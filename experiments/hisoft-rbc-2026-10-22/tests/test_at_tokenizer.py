@@ -12,8 +12,9 @@ class StrictKeywords(unittest.TestCase):
         length = int.from_bytes(record[2:4], 'little')
         return record[4:4 + length]
 
-    def test_reserved_keyword_not_reinterpreted(self):
-        self.assertIn(bytes((0xac,)), self.body('LET AT=123'))
+    def test_variable_at_not_misread_as_position_keyword(self):
+        self.assertIn(b'AT=', self.body('LET AT=123'))
+        self.assertNotIn(bytes((0xac,)), self.body('LET AT=123'))
 
     def test_print_position_keyword(self):
         self.assertIn(bytes((0xac,)), self.body('PRINT AT 2,0;"HI"'))

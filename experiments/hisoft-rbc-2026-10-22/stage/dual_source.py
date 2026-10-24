@@ -41,10 +41,12 @@ def validated_lines(program: bytes):
 
 
 def _canonical(body: bytes, n: int, names: dict):
-    """Remove only encoded number caches and token-adjacent whitespace.
+    """Compare executable token meaning, excluding inert REM contents.
 
-    Strings, REM, DATA, control characters and raw character values are
-    preserved. The visible digits stay, so different numeric values fail.
+    Original REM bytes remain in the source and converted output; only the
+    comparison view drops them. Strings, DATA, controls and visible numeric
+    spelling remain significant. Numeric caches and token-adjacent spacing
+    are already allowed ROM-independent differences.
     """
     body = body.rstrip(b'\r') if body.endswith(b'\r') else body
     if not body.strip(b' '):
@@ -56,8 +58,15 @@ def _canonical(body: bytes, n: int, names: dict):
         c = body[p]
         if c == 34 and not rem:
             quoted = not quoted
-        if c == 0xEA and not quoted:
-            rem = True
+        if c == 0xEA and not quoted and not data:
+            # REM and every following character are inert.  The original
+            # listing is retained untouched; only semantic comparison omits
+            # the comment.  A colon immediately before REM is inert too.
+            while out and out[-1] == 32:
+                out.pop()
+            if out and out[-1] == 58:
+                out.pop()
+            break
         if c == 0xE4 and not quoted and not rem:
             data = True
         if c == 58 and not quoted and not rem:

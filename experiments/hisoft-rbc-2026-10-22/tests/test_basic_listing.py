@@ -37,6 +37,32 @@ class StrictInput(unittest.TestCase):
         self.assertTrue(encode_strict_listing('10 REM FOR I=1TO10'))
         self.assertTrue(encode_strict_listing('10 DATA "FOR I=1TO10": PRINT 5'))
 
+    def test_grammar_disambiguates_at_variable_and_position_control(self):
+        from bas2tap_syntax import check_program
+        from bas2tap import tokenize_line
+        samples = {
+            'LET AT=0': b'\xf1AT=',
+            'IF AT=1 THEN LET AT=2': b'\xfaAT=',
+            'LET A$=STR$ (AT)': b'(AT)',
+            'READ AT,A$': b'\xe3AT,A$',
+            'DIM AT(4)': b'\xe9AT(',
+            'PRINT AT 2,0': b'\xf5\xac',
+            'INPUT AT 2,0;AT': b'\xee\xac',
+            'LPRINT AT 2,0': b'\xe0\xac',
+            'PRINT AT;': b'\xf5AT;',
+            'PRINT AT,1': b'\xf5AT,',
+        }
+        for body, required in samples.items():
+            with self.subTest(body=body):
+                data = tokenize_line(body)
+                self.assertIn(required, data)
+                listing = encode_strict_listing('10 ' + body)
+                self.assertEqual(listing[4:], data)
+                check_program(listing)
+        for body in ('FOR AT=1 TO 2', 'NEXT AT', 'LET AT$="X"'):
+            with self.subTest(body=body), self.assertRaises(Exception):
+                check_program(encode_strict_listing('10 ' + body))
+
     def test_escaped_large_line_uses_upstream_lexer(self):
         long_source = '10 PRINT "' + ('AB' * 550) + '"'
         self.assertGreater(len(encode_strict_listing(long_source)), 1000)
