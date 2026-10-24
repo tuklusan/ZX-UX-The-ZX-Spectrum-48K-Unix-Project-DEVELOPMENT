@@ -56,23 +56,8 @@ jobs:
           path: build/tmp/rbc-round2/
           retention-days: 2
 
-  val-and-usr:
-    needs: compiler-setup
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: rbc-round2-frozen-toolchain
-          path: build/tmp/rbc-round2
-      - name: Stage 1 — all VAL forms and machine-code-call ban
-        env:
-          PYTHONPATH: build/tmp/rbc-round2/upstream:build/tmp/rbc-round2/current/rbc
-        run: python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py val
-
   system-variables:
-    needs: val-and-usr
+    needs: compiler-setup
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

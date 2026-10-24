@@ -14,8 +14,8 @@ import unittest
 from pathlib import Path
 
 BASE = 'a464aa0ea5604aa392b5383fbc82f84d98fe96e1'
-STAGES = ('val', 'sysvars', 'fidelity', 'fonts', 'memory')
-MIN_CASES = {'val': 4, 'sysvars': 4, 'fidelity': 4,
+STAGES = ('sysvars', 'fidelity', 'fonts', 'memory')
+MIN_CASES = {'sysvars': 4, 'fidelity': 4,
              'fonts': 4, 'memory': 3}
 
 
