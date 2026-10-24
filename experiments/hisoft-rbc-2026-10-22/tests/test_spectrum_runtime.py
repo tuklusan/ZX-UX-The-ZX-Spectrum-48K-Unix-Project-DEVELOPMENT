@@ -25,6 +25,15 @@ class SpectrumRuntime(unittest.TestCase):
             cpu.step()
         self.fail('native VAL guard did not terminate or enter ROM')
 
+    def test_sinclair_literal_go_to_uses_next_existing_line(self):
+        from spectrum_runtime import resolve_literal_line
+        lines=[(10,b''),(220,b''),(900,b'')]
+        self.assertEqual(resolve_literal_line(lines,200),220)
+        self.assertEqual(resolve_literal_line(lines,220),220)
+        self.assertEqual(resolve_literal_line(lines,0),10)
+        self.assertEqual(resolve_literal_line(lines,901),901)
+        self.assertEqual(resolve_literal_line(lines,10000),10000)
+
     def test_valid_runtime_expression_enter_rom(self):
         target,cpu=self.evaluate_path(b'2+3')
         self.assertEqual(target,0x35de)

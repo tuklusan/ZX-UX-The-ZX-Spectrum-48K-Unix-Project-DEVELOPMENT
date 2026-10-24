@@ -68,6 +68,13 @@ def guarded_val_bytes():
     return bytes(code)
 
 
+def resolve_literal_line(lines, requested):
+    """Resolve Sinclair line targets to the next numbered line, without rewriting BASIC."""
+    if not isinstance(requested,int) or not 0 <= requested <= 9999:
+        return requested
+    return next((n for n,_ in lines if 0 < n <= 9999 and n >= requested),requested)
+
+
 def install(compiler):
     """Modify only HiSoft's native emission paths; no source-level rewrites."""
     from rtnames import RT
@@ -94,6 +101,7 @@ def install(compiler):
     for_begin = cls.st_for
     for_end = cls.st_next
     run_pass = cls.run_pass
+    original_emit_goto = cls.emit_goto
 
     def spectrum_reset(self, program):
         reset(self, program)
@@ -133,6 +141,9 @@ def install(compiler):
         for_end(self)
         self._zxux_unclosed_for.pop(key, None)
 
+    def spectrum_emit_goto(self, op, line):
+        return original_emit_goto(self, op, resolve_literal_line(self.lines, line))
+
     def spectrum_pass(self):
         run_pass(self)
         if self.storing:
@@ -146,5 +157,6 @@ def install(compiler):
     cls.fn_val = spectrum_val
     cls.st_for = spectrum_for
     cls.st_next = spectrum_next
+    cls.emit_goto = spectrum_emit_goto
     cls.run_pass = spectrum_pass
     cls._zxux_runtime_control = True
