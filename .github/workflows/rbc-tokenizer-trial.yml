@@ -35,6 +35,12 @@ jobs:
           for test in test_basic_listing test_at_tokenizer test_round2_fidelity test_rom_syntax test_dual_source; do
             python -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p "$test.py" -v
           done
+      - uses: actions/checkout@v4
+        with:
+          repository: imneme/pyhsb
+          ref: 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+          path: build/tmp/rbc-round2/upstream
+          persist-credentials: false
       - name: Restore original RBC checkpoint into untracked runner workspace
         shell: bash
         run: |
@@ -58,7 +64,7 @@ jobs:
           set -euo pipefail
           base=experiments/hisoft-rbc-2026-10-22/tests
           for test in test_round2_sysvars test_round2_fonts test_round2_memory test_round2_fidelity test_native_sysvars_rt test_native_font_rt test_native_font_link test_spectrum_fonts test_spectrum_sysvars test_rom_syntax test_tzx_ascii test_safety_usr test_poke_policy test_poke_proof; do
-            python -m unittest discover -s "$base" -p "$test.py" -v
+            PYTHONPATH=build/tmp/rbc-round2/upstream python -m unittest discover -s "$base" -p "$test.py" -v
           done
       - name: Independently recover all 60 TZX input listings
         shell: bash
