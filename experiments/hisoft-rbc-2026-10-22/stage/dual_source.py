@@ -8,6 +8,7 @@ route repairs source spelling, keyword boundaries or the archival input.
 from __future__ import annotations
 
 from pathlib import Path
+import importlib.util
 from tzx_ascii import to_ascii_listing, LosslessConversionError
 
 
@@ -97,12 +98,23 @@ def semantic_check(expected: bytes, observed: bytes, split_lines, token_names: d
                 f'BAS {x[first:first + 8].hex().upper()} versus TZX {y[first:first + 8].hex().upper()}')
 
 
+def _rom_llist_export(lines):
+    """Serialize original token bytes via the project's 48K ROM LLIST path."""
+    tool = Path(__file__).resolve().parents[3] / 'build/tools/zx-tzx2bas.py'
+    spec = importlib.util.spec_from_file_location('zxux_rom_llist', tool)
+    if spec is None or spec.loader is None:
+        raise LosslessConversionError('ROM LLIST export not available')
+    llist = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(llist)
+    return '\n'.join(llist.list_line(n, body) for n, body in lines) + '\n'
+
+
 def convert_tzx(tzx_file: Path, bas_file: Path, dst: Path, rbc, source, kw, fp):
     """Independent extraction, faithful round-trip, then BAS semantic check."""
     import tap
     src_name, program = tap.program_of_tap(rbc._tap_from_tzx(tzx_file))
     original = validated_lines(program)
-    ascii_listing = to_ascii_listing(original, kw.TOKEN)
+    ascii_listing = _rom_llist_export(original)
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(ascii_listing, encoding='ascii')
     _, rebuilt = rbc._source_program(dst, source, kw, fp)

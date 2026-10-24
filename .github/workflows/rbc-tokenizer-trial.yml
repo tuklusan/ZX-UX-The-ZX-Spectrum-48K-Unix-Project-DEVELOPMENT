@@ -138,6 +138,23 @@ jobs:
           assert total == 120, total
           print('Verified 60 independent BAS and 60 TZX-derived token streams')
           PY
+      - name: Prove first original tape roundtrips through independent ROM LLIST
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=build/tmp/rbc-round2
+          PYTHONPATH="$base/upstream:$base/current/rbc:experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk" python - <<'PY'
+          from pathlib import Path
+          import source,compiler,hbcimage,rbc
+          from dual_source import convert_tzx
+          root=Path('build/tmp/rbc-round2')
+          rom=Path('src/zx-ux-sdk/rom/48.rom').read_bytes()
+          kw=source.Keywords(rom)
+          fp=compiler.Compiler(hbcimage.Image.from_tape(root/'hisoft48.tap'),rom,ramtop=65367).fp
+          folder=Path('src/bonus/60-programs/01-minelay/BASIC')
+          report=convert_tzx(folder/'01-minelay.tzx',folder/'01-minelay.bas',root/'first-tape/01-minelay.bas',rbc,source,kw,fp)
+          print('Original tape semantic roundtrip:',report)
+          PY
       - name: Collect 120 independent RBC compile attempts and 60 comparisons
         shell: bash
         run: |
