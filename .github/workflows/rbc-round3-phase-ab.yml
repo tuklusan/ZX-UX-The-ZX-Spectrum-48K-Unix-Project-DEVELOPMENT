@@ -172,61 +172,74 @@ jobs:
         run: |
           set -euo pipefail
           python experiments/hisoft-rbc-2026-10-22/stage/round3_runtime_smoke.py
-      - name: Isolate inactive RUN compiler setup in the kernel
+      - name: Test entry trampoline with live RUN and STOP
         shell: bash
         run: |
           set -euo pipefail
           PYTHONPATH=experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk python - <<'PY'
           from round3_native_system_probe import compile_one, ROOT
           import rvm, rld
-          path=ROOT/'build/tmp/rbc-round3/current/rbc/native_run_rt.py'
-          original=path.read_text()
-          hook='if (self._zxux_run_present and not self.pass0'
-          clear="        self.emit_op_reloc('ld sp,(nn)', self._zxux_run_sp)"
-          modes=('clear_only','directclear','directclear_stack','directclear_stack_norestore','restore_only','fill_only','stack_only')
-          for mode in modes:
-              code=original
-              if mode != 'baseline':
-                  assert code.count(hook)==1
-                  code=code.replace(hook,'if (False and self._zxux_run_present and not self.pass0',1)
-              if mode.startswith('jump_'):
-                  assert code.count(clear)==1
-                  code=code.replace(clear,"        self.emit_goto('jp nn', target)\n        return",1)
-              if mode in ('clear_only','directclear','restore_only','fill_only'):
-                  assert code.count(clear)==1
-                  code=code.replace(clear,'',1)
-              fill_start='        self.ld_hl(self.vars_start)'
-              fill_end='        self.call_rt(compiler.RT.MEM_FILL)'
-              begin=code.index(fill_start,code.index('    def st_run(self):'))
-              finish=code.index(fill_end,begin)+len(fill_end)
-              if mode in ('clear_only','restore_only','stack_only'):
-                  code=code[:begin]+code[finish:]
-              elif mode in ('directclear','directclear_stack','directclear_stack_norestore'):
-                  replacement=("        if self._zxux_run_clear_bytes:\n"
-                    "            self.ld_hl(self.vars_start)\n"
-                    "            self.emit('ld (hl),0')\n"
-                    "            if self._zxux_run_clear_bytes > 1:\n"
-                    "                self.emit('ld d,h; ld e,l; inc de')\n"
-                    "                self.ld_bc_abs(self._zxux_run_clear_bytes-1)\n"
-                    "                self.emit('ldir')")
-                  code=code[:begin]+replacement+code[finish:]
-              if mode in ('clear_only','fill_only','stack_only','directclear_stack_norestore'):
-                  restore='        self.emit_restore()'
-                  assert code.count(restore)==1
-                  code=code.replace(restore,'',1)
-              try:
-                  path.write_text(code)
-                  for sample,listing in (('unreached','10 STOP\n20 RUN 10\n'),('active','10 RUN 100\n100 STOP\n'),('variable','10 LET A=7\n20 RUN 100\n100 STOP\n')):
-                      if mode=='no_entry' and sample=='active': continue
-                      try:
-                          exe=compile_one('rbc-r3-'+mode+'-'+sample,listing)
-                          obj=rld.parse_ssx(exe.read_bytes())
-                          result=rvm.run_kernel(exe,frames=180,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
-                          print('RUN differential',mode,sample,'reason',result.why,'status',result.fg.status,'syscalls',result.session.syscalls,'PC',hex(result.session.m.cpu.pc),'SP',hex(result.session.m.cpu.sp),'BSS',obj['bss'],'image',len(obj['image']),flush=True)
-                      except Exception as exc:
-                          print('RUN differential exception',mode,sample,type(exc).__name__,str(exc),flush=True)
-              finally:
-                  path.write_text(original)
+          root=ROOT/'build/tmp/rbc-round3/current/rbc'
+          wrapper=root/'rbc.py'
+          runtime=root/'native_run_rt.py'
+          original_wrapper=wrapper.read_text()
+          original_runtime=runtime.read_text()
+          def swap(text,old,new):
+              if text.count(old)!=1: raise RuntimeError('unexpected compiler patch point: '+old[:65])
+              return text.replace(old,new,1)
+          try:
+              text=original_runtime
+              text=swap(text,'if (self._zxux_run_present and not self.pass0',
+                            'if (False and self._zxux_run_present and not self.pass0')
+              begin="        self.ld_hl(self.vars_start)\n        self.ld_bc_abs((self._zxux_run_clear_bytes - 1) & 0xffff)\n        self.emit('ld a,0')\n        self.call_rt(compiler.RT.MEM_FILL)"
+              end="        if self._zxux_run_clear_bytes == 1:\n            self.ld_hl(self.vars_start)\n            self.emit('ld (hl),0')\n        else:\n            self.ld_hl(self.vars_start)\n            self.ld_bc_abs(self._zxux_run_clear_bytes - 1)\n            self.emit('ld a,0')\n            self.call_rt(compiler.RT.MEM_FILL)"
+              runtime.write_text(swap(text,begin,end))
+              text=original_wrapper
+              entry="    e=Emitter()"
+              detector=("    saved_stack=p.base+len(p.code)+p.bss-2\n"
+                "    has_restart_slot=p.bss>=2 and any(\n"
+                "        site>=2 and p.code[site-2:site]==bytes((0xed,0x7b)) and\n"
+                "        int.from_bytes(p.code[site:site+2],'little')==saved_stack\n"
+                "        for site in sites)\n"
+                "    e=Emitter()")
+              text=swap(text,entry,detector)
+              old='    entry_image=len(e.code)\n    e.code.extend(p.code)'
+              new=("    shim=None\n"
+                "    if has_restart_slot:\n"
+                "        shim=len(e.code)\n"
+                "        e.emit(0xed,0x73)\n"
+                "        shim_sp=len(e.code);e.relative(0)\n"
+                "        e.emit(0xc3)\n"
+                "        shim_jump=len(e.code);e.relative(0)\n"
+                "    entry_image=len(e.code)\n"
+                "    e.code.extend(p.code)")
+              text=swap(text,old,new)
+              text=swap(text,'(call,entry_image+p.entry-p.base)',
+                       '(call,shim if has_restart_slot else entry_image+p.entry-p.base)')
+              text=swap(text,'    reloc=sorted(e.fixups)',
+                      '    if has_restart_slot:\n        e.fix(shim_sp,len(e.code)+p.bss-2)\n        e.fix(shim_jump,entry_image+p.entry-p.base)\n    reloc=sorted(e.fixups)')
+              wrapper.write_text(text)
+              fixtures={
+                 'simple': '10 RUN 100\n100 STOP\n',
+                 'unreached': '10 PRINT "X"\n20 STOP\n30 RUN 10\n',
+                 'variable': '10 LET A=7\n20 RUN 100\n100 IF A<>0 THEN GO TO 200\n110 STOP\n200 GO TO 200\n',
+                 'nested': '10 GO SUB 300\n20 STOP\n100 STOP\n300 RUN 100\n310 GO TO 310\n',
+                 'system': '10 POKE 23692,42\n20 RUN 100\n100 IF PEEK 23692<>42 THEN GO TO 200\n110 STOP\n200 GO TO 200\n',
+                 'font': '10 POKE 23606,0: POKE 23607,128\n20 RUN 100\n100 STOP\n',
+              }
+              for label,listing in fixtures.items():
+                  try:
+                      ssx=compile_one('rbc-r3-shim-'+label,listing)
+                      data=rld.parse_ssx(ssx.read_bytes())
+                      run=rvm.run_kernel(ssx,frames=350,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
+                      mem=run.session.m.mem
+                      chars=mem[0x5c36]+256*mem[0x5c37]
+                      print('RUN trampoline test',label,'why',run.why,'status',run.fg.status,'BSS',data['bss'],'ED73',data['image'].find(b'\xed\x73'),'ED7B',data['image'].find(b'\xed\x7b'),'CHARS',hex(chars),'syscalls',run.session.syscalls,flush=True)
+                  except Exception as err:
+                      print('RUN trampoline test error',label,type(err).__name__,str(err),flush=True)
+          finally:
+              runtime.write_text(original_runtime)
+              wrapper.write_text(original_wrapper)
           PY
       - name: Prove RUN restart and font restoration in the real ZX-UX kernel
         shell: bash
