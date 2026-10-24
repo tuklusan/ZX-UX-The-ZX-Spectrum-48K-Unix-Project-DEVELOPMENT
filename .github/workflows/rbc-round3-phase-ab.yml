@@ -201,7 +201,13 @@ jobs:
           PYTHONPATH=experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk python - <<'PY'
           from pathlib import Path
           from round3_native_system_probe import compile_one, ROOT
-          import rvm
+          import rvm, rld
+          raw = (ROOT/'build/tmp/rbc-round3/rbc-r3-run-min.ssx').read_bytes()
+          parsed = rld.parse_ssx(raw)
+          img = parsed['image']
+          for code in (b'\xed\x73',b'\xed\x7b'):
+              print('RUN SP opcode',code.hex(),[(i,int.from_bytes(img[i+2:i+4],'little')) for i in range(len(img)-4) if img[i:i+2]==code],flush=True)
+          print('RUN SSX image',len(img),'BSS',parsed['bss'],'relocation count',len(parsed['relocs']),flush=True)
           file = ROOT/'build/tmp/rbc-round3/current/rbc/native_run_rt.py'
           original = file.read_text()
           sequences = {
