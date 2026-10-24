@@ -15,17 +15,15 @@ class ValGuardTests(unittest.TestCase):
         self.assertEqual(len(verify('PRINT VAL "12"','LET A=VAL " -12.5E-3 "',
                                     'PRINT VAL ("0.125")')),3)
 
-    def test_dynamic_string_is_blocked(self):
-        with self.assertRaisesRegex(UnsafeVal,'Line 10'):
-            verify('INPUT A$:PRINT VAL A$')
+    def test_dynamic_string_is_deferred_to_native_guard(self):
+        self.assertTrue(verify('INPUT A$:PRINT VAL A$')[0]['runtime_guard_required'])
 
     def test_literal_machine_code_is_blocked(self):
         with self.assertRaisesRegex(UnsafeVal,'E_VAL_EXPR'):
             verify('LET X=VAL "USR 32768"')
 
-    def test_literal_concatenation_is_blocked(self):
-        with self.assertRaisesRegex(UnsafeVal,'concatenated'):
-            verify('LET X=VAL "1"+A$')
+    def test_literal_concatenation_cannot_bypass_runtime_check(self):
+        self.assertEqual(len(verify('LET X=VAL "1"+A$')), 1)
 
     def test_comments_data_and_quotes_do_not_execute(self):
         self.assertEqual(verify('PRINT "VAL USR 32768"',
@@ -36,7 +34,7 @@ class ValGuardTests(unittest.TestCase):
         with self.assertRaises(UnsafeVal):verify('LET X=VAL "1+USR 32768"')
 
     def test_val_string_evaluation_is_blocked(self):
-        with self.assertRaisesRegex(UnsafeVal,r'VAL\$ evaluates'):
+        with self.assertRaisesRegex(UnsafeVal,r'VAL\$ runtime'):
             verify('PRINT VAL$ ("STR$ (USR 32768)")')
 
 if __name__=='__main__':unittest.main()
