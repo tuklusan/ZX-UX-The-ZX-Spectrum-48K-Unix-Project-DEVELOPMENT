@@ -32,7 +32,7 @@ class ClassificationTests(unittest.TestCase):
         self.assertEqual(result_classify.classify('Not supported line 2232: DIM again, with different sizes'), 'array-redimension')
 
     def test_val(self):
-        self.assertEqual(result_classify.classify('Not supported line 160: VAL'), 'unsupported-val')
+        self.assertEqual(result_classify.classify('Not supported line 160: VAL'), 'unsupported-basic')
 
     def test_numeric_expression(self):
         self.assertEqual(result_classify.classify('Expecting a number line 4:'), 'numeric-expression')

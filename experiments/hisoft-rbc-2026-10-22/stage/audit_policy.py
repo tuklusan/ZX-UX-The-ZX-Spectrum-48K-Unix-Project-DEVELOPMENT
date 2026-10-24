@@ -154,11 +154,10 @@ def audit_lines(lines,mode):
     for line,source in lines:
         raw=source if mode=='text' else tape_to_lex(source)
         mask=scrub_code(raw)
-        for m in re.finditer(r'(?<![A-Za-z\d_$])(USR|POKE|VAL)(?![A-Za-z\d_$])',mask,re.I):
+        for m in re.finditer(r'(?<![A-Za-z\d_$])(USR|POKE)(?![A-Za-z\d_$])',mask,re.I):
             typ=m.group(1).upper()
             expr=split_address(raw[m.end():]) if typ=='POKE' else raw[m.end():].lstrip()[:65]
             if typ=='USR':status=usr_class(raw[m.end():]);detail={'argument_start':expr}
-            elif typ=='VAL':status='runtime_string_expression_needs_safe_evaluator';detail={}
             else:
                 address=constant_address(expr)
                 status='constant_proved_needs_memory_policy' if address is not None else 'needs_exact_control_flow_proof'
@@ -182,7 +181,7 @@ def main():
         except (ValueError,UnicodeError) as ex:row.update({'status':'unparsed','reason':str(ex),'operations':[]})
         rows.append(row)
     summary={'inputs':len(rows),'parsed':sum(r['status']=='parsed' for r in rows), 'unknown_inputs':sum(r['status']!='parsed' for r in rows), 'operations':sum(len(r['operations']) for r in rows)}
-    for opname in ('USR','POKE','VAL'):
+    for opname in ('USR','POKE'):
         events=[v for row in rows for v in row['operations'] if v['operation']==opname]
         summary[opname]={'total':len(events),'by_status':{s:sum(v['status']==s for v in events) for s in sorted({v['status'] for v in events})}}
     result={'purpose':'read-only source-token survey; nonconstant addresses not proved safe','summary':summary,'rows':rows}

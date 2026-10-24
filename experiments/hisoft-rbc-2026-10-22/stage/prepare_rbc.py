@@ -14,10 +14,10 @@ import shutil
 BOUNDARY = (
     'basic_listing.py', 'rom_syntax.py', 'tape_policy.py',
     'bss_layout.py', 'startup_colors.py',
-    'native_pause_rt.py', 'native_keyread_rt.py', 'native_val_rt.py',
+    'native_pause_rt.py', 'native_keyread_rt.py',
     'native_sysvars_rt.py', 'native_sysvar_policy.py', 'spectrum_sysvars.py',
     'spectrum_fonts.py',
-    'poke_policy.py', 'poke_proof.py', 'safety_usr.py', 'val_guard.py',
+    'poke_policy.py', 'poke_proof.py', 'safety_usr.py',
     'udg_bounds.py', 'udg_nested.py', 'udg_chr_bounds.py',
     'rom_keyread.py', 'rom_keyboard_control.py', 'rom_scroll.py',
 )
@@ -40,7 +40,6 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            'from tape_policy import reject_tape_operations\n'
            'from native_pause_rt import install as install_native_pause\n'
            'from native_keyread_rt import install as install_native_keyread\n'
-           'from native_val_rt import install as install_native_val\n'
            'from native_sysvars_rt import install as install_native_sysvars\n'
            'from native_sysvar_policy import allow_private_sysvars\n'
            'from udg_bounds import allow_bounded_udg_loops\n'
@@ -56,7 +55,6 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            'compiler, hbcimage, source = _hisoft_modules(frontend)\n'
            '    install_native_pause(compiler)\n'
            '    install_native_keyread(compiler)\n'
-           '    install_native_val(compiler)\n'
            '    install_native_sysvars(compiler)')
 
     # Input adapter: preserve the original BASIC bytes and exact keyword

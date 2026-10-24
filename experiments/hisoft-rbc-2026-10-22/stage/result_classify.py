@@ -29,8 +29,6 @@ def classify(output: str) -> str:
         return 'computed-line'
     if 'dim again, with different sizes' in text:
         return 'array-redimension'
-    if re.search(r'not supported line \d+:\s*val\b', text):
-        return 'unsupported-val'
     if 'expecting a number line' in text:
         return 'numeric-expression'
     if 'not supported line' in text:

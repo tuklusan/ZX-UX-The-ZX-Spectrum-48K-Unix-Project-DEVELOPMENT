@@ -51,9 +51,11 @@ class ThinWrapper(unittest.TestCase):
         text = self.prepared()
         for required in ('install_native_pause(compiler)',
                          'install_native_keyread(compiler)',
-                         'install_native_val(compiler)',
                          'install_native_sysvars(compiler)'):
             self.assertIn(required, text)
+        for disallowed in ('install_native_val', 'from val_guard import',
+                           'guard_val(', 'safe_val_literals'):
+            self.assertNotIn(disallowed, text)
         self.assertIn('enforce_numeric_usr(', text)
         self.assertIn('validate_rom_lines(program, rom)', text)
         self.assertIn('memory_required(rld.parse_ssx(ssx)', text)

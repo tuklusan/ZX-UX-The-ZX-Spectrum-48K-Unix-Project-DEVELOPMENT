@@ -25,7 +25,7 @@ class PolicySurveyTests(unittest.TestCase):
     def test_poke_literal_and_unknown(self):
         s=b'30 POKE (23000+58),1:POKE (50000+K)*2,VAL X$\n'
         x=policy.audit_lines(policy.from_text(s),'text')
-        self.assertEqual([(i['operation'],i['status']) for i in x], [('POKE','constant_proved_needs_memory_policy'),('POKE','needs_exact_control_flow_proof'),('VAL','runtime_string_expression_needs_safe_evaluator')])
+        self.assertEqual([(i['operation'],i['status']) for i in x], [('POKE','constant_proved_needs_memory_policy'),('POKE','needs_exact_control_flow_proof')])
         self.assertEqual(x[0]['address'],23058)
 
     def test_tzx_tokenized_operator_and_quoted(self):
