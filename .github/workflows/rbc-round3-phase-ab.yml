@@ -129,7 +129,11 @@ jobs:
               cmd=[sys.executable,str(compiler),str(src),'--frontend',str(frontend),
                    '--sdk','src/zx-ux-sdk','--rom','src/zx-ux-sdk/rom/48.rom',
                    '--tape',str(base/'hisoft48.tap'),'-o',str(dest)]
-              r=subprocess.run(cmd,text=True,capture_output=True)
+              try:
+                  r=subprocess.run(cmd,text=True,capture_output=True,timeout=25)
+              except subprocess.TimeoutExpired:
+                  print('Phase B original BAS probe',name,'timed out after 25s',flush=True)
+                  continue
               diag=(r.stderr.strip() or r.stdout.strip()).splitlines()
               print('Phase B original BAS probe',name,'exit',r.returncode,
                     'linked',dest.is_file(),'bytes',dest.stat().st_size if dest.is_file() else None,
@@ -168,6 +172,11 @@ jobs:
         run: |
           set -euo pipefail
           python experiments/hisoft-rbc-2026-10-22/stage/round3_runtime_smoke.py
+      - name: Prove RUN restart and font restoration in the real ZX-UX kernel
+        shell: bash
+        run: |
+          set -euo pipefail
+          python experiments/hisoft-rbc-2026-10-22/stage/round3_native_system_probe.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
