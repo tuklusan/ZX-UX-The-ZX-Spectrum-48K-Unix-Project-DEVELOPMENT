@@ -138,3 +138,21 @@ jobs:
           assert total == 120, total
           print('Verified 60 independent BAS and 60 TZX-derived token streams')
           PY
+      - name: Collect 120 independent RBC compile attempts and 60 comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=build/tmp/rbc-round2
+          PYTHONPATH="$base/upstream:$base/current/rbc:experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk" python experiments/hisoft-rbc-2026-10-22/stage/round2_runner.py --root . --compiler "$base/current/rbc/rbc.py" --frontend "$base/upstream" --tape "$base/hisoft48.tap" --workspace "$base" --revision "$GITHUB_SHA"
+          python experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py corpus --root .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rbc-round2-120-outcomes
+          path: |
+            build/tmp/rbc-round2/results.json
+            build/tmp/rbc-round2/*/comparison.json
+            build/tmp/rbc-round2/*/from-bas.ssx
+            build/tmp/rbc-round2/*/from-tzx.ssx
+            build/tmp/rbc-round2/published/
+          if-no-files-found: warn
