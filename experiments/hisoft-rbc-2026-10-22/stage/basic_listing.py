@@ -5,7 +5,7 @@ metadata writer is permitted on the external BASIC source path.
 """
 from __future__ import annotations
 import re
-from bas2tap import BAS2TAPError, encode_program
+from bas2tap import BAS2TAPError, _prepare_line, tokenize_line
 
 UPSTREAM_REVISION = '0ddb25e4c38ce4ccb5a43e85fb57e683bd274f59'
 LINE = re.compile(r'[ \t]*([0-9]+)(?:(?:[ \t]+(.*))|(:.*))?')
@@ -43,7 +43,32 @@ def encode_strict_listing(listing: str) -> bytes:
         count += 1
     if not count:
         raise ValueError('empty BASIC listing')
-    try:
-        return encode_program(listing, case_insensitive=False, syntax_check=False)
-    except BAS2TAPError as exc:
-        raise ValueError(str(exc)) from exc
+    # Spectrum records may exceed the C converter input buffer after ASCII
+    # control escapes.  The Python version can tokenize the entire source.
+    # Use upstream's preparer and lexer for every numbered line, without
+    # introducing an alternative tokenizer or changing Sinclair code bytes.
+    output = bytearray()
+    mode = {'value': -1}
+    seen = -1
+    for index, raw in enumerate(lines, 1):
+        if index == len(lines) and not raw:
+            continue
+        if raw.endswith('\r'):
+            raw = raw[:-1]
+        try:
+            row = _prepare_line(raw, index, first=(seen == -1))
+            if row is None:
+                continue
+            n, body = row
+            if n <= seen:
+                raise BAS2TAPError(f'Line {n}: duplicate or unordered BASIC line')
+            data = tokenize_line(body, line_number=n, _mode=mode)
+            output.extend(n.to_bytes(2, 'big'))
+            output.extend(len(data).to_bytes(2, 'little'))
+            output.extend(data)
+            if len(output) > 41500:
+                raise BAS2TAPError(f'Line {n}: program exceeds original 41500-byte limit')
+            seen = n
+        except BAS2TAPError as exc:
+            raise ValueError(str(exc)) from exc
+    return bytes(output)

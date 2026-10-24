@@ -29,6 +29,10 @@ class StrictInput(unittest.TestCase):
             with self.subTest(line=line), self.assertRaises(ValueError):
                 split_numbered_line(line)
 
+    def test_escaped_large_line_uses_upstream_lexer(self):
+        long_source = '10 PRINT "' + ('AB' * 550) + '"'
+        self.assertGreater(len(encode_strict_listing(long_source)), 1000)
+
     def test_non_ascii_duplicates_and_missing_line(self):
         for source in ('10 PRINT "£"', '10 PRINT 1\n10 PRINT 2',
                        '20 PRINT 1\n10 PRINT 2', 'PRINT 2', '', '\n\n'):
