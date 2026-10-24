@@ -8,7 +8,7 @@
 # Purpose: Recover an ASCII Sinclair BASIC listing from actual tokenized TZX.
 # Reference: unmodified 16 KiB Sinclair Spectrum 48K ROM, LLIST path.
 # Scope: ROM's character stream before ZX Printer bitmap/layout processing.
-# Dependencies: Python 3 standard library plus the caller-supplied original ROM.
+# Dependencies: Python 3 standard library only; no external ROM or emulator.
 # Safety: reject ambiguous tapes, protect original BASIC/TZX inputs, never
 #         overwrite an existing file; writing outputs is deliberately opt-in.
 """Generate ROM-LLIST-spaced Spectrum BASIC text from a tokenized TZX tape.
@@ -16,8 +16,9 @@
 The original LLIST command uses the same BASIC line formatter as LIST, but
 selects printer stream #3 rather than screen stream #2. The formatting path
 runs through the 48K ROM's OUT-LINE, NUMBER, OUT-CHAR, PO-TOKENS, PO-SEARCH,
-PO-EACH and PO-TR-SP routines; keyword characters come from the ROM table at
-0096h, including the high-bit terminators (not a Python keyword dictionary).
+PO-EACH and PO-TR-SP routines. Keyword characters come directly from the
+embedded original ROM table at 0096h, including high-bit terminators. They
+are not obtained from a separately transcribed Python keyword dictionary.
 
 This converter reproduces the *logical character codes* sent by those routines
 before the printer's 32-column bitmap engine. It does not emulate printer
@@ -31,10 +32,10 @@ numeric representations, control bytes, quotes and comments; do not substitute
 the exported ASCII for archival tape bytes without an independent round trip.
 
 Example, one tape:
-    python3 zx-tzx2bas.py game.tzx --rom 48.rom -o staged/game.bas
+    python3 zx-tzx2bas.py game.tzx -o staged/game.bas
 
 Example, preserved 60-program collection (no original files are touched):
-    python3 zx-tzx2bas.py --corpus src/bonus/60-programs --rom 48.rom \
+    python3 zx-tzx2bas.py --corpus src/bonus/60-programs \
         --out-dir build/tmp/tzx-basic-listings
 
 For license attribution and version information, run --about.
@@ -47,11 +48,34 @@ from pathlib import Path
 import sys
 
 
-# These are the exact 16,384 bytes used for the ROM instruction comparisons.
-# Other Spectrum ROM versions could have distinct formatting code even when
-# their token words look identical. Refuse unknown ROM bytes rather than
-# promising an exact LLIST match to code which has not been examined.
-SPECTRUM_48K_ROM_SHA256 = 'd55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42'
+# These bytes were copied, without translation, from 0096h..0204h (inclusive)
+# of the verified 16 KiB Sinclair 48K ROM. Its full-image SHA-256 is:
+# d55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42.
+# PO-SEARCH starts at 0095h, immediately before the first RND character.
+# The 91 entries map consecutively to token codes A5h..FFh and terminate
+# with bit 7 set on the *last* character. Preserve these raw bits: the
+# original PO-TOKENS printer uses them for its trailing-space branch.
+# No ROM file or ROM emulator is needed in production. The independent tests
+# compare these exact bytes and rendered output against executing ROM code.
+ROM_TOKEN_TABLE = bytes.fromhex('''
+    52 4e c4 49 4e 4b 45 59 a4 50 c9 46 ce 50 4f 49 4e d4 53 43 52 45 45 4e
+    a4 41 54 54 d2 41 d4 54 41 c2 56 41 4c a4 43 4f 44 c5 56 41 cc 4c 45 ce
+    53 49 ce 43 4f d3 54 41 ce 41 53 ce 41 43 d3 41 54 ce 4c ce 45 58 d0 49
+    4e d4 53 51 d2 53 47 ce 41 42 d3 50 45 45 cb 49 ce 55 53 d2 53 54 52 a4
+    43 48 52 a4 4e 4f d4 42 49 ce 4f d2 41 4e c4 3c bd 3e bd 3c be 4c 49 4e
+    c5 54 48 45 ce 54 cf 53 54 45 d0 44 45 46 20 46 ce 43 41 d4 46 4f 52 4d
+    41 d4 4d 4f 56 c5 45 52 41 53 c5 4f 50 45 4e 20 a3 43 4c 4f 53 45 20 a3
+    4d 45 52 47 c5 56 45 52 49 46 d9 42 45 45 d0 43 49 52 43 4c c5 49 4e cb
+    50 41 50 45 d2 46 4c 41 53 c8 42 52 49 47 48 d4 49 4e 56 45 52 53 c5 4f
+    56 45 d2 4f 55 d4 4c 50 52 49 4e d4 4c 4c 49 53 d4 53 54 4f d0 52 45 41
+    c4 44 41 54 c1 52 45 53 54 4f 52 c5 4e 45 d7 42 4f 52 44 45 d2 43 4f 4e
+    54 49 4e 55 c5 44 49 cd 52 45 cd 46 4f d2 47 4f 20 54 cf 47 4f 20 53 55
+    c2 49 4e 50 55 d4 4c 4f 41 c4 4c 49 53 d4 4c 45 d4 50 41 55 53 c5 4e 45
+    58 d4 50 4f 4b c5 50 52 49 4e d4 50 4c 4f d4 52 55 ce 53 41 56 c5 52 41
+    4e 44 4f 4d 49 5a c5 49 c6 43 4c d3 44 52 41 d7 43 4c 45 41 d2 52 45 54
+    55 52 ce 43 4f 50 d9
+''')
+ROM_TOKEN_TABLE_SHA256 = '32874566b963014669040a63e04913db95d92b63d5dff513aefdcae2a0343f60'
 
 
 class TapeError(ValueError):
@@ -236,17 +260,17 @@ def numbered_lines(program: bytes):
         raise TapeError('BASIC program does not end on a line boundary')
 
 
-def rom_keywords(rom: bytes) -> dict[int, bytes]:
+def rom_keywords() -> dict[int, bytes]:
     """Return the 91 original 48K ROM token spellings, indexed 0xA5..0xFF.
 
     Unlike hand-typed token mappings, these names and their exact lengths
-    are obtained by scanning the *supplied* ROM and masking the high bit on
+    are obtained by scanning the *embedded original* ROM table and masking the high bit on
     the final character of each entry.
     """
-    return {0xA5 + n: word for n, (word, _, _) in enumerate(_rom_token_entries(rom))}
+    return {0xA5 + n: word for n, (word, _, _) in enumerate(_rom_token_entries())}
 
 
-def llist_segments(number: int, body: bytes, rom: bytes):
+def llist_segments(number: int, body: bytes):
     """Port the ROM LLIST character-output path (excluding printer pixels).
 
     17F5 LLIST -> 17FB LIST-1 -> 1833 LIST-ALL -> 1855 OUT-LINE:
@@ -282,7 +306,7 @@ def llist_segments(number: int, body: bytes, rom: bytes):
     """
     if not 0 <= number <= 9999:
         raise TapeError(f'invalid BASIC line number {number}')
-    token_entries = _rom_token_entries(rom)
+    token_entries = _rom_token_entries()
     # OUT-NUM-2/OUT-SP-NO: the ROM prints a right-aligned four-column
     # decimal BASIC line number. This prefix participates in the stream,
     # but the subsequent OUT-LINE FLAGS initialization determines whether
@@ -338,31 +362,33 @@ def llist_segments(number: int, body: bytes, rom: bytes):
     return parts
 
 
-def _rom_token_entries(rom: bytes) -> list[tuple[bytes, int, int]]:
+def _rom_token_entries() -> tuple[tuple[bytes, int, int], ...]:
     """Read PO-TOKENS' actual bit-7-terminated token table (0096h).
 
     The ROM's 0C41 PO-SEARCH begins from 0095h (a byte before RND) and
-    traverses exactly 91 table entries. The character with bit 7 set is
-    output after masking that bit, but its *unmasked* value affects trailing
+    traverses exactly 91 table entries. Embedded bytes begin at 0096h.
+    The character with bit 7 set is output after masking that bit,
+    but its *unmasked* value affects trailing
     whitespace in the printer routine. Keep both first and last raw bytes.
 
-    Reject an unexpected ROM size, table prologue, unprintable table entries,
+    Reject an unexpected table length, digest, unprintable table entries,
     incomplete termination, or unexpected beginning/end token spellings.
-    The Python source must not include a duplicated keyword spelling table.
+    The Python source embeds the original byte table verbatim, not a separately
+    transcribed keyword spelling dictionary or ROM binary.
     """
-    if len(rom) != 0x4000 or hashlib.sha256(rom).hexdigest() != SPECTRUM_48K_ROM_SHA256:
-        raise TapeError('expected the verified 16 KiB Spectrum 48K ROM image')
-    if rom[0x95] != 0xBF:
-        raise TapeError('invalid Spectrum ROM keyword-table prologue')
-    pos = 0x96
+    table = ROM_TOKEN_TABLE
+    if (len(table) != 367
+            or hashlib.sha256(table).hexdigest() != ROM_TOKEN_TABLE_SHA256):
+        raise TapeError('embedded original 48K ROM token table failed integrity check')
+    pos = 0
     out = []
     for token in range(0xA5, 0x100):
         start = pos
-        while pos < len(rom) and not (rom[pos] & 128):
+        while pos < len(table) and not (table[pos] & 128):
             pos += 1
-        if pos >= len(rom) or pos - start > 40:
+        if pos >= len(table) or pos - start > 40:
             raise TapeError(f'ROM keyword {token:02X} has no valid high-bit terminator')
-        raw = rom[start:pos + 1]
+        raw = table[start:pos + 1]
         pos += 1
         word = bytes(c & 0x7f for c in raw)
         if not word or any(not 32 <= c < 127 for c in word):
@@ -370,19 +396,21 @@ def _rom_token_entries(rom: bytes) -> list[tuple[bytes, int, int]]:
         out.append((word, raw[0], raw[-1]))
     if out[0][0] != b'RND' or out[0xCB-0xA5][0] != b'THEN' or out[-1][0] != b'COPY':
         raise TapeError('unexpected 48K ROM keyword sequence')
-    return out
+    if pos != len(table):
+        raise TapeError('embedded ROM token table contains trailing bytes')
+    return tuple(out)
 
 
-def llist_codes(number: int, body: bytes, rom: bytes) -> bytes:
+def llist_codes(number: int, body: bytes) -> bytes:
     """ROM LLIST emitted character codes, prior to printer bitmap wrapping.
 
     The physical ZX Printer represents characters as dots in 32-column rows;
     this logical code stream is the relevant output for BASIC regeneration.
     """
-    return b''.join(output for output, _, _ in llist_segments(number, body, rom))
+    return b''.join(output for output, _, _ in llist_segments(number, body))
 
 
-def list_line(number: int, body: bytes, rom: bytes) -> str:
+def list_line(number: int, body: bytes) -> str:
     """Serialize an LLIST line as strictly ASCII source with byte escapes.
 
     The ROM formatter does not know whether a token occurs in a quote,
@@ -397,7 +425,7 @@ def list_line(number: int, body: bytes, rom: bytes) -> str:
     from a heuristic keyword split. Hidden numeric caches stay omitted.
     The original tape must still be retained for exact archived bytes.
     """
-    parts = llist_segments(number, body, rom)
+    parts = llist_segments(number, body)
     quoted = rem = data = False
     rendered = []
     for segment, original, expanded in parts:
@@ -432,14 +460,14 @@ def list_line(number: int, body: bytes, rom: bytes) -> str:
     return ''.join(rendered)
 
 
-def listing(tape: bytes, rom: bytes, *, program_index: int | None = None) -> str:
+def listing(tape: bytes, *, program_index: int | None = None) -> str:
     """Render a selected BASIC program without using a paired BAS source.
 
     If several BASIC files exist on the same tape, the user must choose a
     zero-based program index. The default is intentionally unambiguous only
     for a single stored BASIC program; no automatically selected fallback.
     """
-    _rom_token_entries(rom)
+    _rom_token_entries()
     programs = list(basic_programs(tape))
     if not programs:
         raise TapeError('TZX contains no Spectrum BASIC program header/data pair')
@@ -450,7 +478,7 @@ def listing(tape: bytes, rom: bytes, *, program_index: int | None = None) -> str
     if not 0 <= program_index < len(programs):
         raise TapeError(f'program index {program_index} outside 0..{len(programs) - 1}')
     name, program = programs[program_index]
-    result = [list_line(n, body, rom) for n, body in numbered_lines(program)]
+    result = [list_line(n, body) for n, body in numbered_lines(program)]
     if not result:
         raise TapeError(f'BASIC program {name!r} has no lines')
     return '\n'.join(result) + '\n'
@@ -490,8 +518,6 @@ def main(argv=None):
     ap.add_argument('tzx', type=Path, nargs='?', help='preserved TZX input')
     ap.add_argument('--corpus', type=Path,
                     help='directory containing all 60 numbered game folders')
-    ap.add_argument('--rom', type=Path,
-                    help='original Spectrum 48K 16 KiB ROM image')
     ap.add_argument('-o', '--output', type=Path,
                     help='single-tape BAS path (stdout if omitted)')
     ap.add_argument('--out-dir', type=Path,
@@ -506,8 +532,6 @@ def main(argv=None):
         print('License: see ZX-UX repository LICENSE.')
         print('Reference: Sinclair Spectrum 48K ROM LLIST/OUT-LINE/PO-TOKENS.')
         return 0
-    if args.rom is None:
-        ap.error('--rom is required when converting tapes')
     if bool(args.tzx) == bool(args.corpus):
         ap.error('specify either one TZX or --corpus')
     if args.corpus and (args.output or not args.out_dir):
@@ -515,15 +539,14 @@ def main(argv=None):
     if args.tzx and args.out_dir:
         ap.error('--out-dir is for --corpus only')
     try:
-        rom = args.rom.read_bytes()
-        rom_keywords(rom)
+        rom_keywords()  # Verify the embedded exact original table before use.
         if args.tzx:
-            content = listing(args.tzx.read_bytes(), rom,
+            content = listing(args.tzx.read_bytes(),
                               program_index=args.program_index)
             if args.output is None:
                 sys.stdout.write(content)
             else:
-                _write_listing(args.output, content, (args.tzx, args.rom))
+                _write_listing(args.output, content, (args.tzx,))
                 print(f'Listed {len(content.splitlines())} BASIC lines into {args.output}',
                       file=sys.stderr)
         else:
@@ -540,11 +563,11 @@ def main(argv=None):
                 dest = out / game.name / 'BASIC' / (game.name + '.bas')
                 if _protected_listing_destination(dest) or dest.exists():
                     raise TapeError(f'protected or existing output: {dest}')
-                content = listing(tape.read_bytes(), rom,
+                content = listing(tape.read_bytes(),
                                   program_index=args.program_index)
                 planned.append((tape, dest, content))
             for tape, dest, content in planned:
-                _write_listing(dest, content, (tape, args.rom))
+                _write_listing(dest, content, (tape,))
             print(f'Listed 60 TZX programs under {out}', file=sys.stderr)
     except (OSError, TapeError, UnicodeError) as exc:
         print(f'zx-tzx2bas: {exc}', file=sys.stderr)

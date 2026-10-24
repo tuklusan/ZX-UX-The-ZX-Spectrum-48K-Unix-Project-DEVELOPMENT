@@ -10,6 +10,7 @@ or set ZX_ROM and MINELAY_TZX to local matching bytes.
 from __future__ import annotations
 
 import importlib.util
+import shutil
 import os
 from pathlib import Path
 import subprocess
@@ -48,12 +49,35 @@ def line(number: int, body: bytes) -> bytes:
     return number.to_bytes(2, 'big') + len(full).to_bytes(2, 'little') + full
 
 
-@unittest.skipUnless(ROM_PATH.is_file(), 'requires original 48K ROM')
 class ListSpacing(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.rom = ROM_PATH.read_bytes()
-        cls.tokens = LISTER.rom_keywords(cls.rom)
+        cls.tokens = LISTER.rom_keywords()
+
+    def test_embedded_table_matches_original_rom_if_available(self):
+        if not ROM_PATH.is_file():
+            self.skipTest('independent original Spectrum ROM unavailable')
+        rom = ROM_PATH.read_bytes()
+        import hashlib
+        self.assertEqual(hashlib.sha256(rom).hexdigest(),
+                         'd55daa439b673b0e3f5897f99ac37ecb45f974d1862b4dadb85dec34af99cb42')
+        self.assertEqual(LISTER.ROM_TOKEN_TABLE, rom[0x96:0x205])
+
+    def test_cli_never_requires_external_rom(self):
+        result = subprocess.run([sys.executable, str(TOOL), '--help'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn('--rom', result.stdout)
+        with tempfile.TemporaryDirectory() as work:
+            src = Path(work) / 'program.tzx'
+            standalone = Path(work) / 'zx-tzx2bas.py'
+            # No ROM, SDK or ZX-UX directory is present in this workdir.
+            shutil.copyfile(TOOL, standalone)
+            src.write_bytes(tape_from_program(line(12, b'\xf5"HELLO"')))
+            run = subprocess.run([sys.executable, str(standalone), str(src)],
+                                 cwd=work, capture_output=True, text=True)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(run.stdout, '  12 PRINT "HELLO"\n')
 
     def test_48k_rom_table(self):
         self.assertEqual(len(self.tokens), 91)
@@ -62,46 +86,51 @@ class ListSpacing(unittest.TestCase):
         self.assertEqual(self.tokens[0xff], b'COPY')
 
     def test_exact_line_number_and_keyword_spacing(self):
-        self.assertEqual(LISTER.list_line(20, b'\xe1', self.rom), '  20 LLIST ')
-        self.assertEqual(LISTER.list_line(20, b'\xe0', self.rom), '  20 LPRINT ')
-        self.assertEqual(LISTER.list_line(20, b'\xe4', self.rom), '  20 DATA ')
-        self.assertEqual(LISTER.list_line(20, b'\xf4', self.rom), '  20 POKE ')
-        self.assertEqual(LISTER.list_line(20, b'\xf5', self.rom), '  20 PRINT ')
-        self.assertEqual(LISTER.list_line(20, b'\xe2', self.rom), '  20 STOP ')
-        self.assertEqual(LISTER.list_line(5, b'\xf5\xc2(147)', self.rom),
+        self.assertEqual(LISTER.list_line(20, b'\xe1'), '  20 LLIST ')
+        self.assertEqual(LISTER.list_line(20, b'\xe0'), '  20 LPRINT ')
+        self.assertEqual(LISTER.list_line(20, b'\xe4'), '  20 DATA ')
+        self.assertEqual(LISTER.list_line(20, b'\xf4'), '  20 POKE ')
+        self.assertEqual(LISTER.list_line(20, b'\xf5'), '  20 PRINT ')
+        self.assertEqual(LISTER.list_line(20, b'\xe2'), '  20 STOP ')
+        self.assertEqual(LISTER.list_line(5, b'\xf5\xc2(147)'),
                          '   5 PRINT CHR$ (147)')
 
-    def test_rejects_unverified_rom_with_same_keyword_spelling(self):
-        wrong = bytearray(self.rom)
-        wrong[0x2000] ^= 1
-        with self.assertRaisesRegex(LISTER.TapeError, 'verified 16 KiB'):
-            LISTER.rom_keywords(bytes(wrong))
+    def test_rejects_mutated_embedded_rom_table(self):
+        wrong = bytearray(LISTER.ROM_TOKEN_TABLE)
+        wrong[0] ^= 1
+        saved = LISTER.ROM_TOKEN_TABLE
+        try:
+            LISTER.ROM_TOKEN_TABLE = bytes(wrong)
+            with self.assertRaisesRegex(LISTER.TapeError, 'integrity'):
+                LISTER.rom_keywords()
+        finally:
+            LISTER.ROM_TOKEN_TABLE = saved
 
     def test_minelay_keyword_boundary(self):
-        self.assertEqual(LISTER.list_line(700, b'\xfa\xa5>sk\xcb\xf5', self.rom),
+        self.assertEqual(LISTER.list_line(700, b'\xfa\xa5>sk\xcb\xf5'),
                          ' 700 IF RND>sk THEN PRINT ')
-        self.assertEqual(LISTER.list_line(122, b'\xfaa=7\xcb\xfa', self.rom),
+        self.assertEqual(LISTER.list_line(122, b'\xfaa=7\xcb\xfa'),
                          ' 122 IF a=7 THEN IF ')
 
     def test_spaces_from_rom_flags(self):
         # An explicit space suppresses an additional leading space.
-        self.assertEqual(LISTER.list_line(10, b'\xfaa=1 \xcb\xf5', self.rom),
+        self.assertEqual(LISTER.list_line(10, b'\xfaa=1 \xcb\xf5'),
                          '  10 IF a=1 THEN PRINT ')
         # These three tokens have no default trailing space in ROM.
-        self.assertEqual(LISTER.list_line(10, b'\xf5\xa5>0', self.rom),
+        self.assertEqual(LISTER.list_line(10, b'\xf5\xa5>0'),
                          '  10 PRINT RND>0')
-        self.assertEqual(LISTER.list_line(10, b'\xf5\xa6', self.rom),
+        self.assertEqual(LISTER.list_line(10, b'\xf5\xa6'),
                          '  10 PRINT INKEY$')
 
     def test_binary_data_uses_safe_ascii_escapes(self):
-        self.assertEqual(LISTER.list_line(12, b'\xf5"\x92{40}"', self.rom),
+        self.assertEqual(LISTER.list_line(12, b'\xf5"\x92{40}"'),
                          '  12 PRINT "{92}{7B}40{7D}"')
-        self.assertEqual(LISTER.list_line(13, b'\xea \xf5"', self.rom),
+        self.assertEqual(LISTER.list_line(13, b'\xea \xf5"'),
                          '  13 REM  {F5}"')
 
     def test_embedded_cr_matches_llist_and_is_not_silently_exported(self):
         # LLIST stops at a visible 0Dh, including one inside quotes.
-        self.assertEqual(LISTER.llist_codes(10, b'\xf5"Hi\rEXTRA"', self.rom),
+        self.assertEqual(LISTER.llist_codes(10, b'\xf5"Hi\rEXTRA"'),
                          b'  10 PRINT "Hi')
         program = line(10, b'\xf5"Hi\rEXTRA"')
         with self.assertRaisesRegex(LISTER.TapeError, 'embedded ROM end-of-line'):
@@ -114,7 +143,7 @@ class ListSpacing(unittest.TestCase):
         # The ROM expands both tokens, even in DATA. The ASCII exporter
         # must not mistake the REM token for a new executable remark.
         body = bytes([0xE4, 32, 0xEA, 58, 0xF5, 32, 34, 72, 34])
-        text = LISTER.list_line(10, body, self.rom)
+        text = LISTER.list_line(10, body)
         self.assertIn('{EA}', text)
         self.assertIn('PRINT', text)
 
@@ -127,20 +156,19 @@ class ListSpacing(unittest.TestCase):
 
     def test_original_numeric_cache_skipped(self):
         data = b'\xfaa=7\x0e\x00\x00\x07\x00\x00\xcb\xf5'
-        self.assertEqual(LISTER.list_line(122, data, self.rom),
+        self.assertEqual(LISTER.list_line(122, data),
                          ' 122 IF a=7 THEN PRINT ')
         with self.assertRaisesRegex(LISTER.TapeError, 'truncated'):
-            LISTER.list_line(122, b'\xf5 1\x0e\x00', self.rom)
+            LISTER.list_line(122, b'\xf5 1\x0e\x00')
 
     def test_data_numeric_cache_and_literal_quote(self):
-        self.assertEqual(LISTER.list_line(100, b'\xe4 34\x0e\x00\x00\x22\x00\x00',
-                                          self.rom), ' 100 DATA  34')
+        self.assertEqual(LISTER.list_line(100, b'\xe4 34\x0e\x00\x00\x22\x00\x00'), ' 100 DATA  34')
 
     def test_round_trip_tape_extract(self):
         original = line(122, b'\xfaa=7\xcb\xf5"OK"')
         tape = tape_from_program(original)
         self.assertEqual(list(LISTER.basic_programs(tape))[0][1], original)
-        self.assertEqual(LISTER.listing(tape, self.rom), ' 122 IF a=7 THEN PRINT "OK"\n')
+        self.assertEqual(LISTER.listing(tape), ' 122 IF a=7 THEN PRINT "OK"\n')
 
     def test_bad_checksum_rejected(self):
         image = bytearray(tape_from_program(line(10, b'\xf5"OK"')))
@@ -152,8 +180,8 @@ class ListSpacing(unittest.TestCase):
         tape = tape_from_program(line(10, b'\xf5"A"'))
         tape += tape_from_program(line(20, b'\xf5"B"'))[10:]
         with self.assertRaisesRegex(LISTER.TapeError, '2 BASIC programs'):
-            LISTER.listing(tape, self.rom)
-        self.assertIn('B', LISTER.listing(tape, self.rom, program_index=1))
+            LISTER.listing(tape)
+        self.assertIn('B', LISTER.listing(tape, program_index=1))
 
     def test_protected_original_destination(self):
         path = Path('/tmp/z/src/bonus/60-programs/01-minelay/BASIC/01-minelay.bas')
@@ -172,7 +200,7 @@ class ListSpacing(unittest.TestCase):
         for game in games:
             tape = game / 'BASIC' / (game.name + '.tzx')
             with self.subTest(game=game.name):
-                text = LISTER.listing(tape.read_bytes(), self.rom)
+                text = LISTER.listing(tape.read_bytes())
                 self.assertTrue(text.endswith('\n'))
                 self.assertGreater(len(text.splitlines()), 0)
 
@@ -181,7 +209,7 @@ class ListSpacing(unittest.TestCase):
             input_path = Path(tmp) / 'test.tzx'
             output_path = Path(tmp) / 'staged.bas'
             input_path.write_bytes(tape_from_program(line(20, b'\xe2')))
-            args = [str(input_path), '--rom', str(ROM_PATH), '-o', str(output_path)]
+            args = [str(input_path), '-o', str(output_path)]
             first = subprocess.run([sys.executable, str(TOOL), *args],
                                    capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr)
@@ -193,13 +221,13 @@ class ListSpacing(unittest.TestCase):
 
     @unittest.skipUnless(TZX_PATH.is_file(), 'requires preserved Minelay tape')
     def test_real_minelay(self):
-        converted = LISTER.listing(TZX_PATH.read_bytes(), self.rom)
+        converted = LISTER.listing(TZX_PATH.read_bytes())
         self.assertEqual(len(converted.splitlines()), 81)
         self.assertIn(' 122 IF a=7 THEN IF a$="{92}" THEN GO TO 5000', converted)
         self.assertIn('sk THEN PRINT', converted)
         # Actual output requires no C compiler or dependencies.
         result = subprocess.run([sys.executable, str(TOOL), str(TZX_PATH),
-                                 '--rom', str(ROM_PATH)], check=True,
+                                 ], check=True,
                                 capture_output=True, text=True)
         self.assertEqual(result.stdout, converted)
 
@@ -279,7 +307,7 @@ class OriginalZ80LLISTConformance(unittest.TestCase):
 
     def verify(self, number, body):
         actual = self.rom_output(number, body)
-        calculated = LISTER.llist_codes(number, body, self.rom)
+        calculated = LISTER.llist_codes(number, body)
         self.assertEqual(calculated, actual,
                          f'line {number}, BASIC bytes {body.hex()}')
 
@@ -300,6 +328,20 @@ class OriginalZ80LLISTConformance(unittest.TestCase):
                 with self.subTest(code=code, before=before.hex()):
                     self.verify(100, before + src + b'\xcb')
 
+    def test_entire_preserved_corpus_rom_parity(self):
+        base = HERE.parents[2] / 'src/bonus/60-programs'
+        if not base.is_dir():
+            self.skipTest('original 60-program TZX collection not mounted')
+        games = sorted(base.glob('[0-9][0-9]-*/BASIC/*.tzx'))
+        self.assertEqual(len(games), 60)
+        lines = 0
+        for tape in games:
+            for _, program in LISTER.basic_programs(tape.read_bytes()):
+                for number, body in LISTER.numbered_lines(program):
+                    self.verify(number, body)
+                    lines += 1
+        self.assertEqual(lines, 6581)
+
     def test_actual_minelay_every_line(self):
         if not TZX_PATH.is_file():
             self.skipTest('Minelay original TZX not mounted')
@@ -315,7 +357,7 @@ class OriginalZ80LLISTConformance(unittest.TestCase):
         body = b'\xf5"\xf5"'
         rom = self.rom_output(100, body)
         self.assertEqual(rom, b' 100 PRINT " PRINT "')
-        self.assertEqual(LISTER.list_line(100, body, self.rom),
+        self.assertEqual(LISTER.list_line(100, body),
                          ' 100 PRINT "{F5}"')
 
     def test_number_caches_and_spacings(self):
