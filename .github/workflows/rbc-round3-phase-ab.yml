@@ -308,6 +308,27 @@ jobs:
               finally:
                   path.write_text(original)
           PY
+      - name: Check STOP behavior with and without an unreachable RUN
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk python - <<'PY'
+          from round3_native_system_probe import compile_one,ROOT
+          import rvm,rld
+          samples=[
+            ('rbc-r3-stop-only','10 STOP\n'),
+            ('rbc-r3-print-stop','10 PRINT "X"\n20 STOP\n'),
+            ('rbc-r3-stop-run','10 PRINT "X"\n20 STOP\n30 RUN 10\n'),
+            ('rbc-r3-run-stop','10 PRINT "X"\n20 RUN 100\n100 STOP\n')
+          ]
+          for name,src in samples:
+              try:
+                  path=compile_one(name,src)
+                  r=rvm.run_kernel(path,frames=160,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
+                  print('RUN focused STOP result',name,r.why,r.fg.status,r.session.syscalls,flush=True)
+              except Exception as exc:
+                  print('RUN focused STOP error',name,str(exc),flush=True)
+          PY
       - name: Prove RUN restart and font restoration in the real ZX-UX kernel
         shell: bash
         run: |
