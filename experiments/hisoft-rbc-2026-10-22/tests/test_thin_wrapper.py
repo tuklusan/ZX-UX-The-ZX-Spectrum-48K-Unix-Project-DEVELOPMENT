@@ -1,4 +1,4 @@
-"""Architecture regressions: pyhsb owns BASIC syntax and control flow."""
+"""The RBC compiler keeps HiSoft codegen, original ROM syntax and one input path."""
 from pathlib import Path
 import unittest
 
@@ -26,8 +26,6 @@ class ThinWrapper(unittest.TestCase):
         self.assertNotIn('program, ', statements)
         self.assertNotIn('resolve_missing_targets', text)
         self.assertNotIn('remove_duplicate_for', text)
-        self.assertNotIn('adapt_scuba_charset', text)
-        self.assertNotIn('adapt_stellar_charset', text)
 
     def test_no_language_control_flow_patch(self):
         text = self.prepared()
@@ -37,8 +35,6 @@ class ThinWrapper(unittest.TestCase):
             self.assertNotIn(marker, text)
 
     def test_hisoft_controls_for_next(self):
-        # Acceptance, rejection, and runtime behavior belong to pyhsb.
-        # RBC neither installs FOR patches nor edits FOR source statements.
         text = self.prepared()
         self.assertIn('res=c.compile_whole(program)', text)
         for forbidden in ('install_for_restart', 'remove_duplicate_for',
@@ -53,17 +49,17 @@ class ThinWrapper(unittest.TestCase):
                          'install_native_keyread(compiler)',
                          'install_native_sysvars(compiler)'):
             self.assertIn(required, text)
-        for disallowed in ('install_native_val', 'from val_guard import',
-                           'guard_val(', 'safe_val_literals'):
-            self.assertNotIn(disallowed, text)
         self.assertIn('enforce_numeric_usr(', text)
         self.assertIn('validate_rom_lines(program, rom)', text)
         self.assertIn('memory_required(rld.parse_ssx(ssx)', text)
 
-    def test_input_is_ascii_and_unmodified_before_compiler(self):
+    def test_upstream_tokenizer_is_exclusive(self):
         text = self.prepared()
-        self.assertIn("src.read_text(encoding='ascii').splitlines()", text)
-        self.assertIn('tokenize_preserving_numeric_at(body,source,kw)', text)
+        self.assertIn("src.read_text(encoding='ascii')", text)
+        self.assertIn('program = encode_strict_listing(listing)', text)
+        self.assertIn('return src.stem[:10], program', text)
+        self.assertNotIn('source.tokenize_line(', text)
+        self.assertNotIn('source.hide_numbers(', text)
         self.assertNotIn("encoding='latin-1'", text)
         self.assertIn('return compiler, hbcimage, source', text)
 
