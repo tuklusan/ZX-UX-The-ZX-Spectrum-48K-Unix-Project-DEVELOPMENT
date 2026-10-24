@@ -60,6 +60,10 @@ def install(compiler):
         sysvar_base = getattr(self, '_zxux_sysvar_base', 0)
         user_end = sysvar_base if sysvar_base and sysvar_base >= self.vars_start else self.pc
         user_size = (user_end - self.vars_start) & 0xffff
+        # Keep a byte of private scratch space even when no BASIC variables
+        # exist. HiSoft's native runtime expects this layout to remain valid.
+        if not user_size:
+            self.pc = (self.pc + 1) & 0xffff
         self._zxux_run_clear_bytes = user_size
         self._zxux_run_sp = self.pc
         self.pc = (self.pc + 2) & 0xffff
@@ -86,6 +90,9 @@ def install(compiler):
             self.not_supported('RUN line outside listing')
         # Z80 ED7B restores the caller's stack even after nested GO SUB.
         self.emit_op_reloc('ld sp,(nn)', self._zxux_run_sp)
+        # Startup saved SP before its CALL. Restore the callee's stack
+        # position, where the original return address still lives.
+        self.emit('dec sp; dec sp')
         if self._zxux_run_clear_bytes:
             self.ld_hl(self.vars_start)
             self.emit('ld (hl),0')

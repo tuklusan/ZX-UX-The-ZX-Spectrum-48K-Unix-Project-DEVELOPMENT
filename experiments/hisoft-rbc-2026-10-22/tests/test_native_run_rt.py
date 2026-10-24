@@ -70,8 +70,8 @@ class RunTests(unittest.TestCase):
         self.assertIn(('rel', 'ld (nn),sp', 140), obj.calls)
         obj.end = True
         obj.st_run()
-        self.assertEqual(obj.calls[-8:], [
-            ('rel','ld sp,(nn)',140),('hl',100),
+        self.assertEqual(obj.calls[-9:], [
+            ('rel','ld sp,(nn)',140),('asm','dec sp; dec sp'),('hl',100),
             ('asm','ld (hl),0'),('asm','ld d,h; ld e,l; inc de'),
             ('bc',39),('asm','ldir'),('restore',),('goto','jp nn',10)])
 
@@ -90,7 +90,7 @@ class RunTests(unittest.TestCase):
         obj = Module.Compiler(0)
         obj.reset([(1, b'\xf7\r')])
         obj.layout_vars()
-        self.assertEqual((obj._zxux_run_sp,obj._zxux_run_clear_bytes,obj.pc),(100,0,102))
+        self.assertEqual((obj._zxux_run_sp,obj._zxux_run_clear_bytes,obj.pc),(101,0,103))
         obj.end = True
         obj.st_run()
         self.assertNotIn(('hl',100),obj.calls)
