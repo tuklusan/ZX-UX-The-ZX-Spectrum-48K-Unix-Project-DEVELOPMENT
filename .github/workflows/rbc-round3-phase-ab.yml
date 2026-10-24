@@ -108,6 +108,24 @@ jobs:
           rld.parse_ssx(data)
           print('Real native RUN SSX linked',len(data),'bytes')
           PY
+      - name: Inspect native RUN entry hook compilation state
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import subprocess,sys
+          from pathlib import Path
+          file=Path('build/tmp/rbc-round3/current/rbc/native_run_rt.py')
+          original=file.read_text()
+          needle='    def entry_point_line(self):\\n'
+          replace='    def entry_point_line(self):\\n        print("RUN entry invocation",self.line_no,self.pass0,self.storing,self._zxux_run_first,self._zxux_run_sp,flush=True)\\n'
+          src=original.replace(needle.replace('\\n','\n'),replace.replace('\\n','\n'),1)
+          if src==original: raise RuntimeError('entry hook missing')
+          file.write_text(src)
+          args=[sys.executable,'build/tmp/rbc-round3/current/rbc/rbc.py','build/tmp/rbc-round3/run.bas','--frontend','build/tmp/rbc-round3/upstream','--sdk','src/zx-ux-sdk','--rom','src/zx-ux-sdk/rom/48.rom','--tape','build/tmp/rbc-round3/hisoft48.tap','-o','build/tmp/rbc-round3/run-debug.ssx']
+          try: subprocess.run(args,check=True)
+          finally: file.write_text(original)
+          PY
       - name: Focused original BASIC compilation after Phase B repairs
         shell: bash
         run: |
