@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/rbc-diagnostics-temporary.yml'
+      - 'experiments/hisoft-rbc-2026-10-22/stage/**'
+      - 'experiments/hisoft-rbc-2026-10-22/tests/**'
   workflow_dispatch:
 permissions:
   contents: read

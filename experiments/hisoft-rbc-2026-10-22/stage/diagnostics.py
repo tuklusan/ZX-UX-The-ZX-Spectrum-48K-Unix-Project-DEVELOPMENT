@@ -129,7 +129,7 @@ for _code, _row in enumerate(ROM_TEXT.splitlines()):
     MESSAGES['ROM_' + _report + '_' + _name] = _msg
 MESSAGES['ROM_0_OK'] = 'BASIC program completed successfully.'  # Not an error.
 HIS_BY_NUMBER = dict(zip(range(100, 110), tuple(row.partition('|')[0]
-                                                   for row in HIS_TEXT.splitlines()[:10]))
+                                                   for row in HIS_TEXT.splitlines()[:10])))
 
 
 @dataclass(frozen=True)
