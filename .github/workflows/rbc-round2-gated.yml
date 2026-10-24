@@ -86,7 +86,7 @@ jobs:
           PYTHONPATH: build/tmp/rbc-round2/upstream:build/tmp/rbc-round2/current/rbc
         run: python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py sysvars
 
-  for-next:
+  strict-bas-tzx:
     needs: system-variables
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -96,22 +96,7 @@ jobs:
         with:
           name: rbc-round2-frozen-toolchain
           path: build/tmp/rbc-round2
-      - name: Stage 3 — dynamic FOR/NEXT runtime behavior
-        env:
-          PYTHONPATH: build/tmp/rbc-round2/upstream:build/tmp/rbc-round2/current/rbc
-        run: python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py loops
-
-  strict-bas-tzx:
-    needs: for-next
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: rbc-round2-frozen-toolchain
-          path: build/tmp/rbc-round2
-      - name: Stage 4 — original ROM syntax and dual-source fidelity
+      - name: Stage 3 — original ROM syntax and dual-source fidelity
         env:
           PYTHONPATH: build/tmp/rbc-round2/upstream:build/tmp/rbc-round2/current/rbc
         run: python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py fidelity
@@ -126,7 +111,7 @@ jobs:
         with:
           name: rbc-round2-frozen-toolchain
           path: build/tmp/rbc-round2
-      - name: Stage 5 — process-only font and reliable restoration
+      - name: Stage 4 — process-only font and reliable restoration
         env:
           PYTHONPATH: build/tmp/rbc-round2/upstream:build/tmp/rbc-round2/current/rbc
         run: python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py fonts
@@ -141,7 +126,7 @@ jobs:
         with:
           name: rbc-round2-frozen-toolchain
           path: build/tmp/rbc-round2
-      - name: Stage 6 — exact native requirement and 11000-byte default
+      - name: Stage 5 — exact native requirement and 11000-byte default
         env:
           PYTHONPATH: build/tmp/rbc-round2/upstream:build/tmp/rbc-round2/current/rbc
         run: python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py memory
@@ -156,7 +141,7 @@ jobs:
         with:
           name: rbc-round2-frozen-toolchain
           path: build/tmp/rbc-round2
-      - name: Stage 7 — entire focused RBC regression suite
+      - name: Stage 6 — entire focused RBC regression suite
         env:
           PYTHONPATH: build/tmp/rbc-round2/upstream:build/tmp/rbc-round2/current/rbc
         run: python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -v
@@ -171,7 +156,7 @@ jobs:
         with:
           name: rbc-round2-frozen-toolchain
           path: build/tmp/rbc-round2
-      - name: Stage 8 — real native linker and loader format
+      - name: Stage 7 — real native linker and loader format
         env:
           PYTHONPATH: build/tmp/rbc-round2/upstream
         run: |
@@ -191,7 +176,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Stage 9 — unchanged private checker, required before any corpus work
+      - name: Stage 8 — unchanged private checker, required before any corpus work
         env:
           RBC_CHECKER_ZIP_B64: ${{ secrets.RBC_ROUND2_CHECKER_B64 }}
           RBC_CHECKER_SHA256: ${{ secrets.RBC_ROUND2_CHECKER_SHA256 }}
@@ -218,12 +203,12 @@ jobs:
         with:
           name: rbc-round2-frozen-toolchain
           path: build/tmp/rbc-round2
-      - name: Stage 10 — independently attempt every BAS and every TZX
+      - name: Stage 9 — independently attempt every BAS and every TZX
         env:
           PYTHONPATH: build/tmp/rbc-round2/upstream:build/tmp/rbc-round2/current/rbc:experiments/hisoft-rbc-2026-10-22/stage
         run: |
           python3 experiments/hisoft-rbc-2026-10-22/stage/round2_runner.py --root "$GITHUB_WORKSPACE" --compiler "$GITHUB_WORKSPACE/build/tmp/rbc-round2/current/rbc/rbc.py" --frontend "$GITHUB_WORKSPACE/build/tmp/rbc-round2/upstream" --tape "$GITHUB_WORKSPACE/build/tmp/rbc-round2/hisoft48.tap" --workspace "$GITHUB_WORKSPACE/build/tmp/rbc-round2" --revision "$GITHUB_SHA"
-      - name: Stage 11 — require all 120 outcomes and 60 byte comparisons
+      - name: Stage 10 — require all 120 outcomes and 60 byte comparisons
         run: python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py corpus
       - uses: actions/upload-artifact@v4
         if: always()
@@ -242,7 +227,7 @@ jobs:
         with:
           name: rbc-round2-120-unpublished-outcomes
           path: build/tmp/rbc-round2
-      - name: Stage 12 — independently recheck all result files
+      - name: Stage 11 — independently recheck all result files
         run: python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py corpus
 
   publish-outcomes:
@@ -261,7 +246,7 @@ jobs:
         with:
           name: rbc-round2-120-unpublished-outcomes
           path: build/tmp/rbc-round2
-      - name: Stage 13 — verify exact 60 result files before writing
+      - name: Stage 12 — verify exact 60 result files before writing
         run: |
           python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py corpus
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -310,7 +295,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Stage 14 — confirm remote results and protected original blobs
+      - name: Stage 13 — confirm remote results and protected original blobs
         env:
           VERIFIED_SHA: ${{ needs.publish-outcomes.outputs.published_sha }}
         run: |
@@ -342,7 +327,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Stage 15 — delete only the temporary RBC workflow
+      - name: Stage 14 — delete only the temporary RBC workflow
         env:
           RBC_CHECKER_ZIP_B64: ${{ secrets.RBC_ROUND2_CHECKER_B64 }}
           RBC_CHECKER_SHA256: ${{ secrets.RBC_ROUND2_CHECKER_SHA256 }}

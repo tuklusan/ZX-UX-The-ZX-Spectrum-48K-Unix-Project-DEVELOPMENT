@@ -14,8 +14,8 @@ import unittest
 from pathlib import Path
 
 BASE = 'a464aa0ea5604aa392b5383fbc82f84d98fe96e1'
-STAGES = ('val', 'sysvars', 'loops', 'fidelity', 'fonts', 'memory')
-MIN_CASES = {'val': 4, 'sysvars': 4, 'loops': 4, 'fidelity': 4,
+STAGES = ('val', 'sysvars', 'fidelity', 'fonts', 'memory')
+MIN_CASES = {'val': 4, 'sysvars': 4, 'fidelity': 4,
              'fonts': 4, 'memory': 3}
 
 
@@ -68,19 +68,6 @@ def suite_gate(root: Path, stage: str):
         command = [sys.executable,str(suite_path.parents[1] / 'stage' /
                   'sysvar_native_link_check.py')]
         subprocess.run(command,cwd=root,check=True)
-        count += native_count
-    if stage == 'loops':
-        suite_file = suite_path.parent / 'test_native_loop_execution.py'
-        if not suite_file.is_file():
-            raise RuntimeError('loops: required executable Z80 tests unavailable')
-        native_suite = unittest.defaultTestLoader.discover(
-            str(suite_path.parent), pattern=suite_file.name)
-        native_count = native_suite.countTestCases()
-        if native_count < 4:
-            raise RuntimeError('loops: insufficient native runtime execution cases')
-        native_result = unittest.TextTestRunner(verbosity=2).run(native_suite)
-        if not native_result.wasSuccessful() or native_result.testsRun != native_count:
-            raise RuntimeError('loops: compiled native control-flow behavior failed')
         count += native_count
     return count
 

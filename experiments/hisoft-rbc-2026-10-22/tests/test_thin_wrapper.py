@@ -36,6 +36,17 @@ class ThinWrapper(unittest.TestCase):
                        'ProcessLoopStack', 'compiler_with_computed_lines'):
             self.assertNotIn(marker, text)
 
+    def test_hisoft_controls_for_next(self):
+        # Acceptance, rejection, and runtime behavior belong to pyhsb.
+        # RBC neither installs FOR patches nor edits FOR source statements.
+        text = self.prepared()
+        self.assertIn('res=c.compile_whole(program)', text)
+        for forbidden in ('install_for_restart', 'remove_duplicate_for',
+                          'ProcessLoopStack', 'install_native_loops'):
+            self.assertNotIn(forbidden, text)
+        for obsolete in ('for_restart.py', 'duplicate_for.py'):
+            self.assertFalse((STAGE / obsolete).exists())
+
     def test_only_zxux_specific_runtime_shims(self):
         text = self.prepared()
         for required in ('install_native_pause(compiler)',
