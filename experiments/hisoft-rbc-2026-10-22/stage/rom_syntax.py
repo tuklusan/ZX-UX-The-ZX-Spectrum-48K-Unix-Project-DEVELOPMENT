@@ -40,6 +40,34 @@ def _ready(rom):
     raise RomSyntaxError('48K ROM failed to reach its BASIC editor')
 
 
+def _editor_text(body):
+    """Remove cached number values only for ROM editor syntax scanning.
+
+    ZX BASIC stores 0E followed by five binary bytes after a visible
+    number. LINE_SCAN adds this cache itself, so presenting the stored
+    cache again would make a valid line fail ROM syntax checking.
+    The actual compiled program is left byte-for-byte untouched.
+    """
+    out = bytearray()
+    in_string = False
+    in_remark = False
+    pos = 0
+    while pos < len(body):
+        code = body[pos]
+        if code == 34 and not in_remark:
+            in_string = not in_string
+        elif code == 0xEA and not in_string:
+            in_remark = True
+        if code == 14 and not in_string and not in_remark:
+            if pos + 6 > len(body):
+                raise RomSyntaxError('truncated Sinclair numeric encoding')
+            pos += 6
+            continue
+        out.append(code)
+        pos += 1
+    return bytes(out)
+
+
 def validate_rom_lines(program, rom, max_steps=250000):
     """Check original Sinclair tokenized lines; raise with BASIC line number."""
     import tap
@@ -51,7 +79,7 @@ def validate_rom_lines(program, rom, max_steps=250000):
         memory = bytearray(snapshot)
         start = _word(memory, 0x5C59)  # E_LINE
         # E_LINE_NO expects an editor line number and statement bytes.
-        encoded = str(line).encode('ascii') + b' ' + body.rstrip(b'\r') + b'\r'
+        encoded = str(line).encode('ascii') + b' ' + _editor_text(body.rstrip(b'\r')) + b'\r'
         end = start + len(encoded)
         if end >= 0xF000:
             raise RomSyntaxError(f'Line {line}: line too long for ROM syntax check')

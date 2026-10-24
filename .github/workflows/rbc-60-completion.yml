@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - '.github/workflows/rbc-60-completion.yml'
+      - 'experiments/hisoft-rbc-2026-10-22/stage/**'
 permissions:
   contents: read
 jobs:

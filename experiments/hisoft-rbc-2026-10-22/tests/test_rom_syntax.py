@@ -37,6 +37,16 @@ class OriginalRomSyntax(unittest.TestCase):
         with self.assertRaisesRegex(RomSyntaxError,'Line 10'):
             self.check(b'\xeb I=1TO10:\xf3 I')
 
+    def test_original_numeric_caches_are_not_double_encoded(self):
+        # Stored Sinclair BASIC has cached binary values after visible digits.
+        self.assertEqual(self.check(b'\xed 9000\x0e\x00\x00\x28\x23\x00'), 1)
+        self.assertEqual(self.check(b'\xeb I=1\x0e\x00\x00\x01\x00\x00 '
+                                    b'\xcc 10\x0e\x00\x00\x0a\x00\x00:\xf3 I'), 1)
+
+    def test_bad_stored_numeric_cache_is_rejected(self):
+        with self.assertRaisesRegex(RomSyntaxError, 'numeric encoding'):
+            self.check(b'\xf5 1\x0e\x00')
+
     def test_invalid_statement(self):
         with self.assertRaisesRegex(RomSyntaxError,'ROM syntax error'):
             self.check(b'\xf5 "HELLO"\xf4')
