@@ -24,25 +24,15 @@ ESC = {'\\': 0x5C, "'": 0x27, '"': 0x22, '0': 0, 'a': 7, 'b': 8, 't': 9,
        'n': 10, 'v': 11, 'f': 12, 'r': 13}
 
 
-class Where(tuple):
-    """Two-element source location with an optional exact lexical column."""
-    def __new__(cls, file, line, column=None):
-        obj = super().__new__(cls, (file, line))
-        obj.column = column
-        return obj
-
-
 class CError(Exception):
     def __init__(self, msg, where=None, cls='syntax'):
-        self.message = msg
         self.where = where
-        self.column = getattr(where, "column", None)
         self.cls = cls
         super().__init__(('%s:%d: ' % where if where else '') + '%s: %s' % (cls, msg))
 
 
 class Tok:
-    __slots__ = ('kind', 'val', 'file', 'line', 'bol', 'text', 'ws', 'column')
+    __slots__ = ('kind', 'val', 'file', 'line', 'bol', 'text', 'ws')
 
     def __init__(self, kind, val, file, line, bol, text=None, ws=True):
         self.kind = kind        # 'id' 'kw' 'int' 'float' 'char' 'str' 'op' 'eof'
@@ -52,11 +42,10 @@ class Tok:
         self.bol = bol          # first token on its physical line
         self.text = text
         self.ws = ws            # preceded by white space or a comment
-        self.column = None
 
     @property
     def where(self):
-        return Where(self.file, self.line, self.column)
+        return (self.file, self.line)
 
     def __repr__(self):
         return 'Tok(%s,%r)' % (self.kind, self.val)
@@ -124,7 +113,7 @@ def lex(src, fname, info=None):
         if c == '/' and src.startswith('/*', i):
             j = src.find('*/', i + 2)
             if j < 0:
-                raise CError('unterminated comment', Where(fname, line, i - src.rfind('\n', 0, i)), 'lexical')
+                raise CError('unterminated comment', (fname, line), 'lexical')
             check_comment(src[i:j], fname, line)
             k = src.count('\n', i, j)
             if k:
@@ -133,7 +122,7 @@ def lex(src, fname, info=None):
             i = j + 2
             ws = True
             continue
-        where = Where(fname, line, i - src.rfind('\n', 0, i))
+        where = (fname, line)
         if _isid0(c):
             j = i
             while j < n and _isid(src[j]):
@@ -147,7 +136,6 @@ def lex(src, fname, info=None):
             toks.append(Tok(kind, w, fname, line, bol))
             bol = False
             toks[-1].ws = ws
-            toks[-1].column = where.column
             ws = False
             i = j
             continue
@@ -161,7 +149,6 @@ def lex(src, fname, info=None):
             toks.append(_number(text, where, bol))
             bol = False
             toks[-1].ws = ws
-            toks[-1].column = where.column
             ws = False
             i = j
             continue
@@ -172,7 +159,6 @@ def lex(src, fname, info=None):
             toks.append(Tok('char', bs[0], fname, line, bol))
             bol = False
             toks[-1].ws = ws
-            toks[-1].column = where.column
             ws = False
             i = j
             continue
@@ -181,23 +167,19 @@ def lex(src, fname, info=None):
             toks.append(Tok('str', bs, fname, line, bol))
             bol = False
             toks[-1].ws = ws
-            toks[-1].column = where.column
             ws = False
             i = j
             continue
         if c == '#':
             toks.append(Tok('hash', '#', fname, line, bol))
-            toks[-1].column = where.column
             bol = False
             toks[-1].ws = ws
-            toks[-1].column = where.column
             ws = False
             i += 1
             continue
         for op in OPS:
             if src.startswith(op, i):
                 toks.append(Tok('op', op, fname, line, bol))
-                toks[-1].column = where.column
                 bol = False
                 toks[-1].ws = ws
                 ws = False
@@ -378,9 +360,7 @@ def preprocess(path, include_dirs=(), _macros=None, _depth=0, src=None):
             continue
         if t.kind == 'id' and t.val in macros:
             for x in macros[t.val]:
-                expanded = Tok(x.kind, x.val, t.file, t.line, False, x.text)
-                expanded.column = t.column  # point at the macro invocation
-                out.append(expanded)
+                out.append(Tok(x.kind, x.val, t.file, t.line, False, x.text))
             i += 1
             continue
         out.append(t)

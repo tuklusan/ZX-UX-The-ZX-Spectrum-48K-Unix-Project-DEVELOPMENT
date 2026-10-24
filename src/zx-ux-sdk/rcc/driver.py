@@ -2,7 +2,6 @@
 import os
 import sys
 from .lex import preprocess, CError
-from .diagnostics import emit, emit_error, emit_tool_error
 from .parse import parse
 from . import z80gen, bcgen
 from .fit import FitError, find_smallest
@@ -127,7 +126,7 @@ def main(argv):
         a = argv[i]
         if a in ('-o', '--max', '--stack', '--heap', '--udgs'):
             if i + 1 >= len(argv):
-                emit('CLI_MISSING_VALUE', 'Option %s requires a value.' % a)
+                print('rcc: missing value for %s' % a, file=sys.stderr)
                 return 2
             val = argv[i + 1]
             if a == '-o':
@@ -136,10 +135,10 @@ def main(argv):
                 try:
                     num = int(val, 0)
                 except ValueError:
-                    emit('CLI_INVALID_NUMBER', 'Option %s requires a valid numeric value; received %s.' % (a, val))
+                    print('rcc: invalid value for %s: %s' % (a, val), file=sys.stderr)
                     return 2
                 if num < 0:
-                    emit('CLI_NEGATIVE_VALUE', 'Option %s does not accept a negative value.' % a)
+                    print('rcc: negative value for %s' % a, file=sys.stderr)
                     return 2
                 if a == '--max':
                     limit = num
@@ -149,14 +148,14 @@ def main(argv):
                     heap = num
                 else:
                     if not 4 <= num <= 32:
-                        emit('CLI_UDG_RANGE', 'UDG count must be between 4 and 32.')
+                        print('rcc: --udgs takes 4 to 32', file=sys.stderr)
                         return 2
                     udgs = num
             i += 2
             continue
         if a in ('-S', '-c'):
             if (a == '-S' and obj_only) or (a == '-c' and asm_only):
-                emit('CLI_OUTPUT_CONFLICT', 'Requested compiler output modes conflict.')
+                print('rcc: conflicting output modes', file=sys.stderr)
                 return 2
             asm_only |= a == '-S'
             obj_only |= a == '-c'
@@ -167,7 +166,7 @@ def main(argv):
         elif a in ('--bytecode', '--native'):
             selected = 'all' if a == '--bytecode' else 'none'
             if mode is not None and mode != selected:
-                emit('CLI_BACKEND_CONFLICT', 'Native and bytecode backend selections conflict.')
+                print('rcc: conflicting backends', file=sys.stderr)
                 return 2
             mode = selected
         else:
@@ -175,20 +174,21 @@ def main(argv):
         i += 1
     if mode is not None or asm_only or obj_only:
         if fit and '--fit' in argv:
-            emit('CLI_FIT_CONFLICT', 'Explicit --fit requires linked output without a forced backend.')
+            print('rcc: --fit needs linked output and no forced backend', file=sys.stderr)
             return 2
         fit = False
     if len(files) != 1:
-        emit('CLI_ARGUMENTS', 'Expected exactly one C48 source filename; usage: rcc [-S|-c] [-o out] [--bytecode|--native|--fit|--no-fit] [--max BYTES] [--stack N] [--heap N] [--udgs N] file.c')
+        print('usage: rcc [-S|-c] [-o out] [--bytecode|--native|--fit|--no-fit] [--max BYTES] [--stack N] [--heap N] [--udgs N] file.c',
+              file=sys.stderr)
         return 2
     src = files[0]
     base = os.path.splitext(src)[0]
     target = out or base + ('.s' if asm_only else '.sso' if obj_only else '.ssx')
     if os.path.exists(target) and os.path.exists(src) and os.path.samefile(target, src):
-        emit('IO_OUTPUT_OVERWRITE', 'Output %s would overwrite the original C48 source file.' % target)
+        print('rcc: output %s would overwrite the source' % target, file=sys.stderr)
         return 2
     if not os.path.isfile(src):
-        emit('IO_SOURCE_MISSING', 'C48 source file %s does not exist or cannot be read.' % src)
+        print('rcc: cannot read %s' % src, file=sys.stderr)
         return 1
     opts = {'lib': lib, 'heap': heap, 'stack': stack, 'udgs': udgs, 'module': obj_only}
     if mode == 'all':
@@ -213,23 +213,20 @@ def main(argv):
             data2, g2, text2, obj2, need2 = build(src, opts)
             if need2 < need:
                 data, need = data2, need2
-    except AssertionError as e:
-        emit('GEN_INTERNAL', 'Internal code generation failure: %s' % e, source=src)
-        return 3
     except FitError as e:
-        emit('FIT_SEARCH_CONFIGURATION', 'Compiler fitting search failed: %s' % e)
+        print('rcc: %s' % e, file=sys.stderr)
         return 1
     except CError as e:
-        emit_error(e, src)
+        print('rcc: %s' % e, file=sys.stderr)
         return 1
     except ras.AsmError as e:
-        emit_tool_error('ASM', e)
+        print('rcc: internal assembler error: %s' % e, file=sys.stderr)
         return 3
     except rld.LinkError as e:
-        emit_tool_error('LNK', e)
+        print('rcc: link: %s' % e, file=sys.stderr)
         return 1
     if limit and need > limit:
-        emit('FIT_MEMORY_LIMIT', 'Executable requires %d bytes of memory; configured compile limit is %d bytes.' % (need, limit), source=src)
+        print('rcc: %s needs %d bytes of memory (limit %d)' % (src, need, limit), file=sys.stderr)
         return 1
     return write_out(target, data)
 
@@ -240,7 +237,7 @@ def write_out(path, data):
         with open(path, 'wb') as f:
             f.write(data)
     except OSError as e:
-        emit('IO_OUTPUT_WRITE', 'Compiled output could not be written to %s: %s' % (path, e.strerror or e))
+        print('rcc: cannot write %s: %s' % (path, e.strerror or e), file=sys.stderr)
         try:
             os.remove(path)
         except OSError:
