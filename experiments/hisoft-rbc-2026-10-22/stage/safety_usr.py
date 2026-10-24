@@ -1,56 +1,41 @@
-"""Reject every unproved or numeric Spectrum USR before native compilation.
+"""Refuse executable Sinclair BASIC USR tokens before native compilation.
 
-The graphics-character form is distinct: it returns a UDG address without
-executing machine code. Keep the existing process-memory review independent.
+Every executable 0xC0 token is prohibited, including the graphics-character
+form. Only the genuine token stream matters: letters in quoted messages and
+REM data have no executable meaning. The VAL guard is a separate runtime gate.
 """
 from __future__ import annotations
 
-from audit_policy import audit_lines
-
 
 class UnsupportedUsr(ValueError):
-    """A source line would run machine code or lacks a safe character proof."""
+    """An executable BASIC line contains the forbidden 0xC0 keyword token."""
 
 
 def enforce_numeric_usr(lines, findings):
-    """Fail even if a caller selects the non-strict memory-review setting.
+    """Legacy entry point: block ALL executable USR tokens, not just numeric.
 
-    The token listing and reviewed memory findings must match per BASIC line,
-    in source order. Refuse a mismatch rather than borrow an approval for a
-    different USR expression on the same line.
+    Each record is the original Sinclair line-body bytes. Numeric literals
+    have a six-byte cache beginning at 0x0E, which must never be interpreted
+    as source code. DATA may include expressions evaluated by READ; its USR
+    tokens are forbidden too. No address-classification exemption applies.
     """
-    operations = audit_lines(lines, 'tape')
-    by_line = {}
-    for f in findings:
-        if f.operation == 'USR':
-            by_line.setdefault(f.line, []).append(f)
-    seen = {}
-    for op in operations:
-        if op['operation'] != 'USR':
-            continue
-        line = op['line']
-        offset = seen.get(line, 0)
-        seen[line] = offset + 1
-        reviewed = by_line.get(line, [])
-        if offset >= len(reviewed):
-            raise UnsupportedUsr(f'RBC E_USR_TYPE: Line {line}: USR review mismatch; unsafe to compile.')
-        check = reviewed[offset]
-        kind = op['status']
-        if kind == 'numeric_usr':
-            raise UnsupportedUsr(
-                f'RBC E_MACHINE_CODE: Line {line}: Numeric USR is unsupported. '
-                'Direct execution of machine code is prohibited.')
-        if kind == 'literal_graphics_character':
-            continue  # Original process-memory review still applies.
-        if (kind in ('string_expression_requires_type_and_range_proof',
-                     'string_variable_requires_length_proof') and
-                check.severity == 'info' and
-                check.classification == 'process_udg_pointer'):
-            continue  # An exact, previously reviewed graphics use, not numeric USR.
-        raise UnsupportedUsr(
-            f'RBC E_USR_TYPE: Line {line}: Cannot prove USR uses a safe '
-            f'graphics-character string (source class: {kind}).')
-    for line, reviewed in by_line.items():
-        if seen.get(line, 0) != len(reviewed):
-            raise UnsupportedUsr(
-                f'RBC E_USR_TYPE: Line {line}: Unmatched USR operation in memory review.')
+    del findings  # A separate human-readable memory report cannot override tokens.
+    for line, body in lines:
+        quoted = False
+        pos = 0
+        while pos < len(body):
+            byte = body[pos]
+            if byte == 0x0e and not quoted:
+                if pos + 5 >= len(body):
+                    raise UnsupportedUsr(
+                        f'RBC E_USR_TOKEN: Line {line}: Truncated BASIC numeric marker.')
+                pos += 6
+                continue
+            if byte == 0xea and not quoted:  # REM: everything else is comment data.
+                break
+            if byte == 0x22:
+                quoted = not quoted
+            elif byte == 0xc0 and not quoted:
+                raise UnsupportedUsr(
+                    f'RBC E_USR_TOKEN: Line {line}: USR token 0xC0 is unsupported.')
+            pos += 1

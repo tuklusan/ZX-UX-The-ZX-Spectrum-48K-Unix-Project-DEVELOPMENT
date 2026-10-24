@@ -1,73 +1,48 @@
-"""Check that direct machine-code USR is never granted an exception."""
+"""Regression checks for the blanket executable Sinclair USR-token ban."""
 import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'stage'))
-from audit_policy import audit_lines, from_text, lines_from_tzx
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
 from safety_usr import UnsupportedUsr, enforce_numeric_usr
 
 
-class Finding:
-    def __init__(self, line, classification, severity='block'):
-        self.line = line
-        self.operation = 'USR'
-        self.classification = classification
-        self.severity = severity
-
-
 def tokens(line):
-    # Real Spectrum USR token, not the letters in a screen message.
-    return line.replace(b'{USR}', bytes((0xc0,)))
+    return line.replace(b'{USR}', bytes((0xc0,))).replace(b'{REM}', bytes((0xea,)))
 
 
-class NumericUsrSafetyTests(unittest.TestCase):
-    def test_rom_scroll_exception_is_still_rejected(self):
-        # The previous memory helper had admitted this machine-code call.
-        row = tokens(b'LET I={USR} 3280')
-        with self.assertRaisesRegex(UnsupportedUsr, r'E_MACHINE_CODE: Line 7080'):
-            enforce_numeric_usr([(7080, row)], [Finding(7080, 'rom_screen_scroll', 'info')])
+class UsrTokenSafetyTests(unittest.TestCase):
+    def test_numeric_usr_rejected_in_any_expression(self):
+        forms = (b'PRINT {USR} 32768', b'LET A={USR} 3280',
+                 b'GO TO {USR} 32768', b'IF {USR} 7 THEN RUN',
+                 b'DATA {USR} 3280:READ A')
+        for form in forms:
+            with self.subTest(form=form), self.assertRaisesRegex(UnsupportedUsr, 'E_USR_TOKEN: Line 20'):
+                enforce_numeric_usr([(20, tokens(form))], [])
 
-    def test_numeric_expression_contexts_fail(self):
-        contexts=(b'PRINT {USR} 32768',b'LET A={USR} 32768',
-                  b'IF {USR} 32768=1 THEN PRINT 1', b'GO TO {USR} (32768)',
-                  b'RANDOMIZE {USR} 32768')
-        for body in contexts:
-            with self.subTest(body=body):
-                with self.assertRaisesRegex(UnsupportedUsr, 'Direct execution'):
-                    enforce_numeric_usr([(150,tokens(body))],[Finding(150,'raw_machine_code_address')])
+    def test_graphics_usr_is_also_rejected(self):
+        for form in (b'POKE {USR} "a",255', b'POKE {USR} CHR$ (144+X),7',
+                     b'LET X={USR} "b"'):
+            with self.subTest(form=form), self.assertRaisesRegex(UnsupportedUsr, 'USR token 0xC0'):
+                enforce_numeric_usr([(42, tokens(form))], [])
 
-    def test_nonexecuting_string_literal_passes(self):
-        enforce_numeric_usr([(10,tokens(b'POKE {USR} "a",255'))],
-                            [Finding(10,'process_udg_pointer','info')])
+    def test_nonexecuting_bytes_do_not_trigger(self):
+        lines = [(10, tokens(b'PRINT "{USR}"')),
+                 (20, tokens(b'{REM} {USR} 3280')),
+                 (30, tokens(b'PRINT "USR 32768"')),
+                 (40, tokens(b'PRINT "TEXT":{REM} {USR}'))]
+        enforce_numeric_usr(lines, [])
 
-    def test_approved_computed_string_requires_matching_review(self):
-        code=tokens(b'POKE {USR} CHR$ (144+K)+J,255')
-        enforce_numeric_usr([(100,code)], [Finding(100,'process_udg_pointer','info')])
-        with self.assertRaisesRegex(UnsupportedUsr,'Cannot prove USR'):
-            enforce_numeric_usr([(100,code)], [Finding(100,'raw_machine_code_address')])
+    def test_numeric_cache_cannot_impersonate_usr(self):
+        enforce_numeric_usr([(10, b'PRINT 1\x0e\xc0\x00\x00\x00\x00')], [])
 
-    def test_quoted_rem_and_data_are_ignored(self):
-        code=tokens(b'PRINT "USR 3280":REM {USR} 3280')
-        enforce_numeric_usr([(10,code)],[])
-        code=tokens(b'DATA {USR} 32768:PRINT 9')
-        enforce_numeric_usr([(11,code)],[])
+    def test_invalid_numeric_cache_fails_closed(self):
+        with self.assertRaisesRegex(UnsupportedUsr, 'Truncated'):
+            enforce_numeric_usr([(10, b'PRINT 1\x0e\xc0')], [])
 
-    def test_original_hangman_both_input_forms(self):
-        folder = Path(__file__).resolve().parents[3] / 'src/bonus/60-programs/55-hangman/BASIC'
-        bas = audit_lines(from_text((folder/'55-hangman.bas').read_bytes()), 'text')
-        tape = lines_from_tzx((folder/'55-hangman.tzx').read_bytes())
-        tzx = audit_lines(tape, 'tape')
-        for records in (bas, tzx):
-            hit = [(x['line'], x['status']) for x in records
-                   if x['operation'] == 'USR']
-            self.assertEqual(hit, [(7080, 'numeric_usr')])
-        with self.assertRaisesRegex(UnsupportedUsr, r'E_MACHINE_CODE: Line 7080'):
-            enforce_numeric_usr(tape, [Finding(7080, 'rom_screen_scroll', 'info')])
-
-    def test_reject_bad_review_alignment(self):
-        with self.assertRaisesRegex(UnsupportedUsr,'Unmatched USR'):
-            enforce_numeric_usr([(10,b'PRINT "Hello"')], [Finding(10,'raw_machine_code_address')])
+    def test_code_after_data_and_colon_is_detected(self):
+        with self.assertRaisesRegex(UnsupportedUsr, 'Line 60'):
+            enforce_numeric_usr([(60, tokens(b'DATA 42:LET A={USR} 123'))], [])
 
 
 if __name__ == '__main__':
