@@ -55,7 +55,11 @@ def install(compiler):
         initial_layout(self)
         if not self._zxux_run_present:
             return
-        user_size = (self.pc - self.vars_start) & 0xffff
+        # Preserve system-variable BSS when RUN clears BASIC variables.
+        # The sysvar helper allocates its own process region after user vars.
+        sysvar_base = getattr(self, '_zxux_sysvar_base', 0)
+        user_end = sysvar_base if sysvar_base and sysvar_base >= self.vars_start else self.pc
+        user_size = (user_end - self.vars_start) & 0xffff
         if not user_size:
             # MEM_FILL uses BC=size-1, so keep a single-byte scratch area.
             self.pc = (self.pc + 1) & 0xffff

@@ -74,6 +74,17 @@ class RunTests(unittest.TestCase):
             ('rel','ld sp,(nn)',140),('hl',100),('bc',39),
             ('asm','ld a,0'),('rt',55),('restore',),('goto','jp nn',10)])
 
+    def test_run_preserves_separate_process_system_variable_bss(self):
+        obj = Module.Compiler(40)
+        obj.reset([(10, b'\\xf7\\r')])
+        obj._zxux_sysvar_base = 120
+        obj.layout_vars()
+        self.assertEqual(obj._zxux_run_clear_bytes, 20)
+        self.assertEqual(obj._zxux_run_sp, 140)
+        obj.end = True
+        obj.st_run()
+        self.assertIn(('bc', 19), obj.calls)
+
     def test_zero_user_storage_uses_single_safe_byte(self):
         obj = Module.Compiler(0)
         obj.reset([(1, b'\xf7\r')])

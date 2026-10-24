@@ -11,7 +11,7 @@ import shutil
 BOUNDARY = (
     'bas2tap.py', 'bas2tap_syntax.py', 'basic_listing.py', 'rom_syntax.py',
     'tape_policy.py', 'bss_layout.py', 'startup_colors.py',
-    'native_pause_rt.py', 'native_keyread_rt.py', 'native_sysvars_rt.py',
+    'native_pause_rt.py', 'native_keyread_rt.py', 'native_sysvars_rt.py', 'native_run_rt.py',
     'native_sysvar_policy.py', 'spectrum_sysvars.py', 'spectrum_fonts.py',
     'poke_policy.py', 'poke_proof.py', 'safety_usr.py', 'udg_bounds.py',
     'udg_nested.py', 'udg_chr_bounds.py', 'spectrum_runtime.py', 'rom_keyread.py',
@@ -36,6 +36,7 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            'from tape_policy import reject_tape_operations\n'
            'from native_pause_rt import install as install_native_pause\n'
            'from spectrum_runtime import install as install_spectrum_runtime\n'
+           'from native_run_rt import install as install_native_run\n'
            'from native_keyread_rt import install as install_native_keyread\n'
            'from native_sysvars_rt import install as install_native_sysvars\n'
            'from native_sysvar_policy import allow_private_sysvars\n'
@@ -71,7 +72,8 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            '    install_native_pause(compiler)\n'
            '    install_spectrum_runtime(compiler)\n'
            '    install_native_keyread(compiler)\n'
-           '    install_native_sysvars(compiler)')
+           '    install_native_sysvars(compiler)\n'
+           '    install_native_run(compiler)')
     change('        if not source.open_lines(program):',
            '        validate_rom_lines(program, rom)\n'
            '        reject_tape_operations(source.tap.split_lines(program), kw.TOKEN)\n'

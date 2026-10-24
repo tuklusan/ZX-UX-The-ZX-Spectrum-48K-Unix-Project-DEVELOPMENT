@@ -78,6 +78,36 @@ jobs:
             PYTHONPATH=build/tmp/rbc-round3/upstream python -m unittest discover -s "$base" -p "$pattern" -v
           done
 
+      - uses: actions/checkout@v4
+        with:
+          repository: tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT
+          ref: f12650495d81df52a1835a71bef878be6a569e30
+          path: build/tmp/rbc-round3/checkpoint-ref
+          persist-credentials: false
+      - name: Verify native RUN and source-preserving compiler paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage=experiments/hisoft-rbc-2026-10-22/stage
+          base=build/tmp/rbc-round3
+          cpdir=$base/checkpoint-ref/experiments/hisoft-rbc-2026-10-22/temporary-checkpoint
+          mkdir -p "$base/current/rbc"
+          cp "$cpdir/rbc.py" "$base/current/rbc/rbc.py"
+          cp "$cpdir/memory_safety.py" "$base/current/rbc/memory_safety.py"
+          base64 -d "$cpdir/font32.b64" > "$base/current/rbc/font32.bin"
+          python "$stage/prepare_rbc.py" "$base/current" "$stage"
+          python "$stage/finish_rbc.py" "$base/current" "$stage"
+          PYTHONPATH="$base/upstream" python -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_native_run_rt.py' -v
+          curl -fsSL --retry 2 --max-time 30 -o "$base/hisoft48.tap" https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap
+          printf '10 PRINT "RUN CHECK"\n20 RUN 10\n' > "$base/run.bas"
+          PYTHONPATH="$base/upstream:$base/current/rbc:src/zx-ux-sdk" python "$base/current/rbc/rbc.py" "$base/run.bas" --frontend "$base/upstream" --sdk src/zx-ux-sdk --rom src/zx-ux-sdk/rom/48.rom --tape "$base/hisoft48.tap" -o "$base/run.ssx"
+          PYTHONPATH=src/zx-ux-sdk python - <<'PY'
+          import rld
+          from pathlib import Path
+          data=Path('build/tmp/rbc-round3/run.ssx').read_bytes()
+          rld.parse_ssx(data)
+          print('Real native RUN SSX linked',len(data),'bytes')
+          PY
       - name: Rebuild and compare frozen ZX-UX system tape and metadata
         shell: bash
         run: |

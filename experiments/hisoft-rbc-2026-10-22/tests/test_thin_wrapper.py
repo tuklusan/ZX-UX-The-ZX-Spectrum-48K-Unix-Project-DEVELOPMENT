@@ -29,7 +29,7 @@ class ThinWrapper(unittest.TestCase):
 
     def test_no_language_control_flow_patch(self):
         text = self.prepared()
-        for marker in ('install_for_restart', 'install_native_run',
+        for marker in ('install_for_restart',
                        'install_dynamic_string_width', 'install_native_loops',
                        'ProcessLoopStack', 'compiler_with_computed_lines'):
             self.assertNotIn(marker, text)
@@ -47,7 +47,8 @@ class ThinWrapper(unittest.TestCase):
         text = self.prepared()
         for required in ('install_native_pause(compiler)',
                          'install_native_keyread(compiler)',
-                         'install_native_sysvars(compiler)'):
+                         'install_native_sysvars(compiler)',
+                         'install_native_run(compiler)'):
             self.assertIn(required, text)
         self.assertIn('enforce_numeric_usr(', text)
         self.assertIn('validate_rom_lines(program, rom)', text)
