@@ -194,6 +194,38 @@ jobs:
               except Exception as exc:
                   print('native RUN diagnostic failed',name,type(exc).__name__,str(exc),flush=True)
           PY
+      - name: Isolate native RUN restart suboperations
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk python - <<'PY'
+          from pathlib import Path
+          from round3_native_system_probe import compile_one, ROOT
+          import rvm
+          file = ROOT/'build/tmp/rbc-round3/current/rbc/native_run_rt.py'
+          original = file.read_text()
+          sequences = {
+              'no_rest': [('        self.emit_restore()\\n', '')],
+              'no_fill': [('        self.ld_hl(self.vars_start)\\n        self.ld_bc_abs((self._zxux_run_clear_bytes - 1) & 0xffff)\\n        self.emit(\'ld a,0\')\\n        self.call_rt(compiler.RT.MEM_FILL)\\n', '')],
+              'no_stack': [('        self.emit_op_reloc(\'ld sp,(nn)\', self._zxux_run_sp)\\n', '')],
+              'jump_only': [('        self.emit_op_reloc(\'ld sp,(nn)\', self._zxux_run_sp)\\n', ''), ('        self.ld_hl(self.vars_start)\\n        self.ld_bc_abs((self._zxux_run_clear_bytes - 1) & 0xffff)\\n        self.emit(\'ld a,0\')\\n        self.call_rt(compiler.RT.MEM_FILL)\\n', ''), ('        self.emit_restore()\\n','')],
+          }
+          for name,changes in sequences.items():
+              try:
+                  text=original
+                  for old,new in changes:
+                      old=old.replace('\\n','\n')
+                      if text.count(old)!=1: raise RuntimeError('RUN operation replacement not unique')
+                      text=text.replace(old,new,1)
+                  file.write_text(text)
+                  ssx=compile_one('rbc-r3-'+name, '10 RUN 100\n100 STOP\n')
+                  run=rvm.run_kernel(ssx,frames=200,system=ROOT/'build/out/ZX-UX.tzx',cache=True)
+                  print('RUN isolation',name,run.why,run.fg.status,run.session.syscalls,flush=True)
+              except Exception as exc:
+                  print('RUN isolation failure',name,type(exc).__name__,str(exc),flush=True)
+              finally:
+                  file.write_text(original)
+          PY
       - name: Prove RUN restart and font restoration in the real ZX-UX kernel
         shell: bash
         run: |
