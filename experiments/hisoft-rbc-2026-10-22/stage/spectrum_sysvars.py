@@ -9,17 +9,19 @@ from __future__ import annotations
 FLAGS2 = 23658
 PIP = 23609
 FRAMES = (23672, 23673, 23674)
-PRIVATE = frozenset((FLAGS2, PIP, *FRAMES))
+SCR_CT = 23692
+PRIVATE = frozenset((FLAGS2, PIP, *FRAMES, SCR_CT))
 _MASK24 = (1 << 24) - 1
 
 
 class ProcessSystemVariables:
     """One BASIC process's virtual ROM-compatible system-variable state."""
 
-    def __init__(self, *, flags2=0, pip=0, frames=0):
+    def __init__(self, *, flags2=0, pip=0, frames=0, scr_ct=0):
         self._flags2 = flags2 & 255
         self._pip = pip & 255
         self._frames = frames & _MASK24
+        self._scr_ct = scr_ct & 255
         self._last_tick = None
 
     @property
@@ -27,6 +29,8 @@ class ProcessSystemVariables:
         return self._frames
 
     def peek(self, address):
+        if address == SCR_CT:
+            return self._scr_ct
         if address == FLAGS2:
             return self._flags2
         if address == PIP:
@@ -37,7 +41,9 @@ class ProcessSystemVariables:
 
     def poke(self, address, value):
         value = int(value) & 255
-        if address == FLAGS2:
+        if address == SCR_CT:
+            self._scr_ct = value
+        elif address == FLAGS2:
             self._flags2 = value
         elif address == PIP:
             self._pip = value

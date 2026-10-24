@@ -9,7 +9,7 @@ import re
 from spectrum_sysvars import PRIVATE
 from spectrum_fonts import CHARS_LOW, CHARS_HIGH
 
-_ADDRESS = re.compile(r'^\s*(23606|23607|23609|23658|23672|23673|23674)(?!\d)')
+_ADDRESS = re.compile(r'^\s*(23606|23607|23609|23658|23672|23673|23674|23692)(?!\d)')
 
 
 def allow_private_sysvars(findings):

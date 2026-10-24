@@ -7,7 +7,7 @@ live in compiler-allocated process BSS, not ROM or kernel system RAM.
 """
 from __future__ import annotations
 
-from spectrum_sysvars import FLAGS2, PIP, FRAMES, PRIVATE
+from spectrum_sysvars import FLAGS2, PIP, FRAMES, SCR_CT, PRIVATE
 
 PEEK_RT = 42
 POKE_RT = 43
@@ -205,6 +205,8 @@ def _native_peek(asm, base, load, total=0, font_alias=None, entry=0):
     e.jr('pip','z')
     e.op('cp $6a')
     e.jr('flags','z')
+    e.op('cp $8c')
+    e.jp('scr_ct','z')
     e.op('cp $78')
     e.jr('ordinary_bridge','c')
     e.op('cp $7b')
@@ -245,6 +247,9 @@ def _native_peek(asm, base, load, total=0, font_alias=None, entry=0):
     e.jr('result')
     e.label('flags')
     e.address('ld a,($0000)',0)
+    e.jr('result')
+    e.label('scr_ct')
+    e.address('ld a,($0000)',12)
     e.label('result')
     e.op('ld l,a; ld h,0; ret')
     e.label('ordinary_bridge')
@@ -278,6 +283,8 @@ def _native_poke(asm, base, load, total=0, font_alias=None, entry=0):
     e.jr('pip','z')
     e.op('cp $6a')
     e.jr('flags','z')
+    e.op('cp $8c')
+    e.jp('scr_ct','z')
     e.op('cp $78')
     e.jr('ordinary','c')
     e.op('cp $7b')
@@ -309,6 +316,10 @@ def _native_poke(asm, base, load, total=0, font_alias=None, entry=0):
     e.label('flags')
     e.op('ld a,e')
     e.address('ld ($0000),a',0)
+    e.op('ret')
+    e.label('scr_ct')
+    e.op('ld a,e')
+    e.address('ld ($0000),a',12)
     e.op('ret')
     e.label('ordinary')
     _font_address_alias(e, base, total, 'poke', font_alias)

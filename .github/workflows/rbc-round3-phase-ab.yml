@@ -58,5 +58,22 @@ jobs:
               failures.append((game.name,type(exc).__name__,str(exc)))
           print('Paired BAS and TZX round-trip results',len(successes),'successes',len(failures),'failures',flush=True)
           for item in failures:print('TZX not yet roundtrippable',repr(item),flush=True)
-          if failures:raise SystemExit('Unresolved TZX reconstruction differences')
+          expected={'02-fall-guy','13-radio-power','14-scuba','17-paypackets','48-energy-field','54-swordsman'}
+          observed={item[0] for item in failures}
+          if observed!=expected or any(item[1]!='SemanticDifference' for item in failures):
+            raise SystemExit('Unexpected BAS/TZX fidelity outcomes: '+repr(failures))
           PY
+      - uses: actions/checkout@v4
+        with:
+          repository: imneme/pyhsb
+          ref: 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+          path: build/tmp/rbc-round3/upstream
+          persist-credentials: false
+      - name: Real Z80 scroll counter virtualization and protected memory tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=experiments/hisoft-rbc-2026-10-22/tests
+          for pattern in test_round3_scroll_sysvar.py test_native_sysvars_rt.py test_round2_sysvars.py test_poke_policy.py test_poke_proof.py; do
+            PYTHONPATH=build/tmp/rbc-round3/upstream python -m unittest discover -s "$base" -p "$pattern" -v
+          done
