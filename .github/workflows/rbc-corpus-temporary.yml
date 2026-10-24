@@ -54,6 +54,23 @@ jobs:
           base=Path('build/tmp/rbc-round2')
           revision=os.environ['GITHUB_SHA']
           outcomes=run(root,base/'current/rbc/rbc.py',base/'upstream',base/'hisoft48.tap',base,revision)
+          import rld
+          for game,item in sorted(outcomes.items()):
+              if item['comparison']['status']!='mismatch': continue
+              p=base/game
+              lhs=(p/'from-bas.ssx').read_bytes()
+              rhs=(p/'from-tzx.ssx').read_bytes()
+              diffs=[i for i in range(20,min(len(lhs),len(rhs))) if lhs[i]!=rhs[i]]
+              loc=diffs[0] if diffs else -1
+              pa,pb=rld.parse_ssx(lhs),rld.parse_ssx(rhs)
+              print('RBC_REAL_DIFF',game,'first_image_file_offset',loc,
+                    'different_after_header',len(diffs),
+                    'image_bytes',len(pa['image']),len(pb['image']),
+                    'entry',pa['entry'],pb['entry'],
+                    'bss',pa['bss'],pb['bss'],
+                    'reloc_match',pa['relocs']==pb['relocs'],
+                    'bas_hex',lhs[loc:loc+24].hex() if loc>=0 else '',
+                    'tzx_hex',rhs[loc:loc+24].hex() if loc>=0 else '',flush=True)
           print('RBC_ALL_OUTCOMES',len(outcomes),sum(x['bas']['native_linked'] for x in outcomes.values()),
                 sum(x['tzx']['native_linked'] for x in outcomes.values()),flush=True)
           check=subprocess.run([sys.executable,
