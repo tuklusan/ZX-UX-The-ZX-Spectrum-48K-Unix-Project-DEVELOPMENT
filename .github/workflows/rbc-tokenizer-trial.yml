@@ -35,6 +35,23 @@ jobs:
           for test in test_basic_listing test_at_tokenizer test_round2_fidelity test_rom_syntax test_dual_source; do
             python -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p "$test.py" -v
           done
+      - name: Restore original RBC checkpoint into untracked runner workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          cpdir=experiments/hisoft-rbc-2026-10-22/temporary-checkpoint
+          root=build/tmp/rbc-round2
+          mkdir -p "$root/checkpoint/scratch/rbc" "$root/current/rbc"
+          for file in rbc.py memory_safety.py; do
+            cp "$cpdir/$file" "$root/checkpoint/scratch/rbc/$file"
+            cp "$cpdir/$file" "$root/current/rbc/$file"
+          done
+          base64 -d "$cpdir/font32.b64" > "$root/checkpoint/scratch/rbc/font32.bin"
+          cp "$root/checkpoint/scratch/rbc/font32.bin" "$root/current/rbc/font32.bin"
+          stage=experiments/hisoft-rbc-2026-10-22/stage
+          python "$stage/prepare_rbc.py" "$root/current" "$stage"
+          python "$stage/finish_rbc.py" "$root/current" "$stage"
+          python -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p test_tokenizer_checkpoint.py -v
       - name: Focused RBC system variables, fonts, memory, and fidelity
         shell: bash
         run: |
