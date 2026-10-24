@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: Line 130: Spectrum 48K ROM syntax error 0B near character 30
-- TZX: failed (exit 1); BAS/TZX: Line 130: semantic token/character difference at byte 14; BAS 5448454EF1746D3D versus TZX CBF1746D3D746D2D
+- BAS: failed (exit 1); rbc: 05-championship-boxing.bas: HiSoft v1.1 compile failed: Expecting a number line 9010:
+- TZX: failed (exit 1); rbc: 05-championship-boxing.bas: HiSoft v1.1 compile failed: Expecting a number line 9010:
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

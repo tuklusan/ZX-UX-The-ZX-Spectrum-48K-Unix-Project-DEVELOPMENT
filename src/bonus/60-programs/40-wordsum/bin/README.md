@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: 'ascii' codec can't decode byte 0xe2 in position 992: ordinal not in range(128)
-- TZX: failed (exit 1); 'ascii' codec can't decode byte 0xe2 in position 992: ordinal not in range(128)
+- BAS: failed (exit 1); rbc: 40-wordsum.bas: HiSoft v1.1 compile failed: Not supported line 586: DIM again, with different sizes
+- TZX: failed (exit 1); rbc: 40-wordsum.bas: HiSoft v1.1 compile failed: Not supported line 586: DIM again, with different sizes
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

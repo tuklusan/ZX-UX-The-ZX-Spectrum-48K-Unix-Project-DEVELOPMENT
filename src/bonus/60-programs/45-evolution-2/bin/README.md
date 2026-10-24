@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: Line 200: Spectrum 48K ROM syntax error 0B near character 14
-- TZX: failed (exit 1); BAS/TZX: Line 200: semantic token/character difference at byte 4; BAS 544F2033313AF5AC versus TZX CC33313AF5AC302C
+- BAS: failed (exit 1); rbc: RBC E_TAPE_UNSUPPORTED: Line 1860: LOAD requires external tape I/O; RBC supports standalone BASIC programs only
+- TZX: failed (exit 1); rbc: RBC E_TAPE_UNSUPPORTED: Line 1860: LOAD requires external tape I/O; RBC supports standalone BASIC programs only
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

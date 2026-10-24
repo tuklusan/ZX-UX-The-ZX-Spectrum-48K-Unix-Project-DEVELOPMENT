@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: 'ascii' codec can't decode byte 0xe2 in position 3027: ordinal not in range(128)
-- TZX: failed (exit 1); 'ascii' codec can't decode byte 0xe2 in position 3027: ordinal not in range(128)
+- BAS: failed (exit 1); rbc: 12-flying-bomb.bas: HiSoft v1.1 compile failed: Non-existent line line 410: line 200
+- TZX: failed (exit 1); rbc: 12-flying-bomb.bas: HiSoft v1.1 compile failed: Non-existent line line 410: line 200
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

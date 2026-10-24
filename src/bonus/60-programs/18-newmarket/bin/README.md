@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: Line 92: Spectrum 48K ROM syntax error 0B near character 13
-- TZX: failed (exit 1); BAS/TZX: Line 92: semantic token/character difference at byte 4; BAS 544F20363AD978 versus TZX CC363AD978
+- BAS: failed (exit 1); rbc: 18-newmarket.bas: HiSoft v1.1 compile failed: Not supported line 5150: statement 0xf7
+- TZX: failed (exit 1); rbc: 18-newmarket.bas: HiSoft v1.1 compile failed: Not supported line 5150: statement 0xf7
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

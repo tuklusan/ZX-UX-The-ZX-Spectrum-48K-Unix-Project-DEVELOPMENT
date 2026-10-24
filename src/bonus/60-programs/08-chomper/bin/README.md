@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: Line 100: Spectrum 48K ROM syntax error 0B near character 34
-- TZX: failed (exit 1); BAS/TZX: Line 100: semantic token/character difference at byte 18; BAS 5448454EF1783D78 versus TZX CBF1783D782B313A
+- BAS: failed (exit 1); rbc: src/bonus/60-programs/08-chomper/BASIC/08-chomper.bas needs 13580 bytes of native memory (limit 11000)
+- TZX: failed (exit 1); rbc: build/tmp/rbc-round2/08-chomper/from-tape/08-chomper.bas needs 13580 bytes of native memory (limit 11000)
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

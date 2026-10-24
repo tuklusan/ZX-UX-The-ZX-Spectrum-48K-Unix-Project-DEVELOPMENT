@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: 'ascii' codec can't decode byte 0xe2 in position 4632: ordinal not in range(128)
-- TZX: failed (exit 1); 'ascii' codec can't decode byte 0xe2 in position 4632: ordinal not in range(128)
+- BAS: failed (exit 1); rbc: ZX-UX memory check stopped line 615: USR raw_machine_code_address. 2 blocked operation(s); use --memory-policy review only for isolated tests
+- TZX: failed (exit 1); rbc: ZX-UX memory check stopped line 615: USR raw_machine_code_address. 2 blocked operation(s); use --memory-policy review only for isolated tests
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

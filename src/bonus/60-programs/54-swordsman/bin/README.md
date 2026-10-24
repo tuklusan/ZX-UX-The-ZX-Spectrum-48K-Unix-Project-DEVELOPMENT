@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: Line 110: Spectrum 48K ROM syntax error 0B near character 14
-- TZX: failed (exit 1); BAS/TZX: Line 110: semantic token/character difference at byte 4; BAS 544F20393AE35628 versus TZX CC393AE356284A29
+- BAS: failed (exit 1); rbc: Line 4106: POKE 23692 targets protected machine state
+- TZX: failed (exit 1); TZX conversion: Line 10: semantic token/character difference at byte 1; BAS 2020202053574F52 versus TZX 53574F5244534D41
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 

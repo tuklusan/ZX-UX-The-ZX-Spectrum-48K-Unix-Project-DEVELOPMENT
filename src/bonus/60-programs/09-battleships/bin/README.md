@@ -2,7 +2,7 @@
 
 Independent original BAS and tokenized TZX results using the same RBC revision.
 
-- BAS: failed (exit 1); rbc: Line 140: Spectrum 48K ROM syntax error 0B near character 35
-- TZX: failed (exit 1); BAS/TZX: Line 140: semantic token/character difference at byte 19; BAS 5448454EF1513D35 versus TZX CBF1513D35
+- BAS: failed (exit 1); rbc: src/bonus/60-programs/09-battleships/BASIC/09-battleships.bas needs 12749 bytes of native memory (limit 11000)
+- TZX: failed (exit 1); rbc: build/tmp/rbc-round2/09-battleships/from-tape/09-battleships.bas needs 12749 bytes of native memory (limit 11000)
 - Comparison: unavailable; at least one path failed or fidelity could not be proved
 
