@@ -1,0 +1,49 @@
+name: RBC upeepz80 symbolic stage probe (temporary)
+on:
+  push:
+    paths: [.github/workflows/rbc-upeepz80-stage-probe-temp.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Acquire pinned tools
+        run: |
+          git clone -q https://github.com/tuklusan/upeepz80.git /tmp/upeep
+          git -C /tmp/upeep checkout -q --detach a48d725704b132c3ff23ac77232a3a412b56b15f
+          git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git /tmp/hisoft
+          git -C /tmp/hisoft checkout -q --detach 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+      - name: Inspect candidate codegen fragments before assembler
+        env:
+          PYTHONPATH: /tmp/upeep:/tmp/hisoft
+        run: |
+          python3 - <<'PY'
+          import ast,re
+          from pathlib import Path
+          from upeepz80 import PeepholeOptimizer
+          from z80asm import asm
+          root=ast.parse(Path('/tmp/hisoft/compiler.py').read_text())
+          total=0; candidate=0
+          for node in ast.walk(root):
+              if not isinstance(node,ast.Call) or not isinstance(node.func,ast.Attribute) or node.func.attr!='emit' or not node.args or not isinstance(node.args[0],ast.Constant): continue
+              v=node.args[0].value
+              if not isinstance(v,str) or '{}' in v or '{:' in v: continue
+              try:
+                  original=asm(v)
+              except Exception: continue
+              total+=1
+              if any(w in ('call','jp','jr','djnz','ret','rst','defb','defw') for w in re.findall(r'\b[a-z]+\b',v)): continue
+              text='\n'.join('    '+s.strip() for s in v.split(';') if s.strip())+'\n'
+              try:
+                  o=PeepholeOptimizer()
+                  new=o.optimize(text)
+                  newdata=asm(';'.join(line.split(';')[0].strip() for line in new.splitlines() if line.split(';')[0].strip()))
+              except Exception as e:
+                  print('SKIP', node.lineno, str(e)[:120]);continue
+              if len(newdata)<len(original):
+                  candidate+=1;print('SHRINK',node.lineno,repr(v),'old',len(original),'new',len(newdata),repr(new),o.stats)
+          print('Candidate patterns',candidate,'out of',total)
+          PY
