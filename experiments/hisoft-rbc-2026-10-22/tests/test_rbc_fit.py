@@ -15,7 +15,9 @@ class FitTests(unittest.TestCase):
         # A full patch is exercised by the normal GitHub compiler suite.
         text = Path(__file__).resolve().parents[1] / 'stage' / 'rbc_fit.py'
         rules = text.read_text()
-        self.assertIn('use_rom_font=args.fit', rules)
+        self.assertIn('use_rom_font=False', rules)
+        self.assertIn('use_rom_font=True', rules)
+        self.assertIn('memory_required(rld.parse_ssx(ssx),len(ssx)) > args.max', rules)
         self.assertIn('if not use_rom_font', rules)
         self.assertIn('memory_required(rld.parse_ssx(ssx)', rules)
         self.assertIn('native-memory-limit', rules)

@@ -1,9 +1,8 @@
-"""Install native RBC defaults, memory sizing, and RCC-compatible output modes.
+"""Configure RBC output, exact memory fitting, and process-owned fonts.
 
-The standard Spectrum ROM already holds 768 printable font bytes. With the
-frozen 48K ROM, ordinary BASIC can point CHARS there instead of carrying a
-second full copy. Programs that edit printable glyphs keep their private bank.
-No code backend is invented: RBC still emits native HiSoft machine code.
+Prefer the supplied VGA 8x8 bitmap when it fits the native memory limit;
+fall back to the Spectrum ROM only when necessary for safe native loading.
+Program-owned modified glyph banks always remain private.
 """
 from __future__ import annotations
 
@@ -75,7 +74,12 @@ def patched(source: str) -> str:
            "    try:")
     change('        ssx,diagnostics=build_ssx(builds,font,rld,args.stack)',
            "        ssx,diagnostics=build_ssx(builds,font,rld,args.stack,\n"
-           "               use_rom_font=args.fit and not meta.get('private_font_requested',False))\n"
+           "               use_rom_font=False)\n"
+           "        if (args.fit and args.max and\n"
+           "                not meta.get('private_font_requested',False) and\n"
+           "                memory_required(rld.parse_ssx(ssx),len(ssx)) > args.max):\n"
+           "            ssx,diagnostics=build_ssx(builds,font,rld,args.stack,\n"
+           "                use_rom_font=True)\n"
            "        if args.upeepz80:\n"
            "            diagnostics['upeepz80'] = meta.get('upeepz80_codegen')\n"
            "        measured = memory_required(rld.parse_ssx(ssx), len(ssx))\n"
