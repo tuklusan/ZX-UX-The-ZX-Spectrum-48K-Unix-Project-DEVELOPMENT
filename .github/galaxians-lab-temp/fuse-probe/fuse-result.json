@@ -1,0 +1,19 @@
+{
+  "cmd": [
+    "fuse-sdl",
+    "--machine",
+    "48",
+    "--auto-load",
+    "--no-sound",
+    "--speed",
+    "400",
+    "--tape",
+    ".github/galaxians-lab-temp/fuse-probe/HiSoft_BASIC.tap"
+  ],
+  "pid": 2965,
+  "running": true,
+  "window_titles": [
+    "Fuse"
+  ],
+  "screenshot": ".github/galaxians-lab-temp/fuse-probe/after-compiler-load.png"
+}
