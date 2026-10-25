@@ -58,7 +58,10 @@ def guarded_val_bytes():
     emit(0x06, 0x1D, 0xC3, 0xDE, 0x35)  # invoke ROM VAL X$
     mark('blocked')
     emit(0xE1, 0xD1, 0xC1, 0xF1)
-    emit(0xCF, 0x0A)                # Spectrum handled invalid-argument error
+    # ZX-UX intercepts ROM RST 8 as a kernel error, not a process error.
+    # Release the screen and terminate the current process with status 10.
+    emit(0x21, 0, 0, 0x3E, 39, 0xCD, 3, 0x60)
+    emit(0x21, 10, 0, 0x3E, 1, 0xC3, 3, 0x60)
     for where, name in jumps:
         distance = labels[name] - (where + 1)
         if not -128 <= distance <= 127:

@@ -11,17 +11,11 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - name: Stage exact candidate VAL safety source and tests
+      - name: Verify exact tracked VAL safety source and tests
         run: |
           set -e
-          fetch_checked() {
-            curl -fsSL --retry 2 --max-time 25 \
-              "https://api.github.com/repos/tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT/git/blobs/$2" \
-              | python3 -c 'import json,sys,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' > "$1"
-            test "$(git hash-object "$1")" = "$2"
-          }
-          fetch_checked experiments/hisoft-rbc-2026-10-22/stage/spectrum_runtime.py 1575b3bc879f70e93ff54eecb2f9bbd35f462bcd
-          fetch_checked experiments/hisoft-rbc-2026-10-22/tests/test_spectrum_runtime.py 253badf7b25d25d4a9306fbe83ec9779d775eb63
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/stage/spectrum_runtime.py)" = 1575b3bc879f70e93ff54eecb2f9bbd35f462bcd
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/tests/test_spectrum_runtime.py)" = 253badf7b25d25d4a9306fbe83ec9779d775eb63
       - name: Obtain pinned HiSoft and original compiler tape
         run: |
           git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git upstream-pyhsb
