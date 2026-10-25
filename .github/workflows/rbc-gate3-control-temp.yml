@@ -1,4 +1,4 @@
-name: RBC Gate 3 dynamic control trial
+name: RBC Gate 3 native protected memory trial
 on:
   push:
     paths:
@@ -68,57 +68,24 @@ jobs:
               raise RuntimeError('Rebuilt system kernel metadata missing')
           print('Native kernel and frozen tape exact match')
           PYBUILD
-      - name: Validate native computed branches and modified loops
+      - name: Stage exact tested native control source
+        run: |
+          set -e
+          mkdir -p build/tmp/rbc-gate3-native/checked-sources
+          curl -fsSL --retry 2 --max-time 25 \
+            https://api.github.com/repos/tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT/git/blobs/ec1a8d14b3662fad26948822cf76758510409d82 \
+            | python3 -c 'import json,sys,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' \
+            > experiments/hisoft-rbc-2026-10-22/stage/gate3_native_control.py
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/stage/gate3_native_control.py)" = ec1a8d14b3662fad26948822cf76758510409d82
+          cp experiments/hisoft-rbc-2026-10-22/stage/gate3_native_control.py build/tmp/rbc-gate3-native/checked-sources/
+      - name: Validate native dynamic flow and protected memory
         env:
           PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk:experiments/hisoft-rbc-2026-10-22/stage
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import subprocess,sys,json,hashlib
-          import rvm,rld
-          work=Path('build/tmp/rbc-run-trial')
-          work.mkdir(parents=True, exist_ok=True)
-          corpus={
-           'goto-variable':('10 LET A=100\n20 GO TO A\n30 POKE USR "a",1\n40 GO TO 40\n100 POKE USR "a",17\n110 GO TO 110\n',17),
-           'gosub-variable':('10 LET A=100\n20 GO SUB A\n30 POKE USR "a",27\n40 GO TO 40\n100 RETURN\n',27),
-           'for-index-modified':('10 LET V=0\n20 FOR I=1 TO 7\n30 LET V=V+1\n40 LET I=I+1\n50 NEXT I\n60 POKE USR "a",V\n70 GO TO 70\n',4),
-           'poke-variable':('10 LET A=USR "a"+3\n20 POKE A,77\n30 GO TO 30\n',77),
-          }
-          results={}
-          for name,(listing,expected) in corpus.items():
-              src=work/(name+'.bas')
-              src.write_text(listing,encoding='ascii')
-              out=work/(name+'.ssx')
-              command=[sys.executable,'trial-result/rbc/rbc.py',str(src),
-                       '--frontend','upstream-pyhsb','--sdk','src/zx-ux-sdk',
-                       '--rom','src/zx-ux-sdk/rom/48.rom','--tape','trial-result/hisoft48.tap',
-                       '--max','12000','-o',str(out)]
-              proc=subprocess.run(command,capture_output=True,text=True,timeout=90)
-              row={'compile_exit':proc.returncode,'compiler_stdout':proc.stdout[-1200:],'compiler_stderr':proc.stderr[-1200:]}
-              if proc.returncode==0 and out.is_file():
-                  data=out.read_bytes()
-                  obj=rld.parse_ssx(data)
-                  row.update(file=len(data),image=len(obj['image']),bss=obj['bss'],stack=obj['stack'],
-                             total=len(obj['image'])+obj['bss']+obj['stack'],sha256=hashlib.sha256(data).hexdigest())
-                  try:
-                      vm=rvm.run_kernel(out,frames=470,system='build/out/ZX-UX.tzx',cache=True)
-                      memory=vm.session.m.mem
-                      udg=memory[0x5c7b]+256*memory[0x5c7c]
-                      value=memory[udg+(3 if name=='poke-variable' else 0)]
-                      row.update(started=bool(vm.fg and vm.fg.started is not None),reason=vm.why,
-                                 observed_udg_byte=value,expected_udg_byte=expected)
-                      row['pass']=bool(row['started'] and vm.why=='frames' and value==expected)
-                  except Exception as exc:
-                      row.update(pass_=False,runtime_error=f'{type(exc).__name__}: {exc}')
-              results[name]=row
-              print('GATE3_NATIVE',name,json.dumps(row),flush=True)
-          (work/'gate3-controls.json').write_text(json.dumps(results,indent=2)+'\n')
-          if any(not x.get('pass') for x in results.values()):
-              raise RuntimeError('At least one native control-flow probe failed')
-          PY
+          python3 experiments/hisoft-rbc-2026-10-22/stage/gate3_native_control.py --workspace build/tmp/rbc-gate3-native --system build/out/ZX-UX.tzx
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: rbc-gate3-control-evidence
-          path: build/tmp/rbc-run-trial/
+          name: rbc-gate3-protected-evidence
+          path: build/tmp/rbc-gate3-native/
           retention-days: 1
