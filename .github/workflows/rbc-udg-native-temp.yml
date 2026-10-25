@@ -24,6 +24,7 @@ jobs:
           }
           fetch_blob experiments/hisoft-rbc-2026-10-22/stage/safe_usr_rt.py 6507a4cf0c16c4cd6c5ff35d3545c07b0483b989
           fetch_blob experiments/hisoft-rbc-2026-10-22/tests/test_safe_usr_native_z80.py cead53502e54b62ebc14890e680f931fe20a8fd1
+          fetch_blob experiments/hisoft-rbc-2026-10-22/tests/test_safe_usr_rt.py babbdb473ef6a7d087879c6c2349dff50a09d446
           fetch_blob experiments/hisoft-rbc-2026-10-22/stage/gate3_native_control.py ce18a8d9a0ba96f016c225b61ba9748b7d1e489d
       - name: Obtain pinned HiSoft and original compiler tape
         run: |
