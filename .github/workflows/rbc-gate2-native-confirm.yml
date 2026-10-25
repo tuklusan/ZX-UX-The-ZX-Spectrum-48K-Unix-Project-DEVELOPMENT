@@ -79,6 +79,44 @@ jobs:
               raise RuntimeError('Rebuilt system kernel metadata missing')
           print('Native kernel and frozen tape exact match')
           PYBUILD
+      - name: Run typed UDG original-language native fixture
+        env:
+          PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk
+        run: |
+          python3 - <<'PYUSR'
+          from pathlib import Path
+          import subprocess,sys,hashlib
+          import rld,rvm
+          work=Path('build/tmp/rbc-gate2')
+          listing=work/'typed-udg.bas'
+          listing.write_text('10 LET M=2\n20 LET A$="a"\n30 LET B=USR A$\n40 POKE B+7,254\n50 POKE USR CHR$(143+M)+6,253\n60 POKE USR "c"+5,252\n70 GO TO 70\n',encoding='ascii')
+          def compile_source(path,name):
+              output=work/(name+'.ssx')
+              cmd=[sys.executable,'trial-result/rbc/rbc.py',str(path),
+                   '--frontend','upstream-pyhsb','--sdk','src/zx-ux-sdk',
+                   '--rom','src/zx-ux-sdk/rom/48.rom',
+                   '--tape','trial-result/hisoft48.tap','-o',str(output)]
+              return subprocess.run(cmd,text=True,capture_output=True),output
+          res,ssx=compile_source(listing,'typed-udg')
+          print('TYPED_NATIVE_COMPILE',res.returncode,res.stdout,res.stderr,flush=True)
+          if res.returncode!=0 or not ssx.is_file(): raise RuntimeError('string-valued USR native compile failed')
+          data=ssx.read_bytes()
+          parsed=rld.parse_ssx(data)
+          result=rvm.run_kernel(ssx,frames=500,system='build/out/ZX-UX.tzx',cache=True)
+          if result.why!='frames' or not (result.fg and result.fg.started is not None):
+              raise RuntimeError('typed USR failed to run under the actual ZX-UX kernel')
+          mem=result.session.m.mem
+          udg=mem[0x5c7b]+256*mem[0x5c7c]
+          values=tuple(mem[udg+i] for i in (7,14,21))
+          print('TYPED_UDG_NATIVE',hex(udg),values,'image',len(parsed['image']),'bss',parsed['bss'],'stack',parsed['stack'],flush=True)
+          if values!=(254,253,252): raise RuntimeError('string-valued USR did not update its own three UDG bytes')
+          bad=work/'numeric-usr-val.bas'
+          bad.write_text('10 LET A$="24000"\n20 LET X=USR VAL A$\n30 STOP\n',encoding='ascii')
+          rejected,output=compile_source(bad,'numeric-usr-val')
+          print('NUMERIC_USR_VAL_REJECT',rejected.returncode,rejected.stderr,flush=True)
+          if rejected.returncode==0 or output.exists():
+              raise RuntimeError('numeric USR VAL bypassed machine-code safety gate')
+          PYUSR
       - name: Attempt native ZX-UX starts of linked games
         if: always()
         env:
