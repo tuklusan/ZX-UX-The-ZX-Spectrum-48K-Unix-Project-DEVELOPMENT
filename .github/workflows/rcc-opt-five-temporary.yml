@@ -1,0 +1,189 @@
+name: Temporary RCC five-source optimizer comparison
+on:
+  push:
+    paths:
+      - '.github/workflows/rcc-opt-five-temporary.yml'
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 32
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch exact upeepz80 revision
+        run: |
+          git clone --quiet https://github.com/tuklusan/upeepz80.git /tmp/upeepz80
+          git -C /tmp/upeepz80 checkout --quiet a48d725704b132c3ff23ac77232a3a412b56b15f
+          test "$(git -C /tmp/upeepz80 rev-parse HEAD)" = a48d725704b132c3ff23ac77232a3a412b56b15f
+      - name: Bounded compiler, linker and emulator comparison
+        timeout-minutes: 29
+        run: |
+          import collections, hashlib, json, os, pathlib, re, subprocess, sys, tempfile, time, traceback
+          root=pathlib.Path.cwd()
+          sdk=root/"src/zx-ux-sdk"
+          sys.path.insert(0,str(sdk))
+          sys.path.insert(0,"/tmp/upeepz80")
+          from rcc import driver, z80gen
+          import rld
+          from upeepz80 import PeepholeOptimizer
+          sources=[
+           ("chess","games"),("3dpaint","games"),("write48","apps"),
+           ("invaders","games"),("hanoi","demos"),
+          ]
+          work=pathlib.Path("rcc-opt-five-results")
+          work.mkdir(exist_ok=True)
+          orig_compile=driver.compile_to_asm
+          orig_emit=z80gen.Gen.emit
+          j_re=re.compile(r"^(\s*)j(\s+)([^;\n]+)(.*)$",re.I)
+          jp_re=re.compile(r"^(\s*)jp(\s+)([^;\n]+)(.*)$",re.I)
+          directive_re=re.compile(r"^\s*(?:section|align|db|defb|dw|defw|ds|defs|defm|global|public|extern)\b",re.I)
+          def digest(data): return hashlib.sha256(data).hexdigest()
+          def metric(binary):
+           h=rld.parse_ssx(binary)
+           return {"file":len(binary),"image":len(h["image"]),"bss":h["bss"],"stack":h["stack"],
+                   "heap":h["heap"] if "heap" in h else None,
+                   "total":len(h["image"])+h["bss"]+h["stack"],
+                   "admission":max(len(h["image"])+h["bss"]+h["stack"],len(binary)),
+                   "sha256":digest(binary)}
+          def tune_emit(self,*ins):
+           # Generator-level transformations only, at emission time. No removal across labels or data.
+           for insn in ins:
+            new="\t"+insn
+            old=self.out[-1].strip().lower() if self.out else ""
+            now=insn.strip().lower()
+            if now in ("or a","and a") and old==now:
+             continue
+            if now=="or a" and old=="ld a,0":
+             self.out[-1]="\txor a"; continue
+            if now=="or a" and old=="xor a":
+             continue
+            if re.fullmatch(r"ld ([abcdehl]),\1",now):
+             continue
+            if (old,now) in (("inc hl","dec hl"),("dec hl","inc hl"),
+                              ("inc de","dec de"),("dec de","inc de"),
+                              ("inc bc","dec bc"),("dec bc","inc bc")):
+             self.out.pop(); continue
+            self.out.append(new)
+          def safe_up(text):
+           # Adapt RCC's relaxable "j" only for analysis; restore original relaxable forms.
+           j_operands=set()
+           lines=[]
+           for line in text.splitlines():
+            m=j_re.match(line)
+            if m:
+             j_operands.add(re.sub(r"\s+","",m.group(3)).lower())
+             line=m.group(1)+"jp"+m.group(2)+m.group(3)+m.group(4)
+            lines.append(line)
+           adapted="\n".join(lines)
+           opt=PeepholeOptimizer()
+           opt.patterns=[p for p in opt.patterns if p.name not in ("tail_call","push_sta_pop")]
+           # These require compiler-specific stack and alias validation beyond this bounded probe.
+           opt._dead_store_elimination=lambda x:(x,False)
+           # RCC's ras already relaxes "j"; do not replace it with separately computed JR offsets.
+           opt._convert_to_relative_jumps=lambda x:x
+           changed=opt.optimize(adapted)
+           restored=[]
+           for line in changed.splitlines():
+            m=jp_re.match(line)
+            if m and re.sub(r"\s+","",m.group(3)).lower() in j_operands:
+             line=m.group(1)+"j"+m.group(2)+m.group(3)+m.group(4)
+            restored.append(line)
+           original_data=[l.strip() for l in text.splitlines() if directive_re.match(l)]
+           optimized_data=[l.strip() for l in restored if directive_re.match(l)]
+           if original_data!=optimized_data:
+            raise RuntimeError("unsafe upeep change to section, resource, or assembler directive")
+           return "\n".join(restored),dict(opt.stats)
+          def build_variant(src,opts,variant):
+           stats={}
+           def transform(path,options):
+            text,prog,gen=orig_compile(path,options)
+            if variant=="upeep":
+             text,safe_stats=safe_up(text)
+             stats.update(safe_stats)
+            return text,prog,gen
+           driver.compile_to_asm=transform if variant=="upeep" else orig_compile
+           z80gen.Gen.emit=tune_emit if variant=="generator" else orig_emit
+           try: return driver.build(str(src),opts),stats
+           finally:
+            driver.compile_to_asm=orig_compile
+            z80gen.Gen.emit=orig_emit
+          def native_probe(ssx,screen):
+           args=[sys.executable,str(sdk/"rvm.py"),"--headless","--mute","--frames","90",
+                 "--scr",str(screen),str(ssx)]
+           try:
+            p=subprocess.run(args,text=True,capture_output=True,timeout=80,cwd=root)
+            return {"exit":p.returncode,"stdout":p.stdout[-850:],"stderr":p.stderr[-850:],
+                    "screen_sha256":digest(screen.read_bytes()) if screen.exists() else None}
+           except subprocess.TimeoutExpired as e:
+            return {"timeout_seconds":80,"diagnostic":str(e)}
+          def isolate_regression():
+           cmd=[sys.executable,"-m","unittest","discover","-s","tests","-p","test_maze_tty_isolation.py","-v"]
+           try:
+            p=subprocess.run(cmd,text=True,capture_output=True,timeout=125,cwd=root)
+            return {"exit":p.returncode,"output":(p.stdout+p.stderr)[-2500:],
+                    "note":"separate SDK regression; not proof of candidate cross-process isolation"}
+           except subprocess.TimeoutExpired: return {"timeout_seconds":125}
+          entries=[]
+          for name,category in sources:
+           src=root/"src/assets/c48-src"/category/(name+".c")
+           entry={"program":name,"source_path":str(src.relative_to(root)),
+                  "source_bytes":src.stat().st_size,"source_sha256":digest(src.read_bytes()),"variants":{}}
+           start=time.monotonic()
+           print("PROGRAM_START",name,flush=True)
+           try:
+            options={"lib":False,"heap":1024,"stack":None,"udgs":None,"module":False}
+            selected,trials,modes=driver.find_smallest(str(src),options,driver.build,max_candidates=128,max_passes=3)
+            data,g,txt,obj,need=selected
+            base_bin=work/(name+"-rcc.ssx")
+            base_bin.write_bytes(data)
+            entry["fit_trials"]=trials
+            entry["bytecode_functions"]=sorted(modes)
+            entry["variants"]["rcc"]={"metric":metric(data),"asm_sha256":digest(txt.encode())}
+            selected_opts=dict(options)
+            if modes: selected_opts["bytecode"]=modes
+            for variant in ("upeep","generator"):
+             try:
+              (vdata,vg,vtext,vobj,vneed),stats=build_variant(src,selected_opts,variant)
+              out=work/(name+"-"+variant+".ssx")
+              out.write_bytes(vdata)
+              entry["variants"][variant]={"metric":metric(vdata),"asm_sha256":digest(vtext.encode()),
+                                          "optimizer_stats":stats,"saved_file_bytes":len(data)-len(vdata),
+                                          "saved_total_bytes":entry["variants"]["rcc"]["metric"]["total"]-metric(vdata)["total"]}
+             except Exception as e:
+              entry["variants"][variant]={"error":repr(e),"traceback":traceback.format_exc(limit=4)}
+            for variant in ("rcc","upeep","generator"):
+             if "metric" in entry["variants"].get(variant,{}):
+              ssx=work/(name+"-"+variant+".ssx")
+              entry["variants"][variant]["runtime"]=native_probe(ssx,work/(name+"-"+variant+".scr"))
+            baseline=entry["variants"]["rcc"]["runtime"]
+            for variant in ("upeep","generator"):
+             v=entry["variants"].get(variant,{})
+             if "runtime" in v:
+              rr=v["runtime"]
+              v["same_exit"]=rr.get("exit")==baseline.get("exit") and rr.get("exit")==0
+              v["same_screen_at_90_frames"]=bool(rr.get("screen_sha256")) and rr["screen_sha256"]==baseline.get("screen_sha256")
+              v["same_ram_reservation"]=v["metric"]["bss"]==entry["variants"]["rcc"]["metric"]["bss"] and v["metric"]["stack"]==entry["variants"]["rcc"]["metric"]["stack"]
+           except Exception as e:
+            entry["error"]=repr(e);entry["traceback"]=traceback.format_exc(limit=6)
+           entry["elapsed_s"]=round(time.monotonic()-start,2)
+           entries.append(entry)
+           print("PROGRAM_RESULT",json.dumps(entry,sort_keys=True),flush=True)
+           (work/"results.json").write_text(json.dumps(entries,indent=2,sort_keys=True)+"\n")
+          print("ISOLATION_REGRESSION",json.dumps(isolate_regression()),flush=True)
+          print("FINAL_PROGRAM_COUNT",len(entries),flush=True)
+          print("NOTE Variant benchmarks use RCC's original chosen native/bytecode mix; they do not rerun a new search for each optimizer.",flush=True)
+          print("NOTE Equal 90-frame snapshots are smoke checks, not full gameplay or candidate-specific isolation proof.",flush=True)
+          failed=any("error" in x or any("metric" not in x["variants"].get(v,{}) for v in ("rcc","upeep","generator")) for x in entries)
+          if failed: raise SystemExit(1)
+          
+      - name: Save temporary results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rcc-opt-five-results
+          path: rcc-opt-five-results/
+          retention-days: 2
+          if-no-files-found: warn
