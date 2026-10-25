@@ -74,6 +74,8 @@ def install(compiler_module):
     @wraps(original_reset)
     def reset(self, *args, **kwargs):
         self._zxux_capture = Capture()
+        if hasattr(self, 'm'):
+            self.m._zxux_capture_owner = self
         return original_reset(self, *args, **kwargs)
     cls.reset = reset
 
@@ -107,6 +109,26 @@ def install(compiler_module):
             return call
         setattr(cls, method, wrapping(original, kind, method))
     cls._zxux_symbolic_capture_installed = True
+
+    # HiSoft runtime emitters execute in the Z80 model and copy bytes into
+    # Machine.far without passing Compiler.emit(). Treat those bytes as an
+    # opaque runtime section until their source becomes symbolic too.
+    runtime = getattr(compiler_module, 'rtlib', None)
+    machine_cls = getattr(runtime, 'Machine', None)
+    if machine_cls is not None and not getattr(machine_cls, '_zxux_runtime_capture_installed', False):
+        original_runtime = machine_cls.run_emitter
+        @wraps(original_runtime)
+        def run_emitter(self, n, pc, counting, code_base):
+            end = original_runtime(self, n, pc, counting, code_base)
+            owner = getattr(self, '_zxux_capture_owner', None)
+            if owner is not None and not counting and not self.de_flags & 1:
+                trace = getattr(owner, '_zxux_capture', None)
+                if trace is not None:
+                    trace.events.append(Emission(pc, 'runtime-opaque', f'RT{n}',
+                                                 bytes(self.far[pc:end])))
+            return end
+        machine_cls.run_emitter = run_emitter
+        machine_cls._zxux_runtime_capture_installed = True
 
 
 def audit_result(compiler, result):

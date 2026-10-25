@@ -97,6 +97,29 @@ class Tests(unittest.TestCase):
         c.reset(None)
         self.assertEqual(c._zxux_capture.events, [])
 
+    def test_runtime_emitter_is_counted_but_not_optimized(self):
+        class Machine:
+            def __init__(self):
+                self.de_flags = 0
+                self.far = bytearray(16)
+            def run_emitter(self, n, pc, counting, code_base):
+                self.far[pc:pc + 2] = b'\xc9\x00'
+                return pc + 2
+        class Comp(Mock):
+            _zxux_symbolic_capture_installed = False
+            def __init__(self):
+                self.m = Machine()
+                super().__init__()
+        install(types.SimpleNamespace(Compiler=Comp, rtlib=types.SimpleNamespace(Machine=Machine)))
+        c = Comp()
+        end = c.m.run_emitter(7, 0, 0, 0)
+        self.assertEqual(end, 2)
+        self.assertEqual(c._zxux_capture.events[0].kind, 'runtime-opaque')
+        self.assertEqual(c._zxux_capture.events[0].source, 'RT7')
+        report = c._zxux_capture.audit(bytes(c.m.far[:2]))
+        self.assertEqual(report['uncovered_bytes'], 0)
+        self.assertFalse(report['safe_to_optimize'])
+
     def test_no_compiler_patch_twice(self):
         c = Mock()
         install(types.SimpleNamespace(Compiler=Mock))
