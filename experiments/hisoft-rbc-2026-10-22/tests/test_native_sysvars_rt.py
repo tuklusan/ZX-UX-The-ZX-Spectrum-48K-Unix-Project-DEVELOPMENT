@@ -22,10 +22,22 @@ class NativeSysvars(unittest.TestCase):
         self.cpu = Z80(self.mem)
         self.cpu.sp = 0x9000
         self.ticks = 0
+        self.screen_releases = 0
+        self.runtime_error_statuses = []
         def syscall(cpu):
-            self.assertEqual(cpu.a,38)
-            cpu.hl = self.ticks
+            if cpu.a == 38:
+                cpu.hl = self.ticks
+            elif cpu.a == 39:
+                self.assertEqual(cpu.hl, 0)
+                self.screen_releases += 1
+            elif cpu.a == 1:
+                self.runtime_error_statuses.append(cpu.hl)
+                raise PermissionError('protected address native exit')
+            else:
+                self.fail('unexpected ZX-UX syscall')
         self.cpu.hooks[0x6003] = syscall
+        # Calling ROM RST 8 would panic the kernel, not exit the process.
+        self.cpu.hooks[8] = lambda cpu: self.fail('ROM error reached kernel')
         self.rom_before = {addr: 0xcc for addr in (PIP,FLAGS2,*FRAMES)}
         for addr,byte in self.rom_before.items(): self.mem[addr] = byte
 
@@ -65,9 +77,6 @@ class NativeSysvars(unittest.TestCase):
         self.assertEqual(self.mem[0x5801],0x2f)
 
     def test_rejects_protected_kernel_peek_and_poke(self):
-        def unsafe(cpu):
-            raise PermissionError('protected memory rejected by native runtime')
-        self.cpu.hooks[8] = unsafe
         for address in (0x5b00, 0x5c00, 0x6003, 0xa000):
             with self.subTest(address=address, operation='PEEK'):
                 with self.assertRaises(PermissionError):
@@ -75,6 +84,8 @@ class NativeSysvars(unittest.TestCase):
             with self.subTest(address=address, operation='POKE'):
                 with self.assertRaises(PermissionError):
                     self.poke(address, 0x65)
+        self.assertEqual(self.screen_releases, 8)
+        self.assertEqual(self.runtime_error_statuses, [11] * 8)
         self.assertEqual({a:self.mem[a] for a in self.rom_before},self.rom_before)
 
     def test_allow_private_process_data_but_not_other_memory(self):
@@ -82,7 +93,6 @@ class NativeSysvars(unittest.TestCase):
         # Simulate code at 0x7000 and a process BSS offset of 0x1000.
         self.mem[self.peek_addr:self.peek_addr+256] = _native_peek(asm,0x1000,0x7000,0x1008)
         self.mem[self.poke_addr:self.poke_addr+256] = _native_poke(asm,0x1000,0x7000,0x1008,entry=self.poke_addr-self.peek_addr)
-        self.cpu.hooks[8] = lambda cpu: (_ for _ in ()).throw(PermissionError('out of process'))
         self.mem[self.base] = 0x66
         self.assertEqual(self.peek(self.base), 0x66)
         self.poke(self.base, 0x54)
@@ -98,9 +108,6 @@ class NativeSysvars(unittest.TestCase):
         self.assertEqual(self.mem[23556],42)
 
     def test_rom_writes_are_blocked_but_rom_reads_work(self):
-        def unsafe(cpu):
-            raise PermissionError('write to ROM rejected')
-        self.cpu.hooks[8] = unsafe
         self.mem[0x1234] = 0x55
         self.assertEqual(self.peek(0x1234), 0x55)
         with self.assertRaises(PermissionError):

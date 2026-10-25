@@ -97,6 +97,16 @@ def _clock_sync(e):
     e.op('pop hl; pop de; pop bc; pop af')
 
 
+def _native_error_exit(e):
+    """Return ROM error 11 as native process status, without ROM RST 8.
+
+    The ZX-UX kernel traps ROM errors as a kernel panic. Give the screen
+    back and use the native exit system call instead.
+    """
+    e.op('ld hl,0; ld a,39; call $6003')
+    e.op('ld hl,11; ld a,1; jp $6003')
+
+
 def _process_address_check(e, base, total, accepted, prefix=""):
     """Let unmodified RAM instructions see only native process-owned memory."""
     if total < 1:
@@ -112,7 +122,8 @@ def _process_address_check(e, base, total, accepted, prefix=""):
     e.jr('range_ok'+prefix,'c')
     e.jr('range_ok'+prefix,'z')
     e.label('out_of_process'+prefix)
-    e.op('pop de; rst 8; defb $0b')
+    e.op('pop de')
+    _native_error_exit(e)
     e.label('range_ok'+prefix)
     e.op('pop de')
     e.jr(accepted)
@@ -333,7 +344,7 @@ def _native_poke(asm, base, load, total=0, font_alias=None, entry=0):
     e.label('write_public')
     e.op('ld (hl),e; ret')
     e.label('blocked_rom')
-    e.op('rst 8; defb $0b')
+    _native_error_exit(e)
     e.label('chars0')
     e.op('ld a,e')
     e.address('ld ($0000),a',8)

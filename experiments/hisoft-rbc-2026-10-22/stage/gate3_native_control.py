@@ -65,6 +65,7 @@ def run(root: Path, workspace: Path, system: Path) -> dict:
                     if offset is None:
                         row['kernel_code_intact'] = memory[24576] != 253
                         row['pass'] = (started and vm.why == 'exit'
+                                       and row['status'] == 11
                                        and row['kernel_code_intact'])
                     else:
                         udg = memory[0x5c7b] + 256 * memory[0x5c7c]
