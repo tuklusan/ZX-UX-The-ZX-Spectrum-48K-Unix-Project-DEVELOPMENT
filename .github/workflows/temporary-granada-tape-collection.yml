@@ -16,6 +16,7 @@ jobs:
       - name: Retrieve and validate Granada tape images
         shell: bash
         run: |
+          python - <<'PY'
           import hashlib,html.parser,io,json,os,re,time,urllib.error,urllib.parse,urllib.request,zipfile
           from pathlib import Path
           class PageLinks(html.parser.HTMLParser):
@@ -147,6 +148,7 @@ jobs:
                   if p.is_file():out.write(p,p.relative_to(tapes))
               out.write("granada-manifest.json","MANIFEST.json")
           print("FINAL_RESULT",json.dumps({"catalogue":len(entries),"links":manifest["tape_links_found"],"saved":manifest["tapes_saved"],"errors":len(manifest["errors"]),"skipped":len(manifest["skipped"]),"zip_bytes":Path("Granada-Publishing-Tapes.zip").stat().st_size,"zip_sha256":hashlib.sha256(Path("Granada-Publishing-Tapes.zip").read_bytes()).hexdigest()},sort_keys=True),flush=True)
+          PY
       - name: Upload Granada archive
         if: always()
         uses: actions/upload-artifact@v4
