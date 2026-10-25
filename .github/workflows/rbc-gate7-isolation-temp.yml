@@ -114,6 +114,59 @@ jobs:
               print('GATE7_DIAGNOSTIC',name,json.dumps(row),flush=True)
           (folder/'results.json').write_text(json.dumps(result,indent=2)+'\n')
           PY
+      - name: Trace native ROM workspace across sequential executions
+        if: always()
+        env:
+          PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk:experiments/hisoft-rbc-2026-10-22/stage
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import rvm
+          root=Path('build/tmp/rbc-gate7')
+          options=rvm.Options()
+          options.prog=str(root/'stop-and-font.ssx')
+          options.system='build/out/ZX-UX.tzx'
+          options.cache=True
+          runner=rvm.Runner(options);runner.start()
+          session=runner.session
+          def snapshot(tag,job=None):
+              mem=session.m.mem
+              def word(i):return mem[i]+256*mem[i+1]
+              glyph=word(0x5c7b)
+              start=word(0x5c63);end=word(0x5c65)
+              row={'tag':tag,'frame':session.m.frame,'stkb':start,'stke':end,
+                   'worksp':word(0x5c61),'udg':glyph,
+                   'a':mem[glyph],'b':mem[glyph+8],
+                   'q':list(mem[glyph+168:glyph+173]),
+                   'stack_bytes':list(mem[start:start+8]) if start<65528 else [],
+                   'job_started':job.started if job is not None else None,
+                   'job_ended':job.ended if job is not None else None}
+              print('GATE7_STACK',json.dumps(row),flush=True)
+              return row
+          results=[]
+          first=runner.fg
+          results.append(snapshot('before-first',first))
+          for _ in range(1500):
+              runner.frame()
+              if first.ended is not None:break
+          results.append(snapshot('after-stop',first))
+          file=root/'after-stop.ssx'
+          second=session.launch(file.read_bytes(),rvm.zxux.program_name(str(file)))
+          results.append(snapshot('before-second',second))
+          seen=set()
+          for _ in range(2500):
+              runner.frame()
+              if second.started is not None and second.ended is None:
+                  elapsed=session.m.frame-second.started
+                  for mark in (1,15,120,153):
+                      if elapsed>=mark and mark not in seen:
+                          results.append(snapshot('second-'+str(mark),second))
+                          seen.add(mark)
+              if second.ended is not None:break
+          results.append(snapshot('after-second',second))
+          (root/'stack-trace.json').write_text(json.dumps(results,indent=2)+'\n')
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
