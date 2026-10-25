@@ -1,0 +1,28 @@
+name: RBC checker source snapshot temporary
+on:
+  push:
+    paths:
+      - '.github/workflows/rbc-checker-snapshot-temp.yml'
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package exact source files for unchanged private checker
+        run: |
+          mkdir -p build/tmp/checker-stage/
+          for p in finish_rbc.py integer_fit.py native_integer_compiler.py constant_dims.py constant_data.py size_opt.py; do
+            cp "experiments/hisoft-rbc-2026-10-22/stage/$p" "build/tmp/checker-stage/$p"
+          done
+          for p in test_integer_fit.py test_native_integer_compiler.py test_constant_dims.py test_constant_data.py; do
+            cp "experiments/hisoft-rbc-2026-10-22/tests/$p" "build/tmp/checker-stage/$p"
+          done
+          sha256sum build/tmp/checker-stage/* > /tmp/source-manifest
+          cat /tmp/source-manifest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rbc-private-checker-source
+          path: build/tmp/checker-stage/
+          retention-days: 1
