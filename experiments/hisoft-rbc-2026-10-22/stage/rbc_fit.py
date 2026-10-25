@@ -18,6 +18,7 @@ def patched(source: str) -> str:
 
     change('from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize',
            'from rbc_output import output_path, memory_required, write_mode\n'
+           'from upeepz80_output import optimize_ssx\n'
            'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize')
     change('def build_ssx(builds: list[HiSoftBuild], font:bytes, rld,\n'
            '              stack:int=384) -> tuple[bytes,dict]:',
@@ -41,6 +42,8 @@ def patched(source: str) -> str:
            "ap.add_argument('-o','--output',type=Path,help='output path (default: next to BASIC input)')\n"
            "    ap.add_argument('-S',action='store_true',dest='assembly_only',help='emit Z80 assembly')\n"
            "    ap.add_argument('-c',action='store_true',dest='object_only',help='emit SSO1 object')\n"
+           "    ap.add_argument('--upeepz80',action='store_true',\n"
+           "                    help='validate output-stage optimizer against linked SSX')\n"
            "    ap.add_argument('--fit',action='store_true',default=True,dest='fit',\n"
            "                    help='use 48K ROM glyphs to save native image memory (default)')\n"
            "    ap.add_argument('--no-fit',action='store_false',dest='fit',\n"
@@ -74,6 +77,9 @@ def patched(source: str) -> str:
     change('        ssx,diagnostics=build_ssx(builds,font,rld,args.stack)',
            "        ssx,diagnostics=build_ssx(builds,font,rld,args.stack,\n"
            "               use_rom_font=args.fit and not meta.get('private_font_requested',False))\n"
+           "        if args.upeepz80:\n"
+           "            ssx, optimization_report = optimize_ssx(ssx, rld)\n"
+           "            diagnostics['upeepz80'] = optimization_report\n"
            "        measured = memory_required(rld.parse_ssx(ssx), len(ssx))\n"
            "        diagnostics['memory_required'] = measured\n"
            "        diagnostics['memory_limit'] = args.max\n"
