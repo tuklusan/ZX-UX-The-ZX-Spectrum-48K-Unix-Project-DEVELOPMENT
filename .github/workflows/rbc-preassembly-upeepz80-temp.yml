@@ -1,0 +1,69 @@
+name: RBC preassembly upeepz80 dual source size audit temporary
+on:
+  push:
+    paths:
+      - '.github/workflows/rbc-preassembly-upeepz80-temp.yml'
+permissions:
+  contents: read
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Acquire pinned HiSoft compiler frontend
+        run: |
+          git clone https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git upstream-pyhsb
+          git -C upstream-pyhsb checkout --detach 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+          python3 -m compileall -q upstream-pyhsb
+      - name: Pin Z80 symbolic optimizer
+        run: |
+          git clone -q https://github.com/tuklusan/upeepz80.git build/tmp/upeepz80
+          git -C build/tmp/upeepz80 checkout -q --detach a48d725704b132c3ff23ac77232a3a412b56b15f
+          test "$(git -C build/tmp/upeepz80 rev-parse HEAD)" = a48d725704b132c3ff23ac77232a3a412b56b15f
+          python3 -m compileall -q build/tmp/upeepz80
+      - name: Build compiler wrapper and native font inputs
+        run: |
+          mkdir -p trial-result build/tmp/rbc-round2/checkpoint
+          git fetch --no-tags --depth=1 origin c3d270375af56768df3af6f5ceb38f83c9bd5bdd
+          git show FETCH_HEAD:experiments/hisoft-rbc-2026-10-22/rbc-fresh-chat-2026-10-22.zip > /tmp/rbc-checkpoint.zip
+          unzip -oq /tmp/rbc-checkpoint.zip -d build/tmp/rbc-round2/checkpoint
+          cp -R build/tmp/rbc-round2/checkpoint/scratch/rbc trial-result/rbc
+          python3 experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
+          python3 experiments/hisoft-rbc-2026-10-22/stage/finish_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
+          mkdir -p trial-result/fork-font
+          git -C trial-result/fork-font init -q
+          git -C trial-result/fork-font remote add origin https://github.com/tuklusan/font8x8.git
+          git -C trial-result/fork-font fetch -q --depth 1 origin 8e279d2d864e79128e96188a6b9526cfa3fbfef9
+          git -C trial-result/fork-font checkout -q --detach FETCH_HEAD
+          test "$(git -C trial-result/fork-font rev-parse HEAD)" = 8e279d2d864e79128e96188a6b9526cfa3fbfef9
+          python3 experiments/hisoft-rbc-2026-10-22/stage/font_from_fork.py trial-result/fork-font/font8x8_basic.h trial-result/rbc/font32.bin
+          curl -fsSL --retry 2 --max-time 25 -o trial-result/hisoft48.tap https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap
+      - name: Run generic optimization memory RESTORE and safety tests
+        env:
+          PYTHONPATH: build/tmp/upeepz80:upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk
+        run: |
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_size_opt.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_restore_data.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_round2_memory.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_round2_fidelity.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_safety_usr.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_poke_proof.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_constant_dims.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_integer_fit.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_native_integer_compiler.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_native_string_compiler.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_upeepz80_codegen.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_upeepz80_output.py' -v
+      - name: Compile all 60 BAS and all 60 TZX independently
+        env:
+          PYTHONPATH: build/tmp/upeepz80:upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk
+        run: |
+          python3 experiments/hisoft-rbc-2026-10-22/stage/round2_runner.py --root . --compiler trial-result/rbc/rbc.py --frontend upstream-pyhsb --tape trial-result/hisoft48.tap --workspace build/tmp/rbc-round2 --revision "$(git rev-parse HEAD)" --upeepz80
+          python3 experiments/hisoft-rbc-2026-10-22/stage/round2_gates.py corpus
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rbc-preassembly-upeepz80-results
+          path: build/tmp/rbc-round2/
+          retention-days: 2
