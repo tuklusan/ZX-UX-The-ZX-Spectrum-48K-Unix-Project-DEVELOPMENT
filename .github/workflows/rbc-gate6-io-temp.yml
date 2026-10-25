@@ -21,6 +21,7 @@ jobs:
           fetch_checked experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py 839ac9c7fe164df26532d090a56ff9999047f4aa
           fetch_checked experiments/hisoft-rbc-2026-10-22/stage/external_io_policy.py d95886104d7cd1270cf04797aa485707fcdbd612
           fetch_checked experiments/hisoft-rbc-2026-10-22/tests/test_external_io_policy.py 86624ccab56c0efdd46074d37decc25aac242b0d
+          fetch_checked experiments/hisoft-rbc-2026-10-22/tests/test_finish_rbc_setup.py 0ccaff6f174e26550c807b1c2e455fbef0c13e34
       - name: Obtain pinned HiSoft and original compiler tape
         run: |
           git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git upstream-pyhsb
