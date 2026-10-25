@@ -22,7 +22,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
 
     change('from bss_layout import target_offset',
            'from safe_usr_rt import install as install_safe_usr\n'
-           'from safety_usr import enforce_numeric_usr\n'
+           'from safety_usr import enforce_numeric_usr, allow_typed_usr_findings\n'
            'from poke_policy import apply_poke_policy\n'
            'from poke_proof import prove_pokes\n'
            'from restore_data import resolve_restores\n'
@@ -94,6 +94,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change('        memory_report = summarize(checks)',
            '        poke_proofs = prove_pokes(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n'
            '        apply_poke_policy(checks, poke_proofs, font_alias)\n'
+           '        allow_typed_usr_findings(spectrum_tap.split_lines(program), checks, kw.TOKEN)\n'
            '        enforce_numeric_usr(spectrum_tap.split_lines(program), checks, poke_proofs, kw.TOKEN)\n'
            '        memory_report = summarize(checks)')
     change("'memory_policy':memory_policy, 'memory_check':memory_report}",
