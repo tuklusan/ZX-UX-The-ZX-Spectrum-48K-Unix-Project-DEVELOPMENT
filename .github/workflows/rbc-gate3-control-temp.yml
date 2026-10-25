@@ -77,6 +77,7 @@ jobs:
           import subprocess,sys,json,hashlib
           import rvm,rld
           work=Path('build/tmp/rbc-run-trial')
+          work.mkdir(parents=True, exist_ok=True)
           corpus={
            'goto-variable':('10 LET A=100\n20 GO TO A\n30 POKE USR "a",1\n40 GO TO 40\n100 POKE USR "a",17\n110 GO TO 110\n',17),
            'gosub-variable':('10 LET A=100\n20 GO SUB A\n30 POKE USR "a",27\n40 GO TO 40\n100 RETURN\n',27),
