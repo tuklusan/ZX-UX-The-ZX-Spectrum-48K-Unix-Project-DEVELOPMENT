@@ -1,8 +1,6 @@
-"""Sound, general-purpose HiSoft string-capacity fitting.
+"""Infer text storage lengths from literal scalar assignments.
 
-Only complete literal assignments to scalar strings can establish bounds.
-Any unknown write or indexed string use disqualifies the variable. Original
-BASIC tokens are never modified.
+Skip any variable that can change in another way. Token input is read-only.
 """
 import re
 
@@ -41,7 +39,7 @@ def prove_literal_string_bounds(program, keywords, split_lines):
         return [], []
     rows = list(split_lines(program))
     # LEN and OPEN each need an unused preceding BASIC line number.
-    if not rows or rows[0][0] < 2:
+    if not rows:
         return [], []
     exact = re.compile(rb'^\s*' + bytes([code['LET']]) +
                        rb'\s*([A-Za-z])\$\s*=\s*"([^"\r]*)"\s*$', re.I)
@@ -71,4 +69,5 @@ def prove_literal_string_bounds(program, keywords, split_lines):
     proofs = [{'variable': name + '$', 'max_chars': sizes[name],
                'literal_assignments': len(writes[name]),
                'saved_bss_bytes': 255 - sizes[name]} for name in sorted(sizes)]
-    return ['LEN ' + ', '.join(f'{name}$<={sizes[name]}' for name in sorted(sizes))], proofs
+    directive = ['LEN ' + ', '.join(f'{name}$<={sizes[name]}' for name in sorted(sizes))] if rows[0][0] >= 3 else []
+    return directive, proofs

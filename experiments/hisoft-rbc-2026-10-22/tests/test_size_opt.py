@@ -47,5 +47,12 @@ class FitCases(unittest.TestCase):
                          ['LEN A$<=2'])
 
 
+    def test_first_line_proof_is_applied_in_backend(self):
+        rows = [(1, b'\xf1 A$="HI"\r')]
+        directives, proofs = prove_literal_string_bounds(
+            b'', Keywords(), lambda _: rows)
+        self.assertEqual(directives, [])
+        self.assertEqual(proofs[0]['max_chars'], 2)
+
 if __name__ == '__main__':
     unittest.main()

@@ -30,6 +30,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            'from constant_data import adapt_literal_data\n'
            'from integer_fit import infer_integral_scalars\n'
            'from native_integer_compiler import with_integral_scalars\n'
+           'from native_string_compiler import with_static_strings\n'
            'from bss_layout import target_offset')
     change('        if not source.open_lines(program):',
            '        size_directives, size_proofs = ([], [])\n'
@@ -52,7 +53,8 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change('        builds=[]',
            '        int_directives, integer_proofs = infer_integral_scalars(\n'
            '            program, kw, source.tap.split_lines, poke_proofs=poke_proofs)\n'
-           '        build_class = with_integral_scalars(compiler.Compiler,\n'
+           '        base_class = with_static_strings(compiler.Compiler, size_proofs, compiler.letter)\n'
+           '        build_class = with_integral_scalars(base_class,\n'
            '            [p["variable"] for p in integer_proofs], compiler.INTEG)\n'
            '        builds=[]')
     change('            c=compiler.Compiler(img,rom,ramtop=top)',
@@ -77,7 +79,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change("except (ValueError,OSError) as exc:\n        print('rbc: '+str(exc),file=sys.stderr)",
            "except Exception as exc:\n"
            "        print(format_failure(exc,args.source),file=sys.stderr)")
-    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py', 'integer_fit.py', 'native_integer_compiler.py'):
+    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py', 'integer_fit.py', 'native_integer_compiler.py', 'native_string_compiler.py'):
         shutil.copyfile(extensions / module, checkpoint / 'rbc' / module)
     source.write_text(text)
 
