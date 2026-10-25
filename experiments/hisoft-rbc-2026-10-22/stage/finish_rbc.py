@@ -36,6 +36,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            'from native_string_redim import with_string_redims\n'
            'from native_data_expressions import with_literal_data_expressions\n'
            'from native_dynamic_dim import with_bounded_dynamic_dims\n'
+           'from native_budgeted_dim import with_budgeted_numeric_dims, capacity_for_native_budget\n'
            'from native_dynamic_string_dim import with_bounded_string_dims\n'
            'from native_string_compiler import with_static_strings\n'
            'from upeepz80_codegen import install as install_codegen_optimizer\n'
@@ -75,6 +76,10 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            '        build_class = with_literal_data_expressions(build_class)\n'
            '        build_class = with_bounded_dynamic_dims(build_class,\n'
            '            real_type=compiler.REAL, memfill_rt=compiler.RT.MEM_FILL)\n'
+           '        if budget_capacity:\n'
+           '            build_class = with_budgeted_numeric_dims(build_class,\n'
+           '                capacity=budget_capacity, real_type=compiler.REAL,\n'
+           '                memfill_rt=compiler.RT.MEM_FILL)\n'
            '        build_class = with_bounded_string_dims(build_class,\n'
            '            string_type=compiler.STRING, memfill_rt=compiler.RT.MEM_FILL)\n'
            '        builds=[]')
@@ -87,10 +92,10 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            '        memory_report = summarize(checks)')
     change("'memory_policy':memory_policy, 'memory_check':memory_report}",
            "'memory_policy':memory_policy, 'memory_check':memory_report, "
-           "'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps, 'constant_dimensions':constant_dim_proofs, 'constant_data':constant_data_proofs, 'integer_scalars':integer_proofs, 'upeepz80_codegen':upeep_reports[0] if optimize_z80 else None}")
+           "'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps, 'constant_dimensions':constant_dim_proofs, 'constant_data':constant_data_proofs, 'integer_scalars':integer_proofs, 'budgeted_numeric_units':budgeted_units if budget_capacity else 0, 'upeepz80_codegen':upeep_reports[0] if optimize_z80 else None}")
     change('                   ramtop:int, directives: list[str], memory_policy:str) -> tuple[list[HiSoftBuild], dict]:',
            '                   ramtop:int, directives: list[str], memory_policy:str,\n'
-           '                   optimize_z80:bool=False) -> tuple[list[HiSoftBuild], dict]:')
+           '                   optimize_z80:bool=False, budget_capacity:int=0) -> tuple[list[HiSoftBuild], dict]:')
     change('    compiler, hbcimage, source = _hisoft_modules(frontend)',
            '    compiler, hbcimage, source = _hisoft_modules(frontend)\n'
            '    if optimize_z80:\n'
@@ -100,9 +105,22 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            '        builds=[]')
     change("            builds.append(HiSoftBuild(bytes(res.code),res.load,entry,res.var_bytes,f'ramtop {top}'))",
            "            builds.append(HiSoftBuild(bytes(res.code),res.load,entry,res.var_bytes,f'ramtop {top}'))\n"
-           "            upeep_reports.append(getattr(c,'_zxux_upeep_stats',{}))")
+           "            upeep_reports.append(getattr(c,'_zxux_upeep_stats',{}))\n"
+           "            budgeted_units = sum(5 if c.arrays[k]['type'] == compiler.REAL else 2\n"
+           "                                 for k in getattr(c,'_zxux_budgeted_dims',()))")
     change('args.ramtop,args.directive,args.memory_policy)',
-           'args.ramtop,args.directive,args.memory_policy,args.upeepz80)')
+           'args.ramtop,args.directive,args.memory_policy,args.upeepz80,1)')
+    change("            meta['source_mode']='pyhsb HiSoft v1.1 (48K) source compile'",
+           "            if meta['budgeted_numeric_units']:\n"
+           "                trial, trial_layout = build_ssx(builds,font,rld,args.stack,\n"
+           "                    use_rom_font=args.fit and not meta.get('private_font_requested',False))\n"
+           "                capacity = capacity_for_native_budget(args.max,\n"
+           "                    trial_layout['image'],trial_layout['bss'],args.stack,\n"
+           "                    meta['budgeted_numeric_units'])\n"
+           "                builds,meta=_compile_three(args.source,args.frontend,args.tape,args.rom,\n"
+           "                    args.ramtop,args.directive,args.memory_policy,args.upeepz80,capacity)\n"
+           "                meta['budgeted_numeric_capacity'] = capacity\n"
+           "            meta['source_mode']='pyhsb HiSoft v1.1 (48K) source compile'")
     change('    install_native_run(compiler)',
            '    install_native_run(compiler)\n    install_safe_usr(compiler)')
     text = patched(text)
@@ -117,7 +135,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change("except (ValueError,OSError) as exc:\n        print('rbc: '+str(exc),file=sys.stderr)",
            "except Exception as exc:\n"
            "        print(format_failure(exc,args.source),file=sys.stderr)")
-    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py', 'integer_fit.py', 'native_integer_compiler.py', 'native_redim_compiler.py', 'native_multidim_strings.py', 'native_string_redim.py', 'native_data_expressions.py', 'native_dynamic_dim.py', 'native_dynamic_string_dim.py', 'native_string_compiler.py', 'upeepz80_codegen.py', 'safe_usr_rt.py'):
+    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py', 'integer_fit.py', 'native_integer_compiler.py', 'native_redim_compiler.py', 'native_multidim_strings.py', 'native_string_redim.py', 'native_data_expressions.py', 'native_dynamic_dim.py', 'native_budgeted_dim.py', 'native_dynamic_string_dim.py', 'native_string_compiler.py', 'upeepz80_codegen.py', 'safe_usr_rt.py'):
         shutil.copyfile(extensions / module, checkpoint / 'rbc' / module)
     source.write_text(text)
 
