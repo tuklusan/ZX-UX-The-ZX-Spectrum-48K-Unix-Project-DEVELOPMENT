@@ -18,15 +18,17 @@ jobs:
         shell: bash
         run: |
           set -eu
-          mkdir -p .github/galaxians-lab-temp
+          mkdir -p .github/galaxians-lab-temp/downloaded-tapes
           python3 - <<'PY'
           import urllib.request,urllib.error,hashlib,zipfile,io,json,datetime,base64
           urls={
             'HiSoft_BASIC_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftBASIC.tap.zip',
             'HiSoft_BASIC_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftBASICV1.0.tzx.zip',
-            'Softek_FP_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/SoftekFPFullCompilerV1.1.tap.zip',
-            'Softek_FP_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/SoftekFPFullCompilerV1.0.tzx.zip',
+            'Softek_FP_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/s/SoftekFPFullCompilerV1.1.tap.zip',
+            'Softek_FP_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/s/SoftekFPFullCompilerV1.0.tzx.zip',
             'HiSoft_COLT_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftCOLTCompiler.tzx.zip',
+            'Softek_FP_17_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/s/SoftekFPFullCompilerV1.7.tap.zip',
+            'Softek_IS_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/s/SoftekISBASICCompiler.tzx.zip',
             'MCoder_III_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/MCoderIII.tap.zip',
             'BLAST_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/BLAST.tap.zip',
           }
@@ -41,31 +43,21 @@ jobs:
               if zipfile.is_zipfile(io.BytesIO(payload)):
                 z=zipfile.ZipFile(io.BytesIO(payload))
                 row['members']=[{'name':i.filename,'bytes':i.file_size,'sha256':hashlib.sha256(z.read(i)).hexdigest()} for i in z.infolist() if not i.is_dir()]
-                if name in ('HiSoft_BASIC_TAP','HiSoft_COLT_TZX','Softek_FP_TAP','Softek_FP_TZX','MCoder_III_TAP'):
+                if name in ('HiSoft_BASIC_TAP','HiSoft_COLT_TZX','Softek_FP_TAP','Softek_FP_TZX','Softek_FP_17_TAP','Softek_IS_TZX','MCoder_III_TAP'):
                   for index,i in enumerate(z.infolist()):
                     if not i.is_dir() and i.filename.lower().endswith(('.tap','.tzx')):
-                      with open('.github/galaxians-lab-temp/'+name+'_'+str(index)+'.b64','w') as out:out.write(base64.b64encode(z.read(i)).decode('ascii'))
+                      with open('.github/galaxians-lab-temp/downloaded-tapes/'+name+'_'+str(index)+'.'+i.filename.rsplit('.',1)[-1].lower(),'wb') as out:out.write(z.read(i))
               else:row['error']='not_zip'
             except Exception as e:row['error']=str(e)[:350]
             print(json.dumps(row,sort_keys=True),flush=True)
             results.append(row)
           with open('.github/galaxians-lab-temp/archive-probe.json','w') as f:json.dump({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'results':results},f,indent=2)
           PY
-      - name: Boot authentic HiSoft tape in Fuse
-        shell: bash
-        run: |
-          set +e
-          sudo apt-get update -qq > .github/galaxians-lab-temp/apt.log 2>&1
-          sudo apt-get install -y -qq fuse-emulator-sdl xvfb python3-xlib python3-pil >> .github/galaxians-lab-temp/apt.log 2>&1
-          sudo cp src/zx-ux/rom/48.rom /usr/share/fuse/48.rom
-          sha256sum /usr/share/fuse/48.rom > .github/galaxians-lab-temp/sinclair-rom.sha256
-          xvfb-run -a -s '-screen 0 1024x768x24' /usr/bin/python3 .github/galaxians-lab-temp/hi-basic-probe.py > .github/galaxians-lab-temp/fuse-probe-run.log 2>&1
-          echo "FUSE_RESULT=$?" >> .github/galaxians-lab-temp/fuse-probe-run.log
-      - name: Upload temporary compiler tape for local validation
+      - name: Transfer fetched compiler tapes
         uses: actions/upload-artifact@v4
         with:
-          name: hisoft-basic-48k-compiler-tape
-          path: .github/galaxians-lab-temp/fuse-probe/HiSoft_BASIC.tap
+          name: spectrum-compiler-tapes
+          path: .github/galaxians-lab-temp/downloaded-tapes/
           retention-days: 1
       - name: Commit probe output
         shell: bash
