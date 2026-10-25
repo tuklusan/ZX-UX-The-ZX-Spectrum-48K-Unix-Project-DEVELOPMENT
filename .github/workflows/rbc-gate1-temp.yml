@@ -1,0 +1,64 @@
+name: RBC Gate 1 compiler verification temporary
+on:
+  push:
+    paths:
+      - .github/workflows/rbc-gate1-temp.yml
+permissions:
+  contents: read
+jobs:
+  gate1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get pinned HiSoft frontend
+        run: |
+          git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git upstream-pyhsb
+          git -C upstream-pyhsb checkout -q --detach 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+      - name: Rebuild native compiler from tracked scripts
+        run: |
+          mkdir -p trial-result build/tmp/rbc-round2/checkpoint
+          git fetch --no-tags --depth=1 origin c3d270375af56768df3af6f5ceb38f83c9bd5bdd
+          git show FETCH_HEAD:experiments/hisoft-rbc-2026-10-22/rbc-fresh-chat-2026-10-22.zip > /tmp/rbc-checkpoint.zip
+          unzip -oq /tmp/rbc-checkpoint.zip -d build/tmp/rbc-round2/checkpoint
+          cp -R build/tmp/rbc-round2/checkpoint/scratch/rbc trial-result/rbc
+          python3 experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
+          python3 experiments/hisoft-rbc-2026-10-22/stage/finish_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
+          mkdir -p trial-result/fork-font
+          git -C trial-result/fork-font init -q
+          git -C trial-result/fork-font remote add origin https://github.com/tuklusan/font8x8.git
+          git -C trial-result/fork-font fetch -q --depth 1 origin 8e279d2d864e79128e96188a6b9526cfa3fbfef9
+          git -C trial-result/fork-font checkout -q --detach FETCH_HEAD
+          python3 experiments/hisoft-rbc-2026-10-22/stage/font_from_fork.py trial-result/fork-font/font8x8_basic.h trial-result/rbc/font32.bin
+          curl -fsSL --retry 2 --max-time 25 -o trial-result/hisoft48.tap https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap
+      - name: Run DIM DATA ROM and native unit tests
+        env:
+          PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk
+        run: |
+          set -e
+          for test in test_constant_dims.py test_constant_data.py test_redim_capacity.py test_string_dim_flatten.py test_input_bound_dims.py test_input_string_dims.py test_numeric_input_dims.py test_rom_syntax.py test_native_memory_failure.py test_safe_usr_rt.py; do
+            python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p "$test" -v
+          done
+      - name: Probe original BAS source native linkage
+        if: success()
+        env:
+          PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk
+        run: |
+          mkdir -p build/tmp/rbc-gate1
+          for game in 40-wordsum 41-asset-stripper 54-swordsman; do
+            src="src/bonus/60-programs/$game/BASIC/$game.bas"
+            python3 trial-result/rbc/rbc.py "$src" --frontend upstream-pyhsb --sdk src/zx-ux-sdk --rom src/zx-ux-sdk/rom/48.rom --tape trial-result/hisoft48.tap -o "build/tmp/rbc-gate1/$game.ssx" --report "build/tmp/rbc-gate1/$game.json" > "build/tmp/rbc-gate1/$game.out" 2>&1 || true
+            cat "build/tmp/rbc-gate1/$game.out"
+          done
+      - name: Snapshot reproducible current sources
+        if: always()
+        run: |
+          mkdir -p build/tmp/rbc-gate1
+          git rev-parse HEAD > build/tmp/rbc-gate1/revision.txt
+          git ls-files -z experiments/hisoft-rbc-2026-10-22/stage experiments/hisoft-rbc-2026-10-22/tests src/bonus/60-programs src/zx-ux-sdk | tar --null -czf build/tmp/rbc-gate1/exact-source.tar.gz --files-from -
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rbc-gate1-review
+          path: build/tmp/rbc-gate1/
+          retention-days: 2
