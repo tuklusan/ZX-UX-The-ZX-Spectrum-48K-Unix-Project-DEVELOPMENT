@@ -28,6 +28,8 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            'from size_opt import prove_literal_string_bounds\n'
            'from constant_dims import specialize_literal_dims\n'
            'from constant_data import adapt_literal_data\n'
+           'from integer_fit import infer_integral_scalars\n'
+           'from native_integer_compiler import with_integral_scalars\n'
            'from bss_layout import target_offset')
     change('        if not source.open_lines(program):',
            '        size_directives, size_proofs = ([], [])\n'
@@ -47,6 +49,14 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change('        program = source.tokenize_directives(program,kw)',
            '        program = source.tokenize_directives(program,kw)\n'
            '        program, restore_remaps = resolve_restores(program, kw, initial.fp)')
+    change('        builds=[]',
+           '        int_directives, integer_proofs = infer_integral_scalars(\n'
+           '            program, kw, source.tap.split_lines)\n'
+           '        build_class = with_integral_scalars(compiler.Compiler,\n'
+           '            [p["variable"] for p in integer_proofs], compiler.INTEG)\n'
+           '        builds=[]')
+    change('            c=compiler.Compiler(img,rom,ramtop=top)',
+           '            c=build_class(img,rom,ramtop=top)')
     change('        memory_report = summarize(checks)',
            '        poke_proofs = prove_pokes(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n'
            '        apply_poke_policy(checks, poke_proofs, font_alias)\n'
@@ -54,7 +64,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            '        memory_report = summarize(checks)')
     change("'memory_policy':memory_policy, 'memory_check':memory_report}",
            "'memory_policy':memory_policy, 'memory_check':memory_report, "
-           "'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps, 'constant_dimensions':constant_dim_proofs, 'constant_data':constant_data_proofs}")
+           "'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps, 'constant_dimensions':constant_dim_proofs, 'constant_data':constant_data_proofs, 'integer_scalars':integer_proofs}")
     text = patched(text)
     change('from rbc_output import output_path, memory_required, write_mode',
            'from diagnostics import format_failure, RbcArgumentParser\n'
@@ -67,7 +77,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change("except (ValueError,OSError) as exc:\n        print('rbc: '+str(exc),file=sys.stderr)",
            "except Exception as exc:\n"
            "        print(format_failure(exc,args.source),file=sys.stderr)")
-    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py'):
+    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py', 'integer_fit.py', 'native_integer_compiler.py'):
         shutil.copyfile(extensions / module, checkpoint / 'rbc' / module)
     source.write_text(text)
 
