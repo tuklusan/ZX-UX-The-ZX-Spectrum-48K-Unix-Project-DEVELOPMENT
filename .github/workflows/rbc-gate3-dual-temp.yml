@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - .github/workflows/rbc-gate3-dual-temp.yml
+      - experiments/hisoft-rbc-2026-10-22/tests/test_poke_proof.py
 permissions:
   contents: read
 jobs:

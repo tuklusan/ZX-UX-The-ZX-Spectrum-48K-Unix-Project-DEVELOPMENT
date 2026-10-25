@@ -23,6 +23,10 @@ def check(*text):
     lines=[(10+i*10,tokens(t)) for i,t in enumerate(text)]
     checks=[SimpleNamespace(line=n,operation='POKE') for n,b in lines
             for _ in range(b.count(b'\xf4'))]
+    # The new string-typed USR admission is separately tied to every token.
+    # Do not disable its fail-closed count comparison just to test POKE.
+    checks.extend(SimpleNamespace(line=n,operation='USR') for n,b in lines
+                  for _ in range(b.count(b'\xc0')))
     proof=prove_pokes(lines,TOK,checks)
     enforce_numeric_usr(lines,checks,proof,TOK)
     return proof
