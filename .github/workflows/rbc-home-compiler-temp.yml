@@ -1,0 +1,36 @@
+name: RBC home compiler source validation temporary
+on:
+  push:
+    paths:
+      - '.github/workflows/rbc-home-compiler-temp.yml'
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy pinned Python HiSoft engine into temporary candidate
+        run: |
+          git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git /tmp/pyhsb-src
+          git -C /tmp/pyhsb-src checkout -q --detach 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+          test "$(git -C /tmp/pyhsb-src rev-parse HEAD)" = 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+          mkdir -p build/tmp/home-compiler
+          cp /tmp/pyhsb-src/{compiler.py,hbcimage.py,pyhsb.py,report.py,romfp.py,rtlib.py,rtnames.py,source.py,tap.py,z80asm.py,z80mini.py,LICENSE.txt} build/tmp/home-compiler/
+          python3 -m compileall -q build/tmp/home-compiler
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json
+          files=sorted(p for p in Path('build/tmp/home-compiler').glob('*') if p.is_file())
+          data={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
+          Path('build/tmp/home-compiler-manifest.json').write_text(json.dumps(data,indent=2)+'\n')
+          print('verified source files',len(files))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rbc-home-compiler-candidate
+          path: |
+            build/tmp/home-compiler/
+            build/tmp/home-compiler-manifest.json
+          retention-days: 1
