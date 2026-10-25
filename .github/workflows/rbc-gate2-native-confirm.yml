@@ -34,7 +34,7 @@ jobs:
           PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk
         run: |
           set -e
-          for test in test_safety_usr.py test_typed_usr_classifier.py test_safe_usr_rt.py test_native_pause_rt.py test_native_run_rt.py test_rbc_fit.py; do
+          for test in test_safety_usr.py test_typed_usr_classifier.py test_safe_usr_rt.py test_native_pause_rt.py test_native_run_rt.py test_safe_usr_native_z80.py test_rbc_fit.py; do
             echo "=== $test ==="
             python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p "$test" -v
           done
@@ -103,6 +103,12 @@ jobs:
                       if not item['private_font']: raise AssertionError('expected private 1 KB font bank')
                   try:
                       runner=rvm.run_kernel(target,frames=400,system='build/out/ZX-UX.tzx',cache=True)
+                      if game=='53-russian-roulette':
+                          m=runner.session.m.mem
+                          start=m[0x5c36]+(m[0x5c37]<<8)
+                          item['active_private_font']=bytes(m[start:start+1024])==bank
+                          if not item['active_private_font']:
+                              raise AssertionError('native CHARS does not select embedded font')
                       bitmap,_=runner.picture()
                       item.update(started=bool(runner.fg and runner.fg.started is not None),reason=runner.why,screen_sha256=hashlib.sha256(bitmap).hexdigest(),runtime_finished=runner.why=='exit')
                   except Exception as exc:
