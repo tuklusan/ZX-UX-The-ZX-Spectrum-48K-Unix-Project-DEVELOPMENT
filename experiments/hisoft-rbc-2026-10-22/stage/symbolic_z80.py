@@ -1,0 +1,192 @@
+"""Typed whole-program Z80 intermediate form for the RBC backend.
+
+No instruction bytes are emitted while constructing this form. Each executable
+instruction is retained as assembly; stored bytes and address words stay data.
+Native ras and rld perform all symbol resolution after a whole-program pass.
+
+This module is intentionally independent of the legacy HiSoft emitter. A caller
+must supply explicit instructions, entry labels and protected binary resources;
+disassembling completed HiSoft or SSX bytes cannot satisfy this interface.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import re
+from typing import Callable
+
+_NAME = re.compile(r"[A-Za-z_][A-Za-z_0-9]*\Z")
+_SECTIONS = ("text", "data", "bss")
+_INSTRUCTIONS = frozenset({
+    "adc", "add", "and", "bit", "call", "ccf", "cp", "cpd", "cpdr",
+    "cpi", "cpir", "cpl", "daa", "dec", "di", "djnz", "ei", "ex",
+    "exx", "halt", "im", "in", "inc", "ind", "indr", "ini", "inir",
+    "jp", "jr", "ld", "ldd", "lddr", "ldi", "ldir", "neg", "nop",
+    "or", "otdr", "otir", "out", "outd", "outi", "pop", "push", "res",
+    "ret", "reti", "retn", "rl", "rla", "rlc", "rlca", "rld", "rr",
+    "rra", "rrc", "rrca", "rrd", "rst", "sbc", "scf", "set", "sla",
+    "sll", "sra", "srl", "sub", "xor", "sl1",
+})
+
+
+class SymbolicError(ValueError):
+    """Invalid or unsafe symbolic assembly transformation."""
+
+
+@dataclass(frozen=True)
+class Node:
+    kind: str
+    value: str | bytes | int
+    section: str
+
+
+@dataclass
+class SymbolicProgram:
+    """One program with ordered code, data, and bss sections.
+
+    Labels and reference words refer to assembler symbols, never numeric code
+    offsets. External entry points are exported so the optimizer cannot
+    mistake them for unreachable code.
+    """
+    nodes: list[Node] = field(default_factory=list)
+    entries: set[str] = field(default_factory=set)
+    _section: str = "text"
+
+    def section(self, kind: str) -> None:
+        if kind not in _SECTIONS:
+            raise SymbolicError("unsupported section")
+        self._section = kind
+
+    def label(self, name: str, *, entry: bool = False) -> None:
+        if not _NAME.fullmatch(name):
+            raise SymbolicError("invalid label")
+        if any(n.kind == "label" and n.value.lower() == name.lower() for n in self.nodes):
+            raise SymbolicError("duplicate label")
+        self.nodes.append(Node("label", name, self._section))
+        if entry:
+            self.entries.add(name)
+
+    def instruction(self, text: str) -> None:
+        if self._section != "text":
+            raise SymbolicError("instructions belong in text")
+        if not isinstance(text, str) or '\n' in text or ';' in text:
+            raise SymbolicError("one instruction per call")
+        words = text.strip().split(None, 1)
+        if not words or words[0].lower() not in _INSTRUCTIONS:
+            raise SymbolicError("unrecognized Z80 instruction")
+        self.nodes.append(Node("instruction", text.strip().lower(), self._section))
+
+    def binary(self, data: bytes) -> None:
+        if self._section == "bss":
+            raise SymbolicError("initialized bytes forbidden in bss")
+        if not isinstance(data, bytes):
+            raise SymbolicError("binary resource requires exact bytes")
+        if data:
+            self.nodes.append(Node("binary", data, self._section))
+
+    def reference(self, target: str) -> None:
+        if self._section == "bss" or not _NAME.fullmatch(target):
+            raise SymbolicError("invalid symbolic word")
+        self.nodes.append(Node("reference", target, self._section))
+
+    def reserve(self, size: int) -> None:
+        if self._section != "bss" or not isinstance(size, int) or not 0 <= size <= 65535:
+            raise SymbolicError("invalid bss reservation")
+        self.nodes.append(Node("reserve", size, self._section))
+
+    def assembly(self) -> str:
+        if "start" not in self.entries:
+            raise SymbolicError("start must be an exported entry")
+        defined = {n.value.lower() for n in self.nodes if n.kind == "label"}
+        if any(n.lower() not in defined for n in self.entries):
+            raise SymbolicError("exported entry not defined")
+        # Require monotonic sections. Moving source-level data across a
+        # control-flow boundary would change label meanings.
+        ranks = [_SECTIONS.index(n.section) for n in self.nodes]
+        if ranks != sorted(ranks):
+            raise SymbolicError("sections must be ordered text, data, bss")
+        out = ["    section text"]
+        for name in sorted(self.entries):
+            out.append("    global " + name)
+        current = "text"
+        for n in self.nodes:
+            if n.section != current:
+                current = n.section
+                out.append("    section " + current)
+            if n.kind == "label":
+                out.append(str(n.value) + ":")
+            elif n.kind == "instruction":
+                out.append("    " + str(n.value))
+            elif n.kind == "binary":
+                value = n.value
+                assert isinstance(value, bytes)
+                for i in range(0, len(value), 16):
+                    out.append("    db " + ",".join(str(b) for b in value[i:i + 16]))
+            elif n.kind == "reference":
+                out.append("    dw " + str(n.value))
+            elif n.kind == "reserve":
+                out.append("    ds " + str(n.value))
+        return "\n".join(out) + "\n"
+
+    def optimize(self, optimizer: Callable[[str], str], ras, rld, *,
+                 stack: int = 384, max_memory: int = 12000) -> tuple[bytes, dict]:
+        """Optimize the entire symbolic program once, then assemble and link.
+
+        The unchanged version is first assembled, providing a real baseline.
+        The optimizer must leave every binary, address table and exported
+        entry present and in order. If not, refuse rather than repair text.
+        """
+        original = self.assembly()
+        before = _link(original, ras, rld, stack)
+        proposed = optimizer(original)
+        if not isinstance(proposed, str):
+            raise SymbolicError("optimizer returned non-text")
+        _check_protected(original, proposed, self.entries)
+        after = _link(proposed, ras, rld, stack)
+        pre = rld.parse_ssx(before)
+        post = rld.parse_ssx(after)
+        orig_memory = max(len(before), len(pre["image"]) + pre["bss"] + pre["stack"])
+        new_memory = max(len(after), len(post["image"]) + post["bss"] + post["stack"])
+        # A suspicious enlargement or unchanged size gets no admission.
+        if len(after) >= len(before) or new_memory >= orig_memory:
+            after, post, new_memory = before, pre, orig_memory
+        if max_memory and new_memory > max_memory:
+            raise SymbolicError(f"linked program requires {new_memory} bytes (limit {max_memory})")
+        return after, {"baseline_file_bytes": len(before),
+                       "optimized_file_bytes": len(after),
+                       "baseline_memory_bytes": orig_memory,
+                       "optimized_memory_bytes": new_memory,
+                       "baseline_image_bytes": len(pre["image"]),
+                       "optimized_image_bytes": len(post["image"]),
+                       "baseline_bss_bytes": pre["bss"],
+                       "optimized_bss_bytes": post["bss"],
+                       "saved_file_bytes": len(before) - len(after),
+                       "saved_memory_bytes": orig_memory - new_memory}
+
+
+def _protected_lines(asm: str, entries: set[str]) -> list[str]:
+    result = []
+    for line in asm.splitlines():
+        s = line.strip()
+        lower = s.lower()
+        if lower.startswith(("db ", "dw ", "ds ", "section ", "global ")):
+            result.append(lower)
+        elif s.endswith(":") and s[:-1].lower() in {x.lower() for x in entries}:
+            result.append(lower)
+    return result
+
+
+def _check_protected(original: str, proposed: str, entries: set[str]) -> None:
+    protected = _protected_lines(original, entries)
+    observed = _protected_lines(proposed, entries)
+    if protected != observed:
+        raise SymbolicError("optimizer changed protected data, symbols or sections")
+    if any(x.lower() not in proposed.lower() for x in (name + ":" for name in entries)):
+        raise SymbolicError("optimizer dropped a required entry")
+
+
+def _link(assembly: str, ras, rld, stack: int) -> bytes:
+    obj = ras.assemble_text(assembly, "rbc-symbolic.s")
+    ssx, _bss, _entry, _symbols, _objects = rld.link(
+        [rld.Obj(obj, "rbc-symbolic.sso")], [], entry="start", stack=stack)
+    rld.parse_ssx(ssx)
+    return ssx
