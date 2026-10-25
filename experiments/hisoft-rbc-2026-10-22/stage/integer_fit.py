@@ -13,7 +13,8 @@ from audit_policy import scrub_code
 WRITER = re.compile(r'\b(LET|FOR)\s+([A-Z])(?=\s*[=(])', re.I)
 SCALAR = re.compile(r'^\s*(?:LET|FOR)\s+([A-Z])\s*=\s*([+-]?\d+)\s*$', re.I)
 LOOP = re.compile(r'^\s*FOR\s+([A-Z])\s*=\s*([+-]?\d+)\s+TO\s+([+-]?\d+)(?:\s+STEP\s+([+-]?\d+))?\s*$', re.I)
-UNSAFE = re.compile(r'\b(?:POKE|DEF\s+FN|INPUT|READ|DIM|CLEAR|VAL|RANDOMIZE\s+USR)\b', re.I)
+UNSAFE = re.compile(r'\b(?:DEF\s+FN|INPUT|READ|DIM|CLEAR|VAL|RANDOMIZE\s+USR)\b', re.I)
+VIRTUAL_SYSVARS = frozenset((23609, 23658, 23672, 23673, 23674, 23692))
 NAME = re.compile(r'\b([A-Z])\s*\(', re.I)
 
 
@@ -24,7 +25,7 @@ def _pieces(text):
     return [x.strip() for x in masked.split(':') if x.strip()]
 
 
-def infer_integral_scalars(program, keywords, split_lines, available=1):
+def infer_integral_scalars(program, keywords, split_lines, available=1, poke_proofs=None):
     """Return directive and proof only where every scalar write is a safe integer."""
     rows = list(split_lines(program))
     if not rows or available < 1:
@@ -32,6 +33,17 @@ def infer_integral_scalars(program, keywords, split_lines, available=1):
     text = [_line_text(body, keywords.TOKEN) for _, body in rows]
     if any(UNSAFE.search(scrub_code(line)) for line in text):
         return [], []
+    # Writes confined to separately virtualized UDG memory or known private
+    # Spectrum system variables cannot alias compiled numeric variable slots.
+    if any(re.search(r'\bPOKE\b', scrub_code(line), re.I) for line in text):
+        if not poke_proofs or not all(
+            proof.get('addresses') and all(
+                addr.get('space') == 'process_udg' or
+                (addr.get('space') == 'absolute' and
+                 addr.get('offset') in VIRTUAL_SYSVARS)
+                for addr in proof['addresses'])
+            for proof in poke_proofs):
+            return [], []
     allowed = {}
     rejected = set()
     for line in text:

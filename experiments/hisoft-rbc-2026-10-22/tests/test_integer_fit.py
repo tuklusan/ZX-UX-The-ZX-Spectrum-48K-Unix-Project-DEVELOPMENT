@@ -29,6 +29,22 @@ class Tests(unittest.TestCase):
         self.assertEqual(check([(10,b'\xf1 a=12\r'),(20,b'\xf5 a(1)\r')])[0],[])
     def test_only_literal_in_quotes(self):
         self.assertEqual(check([(10,b'\xf1 a=12\r'),(20,b'\xf5 "POKE:\xf1 a=44"\r')])[0],['INT a'])
+    def test_virtualized_udg_write_is_safe(self):
+        rows=[(10,b'\xf1 a=12\r'),(20,b'\xf4 3,1\r')]
+        good=[{'addresses':[{'space':'process_udg','offset':3}]}]
+        self.assertEqual(infer_integral_scalars(None,K(),lambda _: rows,poke_proofs=good)[0],['INT a'])
+
+    def test_known_spectrum_sysvar_write_is_safe(self):
+        rows=[(10,b'\xf1 a=12\r'),(20,b'\xf4 23672,255\r')]
+        good=[{'addresses':[{'space':'absolute','offset':23672}]}]
+        self.assertEqual(infer_integral_scalars(None,K(),lambda _: rows,poke_proofs=good)[0],['INT a'])
+
+    def test_unknown_poke_cannot_enable_typing(self):
+        rows=[(10,b'\xf1 a=12\r'),(20,b'\xf4 20000,1\r')]
+        for proof in (None,[],[{'addresses':[]}],
+                      [{'addresses':[{'space':'absolute','offset':20000}]}]):
+            self.assertEqual(infer_integral_scalars(None,K(),lambda _: rows,poke_proofs=proof)[0],[])
+
     def test_zero_headroom(self):
         self.assertEqual(infer_integral_scalars(None,K(),lambda _: [(10,b'\xf1 a=1\r')],0)[0],[])
 

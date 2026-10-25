@@ -51,7 +51,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            '        program, restore_remaps = resolve_restores(program, kw, initial.fp)')
     change('        builds=[]',
            '        int_directives, integer_proofs = infer_integral_scalars(\n'
-           '            program, kw, source.tap.split_lines)\n'
+           '            program, kw, source.tap.split_lines, poke_proofs=poke_proofs)\n'
            '        build_class = with_integral_scalars(compiler.Compiler,\n'
            '            [p["variable"] for p in integer_proofs], compiler.INTEG)\n'
            '        builds=[]')
