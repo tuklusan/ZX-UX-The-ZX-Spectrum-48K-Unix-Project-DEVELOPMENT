@@ -64,11 +64,24 @@ class PokePolicyTests(unittest.TestCase):
                     '{FOR} C={USR} "a" {TO} {USR} "a"+7: READ V: {POKE} C,V: {NEXT} C')
         self.assertEqual([x['offset'] for x in proof[0]['addresses']],list(range(8)))
 
-    def test_computed_jump_into_later_line_blocks_unproved_udg(self):
-        with self.assertRaisesRegex(PokeAddressError,'computed branch could enter FOR body'):
-            check('{GO TO} K',
-                  '{FOR} C={USR} "a" {TO} {USR} "a"+7',
-                  'READ V: {POKE} C,V: {NEXT} C')
+    def test_computed_jump_into_loop_uses_protected_runtime_poke(self):
+        result=check('{GO TO} K',
+                     '{FOR} C={USR} "a" {TO} {USR} "a"+7',
+                     'READ V: {POKE} C,V: {NEXT} C')
+        self.assertEqual(result[0]['status'], 'dynamic_programmer_responsibility')
+        self.assertEqual(result[0]['addresses'], [])
+
+    def test_missing_next_does_not_reject_legal_dynamic_poke(self):
+        result=check('{FOR} C={USR} "a" {TO} {USR} "u"+7',
+                     '{POKE} C,1: IF X THEN RETURN')
+        self.assertEqual(result[0]['status'], 'dynamic_programmer_responsibility')
+
+    def test_runtime_protects_modified_for_index(self):
+        result=check('{FOR} C={USR} "a" {TO} {USR} "a"+7',
+                     '{LET} C=C+1',
+                     '{POKE} C,7',
+                     '{NEXT} C')
+        self.assertEqual(result[0]['status'], 'dynamic_programmer_responsibility')
 
     def test_machine_usr_rejected(self):
         with self.assertRaises(UnsupportedUsr):

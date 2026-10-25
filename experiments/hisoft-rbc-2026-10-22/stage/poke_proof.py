@@ -274,13 +274,16 @@ def prove_pokes(lines, token_names, findings):
             has_udg = bool(re.search(r'\bUSR\b', w.address, re.I)) or any(
                 re.search(r'\bUSR\b', value, re.I)
                 for loop in w.loops for value in (loop.first, loop.last, loop.step))
-            if has_udg:
-                if re.search(r'\bUSR\b', w.address, re.I):
-                    proved.append({'line':w.line, 'expression':w.address,
-                                   'addresses':[],
-                                   'status':'runtime_guarded_udg_pointer'})
-                    continue
-                raise
+            if has_udg and re.search(r'\bUSR\b', w.address, re.I):
+                # The compiler emits a UDG pointer range check for direct
+                # USR expressions. The operand type is also checked there.
+                proved.append({'line':w.line, 'expression':w.address,
+                               'addresses':[], 'status':'runtime_guarded_udg_pointer'})
+                continue
+            # Static loop-path inference cannot forbid a BASIC statement.
+            # FOR indices may change; computed branches may enter a body;
+            # early exits need not visit NEXT. For indirect numeric POKE,
+            # the native process memory guard checks the runtime address.
             proved.append({'line':w.line,'expression':w.address,
                            'addresses':[], 'status':'dynamic_programmer_responsibility'})
     for entry in proved:
