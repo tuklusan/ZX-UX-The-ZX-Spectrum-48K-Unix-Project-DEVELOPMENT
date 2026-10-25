@@ -1,4 +1,4 @@
-"""Bounded runtime numeric DIM driven by scalar variables with proved values.
+"""Bounded runtime numeric DIM driven by scalar arithmetic with proved values.
 
 The original DIM operand is compiled, not substituted. Each array reserves its
 proved maximum plus a live-length slot. DIM writes the evaluated live count and
@@ -13,11 +13,12 @@ from __future__ import annotations
 
 import re
 
-_DIM = re.compile(rb'\xe9\s*([A-Za-z])\s*\(\s*([A-Za-z])\s*\)')
+_DIM = re.compile(rb'\xe9\s*([A-Za-z])\s*\(\s*([^():\r]*)\)')
+_EXPR = re.compile(rb'([A-Za-z][A-Za-z0-9]*)(?:\s*([+\-])\s*([A-Za-z][A-Za-z0-9]*|[0-9]+))?')
+_NAME = re.compile(rb'[A-Za-z][A-Za-z0-9]*')
 _ALL_NUMERIC_DIMS = re.compile(rb'\xe9\s*([A-Za-z])(?!\$)\s*\(')
-_ASSIGN = re.compile(rb'\xf1\s*([A-Za-z])\s*=')
-_LITERAL_ASSIGN = re.compile(rb'\xf1\s*([A-Za-z])\s*=\s*([0-9]+)\s*(?=[:\r]|$)')
-_LETTER = re.compile(rb'(?<![a-zA-Z0-9$])([A-Za-z])(?![a-zA-Z0-9$])')
+_ASSIGN = re.compile(rb'\xf1\s*([A-Za-z][A-Za-z0-9]*)\s*=')
+_LITERAL_ASSIGN = re.compile(rb'\xf1\s*([A-Za-z][A-Za-z0-9]*)\s*=\s*([0-9]+)\s*(?=[:\r]|$)')
 _WRITE_TOKENS = (0xEE, 0xE3, 0xEB, 0xF3)  # INPUT, READ, FOR, NEXT
 
 
@@ -60,8 +61,9 @@ def _proved_dimensions(lines):
             arr = m[1].lower()
             other_shapes[arr] = other_shapes.get(arr, 0) + 1
         for m in _DIM.finditer(body):
-            arr, ctl = m[1].lower(), m[2].lower()
-            declarations.setdefault(arr, []).append(ctl)
+            arr = m[1].lower()
+            match = _EXPR.fullmatch(m[2].strip())
+            declarations.setdefault(arr, []).append(match.groups() if match else None)
         for m in _ASSIGN.finditer(body):
             ctl = m[1].lower()
             match = _LITERAL_ASSIGN.match(body, m.start())
@@ -86,25 +88,54 @@ def _proved_dimensions(lines):
                     # FOR modifies only its control variable; variables in
                     # its TO and STEP expressions are read-only.
                     field = body[at+1:end].lstrip()
-                    if field and 65 <= (field[0] | 32) <= 122:
-                        forbidden.add(bytes([field[0] | 32]))
+                    name = _NAME.match(field)
+                    if name:
+                        forbidden.add(name[0].lower())
                 else:
                     # INPUT, READ and NEXT can write every destination listed.
-                    forbidden.update(m[1].lower() for m in _LETTER.finditer(body[at+1:end]))
+                    forbidden.update(m[0].lower() for m in _NAME.finditer(body[at+1:end]))
                 i = end + 1
     result = {}
-    for arr, controls in declarations.items():
-        if len(set(controls)) != 1 or other_shapes[arr] != len(controls):
+    for arr, expressions in declarations.items():
+        # Every occurrence of DIM for this array must have exactly one proven
+        # scalar expression; mixed dimensions are left to HiSoft to reject.
+        if len(expressions) != other_shapes[arr] or None in expressions:
             continue
-        ctl = controls[0]
-        if ctl in forbidden or ctl not in setters:
-            continue
-        capacity = max(setters[ctl])
-        # A dimension whose count is not representable in 16-bit memory is
-        # never safe; the default native --max limit will further constrain it.
-        if not 1 <= capacity <= 65535 // 5:
-            continue
-        result[arr[0] - 97] = (ctl, capacity)
+        possible = []
+        valid = True
+        for first, operator, operand in expressions:
+            first = first.lower()
+            if first in forbidden or first not in setters:
+                valid = False
+                break
+            minimum, maximum = min(setters[first]), max(setters[first])
+            if operator:
+                if operand[:1].isdigit():
+                    if len(operand) > 5:
+                        valid = False
+                        break
+                    low = high = int(operand)
+                else:
+                    name = operand.lower()
+                    if name in forbidden or name not in setters:
+                        valid = False
+                        break
+                    low, high = min(setters[name]), max(setters[name])
+                if operator == b'+':
+                    minimum, maximum = minimum + low, maximum + high
+                else:
+                    minimum, maximum = minimum - high, maximum - low
+            if not 1 <= minimum <= maximum <= 65535 // 5:
+                valid = False
+                break
+            possible.append(maximum)
+        if valid:
+            # Retain the original single-controller shape for older callers;
+            # only richer arithmetic returns its complete expression proof.
+            plain = (len(set(expressions)) == 1 and expressions[0][1] is None
+                     and len(expressions[0][0]) == 1)
+            proof = expressions[0][0].lower() if plain else tuple(expressions)
+            result[arr[0] - 97] = (proof, max(possible))
     return result
 
 

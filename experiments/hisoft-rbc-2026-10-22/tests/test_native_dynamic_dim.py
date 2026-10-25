@@ -83,6 +83,51 @@ class BoundedDynamicTests(unittest.TestCase):
         result = c.compile_whole(self.program('10 INPUT N: DIM A(N)\n20 PRINT A(1)\n'))
         self.assertFalse(result.ok)
 
+    def test_proved_runtime_arithmetic_and_long_scalar_names(self):
+        fixtures = [
+            ('10 LET N=2: LET K=3: DIM A(N+K)\n20 LET A(4)=9\n', 5),
+            ('10 LET N=7: DIM A(N-2)\n20 PRINT A(5)\n', 5),
+            ('10 LET LB=5: DIM A(LB)\n20 PRINT A(4)\n', 5),
+            ('10 LET LB=5: LET KC=2: DIM A(LB+KC)\n20 PRINT A(6)\n', 7),
+            ('10 LET N=7: LET K=3: DIM A(N-K)\n20 PRINT A(4)\n', 4),
+            ('10 LET N=3: LET N=8: DIM A(N+2)\n20 PRINT A(5)\n', 10),
+            ('10 LET N=3: LET N=8: DIM A(N+N)\n20 PRINT A(5)\n', 16),
+        ]
+        for listing, capacity in fixtures:
+            with self.subTest(listing=listing):
+                original = self.program(listing)
+                proof = self.plan(listing)
+                self.assertEqual(proof[0][1], capacity)
+                c = self.backend(self.img, self.rom)
+                result = c.compile_whole(original)
+                self.assertTrue(result.ok, (listing, result.error, result.detail))
+                self.assertEqual(c.arrays[0]['last'], capacity)
+                self.assertEqual(self.program(listing), original)
+
+    def test_arithmetic_bounds_and_multiletter_inputs_fail_closed(self):
+        invalid = [
+            '10 LET N=5: LET K=6: DIM A(N-K)\n',
+            '10 LET N=8000: LET K=6000: DIM A(N+K)\n',
+            '10 LET N=5: LET K=2: READ K: DIM A(N+K)\n20 DATA 2\n',
+            '10 LET LB=5: INPUT LB: DIM A(LB)\n',
+            '10 LET LB=5: FOR LB=1 TO 10: NEXT LB: DIM A(LB)\n',
+            '10 LET LB=5: LET LB=VAL "2": DIM A(LB)\n',
+            '10 LET LB=5: DIM A(LB): DIM A(LB,2)\n',
+            '10 LET LB=5: DIM A(LB*2)\n',
+            '10 LET N=3: DIM A(N+K)\n',
+            '10 LET N=3: DIM A(N+20000)\n',
+        ]
+        for listing in invalid:
+            with self.subTest(listing=listing):
+                self.assertEqual(self.plan(listing), {})
+
+    def test_nonexecuted_prose_cannot_supply_arithmetic_proofs(self):
+        listing = ('10 PRINT "LET K=5: DIM A(N+K)"\n'
+                   '20 REM LET K=5: DIM A(N+K)\n'
+                   '30 DATA "LET K=5", 2\n'
+                   '40 LET N=4: DIM A(N+K)\n')
+        self.assertEqual(self.plan(listing), {})
+
     def guards(self, kind, bound):
         chunks = []
         class Stub:
