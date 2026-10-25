@@ -41,6 +41,8 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change('        if not source.open_lines(program):',
            '        program, constant_dim_proofs = specialize_literal_dims(\n'
            '            program, kw, initial.fp, source, source.tap)\n'
+           '        program, constant_data_proofs = adapt_literal_data(\n'
+           '            program, kw, initial.fp, source, source.tap)\n'
            '        if not source.open_lines(program):')
     change('        program = source.tokenize_directives(program,kw)',
            '        program = source.tokenize_directives(program,kw)\n'
@@ -52,7 +54,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            '        memory_report = summarize(checks)')
     change("'memory_policy':memory_policy, 'memory_check':memory_report}",
            "'memory_policy':memory_policy, 'memory_check':memory_report, "
-           "'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps, 'constant_dimensions':constant_dim_proofs}")
+           "'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps, 'constant_dimensions':constant_dim_proofs, 'constant_data':constant_data_proofs}")
     text = patched(text)
     change('from rbc_output import output_path, memory_required, write_mode',
            'from diagnostics import format_failure, RbcArgumentParser\n'
