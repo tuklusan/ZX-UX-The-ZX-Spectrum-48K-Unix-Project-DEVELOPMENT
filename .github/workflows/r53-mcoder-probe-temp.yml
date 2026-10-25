@@ -18,8 +18,8 @@ jobs:
           python3 - <<'PY'
           import urllib.request,json,zipfile,io,hashlib,pathlib
           sources={
-            "mcoderiii-tap":"https://worldofspectrum.net/pub/sinclair/utils/ZXSpectrumCompilateur%28MCoderIII%29%28PSS%29.tap.zip",
-            "mcoderiii-tzx":"https://worldofspectrum.net/pub/sinclair/utils/ZXSpectrumCompilateur%28PSS%29.tzx.zip"
+            "mcoderiii-tap":"https://worldofspectrum.net/pub/sinclair/utils/z/ZXSpectrumCompilateur%28MCoderIII%29%28PSS%29.tap.zip",
+            "mcoderiii-tzx":"https://worldofspectrum.net/pub/sinclair/utils/z/ZXSpectrumCompilateur%28PSS%29.tzx.zip"
           }
           out=pathlib.Path(".github/r53-lab-temp/tapes")
           rows=[]
