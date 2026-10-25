@@ -16,7 +16,9 @@ class UnifiedDiagnostics(unittest.TestCase):
                                '20 PRINT "USR 200"\n'
                                '30 RANDOMIZE USR 32768\n'
                                '40 IF A THEN PRINT "HEY": PRINT 2\n'
-                               '50 LOAD "PART2"\n')
+                               '50 LOAD "PART2"\n'
+                               '60 LPRINT "TEST"\n'
+                               '70 CAT\n')
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -59,6 +61,16 @@ class UnifiedDiagnostics(unittest.TestCase):
         self.assertEqual(result.mnemonic, 'RBC_TAPE_LOAD')
         self.assertEqual(result.source_text, '50 LOAD "PART2"')
         self.assertEqual(result.source_column, 3)
+
+    def test_external_io_is_not_reported_as_internal_error(self):
+        cases = [(60, 'LPRINT', 'RBC_PRINTER_UNSUPPORTED'),
+                 (70, 'CAT', 'RBC_INTERFACE_UNSUPPORTED')]
+        for line, operation, code in cases:
+            with self.subTest(operation=operation):
+                value = f'RBC E_EXTERNAL_IO: Line {line}: {operation} unavailable'
+                result = from_exception(ValueError(value), self.source)
+                self.assertEqual((result.mnemonic, result.basic_line), (code, line))
+                self.assertIn(operation, result.render())
 
     def test_hisoft_keeps_numeric_code_and_specific_reason(self):
         result = from_exception(ValueError(

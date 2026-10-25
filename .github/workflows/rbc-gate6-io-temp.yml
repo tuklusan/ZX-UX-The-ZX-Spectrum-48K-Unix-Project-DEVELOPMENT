@@ -11,19 +11,15 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - name: Stage checked external channel source and tests
+      - name: Verify native-tested source bytes in repository
         run: |
           set -e
-          fetch_checked() {
-            curl -fsSL --retry 2 --max-time 25 "https://api.github.com/repos/tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT/git/blobs/$2" | python3 -c 'import json,sys,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' > "$1"
-            test "$(git hash-object "$1")" = "$2"
-          }
-          fetch_checked experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py 839ac9c7fe164df26532d090a56ff9999047f4aa
-          fetch_checked experiments/hisoft-rbc-2026-10-22/stage/external_io_policy.py d95886104d7cd1270cf04797aa485707fcdbd612
-          fetch_checked experiments/hisoft-rbc-2026-10-22/tests/test_external_io_policy.py 86624ccab56c0efdd46074d37decc25aac242b0d
-          fetch_checked experiments/hisoft-rbc-2026-10-22/tests/test_finish_rbc_setup.py 0ccaff6f174e26550c807b1c2e455fbef0c13e34
-          fetch_checked experiments/hisoft-rbc-2026-10-22/stage/diagnostics.py a7ea1e50c9d75fec5c6b5ab68759ad2f7c2544e1
-          fetch_checked experiments/hisoft-rbc-2026-10-22/tests/test_diagnostics.py 411b34d9c84a91f19876b56253e1cf69ed406ec0
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py)" = 839ac9c7fe164df26532d090a56ff9999047f4aa
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/stage/external_io_policy.py)" = d95886104d7cd1270cf04797aa485707fcdbd612
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/stage/diagnostics.py)" = a7ea1e50c9d75fec5c6b5ab68759ad2f7c2544e1
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/tests/test_external_io_policy.py)" = 86624ccab56c0efdd46074d37decc25aac242b0d
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/tests/test_finish_rbc_setup.py)" = 0ccaff6f174e26550c807b1c2e455fbef0c13e34
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/tests/test_diagnostics.py)" = 411b34d9c84a91f19876b56253e1cf69ed406ec0
       - name: Obtain pinned HiSoft and original compiler tape
         run: |
           git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git upstream-pyhsb

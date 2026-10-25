@@ -71,7 +71,9 @@ CODE_MEMORY|HiSoft cannot fit generated machine code within compilation memory.
 EXEC_ADDRESS|Requested execution address leaves insufficient room for compiled code and variables.
 ROM_REPORT|HiSoft encountered a Spectrum ROM report.
 INTERNAL|HiSoft compilation failed unexpectedly."""
-RBC_TEXT = """TAPE_LOAD|LOAD requires external tape input, which standalone RBC programs do not provide.
+RBC_TEXT = """PRINTER_UNSUPPORTED|Printer operations are unavailable in standalone RBC.
+INTERFACE_UNSUPPORTED|External channel operations are unavailable in standalone RBC.
+TAPE_LOAD|LOAD requires external tape input, which standalone RBC programs do not provide.
 TAPE_SAVE|SAVE requires external tape output, which standalone RBC programs do not provide.
 TAPE_MERGE|MERGE requires external tape input, which standalone RBC programs do not provide.
 TAPE_VERIFY|VERIFY requires external tape input, which standalone RBC programs do not provide.
@@ -305,6 +307,11 @@ def from_exception(exc: Exception, source: Path | None = None) -> Diagnostic:
             mnemonic = 'RBC_MEMORY_POLICY'
     elif 'e_poke_address' in low:
         mnemonic, keyword = 'RBC_UDG_ADDRESS', 'POKE'
+    elif 'e_external_io' in low:
+        operation = re.search(r'\b(LPRINT|LLIST|CAT|FORMAT|MOVE|ERASE|OPEN\s*#|CLOSE\s*#)\b', detail, re.I)
+        keyword = operation.group(1).upper() if operation else None
+        mnemonic = ('RBC_PRINTER_UNSUPPORTED' if keyword in ('LPRINT', 'LLIST')
+                    else 'RBC_INTERFACE_UNSUPPORTED')
     elif 'e_tape_unsupported' in low:
         operation = re.search(r'\b(LOAD|SAVE|MERGE|VERIFY)\b', detail)
         keyword = operation.group(1) if operation else None

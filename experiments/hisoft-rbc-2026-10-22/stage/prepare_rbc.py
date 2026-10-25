@@ -10,7 +10,7 @@ import shutil
 
 BOUNDARY = (
     'bas2tap.py', 'bas2tap_syntax.py', 'basic_listing.py', 'rom_syntax.py',
-    'tape_policy.py', 'bss_layout.py', 'startup_colors.py',
+    'tape_policy.py', 'external_io_policy.py', 'bss_layout.py', 'startup_colors.py',
     'native_pause_rt.py', 'native_keyread_rt.py', 'native_sysvars_rt.py', 'native_run_rt.py',
     'native_sysvar_policy.py', 'spectrum_sysvars.py', 'spectrum_fonts.py',
     'poke_policy.py', 'poke_proof.py', 'safety_usr.py', 'udg_bounds.py',
@@ -34,6 +34,7 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            'from rom_syntax import validate_rom_lines\n'
            'from spectrum_fonts import detect_font_bank\n'
            'from tape_policy import reject_tape_operations\n'
+           'from external_io_policy import reject_external_commands\n'
            'from native_pause_rt import install as install_native_pause\n'
            'from spectrum_runtime import install as install_spectrum_runtime\n'
            'from native_run_rt import install as install_native_run\n'
@@ -77,6 +78,7 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
     change('        if not source.open_lines(program):',
            '        validate_rom_lines(program, rom)\n'
            '        reject_tape_operations(source.tap.split_lines(program), kw.TOKEN)\n'
+           '        reject_external_commands(source.tap.split_lines(program), kw.TOKEN)\n'
            '        if not source.open_lines(program):')
     change('            program = source.add_directives(program, directives, True, [], kw, initial.fp)',
            '            try:\n'

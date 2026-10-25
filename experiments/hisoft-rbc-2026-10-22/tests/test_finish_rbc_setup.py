@@ -27,7 +27,7 @@ class FinishRbcSetup(unittest.TestCase):
         self.assertEqual(len(imports), 1)
         code = imports[0]
         self.assertIn('from safe_usr_rt import install as install_safe_usr\n', code)
-        self.assertIn('from safety_usr import enforce_numeric_usr\n', code)
+        self.assertIn('from safety_usr import enforce_numeric_usr, allow_typed_usr_findings\n', code)
         self.assertEqual(code.count('from safe_usr_rt import'), 1)
         compile(code, '<RBC imports>', 'exec')
 
