@@ -1,72 +1,25 @@
-name: Galaxians compiler archive probe temporary
+name: Galaxians compiler temporary lab cleanup
 on:
   push:
     paths:
       - .github/workflows/galaxians-compiler-probe-temp.yml
-  workflow_dispatch:
 permissions:
   contents: write
 jobs:
-  archive-probe:
+  cleanup:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: true
-      - name: Check public compiler archive access
+          fetch-depth: 0
+      - name: Remove only temporary Galaxians lab files
         shell: bash
         run: |
-          set -eu
-          mkdir -p .github/galaxians-lab-temp/downloaded-tapes
-          python3 - <<'PY'
-          import urllib.request,urllib.error,hashlib,zipfile,io,json,datetime,base64
-          urls={
-            'HiSoft_BASIC_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftBASIC.tap.zip',
-            'HiSoft_BASIC_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftBASICV1.0.tzx.zip',
-            'Softek_FP_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/s/SoftekFPFullCompilerV1.1.tap.zip',
-            'Softek_FP_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/s/SoftekFPFullCompilerV1.0.tzx.zip',
-            'HiSoft_COLT_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftCOLTCompiler.tzx.zip',
-            'Softek_FP_17_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/s/SoftekFPFullCompilerV1.7.tap.zip',
-            'Softek_IS_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/s/SoftekISBASICCompiler.tzx.zip',
-            'MCoder_III_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/MCoderIII.tap.zip',
-            'BLAST_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/BLAST.tap.zip',
-          }
-          results=[]
-          for name,url in urls.items():
-            row={'name':name,'url':url}
-            try:
-              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 (ZX Spectrum preservation lab)'})
-              with urllib.request.urlopen(req,timeout=25) as reply:
-                payload=reply.read(1500000)
-                row.update(status=reply.status,size=len(payload),sha256=hashlib.sha256(payload).hexdigest(),magic=payload[:16].hex())
-              if zipfile.is_zipfile(io.BytesIO(payload)):
-                z=zipfile.ZipFile(io.BytesIO(payload))
-                row['members']=[{'name':i.filename,'bytes':i.file_size,'sha256':hashlib.sha256(z.read(i)).hexdigest()} for i in z.infolist() if not i.is_dir()]
-                if name in ('HiSoft_BASIC_TAP','HiSoft_COLT_TZX','Softek_FP_TAP','Softek_FP_TZX','Softek_FP_17_TAP','Softek_IS_TZX','MCoder_III_TAP'):
-                  for index,i in enumerate(z.infolist()):
-                    if not i.is_dir() and i.filename.lower().endswith(('.tap','.tzx')):
-                      with open('.github/galaxians-lab-temp/downloaded-tapes/'+name+'_'+str(index)+'.'+i.filename.rsplit('.',1)[-1].lower(),'wb') as out:out.write(z.read(i))
-              else:row['error']='not_zip'
-            except Exception as e:row['error']=str(e)[:350]
-            print(json.dumps(row,sort_keys=True),flush=True)
-            results.append(row)
-          with open('.github/galaxians-lab-temp/archive-probe.json','w') as f:json.dump({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'results':results},f,indent=2)
-          PY
-      - name: Transfer fetched compiler tapes
-        uses: actions/upload-artifact@v4
-        with:
-          name: spectrum-compiler-tapes
-          path: .github/galaxians-lab-temp/downloaded-tapes/
-          retention-days: 1
-      - name: Commit probe output
-        shell: bash
-        run: |
-          set -eu
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          echo "$GITHUB_RUN_ID" > .github/galaxians-lab-temp/runner-id.txt
-          git add .github/galaxians-lab-temp/
-          git commit -m "lab: record temporary Galaxians compiler archive accessibility"
+          git rm -r --ignore-unmatch -- .github/galaxians-lab-temp .github/workflows/galaxians-compiler-probe-temp.yml
+          git commit -m "lab: remove temporary Galaxians compiler runner and test files"
           git pull --rebase origin main
           git push origin HEAD:main
