@@ -201,7 +201,7 @@ jobs:
            except Exception as ne:
             entry["native_error"]=repr(ne)
             entry["native_traceback"]=traceback.format_exc(limit=4)
-          entry["elapsed_s"]=round(time.monotonic()-start,2)
+           entry["elapsed_s"]=round(time.monotonic()-start,2)
            entries.append(entry)
            print("PROGRAM_RESULT",json.dumps(entry,sort_keys=True),flush=True)
            (work/"results.json").write_text(json.dumps(entries,indent=2,sort_keys=True)+"\n")
