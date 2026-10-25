@@ -57,6 +57,8 @@ jobs:
           set +e
           sudo apt-get update -qq > .github/galaxians-lab-temp/apt.log 2>&1
           sudo apt-get install -y -qq fuse-emulator-sdl xvfb python3-xlib python3-pil >> .github/galaxians-lab-temp/apt.log 2>&1
+          sudo cp src/zx-ux/rom/48.rom /usr/share/fuse/48.rom
+          sha256sum /usr/share/fuse/48.rom > .github/galaxians-lab-temp/sinclair-rom.sha256
           xvfb-run -a -s '-screen 0 1024x768x24' /usr/bin/python3 .github/galaxians-lab-temp/hi-basic-probe.py > .github/galaxians-lab-temp/fuse-probe-run.log 2>&1
           echo "FUSE_RESULT=$?" >> .github/galaxians-lab-temp/fuse-probe-run.log
       - name: Commit probe output
