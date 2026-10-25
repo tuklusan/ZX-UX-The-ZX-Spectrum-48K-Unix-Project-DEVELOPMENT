@@ -22,12 +22,14 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def attempt(source_path, output_path, root, compiler, frontend, tape, revision):
+def attempt(source_path, output_path, root, compiler, frontend, tape, revision, optimize_z80=False):
     report = output_path.with_suffix('.json')
     cmd = [sys.executable, str(compiler), str(source_path), '--frontend', str(frontend),
            '--sdk', str(root / 'src/zx-ux-sdk'), '--rom',
            str(root / 'src/zx-ux-sdk/rom/48.rom'), '--tape', str(tape),
            '-o', str(output_path), '--report', str(report)]
+    if optimize_z80:
+        cmd.append('--upeepz80')
     output_path.unlink(missing_ok=True)
     proc = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
     result = {'source': str(source_path.relative_to(root)) if source_path.is_relative_to(root)
@@ -90,7 +92,7 @@ def outcome_readme(game, bas, tzx, comparison):
                       f'- Comparison: {comparison["status"]}; {comparison.get("reason", "not byte-identical")}', '')) + '\n'
 
 
-def run(root, compiler, frontend, tape, workspace, revision):
+def run(root, compiler, frontend, tape, workspace, revision, optimize_z80=False):
     import source
     import hbcimage
     from rbc import _source_program
@@ -127,9 +129,9 @@ def run(root, compiler, frontend, tape, workspace, revision):
         except Exception as exc:
             converted = False
             converter_report = {'error': str(exc), 'category': type(exc).__name__}
-        bas_result = attempt(bas, to_bas, root, compiler, frontend, tape, revision)
+        bas_result = attempt(bas, to_bas, root, compiler, frontend, tape, revision, optimize_z80)
         if converted:
-            tzx_result = attempt(ascii_copy, to_tzx, root, compiler, frontend, tape, revision)
+            tzx_result = attempt(ascii_copy, to_tzx, root, compiler, frontend, tape, revision, optimize_z80)
             tzx_result['tape_sha256'] = sha(tzx.read_bytes())
             tzx_result['tape_source'] = str(tzx.relative_to(root))
         else:
@@ -173,5 +175,7 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     for flag in ('root', 'compiler', 'frontend', 'tape', 'workspace', 'revision'):
         ap.add_argument('--' + flag, required=True)
+    ap.add_argument('--upeepz80', action='store_true', help='optimize symbolic Z80 at codegen stage')
     arg = ap.parse_args()
-    run(arg.root, arg.compiler, arg.frontend, arg.tape, arg.workspace, arg.revision)
+    run(arg.root, arg.compiler, arg.frontend, arg.tape, arg.workspace, arg.revision,
+        optimize_z80=arg.upeepz80)

@@ -31,6 +31,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            'from integer_fit import infer_integral_scalars\n'
            'from native_integer_compiler import with_integral_scalars\n'
            'from native_string_compiler import with_static_strings\n'
+           'from upeepz80_codegen import install as install_codegen_optimizer\n'
            'from bss_layout import target_offset')
     change('        if not source.open_lines(program):',
            '        size_directives, size_proofs = ([], [])\n'
@@ -66,7 +67,22 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            '        memory_report = summarize(checks)')
     change("'memory_policy':memory_policy, 'memory_check':memory_report}",
            "'memory_policy':memory_policy, 'memory_check':memory_report, "
-           "'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps, 'constant_dimensions':constant_dim_proofs, 'constant_data':constant_data_proofs, 'integer_scalars':integer_proofs}")
+           "'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps, 'constant_dimensions':constant_dim_proofs, 'constant_data':constant_data_proofs, 'integer_scalars':integer_proofs, 'upeepz80_codegen':upeep_reports[0] if optimize_z80 else None}")
+    change('                   ramtop:int, directives: list[str], memory_policy:str) -> tuple[list[HiSoftBuild], dict]:',
+           '                   ramtop:int, directives: list[str], memory_policy:str,\n'
+           '                   optimize_z80:bool=False) -> tuple[list[HiSoftBuild], dict]:')
+    change('    compiler, hbcimage, source = _hisoft_modules(frontend)',
+           '    compiler, hbcimage, source = _hisoft_modules(frontend)\n'
+           '    if optimize_z80:\n'
+           '        install_codegen_optimizer(compiler)')
+    change('        builds=[]',
+           '        upeep_reports=[]\n'
+           '        builds=[]')
+    change("            builds.append(HiSoftBuild(bytes(res.code),res.load,entry,res.var_bytes,f'ramtop {top}'))",
+           "            builds.append(HiSoftBuild(bytes(res.code),res.load,entry,res.var_bytes,f'ramtop {top}'))\n"
+           "            upeep_reports.append(getattr(c,'_zxux_upeep_stats',{}))")
+    change('args.ramtop,args.directive,args.memory_policy)',
+           'args.ramtop,args.directive,args.memory_policy,args.upeepz80)')
     text = patched(text)
     change('from rbc_output import output_path, memory_required, write_mode',
            'from diagnostics import format_failure, RbcArgumentParser\n'
@@ -79,7 +95,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change("except (ValueError,OSError) as exc:\n        print('rbc: '+str(exc),file=sys.stderr)",
            "except Exception as exc:\n"
            "        print(format_failure(exc,args.source),file=sys.stderr)")
-    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py', 'integer_fit.py', 'native_integer_compiler.py', 'native_string_compiler.py', 'upeepz80_output.py'):
+    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py', 'integer_fit.py', 'native_integer_compiler.py', 'native_string_compiler.py', 'upeepz80_codegen.py', 'upeepz80_output.py'):
         shutil.copyfile(extensions / module, checkpoint / 'rbc' / module)
     source.write_text(text)
 
