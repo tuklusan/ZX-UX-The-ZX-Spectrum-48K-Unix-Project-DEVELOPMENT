@@ -5,6 +5,8 @@ They do not modify numbered BASIC source or allow numeric machine-code USR.
 """
 from __future__ import annotations
 
+from native_error_exit import error_exit_bytes
+
 
 def guarded_val_bytes():
     """Inspect the evaluated string bytes before calling the 48K ROM VAL.
@@ -58,10 +60,8 @@ def guarded_val_bytes():
     emit(0x06, 0x1D, 0xC3, 0xDE, 0x35)  # invoke ROM VAL X$
     mark('blocked')
     emit(0xE1, 0xD1, 0xC1, 0xF1)
-    # ZX-UX intercepts ROM RST 8 as a kernel error, not a process error.
-    # Release the screen and terminate the current process with status 10.
-    emit(0x21, 0, 0, 0x3E, 39, 0xCD, 3, 0x60)
-    emit(0x21, 10, 0, 0x3E, 1, 0xC3, 3, 0x60)
+    # The wrapper restores CHARS, UDG and shell controls on every exit.
+    emit(*error_exit_bytes(10))
     for where, name in jumps:
         distance = labels[name] - (where + 1)
         if not -128 <= distance <= 127:

@@ -26,7 +26,7 @@ class NativeFontLink(unittest.TestCase):
         self.assertEqual(metadata['font_bytes'], 1024)
         self.assertEqual(parsed['stack'], 384)
         self.assertEqual(parsed['bss'], 0)
-        self.assertEqual(metadata['entry_offset'], 156)
+        self.assertEqual(metadata['entry_offset'], 158)
         load = 0x8000
         image = bytearray(parsed['image'])
         for offset in parsed['relocs']:

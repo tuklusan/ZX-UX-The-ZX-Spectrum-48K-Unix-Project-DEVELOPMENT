@@ -36,6 +36,11 @@ class NativeSysvars(unittest.TestCase):
             else:
                 self.fail('unexpected ZX-UX syscall')
         self.cpu.hooks[0x6003] = syscall
+        # The image's UDG bank holds the relocated wrapper cleanup pointer.
+        self.mem[0x5c7b:0x5c7d] = (0xa100).to_bytes(2, 'little')
+        self.mem[0xa1a8:0xa1aa] = (0x7500).to_bytes(2, 'little')
+        self.mem[0x7500:0x7510] = bytes.fromhex(
+            '2100003e27cd0360210b003e01c30360')
         # Calling ROM RST 8 would panic the kernel, not exit the process.
         self.cpu.hooks[8] = lambda cpu: self.fail('ROM error reached kernel')
         self.rom_before = {addr: 0xcc for addr in (PIP,FLAGS2,*FRAMES)}

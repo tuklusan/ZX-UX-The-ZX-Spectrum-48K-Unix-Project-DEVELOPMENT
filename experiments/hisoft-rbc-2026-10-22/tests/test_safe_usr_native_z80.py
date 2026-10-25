@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
 from safe_usr_rt import UDG_POKE_CHECK
 from z80_python.cpu import Z80CPU
 
-EXPECTED = bytes.fromhex('e5ed5b7b5cb7ed52380c7cb720087dfea83003e118102100003e27cd0360210b003e01c30360c9')
+EXPECTED = bytes.fromhex('e5ed5b7b5cb7ed52380c7cb720087dfea83003e1180f2a7b5c01a800097e23666f110b00e9c9')
 
 
 def execute(data, displacement):
@@ -20,33 +20,24 @@ def execute(data, displacement):
     image[0x5c7b:0x5c7d] = (0xa000).to_bytes(2, 'little')
     image[0xfe00:0xfe02] = (0xa1bc).to_bytes(2, 'little')
     image[0xa000:0xa0a8] = bytes([0x5a]) * 168
+    image[0xa0a8:0xa0aa] = (0x7200).to_bytes(2, 'little')
     cpu = Z80CPU(image.__getitem__, image.__setitem__)
     cpu.pc = 0x9000
     cpu.sp = 0xfe00
     candidate = (0xa000 + displacement) & 0xffff
     cpu.h, cpu.l = candidate >> 8, candidate & 255
     destination = None
-    released = False
     for _ in range(64):
-        if cpu.pc == 0x0008:
-            raise AssertionError('UDG guard entered ROM RST 8')
+        if cpu.pc == 0x0008 or cpu.pc == 0x6003:
+            raise AssertionError('UDG guard entered kernel or ROM error handler')
         if cpu.pc == 0xa1bc:
             destination = 'accepted'
             break
-        if cpu.pc == 0x6003:
-            if cpu.a == 39:
-                if (cpu.h << 8 | cpu.l) != 0:
-                    raise AssertionError('screen release has wrong argument')
-                released = True
-                cpu.pc = image[cpu.sp] | image[cpu.sp + 1] << 8
-                cpu.sp = (cpu.sp + 2) & 0xffff
-                continue
-            if cpu.a == 1:
-                if not released or (cpu.h << 8 | cpu.l) != 11:
-                    raise AssertionError('invalid native exit ordering/status')
-                destination = 'blocked'
-                break
-            raise AssertionError('unexpected native syscall')
+        if cpu.pc == 0x7200:
+            if (cpu.d << 8 | cpu.e) != 11:
+                raise AssertionError('native trampoline lost error status')
+            destination = 'blocked'
+            break
         cpu.step()
     return destination, (cpu.h << 8) | cpu.l, bytes(image[0xa000:0xa0a8])
 

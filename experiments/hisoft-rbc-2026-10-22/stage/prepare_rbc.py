@@ -12,6 +12,7 @@ BOUNDARY = (
     'bas2tap.py', 'bas2tap_syntax.py', 'basic_listing.py', 'rom_syntax.py',
     'tape_policy.py', 'external_io_policy.py', 'bss_layout.py', 'startup_colors.py',
     'native_pause_rt.py', 'native_keyread_rt.py', 'native_sysvars_rt.py', 'native_run_rt.py',
+    'native_error_exit.py',
     'native_sysvar_policy.py', 'spectrum_sysvars.py', 'spectrum_fonts.py',
     'poke_policy.py', 'poke_proof.py', 'safety_usr.py', 'udg_bounds.py',
     'udg_nested.py', 'udg_chr_bounds.py', 'spectrum_runtime.py', 'rom_keyread.py',
@@ -49,6 +50,7 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            'from rom_scroll import allow_rom_screen_scroll\n'
            'from bss_layout import target_offset\n'
            'from startup_colors import save_and_set, save_controls, restore, append_slots\n'
+           'from native_error_exit import UDG_BYTES\n'
            'from memory_safety import MemoryBlocked, analyze_lines, enforce, summarize')
 
     # Replace the whole BAS reader. A secondary tokenizer, legacy fallback,
@@ -114,6 +116,17 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            '    color_records = save_and_set(e)\n'
            '    control_records = save_controls(e)\n'
            '    call=len(e.code)+1;e.call(0,rel=True)')
+    change('    restore_udg=len(e.code)+1;e.ldhl_ind(0,rel=True)',
+           '    e.emit(0x11,0,0)  # Normal completion, status zero in DE\n'
+           '    common_exit=len(e.code)\n'
+           '    e.emit(0xd5)  # Preserve status across cleanup and screen release\n'
+           '    restore_udg=len(e.code)+1;e.ldhl_ind(0,rel=True)')
+    change('    e.ldhl(0);e.lda(1);e.call(SYS)',
+           '    e.emit(0xe1)  # Recover native exit status\n'
+           '    e.lda(1);e.call(SYS)')
+    change('    udg_start=len(e.code);e.code.extend(bytes(21*8))',
+           '    udg_start=len(e.code);e.code.extend(bytes(UDG_BYTES))\n'
+           '    error_pointer=len(e.code);e.relative(common_exit)')
     change('    e.ldhl(0);e.lda(39);e.call(SYS)',
            '    restore(e, color_records)\n'
            '    restore(e, control_records)\n'

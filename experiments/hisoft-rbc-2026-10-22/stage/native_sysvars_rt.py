@@ -8,6 +8,7 @@ live in compiler-allocated process BSS, not ROM or kernel system RAM.
 from __future__ import annotations
 
 from spectrum_sysvars import FLAGS2, PIP, FRAMES, SCR_CT, PRIVATE
+from native_error_exit import error_exit_asm
 
 PEEK_RT = 42
 POKE_RT = 43
@@ -98,13 +99,8 @@ def _clock_sync(e):
 
 
 def _native_error_exit(e):
-    """Return ROM error 11 as native process status, without ROM RST 8.
-
-    The ZX-UX kernel traps ROM errors as a kernel panic. Give the screen
-    back and use the native exit system call instead.
-    """
-    e.op('ld hl,0; ld a,39; call $6003')
-    e.op('ld hl,11; ld a,1; jp $6003')
+    """Restore global graphics via the SSX wrapper before native exit."""
+    e.op(error_exit_asm(11))
 
 
 def _process_address_check(e, base, total, accepted, prefix=""):

@@ -10,7 +10,8 @@ class SpectrumRuntime(unittest.TestCase):
     def evaluate_path(self, value):
         from z80mini import Z80
         mem = bytearray(65536)
-        mem[0x6003] = 0xc9  # Return from the screen-release service.
+        mem[0x5c7b:0x5c7d] = (0xa000).to_bytes(2,'little')
+        mem[0xa0a8:0xa0aa] = (0x7200).to_bytes(2,'little')
         code = guarded_val_bytes()
         mem[0x8000:0x8000+len(code)] = code
         mem[0x9000:0x9000+len(value)] = value
@@ -21,7 +22,7 @@ class SpectrumRuntime(unittest.TestCase):
         cpu.sp = 0xe000
         cpu.pc = 0x8000
         for _ in range(300):
-            if cpu.pc == 0x35de or (cpu.pc == 0x6003 and cpu.a == 1):
+            if cpu.pc in (0x35de, 0x7200):
                 return cpu.pc, cpu
             cpu.step()
         self.fail('native VAL guard did not terminate or enter ROM')
@@ -43,19 +44,19 @@ class SpectrumRuntime(unittest.TestCase):
 
     def test_executable_usr_never_reaches_rom(self):
         target,cpu=self.evaluate_path(b'1+'+bytes([0xc0])+b' 32768')
-        self.assertEqual(target,0x6003)
-        self.assertEqual((cpu.a, cpu.h, cpu.l), (1, 0, 10))
+        self.assertEqual(target,0x7200)
+        self.assertEqual((cpu.d, cpu.e), (0, 10))
         self.assertEqual(cpu.sp,0xe000)
 
     def test_nested_evaluation_never_bypasses_usr_guard(self):
         for token in (0xb0,0xae):
             with self.subTest(token=token):
-                self.assertEqual(self.evaluate_path(bytes([token,0xc0]))[0],0x6003)
+                self.assertEqual(self.evaluate_path(bytes([token,0xc0]))[0],0x7200)
 
     def test_runtime_constructed_usr_is_not_executed(self):
         target, cpu = self.evaluate_path(bytes([0xc0]) + b' 32768')
-        self.assertEqual(target, 0x6003)
-        self.assertEqual((cpu.a, cpu.h, cpu.l), (1, 0, 10))
+        self.assertEqual(target, 0x7200)
+        self.assertEqual((cpu.d, cpu.e), (0, 10))
 
     def test_quoted_nonexecuted_usr_is_not_rejected(self):
         self.assertEqual(self.evaluate_path(b'"'+bytes([0xc0])+b'"')[0],0x35de)

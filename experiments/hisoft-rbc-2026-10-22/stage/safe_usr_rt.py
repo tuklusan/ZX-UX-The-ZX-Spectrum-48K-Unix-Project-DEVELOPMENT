@@ -8,6 +8,7 @@ runtime before using the native protected-memory POKE service.
 from __future__ import annotations
 
 from native_sysvars_rt import POKE_RT
+from native_error_exit import error_exit_asm
 
 # The check leaves the original address in HL and does not write to memory.
 # On failure ROM error 11 terminates the Spectrum statement. This check is
@@ -16,11 +17,7 @@ UDG_POKE_CHECK = (
     'push hl; ld de,($5c7b); or a; sbc hl,de; '
     'jr c,+12; ld a,h; or a; jr nz,+8; '
     'ld a,l; cp 168; jr nc,+3; '
-    'pop hl; jr +16; '
-    # Every failure releases the screen and exits with native status 11.
-    # ROM RST 8 is intercepted by ZX-UX as a kernel panic.
-    'ld hl,0; ld a,39; call $6003; '
-    'ld hl,11; ld a,1; jp $6003'
+    'pop hl; jr +15; ' + error_exit_asm(11)
 )
 
 
