@@ -66,13 +66,14 @@ def attempt(source, out, frontend, tape, limit, system):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--max', type=int, default=24000)
+    parser.add_argument('--games', nargs='+', default=GAMES)
     parser.add_argument('--frontend', type=Path, default=ROOT / 'upstream-pyhsb')
     parser.add_argument('--tape', type=Path, default=ROOT / 'trial-result/hisoft48.tap')
     parser.add_argument('--system', type=Path, default=ROOT / 'build/out/ZX-UX.tzx')
     parser.add_argument('--work', type=Path, default=ROOT / 'build/tmp/rbc-gate2-dual')
     args = parser.parse_args()
-    if not 12000 < args.max <= 24000:
-        raise ValueError('Trial max must exceed 12000 but not 24000 bytes')
+    if not 12000 <= args.max <= 24000:
+        raise ValueError('Trial max must be within 12000..24000 bytes')
     if not args.system.with_name('kernel.json').is_file():
         raise RuntimeError('Native kernel metadata missing')
     if args.system.read_bytes() != (ROOT / 'dist/zx-ux/tzx/ZX-UX.tzx').read_bytes():
@@ -88,7 +89,9 @@ def main():
     work = args.work
     work.mkdir(parents=True, exist_ok=True)
     results = {}
-    for game in GAMES:
+    if len(args.games) != len(set(args.games)):
+        raise ValueError('Duplicate games supplied')
+    for game in args.games:
         original = ROOT / 'src/bonus/60-programs' / game / 'BASIC'
         bas, tzx = original / (game + '.bas'), original / (game + '.tzx')
         if not bas.is_file() or not tzx.is_file():
@@ -131,11 +134,11 @@ def main():
                     default=str), flush=True)
         (folder / 'outcome.json').write_text(json.dumps(item, indent=2) + '\n')
     (work / 'summary.json').write_text(json.dumps(results, indent=2) + '\n')
-    if len(results) != 4:
-        raise RuntimeError('Incomplete four-game outcome collection')
+    if len(results) != len(args.games):
+        raise RuntimeError('Incomplete requested outcome collection')
     if not all(v['bas']['linked'] and v['tzx']['linked']
                and v['comparison']['identical'] for v in results.values()):
-        raise RuntimeError('Gate 2 four-game dual-source proof incomplete; see outcomes')
+        raise RuntimeError('Original dual-source proof incomplete; see outcomes')
 
 
 if __name__ == '__main__':
