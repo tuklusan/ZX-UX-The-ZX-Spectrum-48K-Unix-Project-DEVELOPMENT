@@ -1,10 +1,12 @@
-"""USR token ban and permitted UDG POKE targets."""
+"""USR token guard and separate UDG address-range verification."""
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
 from safety_usr import UnsupportedUsr, enforce_numeric_usr
+from poke_policy import ProtectedPoke, apply_poke_policy
 
 TOK = {0xc0: 'USR', 0xf4: 'POKE', 0xeb: 'FOR', 0xcc: 'TO', 0xf3: 'NEXT',
        0xea: 'REM', 0xf5: 'PRINT', 0xf1: 'LET', 0xf9: 'RANDOMIZE'}
@@ -36,13 +38,11 @@ class UsrGate(unittest.TestCase):
             with self.subTest(body=body), self.assertRaises(UnsupportedUsr):
                 self.check(body)
 
-    def test_graphics_outside_poke_rejected(self):
-        with self.assertRaises(UnsupportedUsr):
-            self.check('{LET} X={USR} "a"')
+    def test_graphics_outside_poke_can_be_typed_string(self):
+        self.check('{LET} X={USR} "a"')
 
-    def test_unproved_graphics_poke_rejected(self):
-        with self.assertRaises(UnsupportedUsr):
-            self.check('{POKE} {USR} "a"+X,1')
+    def test_dynamic_graphics_poke_uses_native_bounds_guard(self):
+        self.check('{POKE} {USR} "a"+X,1')
 
     def test_runtime_guarded_computed_string(self):
         expr = 'USR  CHR$ (143+M)+L'
@@ -54,9 +54,12 @@ class UsrGate(unittest.TestCase):
         self.check('{PRINT} "USR":{REM} {USR} 30000')
         self.check('{PRINT} "' + chr(0xc0) + '"')
 
-    def test_out_of_range_proof_rejected(self):
-        with self.assertRaises(UnsupportedUsr):
-            self.check('{POKE} {USR} "u"+8,1', [proof(10, 'USR  "u"+8', 168)])
+    def test_out_of_range_udg_address_is_rejected(self):
+        finding = SimpleNamespace(line=10, operation='POKE',
+                                  classification='unbounded_memory_write',
+                                  severity='block')
+        with self.assertRaises(ProtectedPoke):
+            apply_poke_policy([finding], [proof(10, 'USR "u"+8', 168)])
 
 
 if __name__ == '__main__':
