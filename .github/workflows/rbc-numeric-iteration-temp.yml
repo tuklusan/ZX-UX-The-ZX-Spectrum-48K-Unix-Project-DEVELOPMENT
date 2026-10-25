@@ -1,4 +1,4 @@
-name: RBC numeric iteration test retry (temporary)
+name: RBC native integer size optimization (temporary)
 on:
   push:
     paths:
@@ -44,6 +44,8 @@ jobs:
           python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_safety_usr.py' -v
           python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_poke_proof.py' -v
           python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_constant_dims.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_integer_fit.py' -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p 'test_native_integer_compiler.py' -v
       - name: Compile all 60 BAS and all 60 TZX independently
         env:
           PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk
@@ -53,6 +55,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: rbc-numeric-iteration-outcomes
+          name: rbc-native-integer-results
           path: build/tmp/rbc-round2/
           retention-days: 2
