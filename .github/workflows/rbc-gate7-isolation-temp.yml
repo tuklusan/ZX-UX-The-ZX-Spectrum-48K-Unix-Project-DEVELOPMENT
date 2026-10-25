@@ -19,6 +19,11 @@ jobs:
             | python3 -c 'import json,sys,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' \
             > experiments/hisoft-rbc-2026-10-22/stage/gate7_isolation_probe.py
           test "$(git hash-object experiments/hisoft-rbc-2026-10-22/stage/gate7_isolation_probe.py)" = 0fbc5910e48ef4a7a85eea28e65d8c705e4558ac
+          curl -fsSL --retry 2 --max-time 25 \
+            https://api.github.com/repos/tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT/git/blobs/ee8253d737e472dd6571ea3da98110c679404cd4 \
+            | python3 -c 'import json,sys,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' \
+            > experiments/hisoft-rbc-2026-10-22/tests/test_native_font_rt.py
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/tests/test_native_font_rt.py)" = ee8253d737e472dd6571ea3da98110c679404cd4
       - name: Obtain pinned HiSoft and original compiler tape
         run: |
           git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git upstream-pyhsb
