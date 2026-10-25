@@ -55,6 +55,7 @@ jobs:
         run: |
           mkdir -p build/tmp/rbc-gate1
           git rev-parse HEAD > build/tmp/rbc-gate1/revision.txt
+          tar -czf build/tmp/rbc-gate1/compiler-sources.tar.gz upstream-pyhsb trial-result/rbc trial-result/hisoft48.tap
           git ls-files -z experiments/hisoft-rbc-2026-10-22/stage experiments/hisoft-rbc-2026-10-22/tests src/bonus/60-programs src/zx-ux-sdk | tar --null -czf build/tmp/rbc-gate1/exact-source.tar.gz --files-from -
       - uses: actions/upload-artifact@v4
         if: always()
