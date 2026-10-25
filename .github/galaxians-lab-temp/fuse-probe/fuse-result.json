@@ -10,7 +10,7 @@
     "--tape",
     ".github/galaxians-lab-temp/fuse-probe/HiSoft_BASIC.tap"
   ],
-  "pid": 2765,
+  "pid": 2999,
   "running": true,
   "window_titles": [],
   "screenshot": ".github/galaxians-lab-temp/fuse-probe/after-compiler-load.png"
