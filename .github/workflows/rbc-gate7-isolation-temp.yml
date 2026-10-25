@@ -78,6 +78,42 @@ jobs:
             python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p "$test" -v
           done
           python3 experiments/hisoft-rbc-2026-10-22/stage/gate7_isolation_probe.py --work build/tmp/rbc-gate7 --system build/out/ZX-UX.tzx
+      - name: Inspect independent native USR address and PEEK results
+        if: always()
+        env:
+          PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk:experiments/hisoft-rbc-2026-10-22/stage
+        run: |
+          python3 - <<'PY'
+          import json,subprocess,sys
+          from pathlib import Path
+          import rvm,rld
+          folder=Path('build/tmp/rbc-gate7/address-diagnostic')
+          folder.mkdir(parents=True,exist_ok=True)
+          programs={
+           'no-peek':'10 LET Q=0\n20 POKE USR "b",Q\n30 GO TO 30\n',
+           'read-udg':'10 LET Q=PEEK USR "a"\n20 POKE USR "b",Q\n30 GO TO 30\n',
+           'zero-then-read':'10 POKE USR "a",0\n20 LET Q=PEEK USR "a"\n30 POKE USR "b",Q\n40 GO TO 40\n',
+           'raw-pointer':'10 LET A=USR "a"\n20 POKE USR "b",INT (A/256)\n30 POKE USR "b"+1,A-INT (A/256)*256\n40 LET Q=PEEK A\n50 POKE USR "b"+2,Q\n60 GO TO 60\n',
+          }
+          result={}
+          for name,bas in programs.items():
+              src=folder/(name+'.bas');ssx=folder/(name+'.ssx')
+              src.write_text(bas,encoding='ascii')
+              cmd=[sys.executable,'trial-result/rbc/rbc.py',str(src),
+                   '--frontend','upstream-pyhsb','--sdk','src/zx-ux-sdk',
+                   '--rom','src/zx-ux-sdk/rom/48.rom','--tape','trial-result/hisoft48.tap',
+                   '--max','12000','-o',str(ssx)]
+              p=subprocess.run(cmd,capture_output=True,text=True)
+              row={'compile_exit':p.returncode,'stderr':p.stderr[-1500:]}
+              if p.returncode==0:
+                  vm=rvm.run_kernel(ssx,frames=300,system='build/out/ZX-UX.tzx',cache=True)
+                  udg=vm.session.word(0x5c7b)
+                  row.update(started=vm.fg.started is not None,why=vm.why,udg=udg,
+                             a=vm.session.m.mem[udg],b=list(vm.session.m.mem[udg+8:udg+12]))
+              result[name]=row
+              print('GATE7_DIAGNOSTIC',name,json.dumps(row),flush=True)
+          (folder/'results.json').write_text(json.dumps(result,indent=2)+'\n')
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
