@@ -55,6 +55,38 @@ def _require_original_keyword_boundaries(number: int, body: str) -> None:
             raise ValueError(f'Line {number}: missing whitespace before TO in FOR statement')
 
 
+def _fix_bin_cache(data: bytes, number: int) -> bytes:
+    """Keep BIN numeric metadata consistent with the visible binary digits."""
+    out = bytearray(data)
+    quoted = False
+    p = 0
+    while p < len(out):
+        c = out[p]
+        if c == 34:
+            quoted = not quoted
+        elif not quoted and c == 0xEA:  # REM: remaining bytes are inert
+            break
+        elif not quoted and c == 14:  # previous numeric metadata
+            if p + 6 > len(out):
+                raise ValueError(f'Line {number}: incomplete numeric cache')
+            p += 6
+            continue
+        elif not quoted and c == 0xC4:  # executable BIN token
+            start = p + 1
+            end = start
+            while end < len(out) and out[end] in (48, 49):
+                end += 1
+            if end != start and end + 6 <= len(out) and out[end] == 14:
+                value = int(out[start:end].decode('ascii'), 2)
+                if value > 65535:
+                    raise ValueError(f'Line {number}: BIN number exceeds 65535')
+                out[end + 1:end + 6] = bytes((0, 0, value & 255, value >> 8, 0))
+                p = end + 6
+                continue
+        p += 1
+    return bytes(out)
+
+
 def encode_strict_listing(listing: str) -> bytes:
     """Do not re-tokenize, clean, rewrite, or insert Spectrum line text."""
     if not listing.isascii():
@@ -97,7 +129,7 @@ def encode_strict_listing(listing: str) -> bytes:
             n, body = row
             if n <= seen:
                 raise BAS2TAPError(f'Line {n}: duplicate or unordered BASIC line')
-            data = tokenize_line(body, line_number=n, _mode=mode)
+            data = _fix_bin_cache(tokenize_line(body, line_number=n, _mode=mode), n)
             output.extend(n.to_bytes(2, 'big'))
             output.extend(len(data).to_bytes(2, 'little'))
             output.extend(data)
