@@ -1,0 +1,123 @@
+name: RBC Gate 3 dynamic control trial
+on:
+  push:
+    paths:
+      - .github/workflows/rbc-gate3-control-temp.yml
+      - experiments/hisoft-rbc-2026-10-22/stage/native_run_rt.py
+      - experiments/hisoft-rbc-2026-10-22/tests/test_native_run_rt.py
+      - experiments/hisoft-rbc-2026-10-22/tests/test_poke_proof.py
+permissions:
+  contents: read
+jobs:
+  trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Obtain pinned HiSoft and original compiler tape
+        run: |
+          git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git upstream-pyhsb
+          git -C upstream-pyhsb checkout -q --detach 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+          mkdir -p trial-result build/tmp/rbc-gate2
+          git fetch --no-tags --depth=1 origin c3d270375af56768df3af6f5ceb38f83c9bd5bdd
+          git show FETCH_HEAD:experiments/hisoft-rbc-2026-10-22/rbc-fresh-chat-2026-10-22.zip > /tmp/rbc-checkpoint.zip
+          unzip -oq /tmp/rbc-checkpoint.zip -d build/tmp/rbc-gate2
+          cp -R build/tmp/rbc-gate2/scratch/rbc trial-result/rbc
+          python3 experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
+          python3 experiments/hisoft-rbc-2026-10-22/stage/finish_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
+          mkdir -p trial-result/fork-font
+          git -C trial-result/fork-font init -q
+          git -C trial-result/fork-font remote add origin https://github.com/tuklusan/font8x8.git
+          git -C trial-result/fork-font fetch -q --depth 1 origin 8e279d2d864e79128e96188a6b9526cfa3fbfef9
+          git -C trial-result/fork-font checkout -q --detach FETCH_HEAD
+          python3 experiments/hisoft-rbc-2026-10-22/stage/font_from_fork.py trial-result/fork-font/font8x8_basic.h trial-result/rbc/font32.bin
+          curl -fsSL --retry 2 --max-time 25 -o trial-result/hisoft48.tap https://www.cs.hmc.edu/~oneill/spectrum/classics/HiSoft-BASIC-Compiler-v1.1-48K.tap
+      - name: Test current typed USR and native routines
+        env:
+          PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk
+        run: |
+          set -e
+          for test in test_safety_usr.py test_typed_usr_classifier.py test_safe_usr_rt.py test_native_pause_rt.py test_native_run_rt.py test_safe_usr_native_z80.py test_rbc_fit.py test_dual_source.py test_rom_syntax.py test_poke_proof.py test_poke_policy.py test_computed_lines.py test_udg_bounds.py test_udg_chr_bounds.py; do
+            echo "=== $test ==="
+            python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p "$test" -v
+          done
+      - name: Build exact ZX-UX kernel metadata for native execution
+        if: always()
+        run: |
+          set -e
+          git clone -q --recurse-submodules https://github.com/z00m128/sjasmplus.git /tmp/sjasmplus-1.24.0
+          git -C /tmp/sjasmplus-1.24.0 checkout -q --detach d379eeac9ad3857fb48fd3a3929175d0a56038ce
+          git -C /tmp/sjasmplus-1.24.0 submodule update -q --init --recursive
+          test "$(git -C /tmp/sjasmplus-1.24.0 rev-parse HEAD)" = d379eeac9ad3857fb48fd3a3929175d0a56038ce
+          make -C /tmp/sjasmplus-1.24.0 USE_LUA=0 -j2 >/tmp/sjasm-build.log 2>&1 || { tail -100 /tmp/sjasm-build.log; exit 1; }
+          /tmp/sjasmplus-1.24.0/build/release/sjasmplus --version
+          mkdir -p build/src build/out
+          cp -R src/zx-ux/. build/src/
+          python3 -B src/zx-ux-sdk/tools/osbuild.py /tmp/sjasmplus-1.24.0/build/release/sjasmplus
+          python3 - <<'PYBUILD'
+          import re,sys
+          from pathlib import Path
+          sys.path.insert(0,'src/zx-ux-sdk/tools')
+          import osbuild,turbo_boot_build
+          syms={m.group(1):int(m.group(2),16) for line in Path('build/src/unix.sym').read_text().splitlines() if (m:=re.match(r'(\S+): EQU 0x([0-9A-Fa-f]+)',line))}
+          _,_,free,_=osbuild.mkfs(syms,osbuild.program_list())
+          turbo_boot_build.create_tzx('/tmp/sjasmplus-1.24.0/build/release/sjasmplus',syms,syms['kend']-0x6000,free,output_name='ZX-UX.tzx')
+          if Path('build/out/ZX-UX.tzx').read_bytes()!=Path('dist/zx-ux/tzx/ZX-UX.tzx').read_bytes():
+              raise RuntimeError('Rebuilt system tape does not match frozen release')
+          if not Path('build/out/kernel.json').exists():
+              raise RuntimeError('Rebuilt system kernel metadata missing')
+          print('Native kernel and frozen tape exact match')
+          PYBUILD
+      - name: Validate native computed branches and modified loops
+        env:
+          PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk:experiments/hisoft-rbc-2026-10-22/stage
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,sys,json,hashlib
+          import rvm,rld
+          work=Path('build/tmp/rbc-run-trial')
+          corpus={
+           'goto-variable':('10 LET A=100\n20 GO TO A\n30 POKE USR "a",1\n40 GO TO 40\n100 POKE USR "a",17\n110 GO TO 110\n',17),
+           'gosub-variable':('10 LET A=100\n20 GO SUB A\n30 POKE USR "a",27\n40 GO TO 40\n100 RETURN\n',27),
+           'for-index-modified':('10 LET V=0\n20 FOR I=1 TO 7\n30 LET V=V+1\n40 LET I=I+1\n50 NEXT I\n60 POKE USR "a",V\n70 GO TO 70\n',4),
+           'poke-variable':('10 LET A=USR "a"+3\n20 POKE A,77\n30 GO TO 30\n',77),
+          }
+          results={}
+          for name,(listing,expected) in corpus.items():
+              src=work/(name+'.bas')
+              src.write_text(listing,encoding='ascii')
+              out=work/(name+'.ssx')
+              command=[sys.executable,'trial-result/rbc/rbc.py',str(src),
+                       '--frontend','upstream-pyhsb','--sdk','src/zx-ux-sdk',
+                       '--rom','src/zx-ux-sdk/rom/48.rom','--tape','trial-result/hisoft48.tap',
+                       '--max','12000','-o',str(out)]
+              proc=subprocess.run(command,capture_output=True,text=True,timeout=90)
+              row={'compile_exit':proc.returncode,'compiler_stdout':proc.stdout[-1200:],'compiler_stderr':proc.stderr[-1200:]}
+              if proc.returncode==0 and out.is_file():
+                  data=out.read_bytes()
+                  obj=rld.parse_ssx(data)
+                  row.update(file=len(data),image=len(obj['image']),bss=obj['bss'],stack=obj['stack'],
+                             total=len(obj['image'])+obj['bss']+obj['stack'],sha256=hashlib.sha256(data).hexdigest())
+                  try:
+                      vm=rvm.run_kernel(out,frames=470,system='build/out/ZX-UX.tzx',cache=True)
+                      memory=vm.session.m.mem
+                      udg=memory[0x5c7b]+256*memory[0x5c7c]
+                      value=memory[udg+(3 if name=='poke-variable' else 0)]
+                      row.update(started=bool(vm.fg and vm.fg.started is not None),reason=vm.why,
+                                 observed_udg_byte=value,expected_udg_byte=expected)
+                      row['pass']=bool(row['started'] and vm.why=='frames' and value==expected)
+                  except Exception as exc:
+                      row.update(pass_=False,runtime_error=f'{type(exc).__name__}: {exc}')
+              results[name]=row
+              print('GATE3_NATIVE',name,json.dumps(row),flush=True)
+          (work/'gate3-controls.json').write_text(json.dumps(results,indent=2)+'\n')
+          if any(not x.get('pass') for x in results.values()):
+              raise RuntimeError('At least one native control-flow probe failed')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rbc-gate3-control-evidence
+          path: build/tmp/rbc-run-trial/
+          retention-days: 1
