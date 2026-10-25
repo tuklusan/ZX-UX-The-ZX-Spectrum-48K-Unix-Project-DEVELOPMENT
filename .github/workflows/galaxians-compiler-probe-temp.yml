@@ -20,15 +20,15 @@ jobs:
           set -eu
           mkdir -p .github/galaxians-lab-temp
           python3 - <<'PY'
-          import urllib.request,urllib.error,hashlib,zipfile,io,json,datetime
+          import urllib.request,urllib.error,hashlib,zipfile,io,json,datetime,base64
           urls={
             'HiSoft_BASIC_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftBASIC.tap.zip',
             'HiSoft_BASIC_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftBASICV1.0.tzx.zip',
             'Softek_FP_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/SoftekFPFullCompilerV1.1.tap.zip',
-            'Softek_FP_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/s/SoftekFPFullCompiler.tzx.zip',
+            'Softek_FP_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/SoftekFPFullCompilerV1.0.tzx.zip',
             'HiSoft_COLT_TZX': 'https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftCOLTCompiler.tzx.zip',
-            'MCoder_III_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/m/MCoderIII.tap.zip',
-            'BLAST_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/b/BLAST.tap.zip',
+            'MCoder_III_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/MCoderIII.tap.zip',
+            'BLAST_TAP': 'https://worldofspectrum.net/pub/sinclair/utils/BLAST.tap.zip',
           }
           results=[]
           for name,url in urls.items():
@@ -41,6 +41,10 @@ jobs:
               if zipfile.is_zipfile(io.BytesIO(payload)):
                 z=zipfile.ZipFile(io.BytesIO(payload))
                 row['members']=[{'name':i.filename,'bytes':i.file_size,'sha256':hashlib.sha256(z.read(i)).hexdigest()} for i in z.infolist() if not i.is_dir()]
+                if name in ('HiSoft_BASIC_TAP','HiSoft_COLT_TZX','Softek_FP_TAP','Softek_FP_TZX','MCoder_III_TAP'):
+                  for index,i in enumerate(z.infolist()):
+                    if not i.is_dir() and i.filename.lower().endswith(('.tap','.tzx')):
+                      with open('.github/galaxians-lab-temp/'+name+'_'+str(index)+'.b64','w') as out:out.write(base64.b64encode(z.read(i)).decode('ascii'))
               else:row['error']='not_zip'
             except Exception as e:row['error']=str(e)[:350]
             print(json.dumps(row,sort_keys=True),flush=True)
@@ -53,6 +57,6 @@ jobs:
           set -eu
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/galaxians-lab-temp/archive-probe.json
+          git add .github/galaxians-lab-temp/
           git commit -m "lab: record temporary Galaxians compiler archive accessibility"
           git push origin HEAD:main
