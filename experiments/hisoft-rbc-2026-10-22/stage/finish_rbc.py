@@ -39,8 +39,8 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change('                program = source.add_directives(program, directives, True, [], kw, initial.fp)',
            '                program = source.add_directives(program, chosen_directives, True, [], kw, initial.fp)')
     change('        if not source.open_lines(program):',
-           '        program, constant_dim_proofs = specialize_literal_dims(\\n'
-           '            program, kw, initial.fp, source, source.tap)\\n'
+           '        program, constant_dim_proofs = specialize_literal_dims(\n'
+           '            program, kw, initial.fp, source, source.tap)\n'
            '        if not source.open_lines(program):')
     change('        program = source.tokenize_directives(program,kw)',
            '        program = source.tokenize_directives(program,kw)\n'
