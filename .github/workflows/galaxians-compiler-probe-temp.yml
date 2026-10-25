@@ -61,12 +61,19 @@ jobs:
           sha256sum /usr/share/fuse/48.rom > .github/galaxians-lab-temp/sinclair-rom.sha256
           xvfb-run -a -s '-screen 0 1024x768x24' /usr/bin/python3 .github/galaxians-lab-temp/hi-basic-probe.py > .github/galaxians-lab-temp/fuse-probe-run.log 2>&1
           echo "FUSE_RESULT=$?" >> .github/galaxians-lab-temp/fuse-probe-run.log
+      - name: Upload temporary compiler tape for local validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: hisoft-basic-48k-compiler-tape
+          path: .github/galaxians-lab-temp/fuse-probe/HiSoft_BASIC.tap
+          retention-days: 1
       - name: Commit probe output
         shell: bash
         run: |
           set -eu
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo "$GITHUB_RUN_ID" > .github/galaxians-lab-temp/runner-id.txt
           git add .github/galaxians-lab-temp/
           git commit -m "lab: record temporary Galaxians compiler archive accessibility"
           git pull --rebase origin main
