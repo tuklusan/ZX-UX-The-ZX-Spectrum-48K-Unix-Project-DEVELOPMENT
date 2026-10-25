@@ -22,6 +22,8 @@ jobs:
           fetch_checked experiments/hisoft-rbc-2026-10-22/stage/external_io_policy.py d95886104d7cd1270cf04797aa485707fcdbd612
           fetch_checked experiments/hisoft-rbc-2026-10-22/tests/test_external_io_policy.py 86624ccab56c0efdd46074d37decc25aac242b0d
           fetch_checked experiments/hisoft-rbc-2026-10-22/tests/test_finish_rbc_setup.py 0ccaff6f174e26550c807b1c2e455fbef0c13e34
+          fetch_checked experiments/hisoft-rbc-2026-10-22/stage/diagnostics.py a7ea1e50c9d75fec5c6b5ab68759ad2f7c2544e1
+          fetch_checked experiments/hisoft-rbc-2026-10-22/tests/test_diagnostics.py 411b34d9c84a91f19876b56253e1cf69ed406ec0
       - name: Obtain pinned HiSoft and original compiler tape
         run: |
           git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git upstream-pyhsb
@@ -45,7 +47,7 @@ jobs:
           PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk:experiments/hisoft-rbc-2026-10-22/stage
         run: |
           set -e
-          for test in test_external_io_policy.py test_tape_policy.py test_finish_rbc_setup.py test_rom_syntax.py; do
+          for test in test_external_io_policy.py test_tape_policy.py test_finish_rbc_setup.py test_rom_syntax.py test_diagnostics.py; do
             python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p "$test" -v
           done
           mkdir -p build/tmp/rbc-gate6-io
@@ -72,7 +74,9 @@ jobs:
               row={'exit':p.returncode,'stderr':p.stderr,'stdout':p.stdout,'binary':dst.exists()}
               row['pass']=(p.returncode!=0 and not dst.exists()) if reject else (p.returncode==0 and dst.exists())
               if name in ('lprint','llist'):
-                  row['pass']=row['pass'] and 'E_EXTERNAL_IO' in p.stderr
+                  row['pass']=row['pass'] and 'RBC_PRINTER_UNSUPPORTED' in p.stderr
+              if name=='if1-cat':
+                  row['pass']=row['pass'] and 'RBC_INTERFACE_UNSUPPORTED' in p.stderr
               results[name]=row
               print('GATE6_IO',name,json.dumps(row),flush=True)
           (w/'summary.json').write_text(json.dumps(results,indent=2)+'\n')
