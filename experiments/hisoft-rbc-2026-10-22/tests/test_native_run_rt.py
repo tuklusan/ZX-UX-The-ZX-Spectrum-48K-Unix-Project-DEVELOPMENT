@@ -2,7 +2,7 @@
 import sys, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
-from native_run_rt import install, _uses_run, _run_entry
+from native_run_rt import install, _uses_run, _run_entry, _computed_run_present
 
 
 class FakeCompiler:
@@ -14,6 +14,8 @@ class FakeCompiler:
     def reset(self, program):
         self.lines = list(program)
         self.pc = self.vars_start = 100
+        self.search_at = 750
+        self.goto_directive = self.gosub_all = 0
     def layout_vars(self):
         self.pc = self.vars_start + self.size
     def entry_point_line(self):
@@ -130,14 +132,26 @@ class RunTests(unittest.TestCase):
         for invalid in (-1, 0x4000, 9999, 1.5, None):
             self.assertIsNone(_run_entry(lines, invalid))
 
-    def test_computed_run_target_rejected(self):
+    def test_computed_run_preserves_target_and_uses_native_search(self):
         obj = Module.Compiler(12)
-        obj.reset([(1, b'\xf7 X\r')])
+        obj.reset([(1, b'\xf7 X\r'), (60, b'\xf5\r')])
         obj.layout_vars()
+        self.assertEqual((obj.goto_directive,obj.gosub_all),(1,1))
         obj.end = False
         obj.target = (True,None)
-        with self.assertRaisesRegex(ValueError, 'computed RUN line'):
-            obj.st_run()
+        obj.st_run()
+        self.assertEqual(obj.calls[-3:],[
+            ('restore',),('asm','pop hl'),('rel','jp nn',750)])
+        self.assertIn(('asm','push hl'),obj.calls)
+        self.assertEqual(obj.calls[0],('rel','ld sp,(nn)',112))
+
+    def test_computed_run_scanner_preserves_bare_and_literal_programs(self):
+        self.assertFalse(_computed_run_present([(10,b'\xf7\r')]))
+        self.assertFalse(_computed_run_present([(10,b'\xf7 130\r')]))
+        self.assertTrue(_computed_run_present([(10,b'\xf7 A\r')]))
+        self.assertTrue(_computed_run_present([(10,b'\xf7 100+A\r')]))
+        self.assertFalse(_computed_run_present([(10,b'"\xf7 X"\r')]))
+        self.assertFalse(_computed_run_present([(10,b'\xea\xf7 X\r')]))
 
     def test_past_final_line_rejected(self):
         obj = Module.Compiler(12)

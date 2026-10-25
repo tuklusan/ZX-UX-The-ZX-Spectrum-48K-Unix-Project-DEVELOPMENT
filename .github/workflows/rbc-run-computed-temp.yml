@@ -1,8 +1,10 @@
-name: RBC computed RUN native trial
+name: RBC computed RUN native confirmation
 on:
   push:
     paths:
       - .github/workflows/rbc-run-computed-temp.yml
+      - experiments/hisoft-rbc-2026-10-22/stage/native_run_rt.py
+      - experiments/hisoft-rbc-2026-10-22/tests/test_native_run_rt.py
       - experiments/hisoft-rbc-2026-10-22/tests/test_poke_proof.py
 permissions:
   contents: read
@@ -12,18 +14,12 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - name: Install exact unpublished RUN candidate sources for test only
+      - name: Verify tracked RUN sources match native-tested bytes
         run: |
           set -e
           mkdir -p build/tmp/rbc-run-trial/checked-sources
-          fetch_blob() {
-            curl -fsSL --retry 2 --max-time 25 \
-              "https://api.github.com/repos/tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT/git/blobs/$2" \
-              | python3 -c 'import json,sys,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' > "$1"
-            test "$(git hash-object "$1")" = "$2"
-          }
-          fetch_blob experiments/hisoft-rbc-2026-10-22/stage/native_run_rt.py d5cdaaae80a427b18860f0c8e3f0cc3909eef846
-          fetch_blob experiments/hisoft-rbc-2026-10-22/tests/test_native_run_rt.py 1223e9bf0d93232df563a58ae50d733e455d0702
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/stage/native_run_rt.py)" = d5cdaaae80a427b18860f0c8e3f0cc3909eef846
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/tests/test_native_run_rt.py)" = 1223e9bf0d93232df563a58ae50d733e455d0702
           cp experiments/hisoft-rbc-2026-10-22/stage/native_run_rt.py build/tmp/rbc-run-trial/checked-sources/
           cp experiments/hisoft-rbc-2026-10-22/tests/test_native_run_rt.py build/tmp/rbc-run-trial/checked-sources/
       - name: Obtain pinned HiSoft and original compiler tape

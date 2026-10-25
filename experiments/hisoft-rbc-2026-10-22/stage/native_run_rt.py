@@ -10,6 +10,31 @@ _RUN = 0xF7
 _REM = 0xEA
 
 
+def _computed_run_present(lines):
+    """Only expression-valued RUN needs the native line-search table."""
+    import re
+    for _, body in lines:
+        quoted = False
+        pos = 0
+        while pos < len(body):
+            ch = body[pos]
+            if ch == 14 and not quoted and pos + 6 <= len(body):
+                pos += 6
+                continue
+            if ch == 34:
+                quoted = not quoted
+            elif not quoted and ch == _REM:
+                break
+            elif not quoted and ch == _RUN:
+                end = body.find(b':', pos + 1)
+                end = len(body) if end < 0 else end
+                arg = body[pos + 1:end].rstrip(b'\r ').strip()
+                if arg and not re.fullmatch(rb'[0-9]+(?:\x0e[\x00-\xff]{5})?', arg):
+                    return True
+            pos += 1
+    return False
+
+
 def _uses_run(lines):
     for _, body in lines:
         quoted = False
@@ -46,6 +71,9 @@ def install(compiler):
     def reset(self, program):
         initial_reset(self, program)
         self._zxux_run_present = _uses_run(self.lines)
+        if _computed_run_present(self.lines):
+            self.goto_directive = 1
+            self.gosub_all = 1
         self._zxux_run_first = next((n for n, _ in self.lines if n > 0), 0)
         self._zxux_run_sp = 0
         self._zxux_run_clear_bytes = 1
@@ -71,17 +99,19 @@ def install(compiler):
         if not self._zxux_run_present or not self._zxux_run_first:
             self.not_supported('RUN entry')
         if self.at_end():
-            requested = self._zxux_run_first
+            computed, requested = False, self._zxux_run_first
         else:
-            # The existing HiSoft parser reads the hidden numeric constant.
+            # HiSoft evaluates computed line numbers into HL.
             computed, requested = self.goto_target()
-            if computed:
-                self.not_supported('computed RUN line')
-        target = _run_entry(self.lines, requested)
-        if target is None:
-            self.not_supported('RUN line outside listing')
-        # Z80 ED7B restores the caller's stack even after nested GO SUB.
+        if not computed:
+            target = _run_entry(self.lines, requested)
+            if target is None:
+                self.not_supported('RUN line outside listing')
+        # Restore the caller's stack after nested GO SUB.
         self.emit_op_reloc('ld sp,(nn)', self._zxux_run_sp)
+        if computed:
+            # Save the target across variable clearing and RESTORE.
+            self.emit('push hl')
         # Keep the emitted width fixed across HiSoft's counting and store passes.
         self.ld_hl(self.vars_start)
         self.emit('ld (hl),0')
@@ -92,7 +122,11 @@ def install(compiler):
         else:
             self.emit('nop; nop; nop; nop; nop; nop; nop; nop')
         self.emit_restore()
-        self.emit_goto('jp nn', target)
+        if computed:
+            self.emit('pop hl')
+            self.emit_op_reloc('jp nn', self.search_at)
+        else:
+            self.emit_goto('jp nn', target)
 
     def dispatch(self):
         result = initial_dispatch(self)
