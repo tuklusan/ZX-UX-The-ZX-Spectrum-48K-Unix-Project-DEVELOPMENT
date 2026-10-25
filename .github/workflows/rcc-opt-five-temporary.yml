@@ -170,37 +170,37 @@ jobs:
               v["same_ram_reservation"]=v["metric"]["bss"]==entry["variants"]["rcc"]["metric"]["bss"] and v["metric"]["stack"]==entry["variants"]["rcc"]["metric"]["stack"]
            except Exception as e:
             entry["error"]=repr(e);entry["traceback"]=traceback.format_exc(limit=6)
-           # An additional forced-native check exposes opportunities hidden by bytecode fitting.
-          try:
-           ndata,ng,ntxt,nobj,nneed=driver.build(str(src),options)
-           entry["native"]={"rcc":{"metric":metric(ndata),"asm_sha256":digest(ntxt.encode())}}
-           (work/(name+"-native-rcc.ssx")).write_bytes(ndata)
-           for nv in ("upeep","generator"):
-            try:
-             (nbytes,nvg,ntext,nobj,nneed),nstats=build_variant(src,options,nv)
-             (work/(name+"-native-"+nv+".ssx")).write_bytes(nbytes)
-             entry["native"][nv]={"metric":metric(nbytes),"optimizer_stats":nstats,
-                "saved_file_bytes":len(ndata)-len(nbytes),
-                "saved_total_bytes":metric(ndata)["total"]-metric(nbytes)["total"]}
-            except Exception as ne:
-             entry["native"][nv]={"error":repr(ne),"traceback":traceback.format_exc(limit=4)}
-           for nv in ("rcc","upeep","generator"):
-            target=entry["native"][nv]
-            if "metric" in target:
-             if target["metric"]["admission"]<=14000:
-              target["runtime"]=native_probe(work/(name+"-native-"+nv+".ssx"),work/(name+"-native-"+nv+".scr"))
-             else:
-              target["runtime"]={"not_run":"exceeds 14000 byte default limit"}
-           nb=entry["native"]["rcc"]["runtime"]
-           for nv in ("upeep","generator"):
-            if "runtime" in entry["native"].get(nv,{}):
-             rr=entry["native"][nv]["runtime"]
-             entry["native"][nv]["same_exit"]=rr.get("exit")==nb.get("exit") and rr.get("exit")==0
-             entry["native"][nv]["same_screen_at_90_frames"]=bool(rr.get("screen_sha256")) and rr.get("screen_sha256")==nb.get("screen_sha256")
-           print("NATIVE_RESULT",json.dumps({"name":name,"data":entry["native"]},sort_keys=True),flush=True)
-          except Exception as ne:
-           entry["native_error"]=repr(ne)
-           entry["native_traceback"]=traceback.format_exc(limit=4)
+            # An additional forced-native check exposes opportunities hidden by bytecode fitting.
+           try:
+            ndata,ng,ntxt,nobj,nneed=driver.build(str(src),options)
+            entry["native"]={"rcc":{"metric":metric(ndata),"asm_sha256":digest(ntxt.encode())}}
+            (work/(name+"-native-rcc.ssx")).write_bytes(ndata)
+            for nv in ("upeep","generator"):
+             try:
+              (nbytes,nvg,ntext,nobj,nneed),nstats=build_variant(src,options,nv)
+              (work/(name+"-native-"+nv+".ssx")).write_bytes(nbytes)
+              entry["native"][nv]={"metric":metric(nbytes),"optimizer_stats":nstats,
+                 "saved_file_bytes":len(ndata)-len(nbytes),
+                 "saved_total_bytes":metric(ndata)["total"]-metric(nbytes)["total"]}
+             except Exception as ne:
+              entry["native"][nv]={"error":repr(ne),"traceback":traceback.format_exc(limit=4)}
+            for nv in ("rcc","upeep","generator"):
+             target=entry["native"][nv]
+             if "metric" in target:
+              if target["metric"]["admission"]<=14000:
+               target["runtime"]=native_probe(work/(name+"-native-"+nv+".ssx"),work/(name+"-native-"+nv+".scr"))
+              else:
+               target["runtime"]={"not_run":"exceeds 14000 byte default limit"}
+            nb=entry["native"]["rcc"]["runtime"]
+            for nv in ("upeep","generator"):
+             if "runtime" in entry["native"].get(nv,{}):
+              rr=entry["native"][nv]["runtime"]
+              entry["native"][nv]["same_exit"]=rr.get("exit")==nb.get("exit") and rr.get("exit")==0
+              entry["native"][nv]["same_screen_at_90_frames"]=bool(rr.get("screen_sha256")) and rr.get("screen_sha256")==nb.get("screen_sha256")
+            print("NATIVE_RESULT",json.dumps({"name":name,"data":entry["native"]},sort_keys=True),flush=True)
+           except Exception as ne:
+            entry["native_error"]=repr(ne)
+            entry["native_traceback"]=traceback.format_exc(limit=4)
           entry["elapsed_s"]=round(time.monotonic()-start,2)
            entries.append(entry)
            print("PROGRAM_RESULT",json.dumps(entry,sort_keys=True),flush=True)
