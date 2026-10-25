@@ -1,0 +1,37 @@
+name: RBC upeepz80 size audit temporary
+on:
+  push:
+    paths:
+      - .github/workflows/rbc-upeepz80-size-temp.yml
+permissions:
+  contents: read
+jobs:
+  sizes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Acquire exact upstream optimizer revision
+        run: |
+          git clone --quiet https://github.com/tuklusan/upeepz80.git build/tmp/upstream-upeepz80
+          git -C build/tmp/upstream-upeepz80 checkout --quiet --detach a48d725704b132c3ff23ac77232a3a412b56b15f
+          test "$(git -C build/tmp/upstream-upeepz80 rev-parse HEAD)" = a48d725704b132c3ff23ac77232a3a412b56b15f
+          grep -q 'GNU GENERAL PUBLIC LICENSE' build/tmp/upstream-upeepz80/LICENSE
+      - name: Test native relocation-preserving output integration
+        env:
+          PYTHONPATH: build/tmp/upstream-upeepz80:experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk
+        run: |
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p test_upeepz80_output.py -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p test_rbc_output.py -v
+          python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p test_rbc_fit.py -v
+      - name: Reassemble and relink every published SSX through upeepz80
+        env:
+          PYTHONPATH: build/tmp/upstream-upeepz80:experiments/hisoft-rbc-2026-10-22/stage:src/zx-ux-sdk
+        run: |
+          python3 experiments/hisoft-rbc-2026-10-22/stage/upeepz80_measure.py --root . --workspace build/tmp/upeepz80-ssx
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rbc-upeepz80-native-sizes
+          path: build/tmp/upeepz80-ssx/upeepz80-ssx-sizes.json
+          retention-days: 1
