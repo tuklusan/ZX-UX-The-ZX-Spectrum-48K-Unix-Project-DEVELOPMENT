@@ -21,7 +21,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git clone -q --depth=1 --branch v1.24.0 https://github.com/z00m128/sjasmplus.git "$RUNNER_TEMP/sjasmplus"
+          git clone -q --recurse-submodules --shallow-submodules --depth=1 --branch v1.24.0 https://github.com/z00m128/sjasmplus.git "$RUNNER_TEMP/sjasmplus"
           make -s -C "$RUNNER_TEMP/sjasmplus" -j2 >/tmp/sjasm-build.log 2>&1 || { tail -60 /tmp/sjasm-build.log; exit 1; }
           "$RUNNER_TEMP/sjasmplus/sjasmplus" --version || true
           git clone -q https://github.com/tuklusan/upeepz80.git "$RUNNER_TEMP/upeepz80"
