@@ -1,0 +1,42 @@
+name: Temporary Granada tape retrieval
+on:
+  push:
+    paths:
+      - .github/workflows/temporary-granada-tape-collection.yml
+permissions:
+  contents: read
+concurrency:
+  group: temporary-granada-tape-collection
+  cancel-in-progress: false
+jobs:
+  retrieve:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Inspect Granada catalogue and linked tape files
+        shell: bash
+        run: |
+          python - <<'PY'
+          import urllib.request,html.parser,time,urllib.parse,re
+          class L(html.parser.HTMLParser):
+            def __init__(self): super().__init__(); self.links=[]; self.stack=[]
+            def handle_starttag(self,t,a):
+              if t=='a': self.stack.append([dict(a).get('href',''),''])
+            def handle_data(self,d):
+              if self.stack:self.stack[-1][1]+=d
+            def handle_endtag(self,t):
+              if t=='a' and self.stack: self.links.append(self.stack.pop())
+          root='https://worldofspectrum.org'
+          pages=['/archive/publishers/Granada-Publishing','/archive/software/games/across-the-ravine-granada-publishing','/archive/software/games/noughts-and-crosses-granada-publishing']
+          for page in pages:
+            try:
+              req=urllib.request.Request(root+page,headers={'User-Agent':'Mozilla/5.0 (archival research; polite sequential retrieval)'})
+              with urllib.request.urlopen(req,timeout=30) as r:data=r.read();url=r.url;status=r.status
+              doc=data.decode('utf-8','replace');p=L();p.feed(doc)
+              print('PAGE',page,'STATUS',status,'LEN',len(data),'URL',url)
+              print('PAGE_HEAD',repr(doc[:600]))
+              relevant=[{'href':x[0],'text':' '.join(x[1].split())[:180]} for x in p.links if any(q in (x[0]+' '+x[1]).lower() for q in ('tape','tzx','tap','download','granada','across the ravine','noughts and crosses','image'))]
+              print('LINKS',repr(relevant[:70]))
+            except Exception as e:print('FETCH_ERROR',page,type(e).__name__,str(e))
+            time.sleep(1)
+          PY
