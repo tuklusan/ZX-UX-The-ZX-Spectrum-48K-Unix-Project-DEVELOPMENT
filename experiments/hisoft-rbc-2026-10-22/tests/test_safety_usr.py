@@ -44,6 +44,12 @@ class UsrGate(unittest.TestCase):
         with self.assertRaises(UnsupportedUsr):
             self.check('{POKE} {USR} "a"+X,1')
 
+    def test_runtime_guarded_computed_string(self):
+        expr = 'USR  CHR$ (143+M)+L'
+        self.check('{POKE} {USR} CHR$ (143+M)+L,1',
+                   [{'line':10,'expression':expr,'addresses':[],
+                     'status':'runtime_guarded_udg_pointer'}])
+
     def test_quoted_and_rem_ignored(self):
         self.check('{PRINT} "USR":{REM} {USR} 30000')
         self.check('{PRINT} "' + chr(0xc0) + '"')

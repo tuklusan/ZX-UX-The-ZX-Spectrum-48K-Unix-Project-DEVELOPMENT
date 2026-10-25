@@ -21,7 +21,8 @@ def finish(checkpoint: Path, extensions: Path) -> None:
         text = text.replace(before, after, 1)
 
     change('from bss_layout import target_offset',
-           'from safety_usr import enforce_numeric_usr\n'
+           'from safe_usr_rt import install as install_safe_usr
+from safety_usr import enforce_numeric_usr\n'
            'from poke_policy import apply_poke_policy\n'
            'from poke_proof import prove_pokes\n'
            'from restore_data import resolve_restores\n'
@@ -83,6 +84,8 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            "            upeep_reports.append(getattr(c,'_zxux_upeep_stats',{}))")
     change('args.ramtop,args.directive,args.memory_policy)',
            'args.ramtop,args.directive,args.memory_policy,args.upeepz80)')
+    change('    install_native_run(compiler)',
+           '    install_native_run(compiler)\n    install_safe_usr(compiler)')
     text = patched(text)
     change('from rbc_output import output_path, memory_required, write_mode',
            'from diagnostics import format_failure, RbcArgumentParser\n'
@@ -95,7 +98,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change("except (ValueError,OSError) as exc:\n        print('rbc: '+str(exc),file=sys.stderr)",
            "except Exception as exc:\n"
            "        print(format_failure(exc,args.source),file=sys.stderr)")
-    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py', 'integer_fit.py', 'native_integer_compiler.py', 'native_string_compiler.py', 'upeepz80_codegen.py'):
+    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py', 'integer_fit.py', 'native_integer_compiler.py', 'native_string_compiler.py', 'upeepz80_codegen.py', 'safe_usr_rt.py'):
         shutil.copyfile(extensions / module, checkpoint / 'rbc' / module)
     source.write_text(text)
 

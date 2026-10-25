@@ -275,6 +275,11 @@ def prove_pokes(lines, token_names, findings):
                 re.search(r'\bUSR\b', value, re.I)
                 for loop in w.loops for value in (loop.first, loop.last, loop.step))
             if has_udg:
+                if re.search(r'\bUSR\b', w.address, re.I):
+                    proved.append({'line':w.line, 'expression':w.address,
+                                   'addresses':[],
+                                   'status':'runtime_guarded_udg_pointer'})
+                    continue
                 raise
             proved.append({'line':w.line,'expression':w.address,
                            'addresses':[], 'status':'dynamic_programmer_responsibility'})

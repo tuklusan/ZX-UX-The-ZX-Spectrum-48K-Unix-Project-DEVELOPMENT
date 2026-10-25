@@ -46,9 +46,9 @@ class PokePolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(PokeAddressError,'E_UDG_RANGE'):
             check('{POKE} {USR} "u"+8,1')
 
-    def test_udg_unknown_offset_rejected(self):
-        with self.assertRaises(PokeAddressError):
-            check('{POKE} {USR} "a"+X,1')
+    def test_udg_unknown_offset_runtime_guarded(self):
+        self.assertEqual(check('{POKE} {USR} "a"+X,1')[0]['status'],
+                         'runtime_guarded_udg_pointer')
 
     def test_bounded_udg_loop(self):
         proof=check('{FOR} F={USR} "a" {TO} {USR} "b"+7',

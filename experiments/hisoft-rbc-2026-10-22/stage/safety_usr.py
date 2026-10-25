@@ -75,6 +75,16 @@ def enforce_numeric_usr(lines, findings, poke_proofs=None, token_names=None):
                        for m in matches) != token_count:
                     raise UnsupportedUsr(f'RBC E_USR_TOKEN: Line {line}: USR outside POKE address')
                 relevant = [p for p in proofs if p['line'] == line and p['expression'] == address]
+                # The compiled argument type and native 168-byte check
+                # protect dynamically computed UDG pointers.
+                if any(p.get('status') == 'runtime_guarded_udg_pointer'
+                       for p in relevant):
+                    if any(re.match(r'\s*(?:[+\-]?(?:\d|\.)|VAL\b|PEEK\b|CODE\b|RND\b|INT\b|ABS\b|SGN\b|PI\b|IN\b)',
+                                    source[m.end():], re.I)
+                           for m in matches):
+                        raise UnsupportedUsr(
+                            f'RBC E_MACHINE_CODE: Line {line}: Numeric USR is prohibited')
+                    continue
                 if any(p.get('addresses') and
                        all(a['space'] == 'process_udg' and 0 <= a['offset'] < 168
                            for a in p['addresses']) for p in relevant):
