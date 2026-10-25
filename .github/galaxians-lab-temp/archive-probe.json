@@ -1,0 +1,75 @@
+{
+  "utc": "2026-10-25T02:12:06.034721+00:00",
+  "results": [
+    {
+      "name": "HiSoft_BASIC_TAP",
+      "url": "https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftBASIC.tap.zip",
+      "status": 200,
+      "size": 8948,
+      "sha256": "1430962f9cf057e7687e736e5a618488be49ec9825e449e2c2654600a4fcb1ec",
+      "magic": "504b0304140002000800648c3a23ac3f",
+      "members": [
+        {
+          "name": "HSBASIC.TAP",
+          "bytes": 12579,
+          "sha256": "4beb4e9e0519010676b05b990e0d5ed382df2329e9b099bd59981cc87db2687d"
+        }
+      ]
+    },
+    {
+      "name": "HiSoft_BASIC_TZX",
+      "url": "https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftBASICV1.0.tzx.zip",
+      "status": 200,
+      "size": 33854,
+      "sha256": "ec7d61a44f67f42f2e18d0a174d75d08db838a8f799d7762a4333eb3fc6bdff7",
+      "magic": "504b0304140000000800187d6e310313",
+      "members": [
+        {
+          "name": "Hisoft BASIC Compiler v1.0 - Side A.tzx",
+          "bytes": 32499,
+          "sha256": "a44b7569befe0c59b7e153779480be2fbd2b0077c67317b05d3213c7306ed953"
+        },
+        {
+          "name": "Hisoft BASIC Compiler v1.0 - Side B.tzx",
+          "bytes": 35396,
+          "sha256": "704ffa73f48fd097ad859cb744e1df4220df3057b2bd9ce8d71b44ef2a413363"
+        }
+      ]
+    },
+    {
+      "name": "Softek_FP_TAP",
+      "url": "https://worldofspectrum.net/pub/sinclair/utils/SoftekFPFullCompilerV1.1.tap.zip",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "name": "Softek_FP_TZX",
+      "url": "https://worldofspectrum.net/pub/sinclair/utils/s/SoftekFPFullCompiler.tzx.zip",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "name": "HiSoft_COLT_TZX",
+      "url": "https://worldofspectrum.net/pub/sinclair/utils/h/HiSoftCOLTCompiler.tzx.zip",
+      "status": 200,
+      "size": 9958,
+      "sha256": "479ec0c04432fdccb3be942cf7d54270f12bfff26b46d1c5eeeb3a6aa8f4cb03",
+      "magic": "504b03041400000008002a0c2e2d386e",
+      "members": [
+        {
+          "name": "Hisoft Colt Compiler.tzx",
+          "bytes": 14640,
+          "sha256": "8f60d193f1125243ed62aa9476e9166b6eaaf743a24443fc34856727cd3d405d"
+        }
+      ]
+    },
+    {
+      "name": "MCoder_III_TAP",
+      "url": "https://worldofspectrum.net/pub/sinclair/utils/m/MCoderIII.tap.zip",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "name": "BLAST_TAP",
+      "url": "https://worldofspectrum.net/pub/sinclair/utils/b/BLAST.tap.zip",
+      "error": "HTTP Error 404: Not Found"
+    }
+  ]
+}
