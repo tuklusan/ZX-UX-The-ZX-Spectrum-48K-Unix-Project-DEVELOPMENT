@@ -36,7 +36,7 @@ jobs:
           PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk
         run: |
           set -e
-          for test in test_constant_dims.py test_constant_data.py test_redim_capacity.py test_string_dim_flatten.py test_input_bound_dims.py test_input_string_dims.py test_numeric_input_dims.py test_rom_syntax.py test_native_memory_failure.py test_safe_usr_rt.py; do
+          for test in test_finish_rbc_setup.py test_constant_dims.py test_constant_data.py test_redim_capacity.py test_string_dim_flatten.py test_input_bound_dims.py test_input_string_dims.py test_numeric_input_dims.py test_rom_syntax.py test_native_memory_failure.py test_safe_usr_rt.py; do
             python3 -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests -p "$test" -v
           done
       - name: Probe original BAS source native linkage
