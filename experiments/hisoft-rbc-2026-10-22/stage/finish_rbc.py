@@ -21,8 +21,8 @@ def finish(checkpoint: Path, extensions: Path) -> None:
         text = text.replace(before, after, 1)
 
     change('from bss_layout import target_offset',
-           'from safe_usr_rt import install as install_safe_usr
-from safety_usr import enforce_numeric_usr\n'
+           'from safe_usr_rt import install as install_safe_usr\n'
+           'from safety_usr import enforce_numeric_usr\n'
            'from poke_policy import apply_poke_policy\n'
            'from poke_proof import prove_pokes\n'
            'from restore_data import resolve_restores\n'
