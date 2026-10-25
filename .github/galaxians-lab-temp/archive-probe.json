@@ -1,5 +1,5 @@
 {
-  "utc": "2026-10-25T02:19:38.605652+00:00",
+  "utc": "2026-10-25T02:30:36.022455+00:00",
   "results": [
     {
       "name": "HiSoft_BASIC_TAP",
@@ -38,13 +38,33 @@
     },
     {
       "name": "Softek_FP_TAP",
-      "url": "https://worldofspectrum.net/pub/sinclair/utils/SoftekFPFullCompilerV1.1.tap.zip",
-      "error": "HTTP Error 404: Not Found"
+      "url": "https://worldofspectrum.net/pub/sinclair/utils/s/SoftekFPFullCompilerV1.1.tap.zip",
+      "status": 200,
+      "size": 4978,
+      "sha256": "6da092b16ef92ee5922e9bf6002dc30c4e5bd37a398c922393bd7c9789b6bc96",
+      "magic": "504b0304140002000800923e7f1e5e23",
+      "members": [
+        {
+          "name": "COMPILE2.TAP",
+          "bytes": 7728,
+          "sha256": "2bd0a5656d1aee4eb3b22a3bb395a6eb533a1dd1a5b12e0a444736a9892ec687"
+        }
+      ]
     },
     {
       "name": "Softek_FP_TZX",
-      "url": "https://worldofspectrum.net/pub/sinclair/utils/SoftekFPFullCompilerV1.0.tzx.zip",
-      "error": "HTTP Error 404: Not Found"
+      "url": "https://worldofspectrum.net/pub/sinclair/utils/s/SoftekFPFullCompilerV1.0.tzx.zip",
+      "status": 200,
+      "size": 4710,
+      "sha256": "04f55901a5df615da97f64c65eb7d3ae3a2d5ae1522419a1cf09621ae7f112fb",
+      "magic": "504b030414000000080040a97d305a5d",
+      "members": [
+        {
+          "name": "Softek FP Full Compiler v1.0.tzx",
+          "bytes": 6809,
+          "sha256": "7a0c66144ce26bafe1583fc4b6eeaf31bc2acc3f1244fe48e5629ac77d0af8fd"
+        }
+      ]
     },
     {
       "name": "HiSoft_COLT_TZX",
@@ -58,6 +78,41 @@
           "name": "Hisoft Colt Compiler.tzx",
           "bytes": 14640,
           "sha256": "8f60d193f1125243ed62aa9476e9166b6eaaf743a24443fc34856727cd3d405d"
+        }
+      ]
+    },
+    {
+      "name": "Softek_FP_17_TAP",
+      "url": "https://worldofspectrum.net/pub/sinclair/utils/s/SoftekFPFullCompilerV1.7.tap.zip",
+      "status": 200,
+      "size": 4889,
+      "sha256": "0338e605eb0f85bf811d6694badbc6807ea62945a34500a85892d82ff24e7c4c",
+      "magic": "504b0304140002000800f149761fee53",
+      "members": [
+        {
+          "name": "SOFTEK_3.TAP",
+          "bytes": 7222,
+          "sha256": "db939aa88a70ce65c933562dd65c13bb38b9523a61744ee0dc371e897a7b35aa"
+        }
+      ]
+    },
+    {
+      "name": "Softek_IS_TZX",
+      "url": "https://worldofspectrum.net/pub/sinclair/utils/s/SoftekISBASICCompiler.tzx.zip",
+      "status": 200,
+      "size": 9478,
+      "sha256": "410591e24bec5420c0b9089a7a2fafca6f2a906196379c734378d91437280988",
+      "magic": "504b03041400000008009b8d5c2bc490",
+      "members": [
+        {
+          "name": "Softek 'IS' Basic Compiler - 16k.tzx",
+          "bytes": 6811,
+          "sha256": "e30978ae29190dff8232f8a4d123787675e09316b0bd389420974b0db2528595"
+        },
+        {
+          "name": "Softek 'IS' Basic Compiler - 48k.tzx",
+          "bytes": 6811,
+          "sha256": "3b9b0e41a24440bfcd0915d30621c6f002246515ec3187d1aa90d79d6af1418e"
         }
       ]
     },
