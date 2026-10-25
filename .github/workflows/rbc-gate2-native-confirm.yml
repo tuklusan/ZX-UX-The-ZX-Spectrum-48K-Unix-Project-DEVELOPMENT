@@ -79,6 +79,16 @@ jobs:
               raise RuntimeError('Rebuilt system kernel metadata missing')
           print('Native kernel and frozen tape exact match')
           PYBUILD
+      - name: Verify three original games with native keyboard and font probes
+        env:
+          PYTHONPATH: src/zx-ux-sdk
+        run: |
+          python3 experiments/hisoft-rbc-2026-10-22/stage/native_three_game_check.py \
+            --bin-dir build/tmp/rbc-gate2 \
+            --system build/out/ZX-UX.tzx \
+            --font trial-result/rbc/font32.bin \
+            > build/tmp/rbc-gate2/three-game-native.json
+          cat build/tmp/rbc-gate2/three-game-native.json
       - name: Run typed UDG original-language native fixture
         env:
           PYTHONPATH: upstream-pyhsb:trial-result/rbc:src/zx-ux-sdk
