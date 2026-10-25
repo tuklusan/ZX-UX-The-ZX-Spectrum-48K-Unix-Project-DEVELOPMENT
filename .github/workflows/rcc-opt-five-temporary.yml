@@ -21,6 +21,7 @@ jobs:
       - name: Bounded compiler, linker and emulator comparison
         timeout-minutes: 29
         run: |
+          python3 - <<'PY'
           import collections, hashlib, json, os, pathlib, re, subprocess, sys, tempfile, time, traceback
           root=pathlib.Path.cwd()
           sdk=root/"src/zx-ux-sdk"
@@ -178,6 +179,7 @@ jobs:
           print("NOTE Equal 90-frame snapshots are smoke checks, not full gameplay or candidate-specific isolation proof.",flush=True)
           failed=any("error" in x or any("metric" not in x["variants"].get(v,{}) for v in ("rcc","upeep","generator")) for x in entries)
           if failed: raise SystemExit(1)
+          PY
           
       - name: Save temporary results
         if: always()
