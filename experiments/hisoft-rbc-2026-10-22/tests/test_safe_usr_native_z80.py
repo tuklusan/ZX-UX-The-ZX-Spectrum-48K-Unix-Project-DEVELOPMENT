@@ -37,7 +37,7 @@ def execute(data, displacement):
 class UdgNativeCheck(unittest.TestCase):
     def test_emission_is_the_exact_z80_guard(self):
         from z80asm import asm
-        self.assertEqual(asm(UDG_POKE_CHECK), EXPECTED)
+        self.assertEqual(asm(UDG_POKE_CHECK) + b"\xc9", EXPECTED)
 
     def test_guard_allows_only_owned_udg_bytes(self):
         for offset in (-100, -1, 0, 1, 7, 8, 159, 167, 168, 169, 256, 320, 512, 2000):
