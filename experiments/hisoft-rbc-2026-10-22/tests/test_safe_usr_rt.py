@@ -72,7 +72,9 @@ class NativeUsr(unittest.TestCase):
     def test_runtime_guard_rejects_underflow_overflow(self):
         self.assertIn('sbc hl,de',UDG_POKE_CHECK)
         self.assertIn('cp 168',UDG_POKE_CHECK)
-        self.assertEqual(UDG_POKE_CHECK.count('rst 8'),3)
+        self.assertNotIn('rst 8',UDG_POKE_CHECK)
+        self.assertIn('ld a,39; call $6003',UDG_POKE_CHECK)
+        self.assertIn('ld hl,11; ld a,1; jp $6003',UDG_POKE_CHECK)
         self.assertIn('pop hl',UDG_POKE_CHECK)
 
     def test_incompatible_poke_is_not_overwritten(self):

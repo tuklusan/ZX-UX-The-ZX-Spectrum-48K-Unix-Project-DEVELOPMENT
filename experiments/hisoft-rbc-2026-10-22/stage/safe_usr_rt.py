@@ -14,9 +14,13 @@ from native_sysvars_rt import POKE_RT
 # before the value is evaluated, so an invalid address has no side effects.
 UDG_POKE_CHECK = (
     'push hl; ld de,($5c7b); or a; sbc hl,de; '
-    'jr nc,+2; rst 8; defb $0b; '
-    'ld a,h; or a; jr z,+2; rst 8; defb $0b; '
-    'ld a,l; cp 168; jr c,+2; rst 8; defb $0b; pop hl'
+    'jr c,+12; ld a,h; or a; jr nz,+8; '
+    'ld a,l; cp 168; jr nc,+3; '
+    'pop hl; jr +16; '
+    # Every failure releases the screen and exits with native status 11.
+    # ROM RST 8 is intercepted by ZX-UX as a kernel panic.
+    'ld hl,0; ld a,39; call $6003; '
+    'ld hl,11; ld a,1; jp $6003'
 )
 
 

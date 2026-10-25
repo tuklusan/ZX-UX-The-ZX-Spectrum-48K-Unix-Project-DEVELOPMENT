@@ -23,6 +23,9 @@ CASES = {
     'for-index-modified': ('10 LET V=0\n20 FOR I=1 TO 7\n30 LET V=V+1\n40 LET I=I+1\n50 NEXT I\n60 POKE USR "a",V\n70 GO TO 70\n', 4, 0),
     'poke-variable': ('10 LET A=USR "a"+3\n20 POKE A,77\n30 GO TO 30\n', 77, 3),
     'protected-poke': ('10 LET P=24576\n20 POKE P,253\n30 GO TO 30\n', None, None),
+    'protected-peek': ('10 LET P=24576\n20 LET X=PEEK P\n30 GO TO 30\n', None, None),
+    'udg-dynamic-invalid': ('10 LET I=168\n20 POKE USR "a"+I,199\n30 GO TO 30\n', None, None),
+    'udg-dynamic-valid': ('10 LET I=167\n20 POKE USR "a"+I,97\n30 GO TO 30\n', 97, 167),
 }
 
 
