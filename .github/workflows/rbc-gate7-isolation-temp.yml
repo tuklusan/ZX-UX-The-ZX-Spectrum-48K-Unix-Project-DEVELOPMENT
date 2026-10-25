@@ -15,10 +15,10 @@ jobs:
         run: |
           set -e
           curl -fsSL --retry 2 --max-time 25 \
-            https://api.github.com/repos/tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT/git/blobs/cd2cf72eb6fa6a96b7eb8fc97d010281bdde4cad \
+            https://api.github.com/repos/tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT/git/blobs/b80adce1aa0a7b3dec6983c4e2937cb6f8ff495b \
             | python3 -c 'import json,sys,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' \
             > experiments/hisoft-rbc-2026-10-22/stage/gate7_isolation_probe.py
-          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/stage/gate7_isolation_probe.py)" = cd2cf72eb6fa6a96b7eb8fc97d010281bdde4cad
+          test "$(git hash-object experiments/hisoft-rbc-2026-10-22/stage/gate7_isolation_probe.py)" = b80adce1aa0a7b3dec6983c4e2937cb6f8ff495b
           curl -fsSL --retry 2 --max-time 25 \
             https://api.github.com/repos/tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT/git/blobs/ee8253d737e472dd6571ea3da98110c679404cd4 \
             | python3 -c 'import json,sys,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' \
