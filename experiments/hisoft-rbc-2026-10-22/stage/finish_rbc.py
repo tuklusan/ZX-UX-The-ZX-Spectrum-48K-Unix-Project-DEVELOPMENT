@@ -26,6 +26,8 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            'from poke_proof import prove_pokes\n'
            'from restore_data import resolve_restores\n'
            'from size_opt import prove_literal_string_bounds\n'
+           'from constant_dims import specialize_literal_dims\n'
+           'from constant_data import adapt_literal_data\n'
            'from bss_layout import target_offset')
     change('        if not source.open_lines(program):',
            '        size_directives, size_proofs = ([], [])\n'
@@ -36,6 +38,10 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            '        if not source.open_lines(program):')
     change('                program = source.add_directives(program, directives, True, [], kw, initial.fp)',
            '                program = source.add_directives(program, chosen_directives, True, [], kw, initial.fp)')
+    change('        if not source.open_lines(program):',
+           '        program, constant_dim_proofs = specialize_literal_dims(\\n'
+           '            program, kw, initial.fp, source, source.tap)\\n'
+           '        if not source.open_lines(program):')
     change('        program = source.tokenize_directives(program,kw)',
            '        program = source.tokenize_directives(program,kw)\n'
            '        program, restore_remaps = resolve_restores(program, kw, initial.fp)')
@@ -46,7 +52,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            '        memory_report = summarize(checks)')
     change("'memory_policy':memory_policy, 'memory_check':memory_report}",
            "'memory_policy':memory_policy, 'memory_check':memory_report, "
-           "'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps}")
+           "'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps, 'constant_dimensions':constant_dim_proofs}")
     text = patched(text)
     change('from rbc_output import output_path, memory_required, write_mode',
            'from diagnostics import format_failure, RbcArgumentParser\n'
@@ -59,7 +65,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change("except (ValueError,OSError) as exc:\n        print('rbc: '+str(exc),file=sys.stderr)",
            "except Exception as exc:\n"
            "        print(format_failure(exc,args.source),file=sys.stderr)")
-    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py'):
+    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py'):
         shutil.copyfile(extensions / module, checkpoint / 'rbc' / module)
     source.write_text(text)
 
