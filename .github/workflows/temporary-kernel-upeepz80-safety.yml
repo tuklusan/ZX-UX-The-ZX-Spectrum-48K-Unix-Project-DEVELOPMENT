@@ -1,0 +1,119 @@
+name: Temporary kernel upeepz80 safety experiment
+on:
+  push:
+    paths:
+      - .github/workflows/temporary-kernel-upeepz80-safety.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: temporary-kernel-upeepz80-safety
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build fixed SjASMPlus 1.24.0 and fetch fixed upeepz80
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone -q --depth=1 --branch v1.24.0 https://github.com/z00m128/sjasmplus.git "$RUNNER_TEMP/sjasmplus"
+          make -s -C "$RUNNER_TEMP/sjasmplus" -j2 >/tmp/sjasm-build.log 2>&1 || { tail -60 /tmp/sjasm-build.log; exit 1; }
+          "$RUNNER_TEMP/sjasmplus/sjasmplus" --version || true
+          git clone -q https://github.com/tuklusan/upeepz80.git "$RUNNER_TEMP/upeepz80"
+          git -C "$RUNNER_TEMP/upeepz80" checkout -q a48d725704b132c3ff23ac77232a3a412b56b15f
+          test "$(git -C "$RUNNER_TEMP/upeepz80" rev-parse HEAD)" = a48d725704b132c3ff23ac77232a3a412b56b15f
+          python -m compileall -q "$RUNNER_TEMP/upeepz80/upeepz80"
+      - name: Baseline, actual optimization, reassembly and safety audit
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p build/src build/out experiment-output
+          cp -a src/zx-ux/. build/src/
+          SJ="$RUNNER_TEMP/sjasmplus/sjasmplus"
+          python -B src/zx-ux-sdk/tools/osbuild.py "$SJ" >experiment-output/baseline.log 2>&1
+          base=$?
+          cat experiment-output/baseline.log
+          if [ "$base" -ne 0 ]; then echo "BASELINE_BUILD_FAILED=$base"; exit 1; fi
+          cp build/out/unix.bin experiment-output/baseline-unix.bin
+          cp build/out/merged-image.bin experiment-output/baseline-merged-image.bin
+          cp build/src/unix.sym experiment-output/baseline.sym
+          cp -a build/src experiment-output/baseline-src
+          PYTHONPATH="$RUNNER_TEMP/upeepz80" python - <<'PY'
+          import difflib, hashlib, json
+          from pathlib import Path
+          from upeepz80 import PeepholeOptimizer, __version__
+          names=['unix.asm','fs.asm','dev.asm','zx.asm','arena.asm','cext.asm','ulib.asm','t_sys.asm','t_file.asm','t_misc.asm','t_tap.asm','t_proc.asm','t_vi.asm','t_zx.asm','t_tar.asm','t_ldx.asm']
+          root=Path('build/src'); dst=Path('experiment-output')
+          changes=[]; allstats={}; patches=[]
+          for name in names:
+              p=root/name
+              old=p.read_text(encoding='latin-1')
+              opt=PeepholeOptimizer()
+              new=opt.optimize(old)
+              oldlines=old.splitlines(); newlines=new.splitlines()
+              diff='\n'.join(difflib.unified_diff(oldlines,newlines,fromfile='baseline/'+name,tofile='optimized/'+name,lineterm=''))
+              if diff: patches.append(diff+'\n')
+              stats={k:v for k,v in opt.stats.items() if v}
+              if diff: p.write_text(new,encoding='latin-1')
+              changes.append({'file':name,'changed':bool(diff),'old_lines':len(oldlines),'new_lines':len(newlines),'statistics':stats,'old_sha256':hashlib.sha256(old.encode('latin-1')).hexdigest(),'new_sha256':hashlib.sha256(new.encode('latin-1')).hexdigest()})
+              for k,v in stats.items(): allstats[k]=allstats.get(k,0)+v
+          (dst/'optimizer-source.patch').write_text(''.join(patches))
+          (dst/'optimizer-changes.json').write_text(json.dumps({'optimizer_version':__version__,'fixed_optimizer_sha':'a48d725704b132c3ff23ac77232a3a412b56b15f','files':changes,'statistics':allstats},indent=2))
+          print('OPTIMIZER_REAL_EXECUTION_FILES='+str(len(names)))
+          print('OPTIMIZER_CHANGED_FILES='+str(sum(c['changed'] for c in changes)))
+          print('OPTIMIZER_STATS='+json.dumps(allstats,sort_keys=True))
+          print('OPTIMIZER_PATCH_FIRST_150_LINES:')
+          print('\n'.join(''.join(patches).splitlines()[:150]))
+          PY
+          optim=$?
+          if [ "$optim" -ne 0 ]; then echo "OPTIMIZER_FAILED=$optim"; exit 1; fi
+          python -B src/zx-ux-sdk/tools/osbuild.py "$SJ" >experiment-output/optimized.log 2>&1
+          optimized_build=$?
+          cat experiment-output/optimized.log
+          echo "OPTIMIZED_BUILD_EXIT=$optimized_build"
+          python - <<'PY'
+          from pathlib import Path
+          import json,hashlib,re
+          p=Path('experiment-output'); base=(p/'baseline-unix.bin').read_bytes()
+          result={'baseline_size':len(base),'baseline_sha256':hashlib.sha256(base).hexdigest()}
+          bmap=(p/'baseline.sym').read_text()
+          o_map=Path('build/src/unix.sym').read_text() if Path('build/src/unix.sym').exists() else ''
+          def symbols(text):
+              return {m.group(1):int(m.group(2),16) for line in text.splitlines() if (m:=re.match(r'(\S+): EQU 0x([0-9A-Fa-f]+)',line))}
+          sy0,syn=symbols(bmap),symbols(o_map)
+          result['baseline_layout']={k:sy0.get(k) for k in ['KBASE','isr','sysent','boot','FONT','kend','ITAB','AR0','WINDOW','CORE']}
+          result['optimized_layout']={k:syn.get(k) for k in ['KBASE','isr','sysent','boot','FONT','kend','ITAB','AR0','WINDOW','CORE']}
+          result['symbols_changed']=sum(sy0.get(k)!=v for k,v in syn.items() if k in sy0)
+          candidate=Path('build/out/unix.bin')
+          if candidate.exists():
+              data=candidate.read_bytes()
+              result['optimized_size']=len(data)
+              result['optimized_sha256']=hashlib.sha256(data).hexdigest()
+              result['delta_bytes']=len(data)-len(base)
+              result['first_different_offset']=next((i for i,(x,y) in enumerate(zip(base,data)) if x!=y),None)
+              result['resident_first_8192_equal']=base[:8192]==data[:8192]
+          fixed={k:sy0.get(k)==syn.get(k) for k in ['KBASE','FONT','WINDOW','CORE']}
+          result['fixed_symbols_equal']=fixed
+          (p/'binary-comparison.json').write_text(json.dumps(result,indent=2))
+          print('BINARY_COMPARISON='+json.dumps(result,sort_keys=True))
+          PY
+          exit 0
+      - name: Upload inspection output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: temporary-kernel-upeepz80-comparison
+          path: |
+            experiment-output/baseline.log
+            experiment-output/optimized.log
+            experiment-output/optimizer-source.patch
+            experiment-output/optimizer-changes.json
+            experiment-output/binary-comparison.json
+            experiment-output/baseline.sym
+            build/src/unix.sym
+          retention-days: 1
