@@ -19,7 +19,9 @@ jobs:
       - name: Build compiler wrapper and native font inputs
         run: |
           mkdir -p trial-result build/tmp/rbc-round2/checkpoint
-          unzip -oq experiments/hisoft-rbc-2026-10-22/rbc-fresh-chat-2026-10-22.zip -d build/tmp/rbc-round2/checkpoint
+          git fetch --no-tags --depth=1 origin c3d270375af56768df3af6f5ceb38f83c9bd5bdd
+          git show FETCH_HEAD:experiments/hisoft-rbc-2026-10-22/rbc-fresh-chat-2026-10-22.zip > /tmp/rbc-checkpoint.zip
+          unzip -oq /tmp/rbc-checkpoint.zip -d build/tmp/rbc-round2/checkpoint
           cp -R build/tmp/rbc-round2/checkpoint/scratch/rbc trial-result/rbc
           python3 experiments/hisoft-rbc-2026-10-22/stage/prepare_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
           python3 experiments/hisoft-rbc-2026-10-22/stage/finish_rbc.py trial-result experiments/hisoft-rbc-2026-10-22/stage
