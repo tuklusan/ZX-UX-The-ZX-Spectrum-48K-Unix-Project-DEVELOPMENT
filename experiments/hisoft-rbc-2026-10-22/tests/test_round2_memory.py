@@ -19,8 +19,8 @@ class Round2Memory(unittest.TestCase):
         if not source.is_file():
             self.fail('Unmodified original RBC source not available for fit check')
         result = patched(source.read_text())
-        self.assertIn('default=11000', result)
-        self.assertNotIn('default=14000', result)
+        self.assertIn('default=12000', result)
+        self.assertNotIn('default=11000', result)
 
     def test_size_is_exactly_reported_for_rejection(self):
         from rbc_fit import patched
