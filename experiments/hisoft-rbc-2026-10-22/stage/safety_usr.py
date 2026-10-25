@@ -1,8 +1,14 @@
-"""Block machine-code USR; permit only statically proved UDG POKE addresses."""
+"""Admit Spectrum USR only after the compiler checks its operand type.
+
+The BASIC token scan is an independent early guard for clear numeric forms.
+Every remaining call must pass HiSoft's actual expression type check in
+safe_usr_rt: a string returns a process UDG pointer, and a number is rejected.
+No spelling-based test grants machine-code execution.
+"""
 from __future__ import annotations
 
 import re
-from audit_policy import scrub_code, split_address
+from audit_policy import scrub_code
 from poke_proof import _line_text
 
 
@@ -42,6 +48,8 @@ def _usr_tokens(body):
     while pos < len(body):
         b = body[pos]
         if not quoted and b == 14:
+            if pos + 6 > len(body):
+                raise UnsupportedUsr('RBC E_USR_TOKEN: Invalid numeric marker')
             pos += 6
             continue
         if b == 34:
@@ -52,50 +60,67 @@ def _usr_tokens(body):
     return count
 
 
-def enforce_numeric_usr(lines, findings, poke_proofs=None, token_names=None):
-    """Permit USR only when it yields an exactly proved relocatable UDG POKE."""
-    del findings
-    token_names = token_names or {}
-    proofs = poke_proofs or []
+def _calls(lines, token_names):
     for line, body in lines:
         for chunk in _chunks(body):
-            token_count = _usr_tokens(chunk)
-            if not token_count:
+            count = _usr_tokens(chunk)
+            if not count:
                 continue
             source = _line_text(chunk, token_names)
             mask = scrub_code(source)
-            matches = list(re.finditer(r'\bUSR\b', mask, re.I))
-            if len(matches) != token_count:
-                raise UnsupportedUsr(f'RBC E_USR_TOKEN: Line {line}: USR token cannot be classified')
-            poke = re.search(r'\bPOKE\b', mask, re.I)
-            if poke:
-                address = split_address(source[poke.end():])
-                if sum(m.start() >= poke.end() and
-                       m.start() < poke.end() + len(source[poke.end():].split(',', 1)[0])
-                       for m in matches) != token_count:
-                    raise UnsupportedUsr(f'RBC E_USR_TOKEN: Line {line}: USR outside POKE address')
-                relevant = [p for p in proofs if p['line'] == line and p['expression'] == address]
-                # The compiled argument type and native 168-byte check
-                # protect dynamically computed UDG pointers.
-                if any(p.get('status') == 'runtime_guarded_udg_pointer'
-                       for p in relevant):
-                    if any(re.match(r'\s*(?:[+\-]?(?:\d|\.)|VAL\b|PEEK\b|CODE\b|RND\b|INT\b|ABS\b|SGN\b|PI\b|IN\b)',
-                                    source[m.end():], re.I)
-                           for m in matches):
-                        raise UnsupportedUsr(
-                            f'RBC E_MACHINE_CODE: Line {line}: Numeric USR is prohibited')
-                    continue
-                if any(p.get('addresses') and
-                       all(a['space'] == 'process_udg' and 0 <= a['offset'] < 168
-                           for a in p['addresses']) for p in relevant):
-                    continue
-            frm = re.search(r'\bFOR\s+([a-z])\s*=', mask, re.I)
-            if frm and all(m.start() > frm.end() for m in matches):
-                var = frm.group(1)
-                if any(p.get('addresses') and
-                       all(a['space'] == 'process_udg' and 0 <= a['offset'] < 168
-                           for a in p['addresses']) and
-                       re.search(r'\b' + re.escape(var) + r'\b', p['expression'], re.I)
-                       for p in proofs):
-                    continue
-            raise UnsupportedUsr(f'RBC E_USR_TOKEN: Line {line}: USR requires a proved UDG POKE address')
+            matches = list(re.finditer(r'(?<![\w$])USR(?![\w$])', mask, re.I))
+            if len(matches) != count:
+                raise UnsupportedUsr(
+                    f'RBC E_USR_TOKEN: Line {line}: USR token cannot be classified')
+            for match in matches:
+                yield line, source[match.end():]
+
+
+def _direct_numeric(tail):
+    """Identify only certain numeric starts; semantic typing covers all others."""
+    s = tail.lstrip()
+    while s.startswith('('):
+        s = s[1:].lstrip()
+    # Numeric literals and functions cannot produce a graphics character.
+    # A signed number includes the case USR -32768.
+    return bool(re.match(
+        r'^(?:[+\-]?\s*(?:\d|\.\d)|'
+        r'(?:VAL(?!\$)|PEEK|CODE|RND|INT|ABS|SGN|PI|IN|LEN|ATTR|POINT|'
+        r'USR|SIN|COS|TAN|ASN|ACS|ATN|SQR|EXP|LN)\b)', s, re.I))
+
+
+def allow_typed_usr_findings(lines, findings, token_names=None):
+    """Defer the USR memory classification to the real compiler type gate.
+
+    This is not an approval for machine code: safe_usr_rt rejects every
+    operand whose compiled type is not STRING in every compiler pass.
+    Fail closed if the separate memory scan and token stream disagree.
+    """
+    token_names = token_names or {}
+    calls = list(_calls(lines, token_names))
+    tracked = [f for f in findings if f.operation == 'USR']
+    if len(calls) != len(tracked):
+        raise UnsupportedUsr('RBC E_USR_TOKEN: Memory scan and token count disagree')
+    for (line, tail), finding in zip(calls, tracked):
+        if finding.line != line:
+            raise UnsupportedUsr(
+                f'RBC E_USR_TOKEN: Line {line}: USR review line mismatch')
+        if _direct_numeric(tail):
+            raise UnsupportedUsr(
+                f'RBC E_MACHINE_CODE: Line {line}: Numeric USR is prohibited')
+        finding.severity = 'info'
+        finding.classification = 'requires_compiler_string_type'
+
+
+def enforce_numeric_usr(lines, findings, poke_proofs=None, token_names=None):
+    """Independent token guard; only semantic string typing admits the call."""
+    del poke_proofs
+    calls = list(_calls(lines, token_names or {}))
+    if findings:
+        tracked = [f for f in findings if f.operation == 'USR']
+        if len(calls) != len(tracked):
+            raise UnsupportedUsr('RBC E_USR_TOKEN: Memory scan and token count disagree')
+    for line, tail in calls:
+        if _direct_numeric(tail):
+            raise UnsupportedUsr(
+                f'RBC E_MACHINE_CODE: Line {line}: Numeric USR is prohibited')
