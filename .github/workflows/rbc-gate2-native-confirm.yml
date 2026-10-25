@@ -56,11 +56,15 @@ jobs:
         if: always()
         run: |
           set -e
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq sjasmplus
+          git clone -q --recurse-submodules https://github.com/z00m128/sjasmplus.git /tmp/sjasmplus-1.24.0
+          git -C /tmp/sjasmplus-1.24.0 checkout -q --detach d379eeac9ad3857fb48fd3a3929175d0a56038ce
+          git -C /tmp/sjasmplus-1.24.0 submodule update -q --init --recursive
+          test "$(git -C /tmp/sjasmplus-1.24.0 rev-parse HEAD)" = d379eeac9ad3857fb48fd3a3929175d0a56038ce
+          make -C /tmp/sjasmplus-1.24.0 USE_LUA=0 -j2 >/tmp/sjasm-build.log 2>&1 || { tail -100 /tmp/sjasm-build.log; exit 1; }
+          /tmp/sjasmplus-1.24.0/build/release/sjasmplus --version
           mkdir -p build/src build/out
           cp -R src/zx-ux/. build/src/
-          python3 -B src/zx-ux-sdk/tools/osbuild.py "$(command -v sjasmplus)"
+          python3 -B src/zx-ux-sdk/tools/osbuild.py /tmp/sjasmplus-1.24.0/build/release/sjasmplus
           python3 - <<'PYBUILD'
           import re,sys
           from pathlib import Path
@@ -68,7 +72,7 @@ jobs:
           import osbuild,turbo_boot_build
           syms={m.group(1):int(m.group(2),16) for line in Path('build/src/unix.sym').read_text().splitlines() if (m:=re.match(r'(\S+): EQU 0x([0-9A-Fa-f]+)',line))}
           _,_,free,_=osbuild.mkfs(syms,osbuild.program_list())
-          turbo_boot_build.create_tzx('sjasmplus',syms,syms['kend']-0x6000,free,output_name='ZX-UX.tzx')
+          turbo_boot_build.create_tzx('/tmp/sjasmplus-1.24.0/build/release/sjasmplus',syms,syms['kend']-0x6000,free,output_name='ZX-UX.tzx')
           if Path('build/out/ZX-UX.tzx').read_bytes()!=Path('dist/zx-ux/tzx/ZX-UX.tzx').read_bytes():
               raise RuntimeError('Rebuilt system tape does not match frozen release')
           if not Path('build/out/kernel.json').exists():
