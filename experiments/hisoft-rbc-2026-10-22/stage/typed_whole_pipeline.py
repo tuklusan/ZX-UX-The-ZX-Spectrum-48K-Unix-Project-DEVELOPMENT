@@ -15,6 +15,7 @@ from symbolic_relative_branches import (inspect_relative_branches,
                                         verify_three_relative_passes)
 from symbolic_source_boundaries import (inspect_source_boundaries,
                                         verify_three_source_maps)
+from symbolic_whole_cfg import inspect_whole_cfg, verify_three_whole_cfg
 
 
 class SourcePipelineError(ValueError):
@@ -63,6 +64,9 @@ def verify_and_build(events, images, bases, text_ends, bss_sizes,
         relative = [inspect_relative_branches(mapping.spans, end, assembler)
                     for mapping, end in zip(maps, text_ends)]
         relative_report = verify_three_relative_passes(relative, bases)
+        flows = [inspect_whole_cfg(mapping.spans, end, assembler, entry_offsets)
+                 for mapping, end in zip(maps, text_ends)]
+        flow_report = verify_three_whole_cfg(flows, bases)
         programs = [from_source(group, image, base, end, bss, assembler,
                                 entry_offsets=entry_offsets)
                     for group, image, base, end, bss in
@@ -83,6 +87,7 @@ def verify_and_build(events, images, bases, text_ends, bss_sizes,
         'source_word_patches': patch_report,
         'source_boundaries': map_report,
         'relative_branches': relative_report,
+        'whole_source_control_flow': flow_report,
         'full_program_source_owned': True,
         'native_behavior_verified': False,
     }, images[0], bases[0], frozenset(reloc_sites))
