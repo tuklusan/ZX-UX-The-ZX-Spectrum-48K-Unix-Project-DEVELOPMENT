@@ -16,7 +16,11 @@ def e(kind, position, data, source='source', symbol_offset=None):
 
 
 def asm(source):
-    return {'nop': b'\x00', 'ret': b'\xc9', 'jp 24600': b'\xc3\x18\x60',
+    return {'nop': b'\x00', 'ret': b'\xc9', 'rst $28': b'\xef',
+            'defb $31,$04,$38': b'\x31\x04\x38',
+            'inc (hl)': b'\x34',
+            'rst $28; defb $31,$04,$38; inc (hl)': b'\xef\x31\x04\x38\x34',
+            'jp 24600': b'\xc3\x18\x60',
             'jp 24118': b'\xc3\x36\x5e', 'jp 23890': b'\xc3\x52\x5d'}[source]
 
 
@@ -58,6 +62,26 @@ class SourceOwnership(unittest.TestCase):
                                           b'\xc9', 0x6000, 1, 0, asm)
         self.assertEqual(result.instruction_bytes, 0)
         self.assertEqual(result.unresolved_bytes, 1)
+
+    def test_inline_calculator_bytes_are_protected_not_executable(self):
+        image = b'\xef\x31\x04\x38\x34'
+        event = e('instruction', 0, image,
+                  'rst $28; defb $31,$04,$38; inc (hl)')
+        result = inspect_source_boundaries([event], image, 0x6000, 5, 0, asm)
+        self.assertEqual([span.kind for span in result.spans],
+                         ['instruction', 'inline-data', 'instruction'])
+        self.assertEqual(result.instruction_bytes, 2)
+        self.assertEqual(result.executable_instruction_count, 2)
+        self.assertTrue(result.fully_typed)
+
+    def test_inline_rewrite_remains_visible_as_mismatch(self):
+        orig = b'\xef\x31\x04\x38\x34'
+        final = b'\xef\x31\x04\x39\x34'
+        event = e('instruction', 0, orig,
+                  'rst $28; defb $31,$04,$38; inc (hl)')
+        result = inspect_source_boundaries([event], final, 0x6000, 5, 0, asm)
+        self.assertEqual(result.mismatches, (3,))
+        self.assertFalse(result.fully_typed)
 
     def test_data_that_looks_like_jump_remains_data(self):
         result = inspect_source_boundaries([e('data-source', 0, b'\xc3\x00\x76')],

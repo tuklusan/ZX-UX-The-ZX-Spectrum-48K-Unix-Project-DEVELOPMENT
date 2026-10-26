@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from symbolic_fragments import FragmentBoundaryError, inspect_fragments
+
 
 class SourceBoundaryError(ValueError):
     """An emission cannot be assigned an unambiguous source footprint."""
@@ -90,6 +92,16 @@ def inspect_source_boundaries(events, image: bytes, base: int, data_start: int,
         elif kind == 'instruction':
             if payload != _encoded(assembler, event.source.strip()):
                 raise SourceBoundaryError('source mnemonic encoding differs')
+            try:
+                fragments = inspect_fragments([event], image, data_start, assembler)
+            except FragmentBoundaryError as exc:
+                raise SourceBoundaryError(str(exc)) from exc
+            for fragment in fragments:
+                spans.append(SourceBoundary(fragment.site, fragment.end,
+                                            fragment.kind, fragment.source))
+                emitted.append(fragment.encoded)
+            i += 1
+            continue
         elif kind == 'relocation':
             target = event.symbol_offset
             if not isinstance(target, int) or not 0 <= target < len(image) + bss:
@@ -121,7 +133,7 @@ def inspect_source_boundaries(events, image: bytes, base: int, data_start: int,
                 mismatches.add(absolute)
     gaps = tuple(i for i, contributors in enumerate(owner) if not contributors)
     overlaps = tuple(i for i, contributors in enumerate(owner) if len(contributors) != 1)
-    typed = {'instruction', 'instruction-relocated', 'data-source'}
+    typed = {'instruction', 'instruction-relocated', 'inline-data', 'data-source'}
     unresolved = tuple(i for i, contributors in enumerate(owner)
                        if (len(contributors) != 1 or
                            spans[contributors[0]].kind not in typed or

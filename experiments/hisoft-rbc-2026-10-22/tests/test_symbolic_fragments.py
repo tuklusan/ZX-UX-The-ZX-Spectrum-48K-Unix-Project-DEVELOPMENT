@@ -16,9 +16,9 @@ def assembler(source):
             'jp $6000': b'\xc3\x00\x60', 'jp $6100': b'\xc3\x00\x61'}[source]
 
 
-def fragment(source, image, site=0):
+def fragment(source, image, site=0, emitted=None):
     event = SimpleNamespace(kind='instruction', position=site,
-                            source=source, data=image[site:])
+                            source=source, data=image[site:] if emitted is None else emitted)
     return inspect_fragments([event], image, len(image), assembler)
 
 
@@ -35,9 +35,11 @@ class SourceFragments(unittest.TestCase):
         records = fragment('rst $28; defb $31,$04,$38', b'\xef\x31\x04\x38')
         self.assertEqual(records[1].kind, 'inline-data')
 
-    def test_mismatched_emitter_bytes_refused(self):
-        with self.assertRaises(FragmentBoundaryError):
-            fragment('rst $28; defb $31,$04,$38', b'\xef\x31\x04\x39')
+    def test_final_image_rewrite_is_reported_without_retyping_code(self):
+        records = fragment('rst $28; defb $31,$04,$38', b'\xef\x31\x04\x39',
+                           emitted=b'\xef\x31\x04\x38')
+        self.assertTrue(records[1].overwritten)
+        self.assertEqual(records[1].encoded, b'\x31\x04\x38')
 
     def test_blank_inline_statement_refused(self):
         with self.assertRaises(FragmentBoundaryError):
@@ -76,6 +78,13 @@ class SourceFragments(unittest.TestCase):
         self.assertEqual(report['protected_inline_bytes'], 3)
         self.assertEqual(report['instruction_bytes'], 1)
         self.assertFalse(report['complete_program_symbolic'])
+
+    def test_three_bases_detect_changed_patch_status(self):
+        stable = fragment('ret', b'\xc9')
+        altered = fragment('ret', b'\x00', emitted=b'\xc9')
+        with self.assertRaises(FragmentBoundaryError):
+            verify_three_fragment_passes([stable, altered, stable],
+                                         [0x6000, 0x6100, 0x6200])
 
     def test_three_bases_detect_changed_immediate(self):
         groups = [fragment('jp $6000', b'\xc3\x00\x60'),

@@ -20,6 +20,7 @@ class Fragment:
     kind: str
     source: str
     encoded: bytes
+    overwritten: bool = False
 
 
 def inspect_fragments(events, image: bytes, text_end: int, assembler):
@@ -55,9 +56,8 @@ def inspect_fragments(events, image: bytes, text_end: int, assembler):
             end = offset + len(encoded)
             if not 0 <= offset < end <= text_end:
                 raise FragmentBoundaryError('fragment outside executable extent')
-            if image[offset:end] != encoded:
-                raise FragmentBoundaryError('source fragment differs from final image')
-            result.append(Fragment(offset, end, kind, source, encoded))
+            result.append(Fragment(offset, end, kind, source, encoded,
+                                   image[offset:end] != encoded))
             assembled.extend(encoded)
             offset = end
         if (assembled != event.data or
@@ -79,7 +79,8 @@ def verify_three_fragment_passes(groups, bases):
     if len(groups) != 3 or len(bases) != 3 or len(set(bases)) != 3:
         raise FragmentBoundaryError('three distinct compilation bases required')
     first = groups[0]
-    footprint = lambda records: tuple((f.site, f.end, f.kind) for f in records)
+    footprint = lambda records: tuple((f.site, f.end, f.kind, f.overwritten)
+                                      for f in records)
     if any(footprint(group) != footprint(first) for group in groups[1:]):
         raise FragmentBoundaryError('source fragment boundaries changed across bases')
     if any(f.source != g.source or f.encoded != g.encoded
@@ -97,6 +98,7 @@ def verify_three_fragment_passes(groups, bases):
         'inline_data_statements': len(protected),
         'instruction_bytes': sum(len(f.encoded) for f in code),
         'protected_inline_bytes': sum(len(f.encoded) for f in protected),
+        'overwritten_source_fragments': sum(f.overwritten for f in first),
         'code_statements_varying_across_bases': changed_code,
         'complete_program_symbolic': False,
     }
