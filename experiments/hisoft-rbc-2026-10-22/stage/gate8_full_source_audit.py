@@ -17,6 +17,7 @@ sys.path[:0] = [str(STAGE), str(ROOT / 'src/zx-ux-sdk')]
 import rld
 from symbolic_capture import audit_result, install as install_capture
 from symbolic_source_patches import from_emissions, verify_three_passes
+from symbolic_relocations import inspect_relocations, verify_three_builds
 
 
 def run(source: Path, checkpoint: Path, frontend: Path,
@@ -32,6 +33,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
                                       [], 'block', False, 0)
     records = []
     source_words = []
+    relocations = []
     original_hook = rbc.install_codegen_optimizer
 
     def passive_capture(module):
@@ -44,6 +46,9 @@ def run(source: Path, checkpoint: Path, frontend: Path,
                 source_words.append(from_emissions(
                     self._zxux_capture.events, result.code,
                     result.code_base, self.data_start))
+                relocations.append(inspect_relocations(
+                    self._zxux_capture.events, result.code,
+                    result.code_base, result.var_bytes))
             return result
         module.Compiler.compile_whole = recorded
 
@@ -60,6 +65,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
                 after.code, after.entry, after.base, after.bss):
             raise RuntimeError(f'passive capture changed program bytes at pass {index}')
     source_patch_report = verify_three_passes(source_words, observed)
+    relocation_report = verify_three_builds(relocations, [x.base for x in observed])
     first, _ = rbc.build_ssx(baseline, bytes(768), rld, 384, use_rom_font=True)
     second, _ = rbc.build_ssx(observed, bytes(768), rld, 384, use_rom_font=True)
     if first != second:
@@ -78,6 +84,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         'file': len(first), 'image': len(info['image']),
         'bss': info['bss'], 'stack': info['stack'], 'total': total,
         'audits': records, 'source_patches': source_patch_report,
+        'source_relocations': relocation_report,
         'gate8_complete': False,
     }
 
