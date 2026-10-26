@@ -1,0 +1,92 @@
+"""Compare complete source compilation with passive typed-emission auditing.
+
+No optimization is attempted. A different byte, missing producer or patched
+address remains an unresolved Gate 8 boundary, never an optimizer success.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+STAGE = Path(__file__).resolve().parent
+sys.path[:0] = [str(STAGE), str(ROOT / 'src/zx-ux-sdk')]
+import rld
+from symbolic_capture import audit_result, install as install_capture
+
+
+def run(source: Path, checkpoint: Path, frontend: Path,
+        tape: Path, rom: Path) -> dict:
+    if not (checkpoint / 'rbc.py').is_file():
+        raise ValueError('reconstructed RBC checkpoint required')
+    if not (frontend / 'compiler.py').is_file():
+        raise ValueError('canonical 48K frontend required')
+    sys.path.insert(0, str(checkpoint))
+    import rbc
+    source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+    baseline, _ = rbc._compile_three(source, frontend, tape, rom, 0xff00,
+                                      [], 'block', False, 0)
+    records = []
+    original_hook = rbc.install_codegen_optimizer
+
+    def passive_capture(module):
+        install_capture(module)
+        parent = module.Compiler.compile_whole
+        def recorded(self, *args, **kwargs):
+            result = parent(self, *args, **kwargs)
+            if result.ok:
+                records.append(audit_result(self, result))
+            return result
+        module.Compiler.compile_whole = recorded
+
+    try:
+        rbc.install_codegen_optimizer = passive_capture
+        observed, _ = rbc._compile_three(source, frontend, tape, rom,
+                                          0xff00, [], 'block', True, 0)
+    finally:
+        rbc.install_codegen_optimizer = original_hook
+    if len(baseline) != 3 or len(observed) != 3 or len(records) != 3:
+        raise ValueError('requires three full compiler passes')
+    for index, (before, after) in enumerate(zip(baseline, observed)):
+        if (before.code, before.entry, before.base, before.bss) != (
+                after.code, after.entry, after.base, after.bss):
+            raise RuntimeError(f'passive capture changed program bytes at pass {index}')
+    first, _ = rbc.build_ssx(baseline, bytes(768), rld, 384, use_rom_font=True)
+    second, _ = rbc.build_ssx(observed, bytes(768), rld, 384, use_rom_font=True)
+    if first != second:
+        raise RuntimeError('passive capture changed linked native program')
+    info = rld.parse_ssx(first)
+    total = len(info['image']) + info['bss'] + info['stack']
+    if max(total, len(first)) > 12000:
+        raise ValueError('default 12000-byte memory limit exceeded')
+    for record in records:
+        if record['safe_to_optimize']:
+            raise RuntimeError('partial typed capture was incorrectly admitted')
+    return {
+        'source_sha256': source_hash, 'source': source.name,
+        'passive_capture_byte_identical': True,
+        'linked_sha256': hashlib.sha256(first).hexdigest(),
+        'file': len(first), 'image': len(info['image']),
+        'bss': info['bss'], 'stack': info['stack'], 'total': total,
+        'audits': records, 'gate8_complete': False,
+    }
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('source', type=Path)
+    p.add_argument('--compiler', required=True, type=Path)
+    p.add_argument('--frontend', required=True, type=Path)
+    p.add_argument('--tape', required=True, type=Path)
+    p.add_argument('--rom', type=Path, default=ROOT / 'src/zx-ux-sdk/rom/48.rom')
+    args = p.parse_args()
+    report = run(args.source.resolve(), args.compiler.resolve(),
+                 args.frontend.resolve(), args.tape.resolve(), args.rom.resolve())
+    print('GATE8_PASSIVE_SOURCE_AUDIT', json.dumps(report, sort_keys=True))
+
+
+if __name__ == '__main__':
+    main()
