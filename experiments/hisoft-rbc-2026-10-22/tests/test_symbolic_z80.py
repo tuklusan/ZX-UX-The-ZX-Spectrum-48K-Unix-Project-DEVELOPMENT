@@ -65,6 +65,19 @@ class SymbolicTests(unittest.TestCase):
         with self.assertRaisesRegex(SymbolicError, 'protected data'):
             p.optimize(optimizer, ras, rld)
 
+    def test_internal_branch_label_cannot_disappear(self):
+        p = self.example()
+        with self.assertRaisesRegex(SymbolicError, 'protected data'):
+            p.optimize(lambda x: x.replace('buffer:', ''), ras, rld)
+
+    def test_internal_table_label_cannot_move(self):
+        p = self.example()
+        def move(asm):
+            return asm.replace('table:\n    dw done\n',
+                               '    dw done\ntable:\n')
+        with self.assertRaisesRegex(SymbolicError, 'protected data'):
+            p.optimize(move, ras, rld)
+
     def test_external_entry_cannot_disappear(self):
         p = self.example()
         with self.assertRaises(SymbolicError):

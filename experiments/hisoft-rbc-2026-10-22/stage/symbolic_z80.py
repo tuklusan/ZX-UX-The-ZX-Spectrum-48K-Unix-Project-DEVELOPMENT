@@ -170,7 +170,9 @@ def _protected_lines(asm: str, entries: set[str]) -> list[str]:
         lower = s.lower()
         if lower.startswith(("db ", "dw ", "ds ", "section ", "global ")):
             result.append(lower)
-        elif s.endswith(":") and s[:-1].lower() in {x.lower() for x in entries}:
+        elif s.endswith(":"):
+            # A private branch target or address-table label is as important
+            # as a public entry. Never infer reachability from exports alone.
             result.append(lower)
     return result
 
