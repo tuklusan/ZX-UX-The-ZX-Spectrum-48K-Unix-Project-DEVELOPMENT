@@ -160,6 +160,10 @@ class SymbolicProgram:
                        "optimized_image_bytes": len(post["image"]),
                        "baseline_bss_bytes": pre["bss"],
                        "optimized_bss_bytes": post["bss"],
+                       "baseline_stack_bytes": pre["stack"],
+                       "optimized_stack_bytes": post["stack"],
+                       "baseline_total_bytes": len(pre["image"]) + pre["bss"] + pre["stack"],
+                       "optimized_total_bytes": len(post["image"]) + post["bss"] + post["stack"],
                        "saved_file_bytes": len(before) - len(after),
                        "saved_memory_bytes": orig_memory - new_memory}
 

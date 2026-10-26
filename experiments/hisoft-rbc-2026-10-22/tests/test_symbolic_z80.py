@@ -111,6 +111,21 @@ class SymbolicTests(unittest.TestCase):
         self.assertEqual(stats['saved_file_bytes'], 0)
         self.assertEqual(len(ssx), stats['baseline_file_bytes'])
 
+    def test_exact_native_size_dimensions(self):
+        p = self.example()
+        raw, sizes = p.optimize(lambda asm: asm, ras, rld)
+        linked = rld.parse_ssx(raw)
+        self.assertEqual(sizes['baseline_file_bytes'], len(raw))
+        self.assertEqual(sizes['optimized_file_bytes'], len(raw))
+        for prefix in ('baseline', 'optimized'):
+            self.assertEqual(sizes[prefix + '_stack_bytes'], 384)
+            self.assertEqual(sizes[prefix + '_image_bytes'], len(linked['image']))
+            self.assertEqual(sizes[prefix + '_bss_bytes'], linked['bss'])
+            self.assertEqual(sizes[prefix + '_total_bytes'],
+                             len(linked['image']) + linked['bss'] + linked['stack'])
+            self.assertEqual(sizes[prefix + '_memory_bytes'],
+                             max(len(raw), sizes[prefix + '_total_bytes']))
+
     def test_limits_measured_after_link(self):
         p = self.example()
         with self.assertRaisesRegex(SymbolicError, 'requires'):
