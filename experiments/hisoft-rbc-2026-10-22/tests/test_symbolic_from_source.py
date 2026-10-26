@@ -9,7 +9,8 @@ from types import SimpleNamespace
 STAGE = Path(__file__).resolve().parents[1] / 'stage'
 ROOT = STAGE.parents[2]
 sys.path[:0] = [str(STAGE), str(ROOT / 'src/zx-ux-sdk')]
-from symbolic_from_source import UnresolvedSourceProgram, from_source
+from symbolic_from_source import (UnresolvedSourceProgram,
+                                  _validate_static_instruction, from_source)
 import ras
 import rld
 
@@ -109,6 +110,19 @@ class NativeFromSource(unittest.TestCase):
         with self.assertRaises(UnresolvedSourceProgram):
             from_source([e('data-source', 0, b'\xc9', 'BASIC DATA')],
                         b'\xc9', 0x6000, 1, 0, asm)
+
+    def test_untyped_absolute_operands_are_never_passed_to_linker(self):
+        for ins in ('ld hl,24576', 'ld a,(24576)', 'ld (0x6000),a',
+                    'ld (0x5c36),hl', 'call $6000', 'jp (hl)',
+                    'jr z,+1', 'ld bc,$6000'):
+            with self.subTest(ins=ins), self.assertRaises(UnresolvedSourceProgram):
+                _validate_static_instruction(ins)
+
+    def test_register_and_byte_immediate_forms_are_explicitly_safe(self):
+        for ins in ('ret', 'nop', 'ld a,5', 'ld (hl),$ff',
+                    'bit 7,h', 'rst $28', 'cp 0', 'or a'):
+            with self.subTest(ins=ins):
+                _validate_static_instruction(ins)
 
     def test_inline_source_data_preserved(self):
         image = b'\xef\x31\x04\x38\xc9'

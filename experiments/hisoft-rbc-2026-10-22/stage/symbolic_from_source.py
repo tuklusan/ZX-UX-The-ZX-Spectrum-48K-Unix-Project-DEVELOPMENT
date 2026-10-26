@@ -16,6 +16,24 @@ class UnresolvedSourceProgram(ValueError):
     """An original producer lacks sufficient type information for assembly."""
 
 
+_NUMERIC = re.compile(r'(?<![\w])(?:[-+]?(?:0x[0-9a-f]+|\$[0-9a-f]+|[0-9]+))',
+                      re.IGNORECASE)
+_SAFE_IMMEDIATE = re.compile(
+    r'(?:ld\s+(?:a|\(hl\))\s*,|(?:and|or|xor|cp|sub)\s+|'
+    r'(?:add|adc|sbc)\s+a\s*,|(?:bit|res|set)\s+|rst\s+)'
+    r'(?:[-+]?(?:0x[0-9a-f]+|\$[0-9a-f]+|[0-9]+))'
+    r'(?:\s*,\s*(?:a|b|c|d|e|h|l|\(hl\)))?\Z', re.IGNORECASE)
+
+
+def _validate_static_instruction(source: str) -> None:
+    """Never carry an untyped absolute address through native relocation."""
+    op = source.split(None, 1)[0].lower()
+    if op in ('jp', 'call', 'jr', 'djnz'):
+        raise UnresolvedSourceProgram('branch lacks an explicit symbolic target')
+    if _NUMERIC.search(source) and not _SAFE_IMMEDIATE.fullmatch(source.strip()):
+        raise UnresolvedSourceProgram('numeric operand has no verified address type')
+
+
 def from_source(events, image: bytes, base: int, text_end: int, bss: int,
                 assembler, *, entry_offsets=(0,)) -> SymbolicProgram:
     """Construct an entire typed source image and explicit entry labels."""
@@ -83,14 +101,7 @@ def from_source(events, image: bytes, base: int, text_end: int, bss: int,
                     raise UnresolvedSourceProgram('source relocation placeholder missing')
             else:
                 source = span.source
-                op = source.split(None, 1)[0].lower()
-                # Bare numeric branch/control targets are not relocatable sources.
-                if op in ('jp', 'call', 'jr', 'djnz') and source.strip().lower() != 'jp (hl)':
-                    raise UnresolvedSourceProgram('untyped numeric control transfer')
-                # A 16-bit immediate can encode a hidden program address.
-                if re.search(r'\bld\s+(?:bc|de|hl|sp)\s*,\s*[-+$0-9]', source,
-                             re.IGNORECASE):
-                    raise UnresolvedSourceProgram('untyped 16-bit operand')
+                _validate_static_instruction(source)
             program.instruction(source)
         elif span.kind in ('inline-data', 'data-source'):
             # Split protected source data only where an explicit typed label lands.
