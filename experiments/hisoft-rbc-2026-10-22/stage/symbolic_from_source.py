@@ -26,10 +26,29 @@ _SAFE_IMMEDIATE = re.compile(
     r'(?:\s*,\s*(?:a|b|c|d|e|h|l|\(hl\)))?\Z', re.IGNORECASE)
 
 
+_ROM_BRANCH = re.compile(
+    r'(?:jp|call)\s+(?:(?:nz|z|nc|c|po|pe|p|m)\s*,\s*)?'
+    r'(\$[0-9a-f]+|0x[0-9a-f]+|[0-9]+)\Z', re.IGNORECASE)
+
+
+def _fixed_rom_branch(source: str) -> bool:
+    """Retain only direct, constant targets inside the 16K ZX Spectrum ROM."""
+    match = _ROM_BRANCH.fullmatch(source.strip())
+    if match is None:
+        return False
+    operand = match.group(1)
+    value = (int(operand[1:], 16) if operand.startswith('$') else
+             int(operand, 16) if operand.lower().startswith('0x') else
+             int(operand, 10))
+    return 0 <= value < 0x4000
+
+
 def _validate_static_instruction(source: str) -> None:
     """Never carry an untyped absolute address through native relocation."""
     op = source.split(None, 1)[0].lower()
     if op in ('jp', 'call', 'jr', 'djnz'):
+        if op in ('jp', 'call') and _fixed_rom_branch(source):
+            return
         raise UnresolvedSourceProgram('branch lacks an explicit symbolic target')
     if _NUMERIC.search(source) and not _SAFE_IMMEDIATE.fullmatch(source.strip()):
         raise UnresolvedSourceProgram('numeric operand has no verified address type')

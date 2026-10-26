@@ -17,6 +17,9 @@ ASM = {'nop': b'\x00', 'dec a': b'\x3d', 'inc a': b'\x3c',
        'jr nz,-3': b'\x20\xfd', 'jr +1': b'\x18\x01',
        'djnz -3': b'\x10\xfd', 'ret': b'\xc9',
        'call 28672': b'\xcd\x00\x70',
+       'call $2bf1': b'\xcd\xf1\x2b',
+       'jp z,0x0038': b'\xca\x38\x00',
+       'jp nz,0x4000': b'\xc2\x00\x40',
        'defb $c3': b'\xc3', 'jr z,-1': b'\x28\xff'}
 
 
@@ -77,6 +80,22 @@ class FullSourceRelative(unittest.TestCase):
         data = b''.join(e.data for e in es)
         with self.assertRaisesRegex(UnresolvedSourceProgram, 'symbolic target'):
             from_source(es, data, 0x7000, len(data), 0, assembler)
+
+    def test_fixed_rom_calls_and_jumps_link_without_relocation(self):
+        for source in ('call $2bf1', 'jp z,0x0038'):
+            with self.subTest(source=source):
+                es = events(source)
+                data = b''.join(e.data for e in es)
+                program = from_source(es, data, 0x7000, len(data), 0, assembler)
+                self.assertEqual(link(program)['image'], data)
+
+    def test_static_calls_outside_rom_remain_blocked(self):
+        for source in ('call 28672', 'jp nz,0x4000'):
+            with self.subTest(source=source):
+                es = events(source)
+                data = b''.join(e.data for e in es)
+                with self.assertRaisesRegex(UnresolvedSourceProgram, 'symbolic target'):
+                    from_source(es, data, 0x7000, len(data), 0, assembler)
 
     def test_runtime_opaque_bytes_are_never_promoted(self):
         es = events('ret')
