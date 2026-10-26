@@ -1,0 +1,90 @@
+"""Build source branches through ownership checks and native ras/rld."""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+import unittest
+ROOT = Path(__file__).resolve().parents[3]
+sys.path[:0] = [str(Path(__file__).resolve().parents[1] / 'stage'),
+                str(ROOT / 'src/zx-ux-sdk')]
+import ras
+import rld
+from symbolic_from_source import UnresolvedSourceProgram, from_source
+
+
+ASM = {'nop': b'\x00', 'dec a': b'\x3d', 'inc a': b'\x3c',
+       'jr nz,-3': b'\x20\xfd', 'jr +1': b'\x18\x01',
+       'djnz -3': b'\x10\xfd', 'ret': b'\xc9',
+       'call 28672': b'\xcd\x00\x70',
+       'defb $c3': b'\xc3', 'jr z,-1': b'\x28\xff'}
+
+
+def assembler(src):
+    return ASM[src]
+
+
+def events(*statements):
+    pc = 0
+    result = []
+    for source in statements:
+        data = assembler(source)
+        result.append(SimpleNamespace(kind='instruction', position=pc,
+                                      data=data, source=source))
+        pc += len(data)
+    return result
+
+
+def link(p):
+    obj = ras.assemble_text(p.assembly(), 'source-relative.s')
+    ssx, _, _, _, _ = rld.link([rld.Obj(obj, 'source-relative.sso')], [],
+                                entry='start', stack=384)
+    return rld.parse_ssx(ssx)
+
+
+class FullSourceRelative(unittest.TestCase):
+    def test_backward_conditional_compiles_from_exact_source(self):
+        es = events('nop', 'dec a', 'jr nz,-3', 'ret')
+        data = b''.join(e.data for e in es)
+        program = from_source(es, data, 0x7000, len(data), 0, assembler)
+        text = program.assembly()
+        self.assertIn('source_0001:', text)
+        self.assertIn('jr nz,source_0001', text)
+        self.assertEqual(link(program)['image'], data)
+
+    def test_backward_djnz_compiles_from_exact_source(self):
+        es = events('nop', 'djnz -3', 'ret')
+        data = b''.join(e.data for e in es)
+        program = from_source(es, data, 0x7000, len(data), 0, assembler)
+        self.assertIn('djnz start', program.assembly())
+        self.assertEqual(link(program)['image'], data)
+
+    def test_forward_short_jump_compiles_from_exact_source(self):
+        es = events('jr +1', 'nop', 'ret')
+        data = b''.join(e.data for e in es)
+        program = from_source(es, data, 0x7000, len(data), 0, assembler)
+        self.assertIn('jr source_0003', program.assembly())
+        self.assertEqual(link(program)['image'], data)
+
+    def test_branch_into_middle_of_inline_literal_is_rejected(self):
+        es = events('jr z,-1', 'ret')
+        data = b''.join(e.data for e in es)
+        with self.assertRaisesRegex(UnresolvedSourceProgram, 'not a source instruction'):
+            from_source(es, data, 0x7000, len(data), 0, assembler)
+
+    def test_unknown_numeric_absolute_branch_is_still_rejected(self):
+        es = events('call 28672', 'ret')
+        data = b''.join(e.data for e in es)
+        with self.assertRaisesRegex(UnresolvedSourceProgram, 'symbolic target'):
+            from_source(es, data, 0x7000, len(data), 0, assembler)
+
+    def test_runtime_opaque_bytes_are_never_promoted(self):
+        es = events('ret')
+        es.append(SimpleNamespace(kind='runtime-opaque', position=1,
+                                  data=b'\xc9', source='RT1'))
+        with self.assertRaisesRegex(UnresolvedSourceProgram, 'unresolved source bytes'):
+            from_source(es, b'\xc9\xc9', 0x7000, 2, 0, assembler)
+
+
+if __name__ == '__main__':
+    unittest.main()

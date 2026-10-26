@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 
 from symbolic_source_boundaries import SourceBoundaryError, inspect_source_boundaries
+from symbolic_relative_branches import RelativeBranchError, inspect_relative_branches
 from symbolic_z80 import SymbolicProgram
 
 
@@ -58,6 +59,10 @@ def from_source(events, image: bytes, base: int, text_end: int, bss: int,
                                                         'instruction-relocated')}
     if any(entry not in instructions for entry in entry_offsets):
         raise UnresolvedSourceProgram('entry does not name a source instruction')
+    try:
+        relatives = inspect_relative_branches(spans, text_end, assembler)
+    except RelativeBranchError as exc:
+        raise UnresolvedSourceProgram(str(exc)) from exc
     targets = {s.target for s in spans if s.kind == 'instruction-relocated'}
     if None in targets:
         raise UnresolvedSourceProgram('relocation target is missing')
@@ -75,7 +80,7 @@ def from_source(events, image: bytes, base: int, text_end: int, bss: int,
             raise UnresolvedSourceProgram('branch target lacks a source instruction')
         if span.target < text_end and span.target not in instructions:
             raise UnresolvedSourceProgram('source relocation targets inline literal')
-    marks = set(entry_offsets) | targets
+    marks = set(entry_offsets) | targets | {branch.target for branch in relatives.values()}
     for t in marks:
         if t < text_end and t not in instructions:
             raise UnresolvedSourceProgram('text label falls inside source instruction')
@@ -100,8 +105,12 @@ def from_source(events, image: bytes, base: int, text_end: int, bss: int,
                 if source == span.source:
                     raise UnresolvedSourceProgram('source relocation placeholder missing')
             else:
-                source = span.source
-                _validate_static_instruction(source)
+                relative = relatives.get(span.start)
+                if relative is not None:
+                    source = relative.opcode + (' ' if relative.opcode in ('jr', 'djnz') else ',') + name(relative.target)
+                else:
+                    source = span.source
+                    _validate_static_instruction(source)
             program.instruction(source)
         elif span.kind in ('inline-data', 'data-source'):
             # Split protected source data only where an explicit typed label lands.
