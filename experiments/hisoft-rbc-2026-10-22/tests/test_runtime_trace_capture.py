@@ -87,6 +87,35 @@ class BridgeTests(unittest.TestCase):
         self.assertFalse(report['safe_to_optimize'])
         self.assertFalse(c._zxux_capture.runtime_traces[0]['typed_instructions'])
 
+    def test_opaque_emitter_without_producer_writes_cannot_be_complete(self):
+        class IncompleteMachine(Machine):
+            _zxux_runtime_capture_installed = False
+            def run_emitter(self, n, pc, counting, code_base):
+                if self.cpu.trace:
+                    self.cpu.trace(0x7101)
+                self.cpu.wb(0x9000 + pc, 0xc9)
+                # The missing second byte is copied from preexisting staging RAM.
+                self.far[pc:pc + 2] = self.cpu.mem[0x9000 + pc:0x9000 + pc + 2]
+                return pc + 2
+        class Child(Compiler):
+            _zxux_symbolic_capture_installed = False
+            def __init__(self):
+                self.m = IncompleteMachine()
+                self.far = self.m.far
+                self.pc = 0
+                self.storing = True
+                self.reset()
+        install(SimpleNamespace(Compiler=Child,
+                                rtlib=SimpleNamespace(Machine=IncompleteMachine)))
+        c = Child()
+        c.m.run_emitter(9, 0, False, 0x6000)
+        audit = c._zxux_capture.audit(bytes(c.far[:2]))
+        self.assertEqual(audit['uncovered_bytes'], 0)
+        self.assertEqual(audit['runtime_trace_uncovered_bytes'], 1)
+        self.assertFalse(audit['runtime_traces_complete'])
+        self.assertFalse(audit['complete_byte_trace'])
+        self.assertFalse(audit['safe_to_optimize'])
+
     def test_counting_mode_does_not_capture_runtime(self):
         c = Compiler()
         c.m.run_emitter(9, 0, True, 0x6000)

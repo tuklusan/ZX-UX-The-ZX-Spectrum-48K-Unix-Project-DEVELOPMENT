@@ -79,8 +79,10 @@ class Capture:
                 'runtime_trace_changed_bytes': sum(r['changed_after_write'] for r in self.runtime_traces),
                 'runtime_trace_outside_bytes': sum(r['outside_emitter_bytes'] for r in self.runtime_traces),
                 'runtime_trace_source_pc_count': sum(r['source_pc_count'] for r in self.runtime_traces),
+                'runtime_traces_complete': all(r['fully_observed'] for r in self.runtime_traces),
                 'safe_to_optimize': False,  # numeric addresses still need symbolization
-                'complete_byte_trace': not uncovered and not patched and not out_of_image}
+                'complete_byte_trace': (not uncovered and not patched and not out_of_image and
+                                        all(r['fully_observed'] for r in self.runtime_traces))}
 
 
 
