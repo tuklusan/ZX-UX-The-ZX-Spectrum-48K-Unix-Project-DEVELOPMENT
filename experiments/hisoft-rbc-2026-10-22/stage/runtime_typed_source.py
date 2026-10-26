@@ -87,9 +87,11 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
             raise RuntimeSourceError('runtime source data declared executable')
         if kind == 'relocated':
             offset = statement.symbol_offset
-            if (not isinstance(offset, int) or not 0 <= offset < end or
+            if (not isinstance(offset, int) or not 0 <= offset or
                     source.count('nn') != 1):
                 raise RuntimeSourceError('runtime relocated operand has no target')
+            # The target may be in another emitter, BASIC DATA or the BSS.
+            # Whole-program symbol resolution checks actual storage bounds.
             target = base + offset
             if target > 0xffff:
                 raise RuntimeSourceError('runtime relocation outside address space')

@@ -81,6 +81,7 @@ class Capture:
                 'runtime_trace_outside_bytes': sum(r['outside_emitter_bytes'] for r in self.runtime_traces),
                 'runtime_trace_source_pc_count': sum(r['source_pc_count'] for r in self.runtime_traces),
                 'runtime_traces_complete': all(r['fully_observed'] for r in self.runtime_traces),
+                'runtime_typed_source_events': sum(r.get('typed_source_events', 0) for r in self.runtime_traces),
                 'safe_to_optimize': False,  # numeric addresses still need symbolization
                 'complete_byte_trace': (not uncovered and not patched and not out_of_image and
                                         all(r['fully_observed'] for r in self.runtime_traces))}
@@ -225,9 +226,9 @@ def install(compiler_module):
         cls.st_data = st_data
     cls._zxux_symbolic_capture_installed = True
 
-    # HiSoft runtime emitters execute in the Z80 model and copy bytes into
-    # Machine.far without passing Compiler.emit(). Treat those bytes as an
-    # opaque runtime section until their source becomes symbolic too.
+    # Source declarations are provided separately from runtime output. An
+    # emitter without a source provider stays opaque; matching bytes alone
+    # never make it a typed instruction stream.
     runtime = getattr(compiler_module, 'rtlib', None)
     machine_cls = getattr(runtime, 'Machine', None)
     if machine_cls is not None and not getattr(machine_cls, '_zxux_runtime_capture_installed', False):
@@ -251,12 +252,32 @@ def install(compiler_module):
             if owner is not None and not counting and not self.de_flags & 1:
                 trace = getattr(owner, '_zxux_capture', None)
                 if trace is not None:
+                    source_events = None
                     if tracing:
                         report = source_trace.inspect(pc, end, bytes(self.far[pc:end]))
                         report['routine'] = n
+                        provider = getattr(self, '_zxux_typed_runtime_source', None)
+                        if provider is not None:
+                            if not callable(provider):
+                                raise ValueError('runtime source provider must be callable')
+                            # The provider supplies independently reviewed original
+                            # statements and an assembler, not a decoded result.
+                            statements, assembler = provider(n, pc, end, code_base)
+                            from runtime_typed_source import typed_runtime_events
+                            source_events = typed_runtime_events(
+                                source_trace.writes, statements,
+                                bytes(self.far[pc:end]), pc, end, code_base,
+                                assembler)
+                            report['typed_instructions'] = True
+                            report['typed_source_events'] = len(source_events)
                         trace.runtime_traces.append(report)
-                    trace.events.append(Emission(pc, 'runtime-opaque', f'RT{n}',
-                                                 bytes(self.far[pc:end])))
+                    elif getattr(self, '_zxux_typed_runtime_source', None) is not None:
+                        raise ValueError('typed runtime source requires 48K write tracing')
+                    if source_events is None:
+                        trace.events.append(Emission(pc, 'runtime-opaque', f'RT{n}',
+                                                     bytes(self.far[pc:end])))
+                    else:
+                        trace.events.extend(source_events)
             return end
         machine_cls.run_emitter = run_emitter
         machine_cls._zxux_runtime_capture_installed = True

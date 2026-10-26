@@ -76,6 +76,20 @@ class RuntimeTypedSources(unittest.TestCase):
         self.assertEqual(linked['image'][3:], image[3:])
         self.assertEqual(linked['image'][1:3], b'\x06\x00')  # native link base is zero
 
+    def test_relocation_can_reference_another_runtime_section_or_bss(self):
+        image = b'\xc3\x12\x60'
+        sources = (RuntimeStatement(0, 0x7011, 'relocated', 'jp nn', 0x12),)
+        writes = (Write(0, 0xc3, 0x7011), Write(1, 0x12, 0x7011),
+                  Write(2, 0x60, 0x7011))
+        def asm(text):
+            return {'jp 24594': image}[text]
+        events = typed_runtime_events(writes, sources, image, 0, 3, 0x6000, asm)
+        self.assertEqual(events[1].symbol_offset, 0x12)
+        with self.assertRaises(RuntimeSourceError):
+            typed_runtime_events(writes,
+                (RuntimeStatement(0, 0x7011, 'relocated', 'jp nn', 0x10000),),
+                image, 0, 3, 0x6000, asm)
+
     def test_missing_duplicate_changed_and_unknown_writer_rejected(self):
         image, source, writes = fixture()
         bad = (writes[:2] + writes[3:], writes + writes[:1],

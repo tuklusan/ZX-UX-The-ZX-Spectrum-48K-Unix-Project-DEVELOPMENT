@@ -116,6 +116,57 @@ class BridgeTests(unittest.TestCase):
         self.assertFalse(audit['complete_byte_trace'])
         self.assertFalse(audit['safe_to_optimize'])
 
+    def test_reviewed_typed_runtime_source_reaches_native_symbolic_link(self):
+        from runtime_typed_source import RuntimeStatement
+        from symbolic_from_source import from_source
+        from symbolic_source_boundaries import inspect_source_boundaries
+        import ras
+        import rld
+
+        c = Compiler()
+        def encoder(text):
+            return {'ret': b'\xc9', 'defb 0': b'\0'}[text]
+        def original_sources(n, start, end, base):
+            self.assertEqual((n, start, end, base), (9, 0, 2, 0x6000))
+            return ((RuntimeStatement(0, 0x7101, 'instruction', 'ret'),
+                     RuntimeStatement(1, 0x7101, 'literal', 'defb 0')),
+                    encoder)
+        c.m._zxux_typed_runtime_source = original_sources
+        self.assertEqual(c.m.run_emitter(9, 0, False, 0x6000), 2)
+        events = c._zxux_capture.events
+        self.assertEqual([e.kind for e in events], ['instruction', 'instruction'])
+        self.assertEqual(c._zxux_capture.runtime_traces[0]['typed_source_events'], 2)
+        self.assertTrue(c._zxux_capture.runtime_traces[0]['typed_instructions'])
+        image = bytes(c.far[:2])
+        typed = inspect_source_boundaries(events, image, 0x6000, 2, 0, encoder)
+        self.assertTrue(typed.fully_typed)
+        self.assertEqual([s.kind for s in typed.spans], ['instruction', 'inline-data'])
+        program = from_source(events, image, 0x6000, 2, 0, encoder)
+        obj = ras.assemble_text(program.assembly(), 'runtime-bridge.s')
+        ssx, *_ = rld.link([rld.Obj(obj, 'runtime-bridge.sso')], [],
+                           entry='start', stack=384)
+        self.assertEqual(rld.parse_ssx(ssx)['image'], image)
+        self.assertFalse(c._zxux_capture.audit(image)['safe_to_optimize'])
+
+    def test_bad_runtime_source_does_not_fall_back_to_opaque(self):
+        from runtime_typed_source import RuntimeStatement, RuntimeSourceError
+        c = Compiler()
+        c.m._zxux_typed_runtime_source = lambda n, start, end, base: (
+            (RuntimeStatement(0, 0x7102, 'instruction', 'ret'),),
+            lambda s: b'\xc9')
+        with self.assertRaises(RuntimeSourceError):
+            c.m.run_emitter(9, 0, False, 0x6000)
+        self.assertEqual(c._zxux_capture.events, [])
+        self.assertFalse(c._zxux_runtime_emitting)
+        self.assertIsNone(c.m.cpu.trace)
+        self.assertNotIn('wb', vars(c.m.cpu))
+
+    def test_typed_provider_does_not_skip_counting_mode(self):
+        c = Compiler()
+        c.m._zxux_typed_runtime_source = lambda *args: self.fail('counting mode queried source')
+        c.m.run_emitter(9, 0, True, 0x6000)
+        self.assertEqual(c._zxux_capture.events, [])
+
     def test_counting_mode_does_not_capture_runtime(self):
         c = Compiler()
         c.m.run_emitter(9, 0, True, 0x6000)

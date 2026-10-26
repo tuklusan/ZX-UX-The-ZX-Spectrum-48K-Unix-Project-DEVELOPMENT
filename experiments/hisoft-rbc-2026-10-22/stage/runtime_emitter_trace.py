@@ -115,7 +115,7 @@ class RuntimeEmitterTrace:
             'rewritten_bytes': len(rewritten),
             'outside_emitter_bytes': len(escaped), 'outside_first': escaped[:16],
             'untraced_pc_writes': len(untraced), 'untraced_first': untraced[:16],
-            'fully_observed': not missing and not changed and not escaped and not untraced,
+            'fully_observed': not missing and not changed and not escaped and not untraced and not rewritten,
             'typed_instructions': False,
         }
 

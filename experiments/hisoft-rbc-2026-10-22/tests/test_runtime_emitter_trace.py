@@ -62,6 +62,18 @@ class NativeTrace(unittest.TestCase):
         self.assertEqual(r['outside_first'], [3])
         self.assertFalse(r['fully_observed'])
 
+    def test_matching_final_bytes_do_not_hide_staging_rewrites(self):
+        m = self.make_machine()
+        with RuntimeEmitterTrace(m) as trace:
+            m.cpu.trace(0x7234)
+            m.cpu.wb(0x9000, 0x00)
+            m.cpu.trace(0x7236)
+            m.cpu.wb(0x9000, 0xc9)
+        report = trace.inspect(0, 1, b'\xc9')
+        self.assertEqual(report['changed_after_write'], 0)
+        self.assertEqual(report['rewritten_bytes'], 1)
+        self.assertFalse(report['fully_observed'])
+
     def test_write_without_instruction_site_is_untyped(self):
         m = self.make_machine()
         with RuntimeEmitterTrace(m) as trace:
