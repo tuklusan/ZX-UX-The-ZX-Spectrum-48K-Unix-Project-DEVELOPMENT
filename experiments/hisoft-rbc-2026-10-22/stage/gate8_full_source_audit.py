@@ -25,6 +25,24 @@ from symbolic_fragments import inspect_fragments, verify_three_fragment_passes
 from runtime_emitter_trace import verify_three_runtime_traces
 from symbolic_emit_sites import inspect_emit_sites, verify_three_emit_sites
 from symbolic_relative_branches import inspect_relative_branches, verify_three_relative_passes
+from typed_whole_pipeline import SourcePipelineError, link_source_pair, verify_and_build
+
+
+def verify_full_source_native(events, results, text_ends, assembler, ras):
+    """Attempt a real native link, recording missing typed sources honestly."""
+    try:
+        source = verify_and_build(
+            events, [r.code for r in results],
+            [r.code_base for r in results], text_ends,
+            [r.var_bytes for r in results], assembler)
+        plain, _, sizes = link_source_pair(source, ras, rld, lambda text: text)
+    except (ValueError, TypeError, KeyError) as exc:
+        return {'source_owned': False, 'native_link_verified': False,
+                'blocker': str(exc), 'native_behavior_verified': False}
+    return {'source_owned': True, 'native_link_verified': True,
+            'plain_sha256': hashlib.sha256(plain).hexdigest(),
+            'plain_sizes': sizes['plain'],
+            'native_behavior_verified': False}
 
 
 def run(source: Path, checkpoint: Path, frontend: Path,
@@ -48,6 +66,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     runtime_source_traces = []
     compiler_source_sites = []
     relative_groups = []
+    captured_events = []
+    text_endpoints = []
     original_hook = rbc.install_codegen_optimizer
 
     def passive_capture(module):
@@ -57,6 +77,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             result = parent(self, *args, **kwargs)
             if result.ok:
                 records.append(audit_result(self, result))
+                captured_events.append(tuple(self._zxux_capture.events))
+                text_endpoints.append(self.data_start)
                 runtime_source_traces.append(list(self._zxux_capture.runtime_traces))
                 compiler_source_sites.append(inspect_emit_sites(self._zxux_capture.events))
                 source_words.append(from_emissions(
@@ -118,6 +140,10 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     for record in records:
         if record['safe_to_optimize']:
             raise RuntimeError('partial typed capture was incorrectly admitted')
+    import ras
+    from z80asm import asm
+    whole_attempt = verify_full_source_native(
+        captured_events, observed, text_endpoints, asm, ras)
     return {
         'source_sha256': source_hash, 'source': source.name,
         'passive_capture_byte_identical': True,
@@ -133,6 +159,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         'runtime_emitter_sources': runtime_report,
         'compiler_source_sites': source_site_report,
         'relative_source_branches': relative_report,
+        'whole_program_attempt': whole_attempt,
         'gate8_complete': False,
     }
 
