@@ -85,3 +85,19 @@ def inspect_relative_branches(spans, text_end: int, assembler):
             raise RelativeBranchError('duplicate source relative branch site')
         result[span.start] = RelativeBranch(span.start, target, source, instruction)
     return result
+
+
+def verify_three_relative_passes(groups, bases):
+    """Require identical source-relative control flow at three native bases."""
+    if len(groups) != 3 or len(bases) != 3 or len(set(bases)) != 3:
+        raise RelativeBranchError('three distinct compilation bases required')
+    first = groups[0]
+    signature = lambda branches: tuple(sorted(
+        (branch.site, branch.target, branch.source, branch.opcode)
+        for branch in branches.values()))
+    original = signature(first)
+    if any(signature(group) != original for group in groups[1:]):
+        raise RelativeBranchError('source relative branch target changed across bases')
+    return {'verified_relative_branches': len(first),
+            'verified_relative_instruction_bytes': 2 * len(first),
+            'verified_native_bases': len(set(bases))}

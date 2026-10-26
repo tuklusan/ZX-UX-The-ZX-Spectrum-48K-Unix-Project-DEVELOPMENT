@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(Path(__file__).resolve().parents[1] / 'stage'),
                 str(ROOT / 'src/zx-ux-sdk')]
 from symbolic_relative_branches import (RelativeBranchError,
-                                        inspect_relative_branches)
+                                        inspect_relative_branches,
+                                        verify_three_relative_passes)
 from symbolic_z80 import SymbolicProgram
 import ras
 import rld
@@ -93,6 +94,26 @@ class RelativeSources(unittest.TestCase):
             inspect_relative_branches([span(0, 2, 'jr +2'),
                                        span(2, 4, 'ld a,2'), span(4, 5, 'ret')],
                                       5, lambda source: b'\x18\x03')
+
+    def test_three_native_base_branch_targets_are_identical(self):
+        spans = [span(0, 2, 'ld b,3'), span(2, 3, 'dec b'),
+                 span(3, 5, 'jr nz,-3'), span(5, 6, 'ret')]
+        groups = [inspect_relative_branches(spans, 6, source_asm) for _ in range(3)]
+        report = verify_three_relative_passes(groups, [0xdd71, 0xdbec, 0xdb08])
+        self.assertEqual(report['verified_relative_branches'], 1)
+        self.assertEqual(report['verified_relative_instruction_bytes'], 2)
+        self.assertEqual(report['verified_native_bases'], 3)
+
+    def test_three_base_mismatch_is_blocked(self):
+        spans = [span(0, 2, 'jr +2'), span(2, 4, 'ld a,1'), span(4, 5, 'ret')]
+        groups = [inspect_relative_branches(spans, 5, source_asm) for _ in range(3)]
+        groups[2] = {0: groups[2][0].__class__(0, 2, 'jr +2', 'jr')}
+        with self.assertRaisesRegex(RelativeBranchError, 'changed across bases'):
+            verify_three_relative_passes(groups, [0xdd71, 0xdbec, 0xdb08])
+
+    def test_same_load_base_is_not_three_base_proof(self):
+        with self.assertRaisesRegex(RelativeBranchError, 'distinct'):
+            verify_three_relative_passes([{}, {}, {}], [0x8000] * 3)
 
     def test_reoptimized_native_assembler_recalculates_jr(self):
         p = SymbolicProgram()
