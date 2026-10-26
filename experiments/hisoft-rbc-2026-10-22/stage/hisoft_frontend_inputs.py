@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Recreate untracked HiSoft v1.1 tape and locked pyhsb sources for RBC.
+"""Recreate untracked HiSoft v1.1 tape and locked canonical frontend for RBC.
 
 No BASIC program is edited. Inputs and copied Python files are checked before
 entering the compiler; the tape is supplied by the operator, not the repo.
@@ -11,9 +11,11 @@ import hashlib
 from pathlib import Path
 from urllib.request import urlopen
 
+# Canonical ZX-UX frontend: owner's HiSoft Python compiler fork.
+CANONICAL_FRONTEND = 'https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft'
 REVISION = '7cc87dafb58fcf5632b7190320dd11c30b4fe961'
-ORIGIN = f'https://raw.githubusercontent.com/imneme/pyhsb/{REVISION}/'
-# Blob identities read from the upstream tree at REVISION, not from HEAD.
+ORIGIN = f'{CANONICAL_FRONTEND.replace("github.com", "raw.githubusercontent.com")}/{REVISION}/'
+# Blob identities checked against the canonical fork at REVISION, not HEAD.
 FRONTEND = {
     'compiler.py': '688dc637474fef51f6b4d902839d9cd4d01db4a8',
     'hbcimage.py': '2717fc4b1ceeffb87afa897169cffc2c5322a7df',
@@ -69,7 +71,7 @@ def convert_tzx_to_tap(tzx: bytes) -> bytes:
 
 
 def copy_frontend(out: Path, source: Path | None = None) -> dict[str, str]:
-    """Allow only the exact reviewed upstream source revision."""
+    """Allow only the exact reviewed canonical fork revision."""
     contents = {}
     for filename, expected in FRONTEND.items():
         if source is None:
@@ -79,7 +81,7 @@ def copy_frontend(out: Path, source: Path | None = None) -> dict[str, str]:
             raw = (source / filename).read_bytes()
         actual = git_blob(raw)
         if actual != expected:
-            raise ValueError(f'{filename}: upstream Git blob mismatch ({actual})')
+            raise ValueError(f'{filename}: canonical frontend Git blob mismatch ({actual})')
         contents[filename] = raw
     out.mkdir(parents=True, exist_ok=True)
     for filename, raw in contents.items():
