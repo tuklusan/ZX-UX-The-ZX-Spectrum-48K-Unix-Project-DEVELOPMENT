@@ -41,12 +41,11 @@ def validated_lines(program: bytes):
 
 
 def _canonical(body: bytes, n: int, names: dict):
-    """Compare executable token meaning, excluding inert REM contents.
+    """Compare all source tokens, including the exact bytes after REM.
 
-    Original REM bytes remain in the source and converted output; only the
-    comparison view drops them. Strings, DATA, controls and visible numeric
-    spelling remain significant. Numeric caches and token-adjacent spacing
-    are already allowed ROM-independent differences.
+    Only harmless keyword spacing, edge spaces around REM content, and
+    Sinclair numeric caches may be ignored. A changed remark, control byte,
+    internal space or glyph remains a line difference.
     """
     body = body.rstrip(b'\r') if body.endswith(b'\r') else body
     if not body.strip(b' '):
@@ -59,13 +58,11 @@ def _canonical(body: bytes, n: int, names: dict):
         if c == 34 and not rem:
             quoted = not quoted
         if c == 0xEA and not quoted and not data:
-            # REM and every following character are inert.  The original
-            # listing is retained untouched; only semantic comparison omits
-            # the comment.  A colon immediately before REM is inert too.
-            while out and out[-1] == 32:
-                out.pop()
-            if out and out[-1] == 58:
-                out.pop()
+            # Keep the remark's bytes, including controls and glyphs. The
+            # original tape and ROM ASCII listing can shift only inert edge
+            # spaces around the same remark; interior bytes must match.
+            out.append(c)
+            out.extend(body[p + 1:].strip(b' '))
             break
         if c == 0xE4 and not quoted and not rem:
             data = True

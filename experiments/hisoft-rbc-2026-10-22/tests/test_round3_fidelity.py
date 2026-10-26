@@ -20,8 +20,10 @@ class TapeWhitespaceFidelity(unittest.TestCase):
     def test_blank_line_stays_blank_at_same_line_number(self):
         self.compare(b' \r',b'\r')
 
-    def test_remark_spacing_is_not_semantically_significant(self):
-        self.compare(b'\xea  A\r',b'\xea A\r')
+    def test_remark_only_ignores_edge_spaces(self):
+        self.compare(b'\xea  A\r', b'\xea A\r')
+        with self.assertRaises(SemanticDifference):
+            self.compare(b'\xea A  B\r', b'\xea A B\r')
 
     def test_spaces_in_strings_are_not_ignored(self):
         with self.assertRaises(SemanticDifference):

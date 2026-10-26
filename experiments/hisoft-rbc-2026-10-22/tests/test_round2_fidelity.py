@@ -27,9 +27,10 @@ class Round2Fidelity(unittest.TestCase):
             semantic_check(packing(b'\xebI=1TO10\r'), packing(b'\xebI=1\xcc10\r'),
                            None, token_names, 'BAS/TZX')
 
-    def test_rem_contents_are_ignored_but_strings_are_not(self):
-        semantic_check(packing(b'\xea  A  B\r'), packing(b'\xea A B\r'),
-                       None, {0xEA: 'REM'}, 'BAS/TZX')
+    def test_rem_interior_and_string_bytes_are_preserved(self):
+        with self.assertRaisesRegex(SemanticDifference, 'Line 10'):
+            semantic_check(packing(b'\xea  A  B\r'), packing(b'\xea A B\r'),
+                           None, {0xEA: 'REM'}, 'BAS/TZX')
         with self.assertRaisesRegex(SemanticDifference, 'Line 10'):
             semantic_check(packing(b'\xf5\"A  B\"\r'), packing(b'\xf5\"A B\"\r'),
                            None, {0xF5: 'PRINT'}, 'BAS/TZX')

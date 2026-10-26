@@ -25,18 +25,28 @@ class Fidelity(unittest.TestCase):
         with self.assertRaisesRegex(SemanticDifference, 'Line 10'):
             self.compare(b'\xebI=1TO10\r', b'\xebI=1\xcc10\r')
 
-    def test_remark_is_ignored_only_for_equivalence(self):
+    def test_remark_bytes_are_preserved_for_equivalence(self):
         with self.assertRaises(SemanticDifference):
             self.compare(b'\xf5"A B"\r', b'\xf5"AB"\r')
-        self.compare(b'\xea A B\r', b'\xea A  B\r')
-        self.compare(b'\xf51: \xea note\r', b'\xf51\r')
-        self.compare(b'\xf51: \xea note\r', b'\xf51: \xea changed\r')
+        with self.assertRaises(SemanticDifference):
+            self.compare(b'\xea A B\r', b'\xea A  B\r')
+        with self.assertRaises(SemanticDifference):
+            self.compare(b'\xf51: \xea note\r', b'\xf51\r')
+        with self.assertRaises(SemanticDifference):
+            self.compare(b'\xf51: \xea note\r', b'\xf51: \xea changed\r')
         # The spelling REM inside a string is still executable data.
         with self.assertRaises(SemanticDifference):
             self.compare(b'\xf5"REM A"\r', b'\xf5"REM B"\r')
         # Actual statements preceding a REM remain significant.
         with self.assertRaises(SemanticDifference):
             self.compare(b'\xf51:\xea note\r', b'\xf52:\xea note\r')
+
+    def test_only_rem_edge_spaces_may_differ(self):
+        self.compare(b'\xea  NOTE  HERE   \r', b'\xeaNOTE  HERE\r')
+        with self.assertRaisesRegex(SemanticDifference, 'Line 10'):
+            self.compare(b'\xeaNOTE  HERE\r', b'\xeaNOTE HERE\r')
+        with self.assertRaisesRegex(SemanticDifference, 'Line 10'):
+            self.compare(b'\xeaNOTE\x7f\r', b'\xeaNOTE\x7e\r')
 
     def test_print_separator_whitespace_outside_quote(self):
         self.compare(b'\xf5"A " ;X$\r', b'\xf5"A ";X$\r')
