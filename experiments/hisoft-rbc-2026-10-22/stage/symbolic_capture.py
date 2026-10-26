@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import wraps
+from runtime_emitter_trace import RuntimeEmitterTrace
 import sys
 
 
@@ -24,6 +25,7 @@ class Emission:
 @dataclass
 class Capture:
     events: list[Emission] = field(default_factory=list)
+    runtime_traces: list[dict] = field(default_factory=list)
 
     def record(self, compiler, position, kind, source, symbol_offset=None):
         if not compiler.storing:
@@ -70,6 +72,13 @@ class Capture:
                 'out_of_image_emission_bytes': len(out_of_image),
                 'out_of_image_first': out_of_image[:16],
                 'byte_categories': categories,
+                'runtime_emitter_traces': len(self.runtime_traces),
+                'runtime_trace_covered_bytes': sum(r['covered_bytes'] for r in self.runtime_traces),
+                'runtime_trace_uncovered_bytes': sum(r['uncovered_bytes'] for r in self.runtime_traces),
+                'runtime_trace_untraced_pc_writes': sum(r['untraced_pc_writes'] for r in self.runtime_traces),
+                'runtime_trace_changed_bytes': sum(r['changed_after_write'] for r in self.runtime_traces),
+                'runtime_trace_outside_bytes': sum(r['outside_emitter_bytes'] for r in self.runtime_traces),
+                'runtime_trace_source_pc_count': sum(r['source_pc_count'] for r in self.runtime_traces),
                 'safe_to_optimize': False,  # numeric addresses still need symbolization
                 'complete_byte_trace': not uncovered and not patched and not out_of_image}
 
@@ -209,16 +218,26 @@ def install(compiler_module):
         @wraps(original_runtime)
         def run_emitter(self, n, pc, counting, code_base):
             owner = getattr(self, '_zxux_capture_owner', None)
+            tracing = (owner is not None and not counting and not self.de_flags & 1
+                       and getattr(self, 'p', {}).get('direct', False))
             if owner is not None:
                 owner._zxux_runtime_emitting = True
             try:
-                end = original_runtime(self, n, pc, counting, code_base)
+                if tracing:
+                    with RuntimeEmitterTrace(self) as source_trace:
+                        end = original_runtime(self, n, pc, counting, code_base)
+                else:
+                    end = original_runtime(self, n, pc, counting, code_base)
             finally:
                 if owner is not None:
                     owner._zxux_runtime_emitting = False
             if owner is not None and not counting and not self.de_flags & 1:
                 trace = getattr(owner, '_zxux_capture', None)
                 if trace is not None:
+                    if tracing:
+                        report = source_trace.inspect(pc, end, bytes(self.far[pc:end]))
+                        report['routine'] = n
+                        trace.runtime_traces.append(report)
                     trace.events.append(Emission(pc, 'runtime-opaque', f'RT{n}',
                                                  bytes(self.far[pc:end])))
             return end
