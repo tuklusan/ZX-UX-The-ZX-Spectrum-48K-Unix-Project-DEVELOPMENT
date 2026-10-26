@@ -65,6 +65,21 @@ class Tests(unittest.TestCase):
             candidate.compile_whole(b'')
         self.assertEqual(candidate._zxux_upeep_stats['uncovered_bytes'], 1)
 
+    def test_direct_write_byte_is_reported_as_unresolved_address(self):
+        class Native(Mock):
+            _zxux_symbolic_capture_installed = False
+            _zxux_whole_program_gate_installed = False
+            def __init__(self):
+                self.m = types.SimpleNamespace(p={'direct': True}, far=None)
+                super().__init__()
+                self.m.far = self.far
+        install(types.SimpleNamespace(Compiler=Native))
+        c = Native()
+        with self.assertRaisesRegex(UnresolvedAssemblyBoundary,
+                                    '1 typed-address patches pending'):
+            c.compile_whole(b'')
+        self.assertEqual(c._zxux_upeep_stats['unresolved_direct_write_bytes'], 1)
+
     def test_cannot_install_twice(self):
         install(types.SimpleNamespace(Compiler=Mock))
         candidate = Mock()

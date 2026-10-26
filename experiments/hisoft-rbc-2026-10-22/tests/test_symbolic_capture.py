@@ -68,6 +68,34 @@ class Tests(unittest.TestCase):
         self.assertEqual(a['uncovered_first'], [1])
         self.assertFalse(a['safe_to_optimize'])
 
+    def test_direct_patch_source_is_captured_before_binary_output(self):
+        class Native48(Mock):
+            _zxux_symbolic_capture_installed = False
+            def __init__(self):
+                self.m = types.SimpleNamespace(p={'direct': True}, far=None)
+                self.counting = False
+                self.de_flags = 0
+                super().__init__()
+                self.m.far = self.far
+            def patch(self):
+                self.far[1:3] = b'\x34\x12'
+        install(types.SimpleNamespace(Compiler=Native48))
+        c = Native48()
+        self.assertIs(c.far, c.m.far)
+        c.emit_opcode('jp nn')
+        c.emit_word_reloc(0)
+        c.patch()
+        self.assertEqual(c.far[:3], b'\xc3\x34\x12')
+        events = c._zxux_capture.events
+        self.assertEqual([x.kind for x in events],
+                         ['opcode', 'relocation', 'direct-write'])
+        self.assertEqual(events[-1].source, 'patch')
+        report = c._zxux_capture.audit(bytes(c.far[:c.pc]))
+        self.assertEqual(report['unresolved_direct_write_bytes'], 2)
+        self.assertEqual(report['uncovered_bytes'], 0)
+        self.assertEqual(report['changed_after_emit'], 0)
+        self.assertFalse(report['safe_to_optimize'])
+
     def test_direct_ram_patch_is_visible(self):
         c = Mock()
         c.emit_opcode('jp nn')

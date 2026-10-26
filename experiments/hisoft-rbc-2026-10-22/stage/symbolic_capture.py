@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import wraps
+import sys
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,10 @@ class Capture:
         uncovered = [i for i in range(len(image)) if i not in last_writer]
         patched = [i for i, actual in enumerate(image)
                    if i in last_writer and last_writer[i][0] != actual]
+        direct_sites = {event.position + offset
+                        for event in self.events if event.kind == 'direct-write'
+                        for offset in range(len(event.data))
+                        if event.position + offset < len(image)}
         categories = {}
         for _, kind in last_writer.values():
             categories[kind] = categories.get(kind, 0) + 1
@@ -59,9 +64,52 @@ class Capture:
                 'uncovered_bytes': len(uncovered), 'uncovered_first': uncovered[:16],
                 'changed_after_emit': len(patched), 'patch_first': patched[:16],
                 'rewritten_bytes': len(overlaps),
+                'unresolved_direct_write_bytes': len(direct_sites),
                 'byte_categories': categories,
                 'safe_to_optimize': False,  # numeric addresses still need symbolization
                 'complete_byte_trace': not uncovered and not patched}
+
+
+
+class TracedRAM(bytearray):
+    """Observe HiSoft's direct stores at emission time, with exact byte offsets.
+
+    The byte buffer still behaves as ordinary bytearray. Only 48K's staging
+    machine can be wrapped: the 128K far-memory callback retains a separate
+    closure pointer and must never be redirected here.
+    """
+
+    def __init__(self, initial, owner):
+        super().__init__(initial)
+        self._owner = owner
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        owner = self._owner
+        if (getattr(owner, 'counting', True) or
+                getattr(owner, 'de_flags', 0) & 1 or
+                getattr(owner, '_zxux_capture_active', False) or
+                getattr(owner, '_zxux_runtime_emitting', False) or
+                getattr(owner, '_zxux_in_data', False)):
+            return
+        trace = getattr(owner, '_zxux_capture', None)
+        if trace is None:
+            return
+        if isinstance(key, slice):
+            start, stop, step = key.indices(len(self))
+            if step != 1 or stop - start > 4096:
+                raise ValueError('unresolved direct Z80 write slice')
+            indices = list(range(start, stop))
+        else:
+            indices = [key if key >= 0 else len(self) + key]
+        if not indices:
+            return
+        method = sys._getframe(1).f_code.co_name
+        if indices != list(range(indices[0], indices[0] + len(indices))):
+            raise ValueError('unresolved noncontiguous Z80 direct write')
+        begin = indices[0]
+        trace.events.append(Emission(begin, 'direct-write', method,
+                                     bytes(self[begin:begin + len(indices)])))
 
 
 def install(compiler_module):
@@ -69,6 +117,18 @@ def install(compiler_module):
     cls = compiler_module.Compiler
     if getattr(cls, '_zxux_symbolic_capture_installed', False):
         return
+
+    original_init = cls.__init__
+    @wraps(original_init)
+    def __init__(self, *args, **kwargs):
+        original_init(self, *args, **kwargs)
+        machine = getattr(self, 'm', None)
+        if machine is not None and getattr(machine, 'p', {}).get('direct', False):
+            # Replace BOTH aliases. The 48K runtime copies from its staging
+            # buffer to m.far, and the HiSoft compiler uses self.far.
+            traced = TracedRAM(self.far, self)
+            machine.far = self.far = traced
+    cls.__init__ = __init__
 
     original_reset = cls.reset
     @wraps(original_reset)
@@ -142,8 +202,14 @@ def install(compiler_module):
         original_runtime = machine_cls.run_emitter
         @wraps(original_runtime)
         def run_emitter(self, n, pc, counting, code_base):
-            end = original_runtime(self, n, pc, counting, code_base)
             owner = getattr(self, '_zxux_capture_owner', None)
+            if owner is not None:
+                owner._zxux_runtime_emitting = True
+            try:
+                end = original_runtime(self, n, pc, counting, code_base)
+            finally:
+                if owner is not None:
+                    owner._zxux_runtime_emitting = False
             if owner is not None and not counting and not self.de_flags & 1:
                 trace = getattr(owner, '_zxux_capture', None)
                 if trace is not None:

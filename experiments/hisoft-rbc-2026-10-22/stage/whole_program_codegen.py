@@ -34,6 +34,7 @@ def install(compiler_module):
             'image_bytes': report['image_bytes'],
             'uncovered_bytes': report['uncovered_bytes'],
             'changed_after_emit': report['changed_after_emit'],
+            'unresolved_direct_write_bytes': report['unresolved_direct_write_bytes'],
             'rewritten_bytes': report['rewritten_bytes'],
             'byte_categories': report['byte_categories'],
         }
@@ -43,7 +44,8 @@ def install(compiler_module):
             raise UnresolvedAssemblyBoundary(
                 'Gate 8 unresolved whole-program Z80 boundaries: '
                 f"{report['uncovered_bytes']} uncaptured bytes, "
-                f"{report['changed_after_emit']} patched bytes, "
+                f"{report['changed_after_emit']} untraced patches, "
+                f"{report['unresolved_direct_write_bytes']} typed-address patches pending, "
                 f"{report['rewritten_bytes']} rewrites; "
                 'typed relocations and runtime-emitter source required')
         raise UnresolvedAssemblyBoundary(
