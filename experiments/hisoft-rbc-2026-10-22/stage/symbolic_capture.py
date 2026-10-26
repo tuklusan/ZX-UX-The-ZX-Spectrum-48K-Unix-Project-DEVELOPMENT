@@ -108,6 +108,29 @@ def install(compiler_module):
                 return value
             return call
         setattr(cls, method, wrapping(original, kind, method))
+    # HiSoft stores DATA directly into its reserved data section, outside
+    # emit_byte/emit_bytes. Capture the typed source DATA record at its actual
+    # destination while the statement is being compiled, not by sweeping the
+    # finished linked binary for bytes that happen to resemble instructions.
+    if hasattr(cls, 'st_data'):
+        original_data = cls.st_data
+        @wraps(original_data)
+        def st_data(self, *args, **kwargs):
+            active = getattr(self, 'storing_data', False)
+            start = getattr(self, 'data_size', 0)
+            result = original_data(self, *args, **kwargs)
+            end = getattr(self, 'data_size', 0)
+            if active and end > start:
+                begin = self.data_start + start
+                finish = self.data_start + end
+                capture = getattr(self, '_zxux_capture', None)
+                if capture is None:
+                    raise ValueError('DATA was emitted without a capture')
+                capture.events.append(Emission(
+                    begin, 'data-source', f'BASIC line {self.line_no} DATA',
+                    bytes(self.far[begin:finish])))
+            return result
+        cls.st_data = st_data
     cls._zxux_symbolic_capture_installed = True
 
     # HiSoft runtime emitters execute in the Z80 model and copy bytes into

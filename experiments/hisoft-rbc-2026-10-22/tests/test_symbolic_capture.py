@@ -120,6 +120,31 @@ class Tests(unittest.TestCase):
         self.assertEqual(report['uncovered_bytes'], 0)
         self.assertFalse(report['safe_to_optimize'])
 
+    def test_data_source_is_recorded_without_post_link_dump(self):
+        class WithData(Mock):
+            _zxux_symbolic_capture_installed = False
+            def __init__(self):
+                super().__init__()
+                self.data_start = 20
+                self.data_size = 0
+                self.line_no = 80
+            @property
+            def storing_data(self):
+                return self.storing
+            def st_data(self):
+                base = self.data_start + self.data_size
+                self.far[base:base+3] = bytes((0xc3, 0, 0x76))
+                self.data_size += 3
+        install(types.SimpleNamespace(Compiler=WithData))
+        c = WithData()
+        c.st_data()
+        events = c._zxux_capture.events
+        self.assertEqual([x.kind for x in events], ['data-source'])
+        self.assertEqual(events[0].position, 20)
+        self.assertEqual(events[0].source, 'BASIC line 80 DATA')
+        self.assertEqual(events[0].data, b'\xc3\x00\x76')
+        self.assertEqual(c.far[20:23], b'\xc3\x00\x76')
+
     def test_no_compiler_patch_twice(self):
         c = Mock()
         install(types.SimpleNamespace(Compiler=Mock))

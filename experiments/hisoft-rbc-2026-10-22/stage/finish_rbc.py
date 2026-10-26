@@ -103,10 +103,6 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change('                   ramtop:int, directives: list[str], memory_policy:str) -> tuple[list[HiSoftBuild], dict]:',
            '                   ramtop:int, directives: list[str], memory_policy:str,\n'
            '                   optimize_z80:bool=False, budget_capacity:int=0) -> tuple[list[HiSoftBuild], dict]:')
-    change('    compiler, hbcimage, source = _hisoft_modules(frontend)',
-           '    compiler, hbcimage, source = _hisoft_modules(frontend)\n'
-           '    if optimize_z80:\n'
-           '        install_codegen_optimizer(compiler)')
     change('        builds=[]',
            '        upeep_reports=[]\n'
            '        builds=[]')
@@ -130,7 +126,9 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            "                meta['budgeted_numeric_capacity'] = capacity\n"
            "            meta['source_mode']='pyhsb HiSoft v1.1 (48K) source compile'")
     change('    install_native_run(compiler)',
-           '    install_native_run(compiler)\n    install_safe_usr(compiler)')
+           '    install_native_run(compiler)\n    install_safe_usr(compiler)\n'
+           '    if optimize_z80:\n'
+           '        install_codegen_optimizer(compiler)')
     text = patched(text)
     change('from rbc_output import output_path, memory_required, write_mode',
            'from diagnostics import format_failure, RbcArgumentParser\n'
