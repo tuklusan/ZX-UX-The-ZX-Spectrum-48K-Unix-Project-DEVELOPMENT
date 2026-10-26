@@ -163,7 +163,9 @@ def install(compiler_module):
                     self._zxux_capture = capture
                 symbol = args[0] if method_name == 'emit_word_reloc' else None
                 source = (str(args[0]).format(*args[1:])
-                          if method_name == 'emit' and args else str(args[:1]))
+                          if method_name == 'emit' and args else
+                          str(args[0]) if method_name == 'emit_opcode' and args
+                          else str(args[:1]))
                 capture.record(self, start, category, source, symbol)
                 return value
             return call
