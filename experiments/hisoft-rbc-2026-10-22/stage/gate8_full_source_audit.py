@@ -19,6 +19,7 @@ from symbolic_capture import audit_result, install as install_capture
 from symbolic_source_patches import from_emissions, verify_three_passes
 from symbolic_relocations import inspect_relocations, verify_three_builds
 from symbolic_instructions import inspect_sources, verify_three_sources
+from symbolic_opcode_pairs import inspect_opcode_pairs, verify_three_opcode_passes
 
 
 def run(source: Path, checkpoint: Path, frontend: Path,
@@ -36,6 +37,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     source_words = []
     relocations = []
     instructions = []
+    opcode_pairs = []
     original_hook = rbc.install_codegen_optimizer
 
     def passive_capture(module):
@@ -54,6 +56,9 @@ def run(source: Path, checkpoint: Path, frontend: Path,
                 from z80asm import asm
                 instructions.append(inspect_sources(
                     self._zxux_capture.events, result.code, asm))
+                opcode_pairs.append(inspect_opcode_pairs(
+                    self._zxux_capture.events, result.code,
+                    result.code_base, asm))
             return result
         module.Compiler.compile_whole = recorded
 
@@ -72,6 +77,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     source_patch_report = verify_three_passes(source_words, observed)
     relocation_report = verify_three_builds(relocations, [x.base for x in observed])
     instruction_report = verify_three_sources(instructions, [x.base for x in observed])
+    opcode_report = verify_three_opcode_passes(opcode_pairs, [x.base for x in observed])
     first, _ = rbc.build_ssx(baseline, bytes(768), rld, 384, use_rom_font=True)
     second, _ = rbc.build_ssx(observed, bytes(768), rld, 384, use_rom_font=True)
     if first != second:
@@ -92,6 +98,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         'audits': records, 'source_patches': source_patch_report,
         'source_relocations': relocation_report,
         'source_instructions': instruction_report,
+        'paired_source_opcodes': opcode_report,
         'gate8_complete': False,
     }
 
