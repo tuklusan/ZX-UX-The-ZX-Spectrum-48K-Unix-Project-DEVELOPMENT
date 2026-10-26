@@ -141,6 +141,7 @@ class SymbolicProgram:
         if not isinstance(proposed, str):
             raise SymbolicError("optimizer returned non-text")
         _check_protected(original, proposed, self.entries)
+        _check_optimizer_output(proposed)
         after = _link(proposed, ras, rld, stack)
         pre = rld.parse_ssx(before)
         post = rld.parse_ssx(after)
@@ -184,6 +185,39 @@ def _check_protected(original: str, proposed: str, entries: set[str]) -> None:
         raise SymbolicError("optimizer changed protected data, symbols or sections")
     if any(x.lower() not in proposed.lower() for x in (name + ":" for name in entries)):
         raise SymbolicError("optimizer dropped a required entry")
+
+
+def _check_optimizer_output(assembly: str) -> None:
+    """Allow only instructions in text and the original protected directives.
+
+    The optimizer is not an assembler frontend. Unknown directives or a new
+    executable instruction in the data section must fail before native link.
+    In particular, a new ORG can change an image without changing any of the
+    preserved DB, DW, DS, symbol or section lines.
+    """
+    section = "text"
+    for line in assembly.splitlines():
+        statement = line.partition(";")[0].strip().lower()
+        if not statement:
+            continue
+        words = statement.split(None, 1)
+        opcode = words[0]
+        if opcode == "section":
+            if len(words) != 2 or words[1] not in _SECTIONS:
+                raise SymbolicError("optimizer added an invalid section")
+            section = words[1]
+        elif opcode == "global":
+            if len(words) != 2 or not _NAME.fullmatch(words[1]):
+                raise SymbolicError("optimizer changed a global symbol")
+        elif statement.endswith(":"):
+            if not _NAME.fullmatch(statement[:-1]):
+                raise SymbolicError("optimizer changed a label")
+        elif opcode in ("db", "dw", "ds"):
+            # _check_protected already compares these source lines in order.
+            if len(words) != 2:
+                raise SymbolicError("optimizer changed a data directive")
+        elif section != "text" or opcode not in _INSTRUCTIONS or ":" in statement:
+            raise SymbolicError("optimizer added non-Z80 code or a directive")
 
 
 def _link(assembly: str, ras, rld, stack: int) -> bytes:

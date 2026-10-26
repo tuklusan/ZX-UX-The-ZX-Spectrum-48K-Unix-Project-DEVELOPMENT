@@ -83,6 +83,28 @@ class SymbolicTests(unittest.TestCase):
         with self.assertRaises(SymbolicError):
             p.optimize(lambda x: x.replace('done:', ''), ras, rld)
 
+    def test_optimizer_cannot_inject_layout_directives(self):
+        p = self.example()
+        for directive in ("org 0", "equ 1", "include 'other.asm'"):
+            with self.subTest(directive=directive):
+                def insert(asm):
+                    return asm.replace("    ld a,0\n", "    " + directive + "\n    ld a,0\n")
+                with self.assertRaisesRegex(SymbolicError, 'directive'):
+                    p.optimize(insert, ras, rld)
+
+    def test_optimizer_cannot_emit_code_inside_data_or_bss(self):
+        p = self.example()
+        with self.assertRaisesRegex(SymbolicError, 'non-Z80 code'):
+            p.optimize(lambda asm: asm.replace('table:\n', 'table:\n    nop\n'), ras, rld)
+        with self.assertRaisesRegex(SymbolicError, 'non-Z80 code'):
+            p.optimize(lambda asm: asm.replace('buffer:\n', 'buffer:\n    ret\n'), ras, rld)
+
+    def test_optimizer_can_keep_comments_in_text(self):
+        p = self.example()
+        ssx, metrics = p.optimize(lambda asm: asm.replace('    ret\n', '    ret ; kept\n'), ras, rld)
+        self.assertEqual(metrics['saved_file_bytes'], 0)
+        self.assertTrue(ssx.startswith(b'SSX1'))
+
     def test_no_growth_keeps_original(self):
         p = self.example()
         ssx, stats = p.optimize(lambda x: x, ras, rld)
