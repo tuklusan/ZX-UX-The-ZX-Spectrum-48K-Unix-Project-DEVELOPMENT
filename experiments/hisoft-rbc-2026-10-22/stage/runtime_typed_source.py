@@ -22,6 +22,7 @@ class RuntimeStatement:
     kind: str                    # instruction, literal, or relocated
     source: str                  # original mnemonic or defb/defw statement
     symbol_offset: int | None = None
+    write_pcs: tuple[int, ...] | None = None  # exact source PC of each output byte
 
 
 def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement],
@@ -108,18 +109,32 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
             raise RuntimeSourceError('runtime source extends outside output')
         if encoded != image[cursor - start:cursor - start + len(encoded)]:
             raise RuntimeSourceError('runtime source encoding differs from bytes')
-        if any(site_at[p] != statement.emitter_pc for p in range(cursor, cursor + len(encoded))):
+        sites = (statement.write_pcs if statement.write_pcs is not None else
+                 (statement.emitter_pc,) * len(encoded))
+        if (not isinstance(sites, tuple) or len(sites) != len(encoded) or
+                not sites or sites[0] != statement.emitter_pc or
+                any(not isinstance(site, int) or not 0 <= site <= 0xffff
+                    for site in sites)):
+            raise RuntimeSourceError('runtime source PC sequence invalid')
+        if any(site_at[p] != sites[p - cursor]
+               for p in range(cursor, cursor + len(encoded))):
             raise RuntimeSourceError('runtime write PC differs from typed producer')
         if kind == 'relocated':
             if (len(encoded) < 3 or
                     encoded[-2:] != target.to_bytes(2, 'little')):
                 raise RuntimeSourceError('runtime operand is not terminal 16-bit address')
             split = len(encoded) - 2
-            result.append(Emission(cursor, 'opcode', source, encoded[:split]))
+            result.append(Emission(cursor, 'opcode', source, encoded[:split],
+                                   source_site=f'runtime_pc:{sites[0]}',
+                                   producer_pcs=sites[:split]))
             result.append(Emission(cursor + split, 'relocation', str(offset),
-                                   encoded[split:], offset))
+                                   encoded[split:], offset,
+                                   source_site=f'runtime_pc:{sites[split]}',
+                                   producer_pcs=sites[split:]))
         else:
-            result.append(Emission(cursor, 'instruction', source, encoded))
+            result.append(Emission(cursor, 'instruction', source, encoded,
+                                   source_site=f'runtime_pc:{sites[0]}',
+                                   producer_pcs=sites))
         cursor += len(encoded)
     if cursor != end:
         raise RuntimeSourceError('runtime source does not cover complete emitter')

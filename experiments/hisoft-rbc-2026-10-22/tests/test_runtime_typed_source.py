@@ -76,6 +76,38 @@ class RuntimeTypedSources(unittest.TestCase):
         self.assertEqual(linked['image'][3:], image[3:])
         self.assertEqual(linked['image'][1:3], b'\x06\x00')  # native link base is zero
 
+    def test_multi_pc_relocation_preserves_each_original_byte_site(self):
+        from symbolic_emit_sites import inspect_emit_sites, verify_three_emit_sites
+        bases = [0x6000, 0x5e1e, 0x5d3a]
+        groups = []
+        source = (RuntimeStatement(0, 0x7110, 'relocated', 'jp nn', 7,
+                                   (0x7110, 0x7120, 0x7130)),)
+        for base in bases:
+            image = b'\xc3' + (base + 7).to_bytes(2, 'little')
+            writes = tuple(Write(i, image[i], source[0].write_pcs[i])
+                           for i in range(3))
+            encoder = lambda text, expected='jp '+str(base + 7), data=image: (
+                data if text == expected else bytes())
+            events = typed_runtime_events(writes, source, image,
+                                          0, 3, base, encoder)
+            sites = inspect_emit_sites(events)
+            self.assertEqual(sites[0].producer_pcs, (0x7110,))
+            self.assertEqual(sites[1].producer_pcs, (0x7120, 0x7130))
+            groups.append(sites)
+        result = verify_three_emit_sites(groups, bases)
+        self.assertEqual(result['source_emissions'], 2)
+        self.assertEqual(result['source_call_sites'], 2)
+        with self.assertRaises(RuntimeSourceError):
+            typed_runtime_events(writes,
+                (RuntimeStatement(0, 0x7110, 'relocated', 'jp nn', 7,
+                                  (0x7110, 0x7120)),),
+                image, 0, 3, base, encoder)
+        with self.assertRaises(RuntimeSourceError):
+            typed_runtime_events(writes,
+                (RuntimeStatement(0, 0x7110, 'relocated', 'jp nn', 7,
+                                  (0x7110, 0x7130, 0x7120)),),
+                image, 0, 3, base, encoder)
+
     def test_relocation_can_reference_another_runtime_section_or_bss(self):
         image = b'\xc3\x12\x60'
         sources = (RuntimeStatement(0, 0x7011, 'relocated', 'jp nn', 0x12),)

@@ -120,6 +120,7 @@ class BridgeTests(unittest.TestCase):
         from runtime_typed_source import RuntimeStatement
         from symbolic_from_source import from_source
         from symbolic_source_boundaries import inspect_source_boundaries
+        from symbolic_emit_sites import inspect_emit_sites
         import ras
         import rld
 
@@ -137,6 +138,11 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual([e.kind for e in events], ['instruction', 'instruction'])
         self.assertEqual(c._zxux_capture.runtime_traces[0]['typed_source_events'], 2)
         self.assertTrue(c._zxux_capture.runtime_traces[0]['typed_instructions'])
+        sites = inspect_emit_sites(events)
+        self.assertEqual([site.producer_pcs for site in sites],
+                         [(0x7101,), (0x7101,)])
+        self.assertEqual([site.site for site in sites],
+                         ['runtime_pc:28929', 'runtime_pc:28929'])
         image = bytes(c.far[:2])
         typed = inspect_source_boundaries(events, image, 0x6000, 2, 0, encoder)
         self.assertTrue(typed.fully_typed)

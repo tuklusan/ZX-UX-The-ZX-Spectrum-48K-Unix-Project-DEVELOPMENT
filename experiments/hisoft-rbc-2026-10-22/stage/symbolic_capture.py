@@ -21,6 +21,7 @@ class Emission:
     data: bytes
     symbol_offset: int | None = None
     source_site: str | None = None
+    producer_pcs: tuple[int, ...] | None = None
 
 
 @dataclass

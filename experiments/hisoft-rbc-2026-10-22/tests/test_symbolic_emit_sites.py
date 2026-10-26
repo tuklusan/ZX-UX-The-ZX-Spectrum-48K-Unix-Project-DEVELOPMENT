@@ -69,6 +69,27 @@ class Sites(unittest.TestCase):
                                 data=b'\xc9', source_site=None)
         self.assertEqual(inspect_emit_sites([event]), ())
 
+    def test_runtime_source_requires_all_byte_pc_origins(self):
+        def e(pcs, site='runtime_pc:0'):
+            return SimpleNamespace(kind='instruction', position=0,
+                                   data=b'\xc9\x00', source_site=site,
+                                   producer_pcs=pcs)
+        observed = inspect_emit_sites([e((0, 0x7110))])
+        self.assertEqual(observed[0].site, 'runtime_pc:0')
+        self.assertEqual(observed[0].producer_pcs, (0, 0x7110))
+        for bad in ((), (0,), (0, 65536), (1, 0x7110)):
+            with self.subTest(bad=bad), self.assertRaises(EmitSiteError):
+                inspect_emit_sites([e(bad)])
+        with self.assertRaises(EmitSiteError):
+            inspect_emit_sites([e(None)])
+        with self.assertRaises(EmitSiteError):
+            inspect_emit_sites([e((0, 0x7110), site='runtime_pc:65536')])
+        with self.assertRaises(EmitSiteError):
+            inspect_emit_sites([e((0, 0x7110), site='emit_const:1')])
+        with self.assertRaises(EmitSiteError):
+            verify_three_emit_sites([observed, observed,
+                inspect_emit_sites([e((0, 0x7111))])], [0x6000, 0x6100, 0x6200])
+
     def test_missing_site_and_changed_three_pass_source_fail(self):
         def e(site):
             return SimpleNamespace(kind='instruction', position=0,

@@ -22,6 +22,7 @@ class SourceSite:
     size: int
     kind: str
     site: str
+    producer_pcs: tuple[int, ...] | None = None
 
 
 def inspect_emit_sites(events) -> tuple[SourceSite, ...]:
@@ -34,14 +35,28 @@ def inspect_emit_sites(events) -> tuple[SourceSite, ...]:
         if not isinstance(name, str) or ':' not in name:
             raise EmitSiteError('source emission lacks compiler call site')
         method, line = name.rsplit(':', 1)
-        if not method.isidentifier() or not line.isdecimal() or int(line) <= 0:
+        if not method.isidentifier() or not line.isdecimal():
+            raise EmitSiteError('invalid compiler call site')
+        if method == 'runtime_pc':
+            if int(line) > 0xffff:
+                raise EmitSiteError('runtime producer PC outside Z80 address space')
+        elif int(line) <= 0:
             raise EmitSiteError('invalid compiler call site')
         if not isinstance(event.position, int) or event.position < 0:
             raise EmitSiteError('negative source emission position')
         if not isinstance(event.data, bytes) or not event.data:
             raise EmitSiteError('source emission has no bytes')
+        producers = getattr(event, 'producer_pcs', None)
+        if method == 'runtime_pc':
+            if (not isinstance(producers, tuple) or len(producers) != len(event.data)
+                    or producers[0] != int(line) or
+                    any(not isinstance(pc, int) or not 0 <= pc <= 0xffff
+                        for pc in producers)):
+                raise EmitSiteError('missing verified runtime producer PC sequence')
+        elif producers is not None:
+            raise EmitSiteError('compiler call has unexpected runtime PC sequence')
         result.append(SourceSite(event.position, len(event.data), event.kind,
-                                 name))
+                                 name, producers))
     return tuple(result)
 
 
