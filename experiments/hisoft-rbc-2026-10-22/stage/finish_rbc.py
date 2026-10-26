@@ -41,7 +41,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            'from native_dynamic_string_dim import with_bounded_string_dims\n'
            'from native_string_compiler import with_static_strings\n'
            'from native_auto_scroll import with_native_screen_scroll\n'
-           'from upeepz80_codegen import install as install_codegen_optimizer\n'
+           'from whole_program_codegen import install as install_codegen_optimizer\n'
            'from bss_layout import target_offset')
     change('        if not source.open_lines(program):',
            '        size_directives, size_proofs = ([], [])\n'
@@ -143,7 +143,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
     change("except (ValueError,OSError) as exc:\n        print('rbc: '+str(exc),file=sys.stderr)",
            "except Exception as exc:\n"
            "        print(format_failure(exc,args.source),file=sys.stderr)")
-    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py', 'integer_fit.py', 'native_integer_compiler.py', 'native_redim_compiler.py', 'native_multidim_strings.py', 'native_string_redim.py', 'native_data_expressions.py', 'native_dynamic_dim.py', 'native_budgeted_dim.py', 'native_dynamic_string_dim.py', 'native_budgeted_string_dim.py', 'native_string_compiler.py', 'native_auto_scroll.py', 'upeepz80_codegen.py', 'safe_usr_rt.py'):
+    for module in ('rbc_fit.py', 'rbc_output.py', 'audit_policy.py', 'diagnostics.py', 'restore_data.py', 'size_opt.py', 'constant_dims.py', 'constant_data.py', 'integer_fit.py', 'native_integer_compiler.py', 'native_redim_compiler.py', 'native_multidim_strings.py', 'native_string_redim.py', 'native_data_expressions.py', 'native_dynamic_dim.py', 'native_budgeted_dim.py', 'native_dynamic_string_dim.py', 'native_budgeted_string_dim.py', 'native_string_compiler.py', 'native_auto_scroll.py', 'upeepz80_codegen.py', 'whole_program_codegen.py', 'symbolic_capture.py', 'safe_usr_rt.py'):
         shutil.copyfile(extensions / module, checkpoint / 'rbc' / module)
     source.write_text(text)
 
