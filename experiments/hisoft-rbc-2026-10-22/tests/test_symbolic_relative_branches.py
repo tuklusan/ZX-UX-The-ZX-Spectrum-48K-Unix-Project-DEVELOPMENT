@@ -95,6 +95,24 @@ class RelativeSources(unittest.TestCase):
                                        span(2, 4, 'ld a,2'), span(4, 5, 'ret')],
                                       5, lambda source: b'\x18\x03')
 
+    def test_original_relative_opcode_byte_must_match_the_source(self):
+        sources = (
+            ('jr +2', b'\x20\x02'),
+            ('jr nz,-3', b'\x18\xfd'),
+            ('jr z,+1', b'\x30\x01'),
+            ('jr c,$02', b'\x28\x02'),
+            ('jr nc,0x02', b'\x38\x02'),
+            ('djnz -4', b'\x18\xfc'),
+        )
+        for source, wrong_encoding in sources:
+            with self.subTest(source=source):
+                with self.assertRaisesRegex(RelativeBranchError,
+                                            'branch encoding differs'):
+                    inspect_relative_branches(
+                        [span(0, 2, source), span(2, 3, 'nop'),
+                         span(3, 4, 'ret'), span(4, 5, 'ret')],
+                        5, lambda _: wrong_encoding)
+
     def test_three_native_base_branch_targets_are_identical(self):
         spans = [span(0, 2, 'ld b,3'), span(2, 3, 'dec b'),
                  span(3, 5, 'jr nz,-3'), span(5, 6, 'ret')]

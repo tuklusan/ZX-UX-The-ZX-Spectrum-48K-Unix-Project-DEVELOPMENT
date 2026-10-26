@@ -76,8 +76,13 @@ def inspect_relative_branches(spans, text_end: int, assembler):
             encoded = bytes(assembler(source))
         except (ValueError, TypeError, KeyError, IndexError) as exc:
             raise RelativeBranchError('invalid source relative branch encoding') from exc
-        if len(encoded) != 2 or encoded[1] != (displacement & 255):
-            raise RelativeBranchError('source relative displacement encoding differs')
+        expected_opcode = {
+            'djnz': 0x10, 'jr': 0x18, 'jr nz': 0x20,
+            'jr z': 0x28, 'jr nc': 0x30, 'jr c': 0x38,
+        }[instruction]
+        if (len(encoded) != 2 or encoded[0] != expected_opcode or
+                encoded[1] != (displacement & 255)):
+            raise RelativeBranchError('source relative branch encoding differs')
         target = span.end + displacement
         if target not in instructions:
             raise RelativeBranchError('relative branch target is not a source instruction')
