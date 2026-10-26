@@ -20,6 +20,7 @@ from symbolic_source_patches import from_emissions, verify_three_passes
 from symbolic_relocations import inspect_relocations, verify_three_builds
 from symbolic_instructions import inspect_sources, verify_three_sources
 from symbolic_opcode_pairs import inspect_opcode_pairs, verify_three_opcode_passes
+from symbolic_source_boundaries import inspect_source_boundaries, verify_three_source_maps
 
 
 def run(source: Path, checkpoint: Path, frontend: Path,
@@ -38,6 +39,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     relocations = []
     instructions = []
     opcode_pairs = []
+    source_maps = []
     original_hook = rbc.install_codegen_optimizer
 
     def passive_capture(module):
@@ -59,6 +61,9 @@ def run(source: Path, checkpoint: Path, frontend: Path,
                 opcode_pairs.append(inspect_opcode_pairs(
                     self._zxux_capture.events, result.code,
                     result.code_base, asm))
+                source_maps.append(inspect_source_boundaries(
+                    self._zxux_capture.events, result.code,
+                    result.code_base, self.data_start, result.var_bytes, asm))
             return result
         module.Compiler.compile_whole = recorded
 
@@ -78,6 +83,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     relocation_report = verify_three_builds(relocations, [x.base for x in observed])
     instruction_report = verify_three_sources(instructions, [x.base for x in observed])
     opcode_report = verify_three_opcode_passes(opcode_pairs, [x.base for x in observed])
+    source_map_report = verify_three_source_maps(source_maps, [x.base for x in observed])
     first, _ = rbc.build_ssx(baseline, bytes(768), rld, 384, use_rom_font=True)
     second, _ = rbc.build_ssx(observed, bytes(768), rld, 384, use_rom_font=True)
     if first != second:
@@ -99,6 +105,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         'source_relocations': relocation_report,
         'source_instructions': instruction_report,
         'paired_source_opcodes': opcode_report,
+        'source_byte_ownership': source_map_report,
         'gate8_complete': False,
     }
 
