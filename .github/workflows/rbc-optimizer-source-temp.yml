@@ -1,0 +1,29 @@
+name: RBC temporary pinned optimizer source
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rbc-optimizer-source-temp.yml'
+jobs:
+  verify-source:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Fetch exact upstream source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout --filter=blob:none https://github.com/tuklusan/upeepz80.git source
+          git -C source checkout --detach a48d725704b132c3ff23ac77232a3a412b56b15f
+          test "$(git -C source rev-parse HEAD)" = a48d725704b132c3ff23ac77232a3a412b56b15f
+          test "$(git -C source hash-object upeepz80/peephole.py)" = 067ac45ed935fbe90f9e24a864cdf2eca163cc4c
+          test "$(git -C source hash-object upeepz80/z80.py)" = 550b14e167a4a265aada5901d86e506225a9a1b9
+          test "$(git -C source hash-object upeepz80/__init__.py)" = d5bf9e1ca2f80d671c09231520af1470cb7a185e
+          tar -czf upeepz80-a48d7257-source.tar.gz -C source upeepz80
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rbc-temporary-verified-upeepz80
+          path: upeepz80-a48d7257-source.tar.gz
+          if-no-files-found: error
+          retention-days: 1
