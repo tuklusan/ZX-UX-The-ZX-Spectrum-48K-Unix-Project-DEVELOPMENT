@@ -82,6 +82,10 @@ class Capture:
                 'runtime_trace_outside_bytes': sum(r['outside_emitter_bytes'] for r in self.runtime_traces),
                 'runtime_trace_source_pc_count': sum(r['source_pc_count'] for r in self.runtime_traces),
                 'runtime_traces_complete': all(r['fully_observed'] for r in self.runtime_traces),
+                'runtime_typed_calculated_bytes': sum(
+                    r.get('typed_calculated_bytes', 0) for r in self.runtime_traces),
+                'runtime_untyped_calculated_bytes': sum(
+                    r.get('untyped_calculated_bytes', 0) for r in self.runtime_traces),
                 'runtime_typed_source_events': sum(r.get('typed_source_events', 0) for r in self.runtime_traces),
                 'safe_to_optimize': False,  # numeric addresses still need symbolization
                 'complete_byte_trace': (not uncovered and not patched and not out_of_image and
@@ -243,7 +247,7 @@ def install(compiler_module):
                 owner._zxux_runtime_emitting = True
             try:
                 if tracing:
-                    with RuntimeEmitterTrace(self) as source_trace:
+                    with RuntimeEmitterTrace(self, code_base=code_base) as source_trace:
                         end = original_runtime(self, n, pc, counting, code_base)
                 else:
                     end = original_runtime(self, n, pc, counting, code_base)

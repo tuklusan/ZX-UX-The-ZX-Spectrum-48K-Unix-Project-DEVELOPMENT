@@ -29,7 +29,7 @@ class RuntimeEmitterTrace:
     hook is chained, and both instance attributes are restored on exit.
     """
 
-    def __init__(self, machine):
+    def __init__(self, machine, code_base=None):
         profile = getattr(machine, 'p', {})
         if not profile.get('direct'):
             raise RuntimeTraceError('only the 48K direct runtime is traceable')
@@ -44,6 +44,16 @@ class RuntimeEmitterTrace:
         self._old_wb = None
         self._saved_wb = None
         self._wb_overridden = False
+        self.source_roles = None
+        # Synthetic Z80 CPU mocks lack the original compiler image. Keep
+        # their older diagnostic behavior without declaring type success.
+        if code_base is not None:
+            from gate8_original_runtime_types import SourceTransactions, HELPER_CODE
+            memory = getattr(self.cpu, 'mem', None)
+            if (memory is not None and all(memory[p:p + len(raw)] == raw
+                                          for p, raw in HELPER_CODE.items())):
+                self.source_roles = SourceTransactions(memory, code_base)
+
 
     def __enter__(self):
         cpu = self.cpu
@@ -54,12 +64,33 @@ class RuntimeEmitterTrace:
 
         def trace(pc):
             self._site = pc
+            if self.source_roles is not None:
+                self.source_roles.step(cpu, pc)
             if self._old_trace is not None:
                 self._old_trace(pc)
 
         def write(address, value):
             addr = address & 65535
             if addr >= self.staging:
+                if self.source_roles is not None:
+                    if self._site == 0x5d25:
+                        self.source_roles.write(cpu, self._site,
+                                                addr - self.staging, value & 255)
+                    else:
+                        # Only original ED block copies are allowed to bypass
+                        # the numeric helper. Their source is original ROM or
+                        # original compiler memory, never emitted output.
+                        source = getattr(cpu, 'hl', None)
+                        target = getattr(cpu, 'de', None)
+                        memory = getattr(cpu, 'mem', None)
+                        if (memory is None or source is None or target is None or
+                                memory[self._site] != 0xed or
+                                memory[(self._site + 1) & 65535] not in
+                                (0xa0, 0xa8, 0xb0, 0xb8) or
+                                (target & 65535) != addr or
+                                not (source < 16384 or 0x5cf0 <= source < 0x8b5d) or
+                                memory[source] != (value & 255)):
+                            raise RuntimeTraceError('runtime source writer is untyped')
                 self.writes.append(RuntimeWrite(addr - self.staging,
                                                 value & 255, self._site))
             return self._old_wb(address, value)
@@ -96,6 +127,17 @@ class RuntimeEmitterTrace:
         changed = [p for p in range(start, end) if p in last and
                    image[p - start] != last[p].value]
         untraced = [w.position for w in self.writes if w.emitter_pc is None]
+        classified = self.source_roles.finish() if self.source_roles is not None else ()
+        role_counts = {}
+        origin_signature = hashlib.sha256()
+        for e in classified:
+            role_counts[e.kind] = role_counts.get(e.kind, 0) + 1
+            origin_signature.update(e.position.to_bytes(2, 'little'))
+            origin_signature.update(e.source_site.to_bytes(2, 'little'))
+            origin_signature.update(e.helper_pc.to_bytes(2, 'little'))
+            origin_signature.update(e.kind.encode('ascii') + b'\0')
+            origin_signature.update(((e.target_offset if e.target_offset is not None
+                                      else 65536)).to_bytes(3, 'little'))
         sites = hashlib.sha256()
         for write in self.writes:
             sites.update(write.position.to_bytes(2, 'little'))
@@ -117,6 +159,12 @@ class RuntimeEmitterTrace:
             'untraced_pc_writes': len(untraced), 'untraced_first': untraced[:16],
             'fully_observed': not missing and not changed and not escaped and not untraced and not rewritten,
             'typed_instructions': False,
+            'source_roles_verified': self.source_roles is not None,
+            'typed_calculated_bytes': len(classified),
+            'untyped_calculated_bytes': (0 if self.source_roles is not None
+                                         else len(self.writes)),
+            'calculated_source_roles': role_counts,
+            'calculated_source_sites_sha256': origin_signature.hexdigest(),
         }
 
 
@@ -132,7 +180,11 @@ def verify_three_runtime_traces(groups, bases) -> dict:
         signature = tuple((r['routine'], r['output_bytes'], r['staging_write_count'],
                            r['source_write_sites_sha256'], r['covered_bytes'],
                            r['uncovered_bytes'], r['changed_after_write'],
-                           r['outside_emitter_bytes'], r['untraced_pc_writes'])
+                           r['outside_emitter_bytes'], r['untraced_pc_writes'],
+                           r.get('source_roles_verified', False),
+                           r.get('typed_calculated_bytes', 0),
+                           r.get('untyped_calculated_bytes', 0),
+                           r.get('calculated_source_sites_sha256', ''))
                           for r in group)
         signatures.append(signature)
     if any(s != signatures[0] for s in signatures[1:]):
@@ -144,4 +196,10 @@ def verify_three_runtime_traces(groups, bases) -> dict:
             'runtime_write_changed_bytes': sum(r['changed_after_write'] for r in first),
             'runtime_write_outside_bytes': sum(r['outside_emitter_bytes'] for r in first),
             'runtime_pc_source_count': sum(r['source_pc_count'] for r in first),
+            'runtime_typed_calculated_bytes': sum(r.get('typed_calculated_bytes', 0)
+                                                 for r in first),
+            'runtime_untyped_calculated_bytes': sum(r.get('untyped_calculated_bytes', 0)
+                                                   for r in first),
+            'runtime_source_roles_verified': all(r.get('source_roles_verified', False)
+                                                 for r in first),
             'complete_runtime_symbolic': False}
