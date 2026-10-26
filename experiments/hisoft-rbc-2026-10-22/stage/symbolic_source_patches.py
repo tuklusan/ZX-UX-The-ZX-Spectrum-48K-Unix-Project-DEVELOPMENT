@@ -51,6 +51,8 @@ def from_emissions(events, image: bytes, code_base: int,
             raise UnresolvedSourcePatch('direct source word boundaries unresolved')
         if not (0 <= first[0] < len(image) - 1):
             raise UnresolvedSourcePatch('direct source patch outside image')
+        if first[0] + 1 >= text_end:
+            raise UnresolvedSourcePatch('direct source patch outside executable text')
         value = first[2] | second[2] << 8
         if image[first[0]:first[0] + 2] != bytes((value & 255, value >> 8)):
             raise UnresolvedSourcePatch('source write changed after capture')
@@ -62,8 +64,12 @@ def from_emissions(events, image: bytes, code_base: int,
                 raise UnresolvedSourcePatch('computed control target outside code')
         groups.append(SourceWord(first[0], first[1], kind, value, target))
         i += 2
-    if len({g.site for g in groups}) != len(groups):
-        raise UnresolvedSourcePatch('source patch word written twice')
+    occupied = set()
+    for group in groups:
+        footprint = {group.site, group.site + 1}
+        if occupied.intersection(footprint):
+            raise UnresolvedSourcePatch('overlapping source patch bytes')
+        occupied.update(footprint)
     return tuple(groups)
 
 
@@ -71,6 +77,8 @@ def verify_three_passes(words, builds) -> dict:
     """All source addresses must relocate; source byte lengths must not."""
     if len(words) != 3 or len(builds) != 3:
         raise UnresolvedSourcePatch('three native build passes required')
+    if len({run.base for run in builds}) != 3:
+        raise UnresolvedSourcePatch('native build bases must be distinct')
     base = builds[0].base
     first = words[0]
     for candidate, run in zip(words[1:], builds[1:]):

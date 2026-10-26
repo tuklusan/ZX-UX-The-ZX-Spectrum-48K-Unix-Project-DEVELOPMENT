@@ -61,6 +61,30 @@ class SourcePatches(unittest.TestCase):
         with self.assertRaises(UnresolvedSourcePatch):
             verify_three_passes(words, [SimpleNamespace(base=b) for b in bases])
 
+    def test_overlapping_patch_words_fail_even_when_bytes_agree(self):
+        base = 0x5050
+        # Both words have bytes 0x50,0x50. The overlapping site must not
+        # be admitted merely because the final image still matches.
+        payload = pair(10, 'st_next', base) + pair(11, 'st_next', base)
+        image = bytearray(64)
+        image[10:13] = bytes((0x50, 0x50, 0x50))
+        with self.assertRaisesRegex(UnresolvedSourcePatch, 'overlapping'):
+            from_emissions(payload, bytes(image), base, 40)
+
+    def test_data_region_cannot_be_classified_as_code_patch(self):
+        base = 0x6000
+        payload = pair(46, 'st_next', base + 12)
+        image = bytearray(64)
+        image[46:48] = (base + 12).to_bytes(2, 'little')
+        with self.assertRaisesRegex(UnresolvedSourcePatch, 'executable text'):
+            from_emissions(payload, bytes(image), base, 40)
+
+    def test_three_identical_bases_cannot_claim_relocation_proof(self):
+        base = 0x6000
+        with self.assertRaisesRegex(UnresolvedSourcePatch, 'distinct'):
+            verify_three_passes([self.make(base)] * 3,
+                                [SimpleNamespace(base=base)] * 3)
+
     def test_changed_target_is_not_relocation(self):
         bases = [0x6000, 0x5E7B, 0x5D97]
         words = [self.make(b) for b in bases]
