@@ -42,10 +42,12 @@ class Capture:
         """
         last_writer = {}
         overlaps = set()
+        out_of_image = []
         for event in self.events:
             for offset, value in enumerate(event.data):
                 pos = event.position + offset
-                if pos >= len(image):
+                if pos < 0 or pos >= len(image):
+                    out_of_image.append(pos)
                     continue
                 if pos in last_writer:
                     overlaps.add(pos)
@@ -65,9 +67,11 @@ class Capture:
                 'changed_after_emit': len(patched), 'patch_first': patched[:16],
                 'rewritten_bytes': len(overlaps),
                 'unresolved_direct_write_bytes': len(direct_sites),
+                'out_of_image_emission_bytes': len(out_of_image),
+                'out_of_image_first': out_of_image[:16],
                 'byte_categories': categories,
                 'safe_to_optimize': False,  # numeric addresses still need symbolization
-                'complete_byte_trace': not uncovered and not patched}
+                'complete_byte_trace': not uncovered and not patched and not out_of_image}
 
 
 

@@ -113,6 +113,22 @@ class Tests(unittest.TestCase):
         a = c._zxux_capture.audit(bytes(c.far[:c.pc]))
         self.assertEqual(a['rewritten_bytes'], 1)
 
+    def test_out_of_image_emission_cannot_pass_trace(self):
+        trace = Capture([Emission(0, 'instruction', 'ret', b'\xc9'),
+                         Emission(1, 'binary', 'stray', b'\x76')])
+        result = trace.audit(b'\xc9')
+        self.assertEqual(result['uncovered_bytes'], 0)
+        self.assertEqual(result['changed_after_emit'], 0)
+        self.assertEqual(result['out_of_image_emission_bytes'], 1)
+        self.assertEqual(result['out_of_image_first'], [1])
+        self.assertFalse(result['complete_byte_trace'])
+
+    def test_negative_emission_site_does_not_count_as_coverage(self):
+        trace = Capture([Emission(-1, 'binary', 'bad-site', b'\x00\xc9')])
+        result = trace.audit(b'\xc9')
+        self.assertEqual(result['out_of_image_first'], [-1])
+        self.assertFalse(result['complete_byte_trace'])
+
     def test_counting_pass_not_recorded(self):
         c = Mock()
         c.storing = False
