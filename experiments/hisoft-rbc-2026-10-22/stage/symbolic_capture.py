@@ -105,8 +105,7 @@ class TracedRAM(bytearray):
         if (getattr(owner, 'counting', True) or
                 getattr(owner, 'de_flags', 0) & 1 or
                 getattr(owner, '_zxux_capture_active', False) or
-                getattr(owner, '_zxux_runtime_emitting', False) or
-                getattr(owner, '_zxux_in_data', False)):
+                getattr(owner, '_zxux_runtime_emitting', False)):
             return
         trace = getattr(owner, '_zxux_capture', None)
         if trace is None:
@@ -120,6 +119,14 @@ class TracedRAM(bytearray):
             indices = [key if key >= 0 else len(self) + key]
         if not indices:
             return
+        # Only DATA storage has its own typed source event; other writes stay visible.
+        if getattr(owner, '_zxux_in_data', False):
+            lo = getattr(owner, 'data_start', None)
+            hi = getattr(owner, 'vars_start', None)
+            if (getattr(owner, 'storing_data', False) and
+                    isinstance(lo, int) and isinstance(hi, int) and
+                    all(lo <= index < hi for index in indices)):
+                return
         method = sys._getframe(1).f_code.co_name
         if indices != list(range(indices[0], indices[0] + len(indices))):
             raise ValueError('unresolved noncontiguous Z80 direct write')
@@ -198,7 +205,12 @@ def install(compiler_module):
         def st_data(self, *args, **kwargs):
             active = getattr(self, 'storing_data', False)
             start = getattr(self, 'data_size', 0)
-            result = original_data(self, *args, **kwargs)
+            old_in_data = getattr(self, '_zxux_in_data', False)
+            self._zxux_in_data = True
+            try:
+                result = original_data(self, *args, **kwargs)
+            finally:
+                self._zxux_in_data = old_in_data
             end = getattr(self, 'data_size', 0)
             if active and end > start:
                 begin = self.data_start + start
