@@ -16,6 +16,7 @@ STAGE = Path(__file__).resolve().parent
 sys.path[:0] = [str(STAGE), str(ROOT / 'src/zx-ux-sdk')]
 import rld
 from symbolic_capture import audit_result, install as install_capture
+from symbolic_source_patches import from_emissions, verify_three_passes
 
 
 def run(source: Path, checkpoint: Path, frontend: Path,
@@ -30,6 +31,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     baseline, _ = rbc._compile_three(source, frontend, tape, rom, 0xff00,
                                       [], 'block', False, 0)
     records = []
+    source_words = []
     original_hook = rbc.install_codegen_optimizer
 
     def passive_capture(module):
@@ -39,6 +41,9 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             result = parent(self, *args, **kwargs)
             if result.ok:
                 records.append(audit_result(self, result))
+                source_words.append(from_emissions(
+                    self._zxux_capture.events, result.code,
+                    result.code_base, self.data_start))
             return result
         module.Compiler.compile_whole = recorded
 
@@ -54,6 +59,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         if (before.code, before.entry, before.base, before.bss) != (
                 after.code, after.entry, after.base, after.bss):
             raise RuntimeError(f'passive capture changed program bytes at pass {index}')
+    source_patch_report = verify_three_passes(source_words, observed)
     first, _ = rbc.build_ssx(baseline, bytes(768), rld, 384, use_rom_font=True)
     second, _ = rbc.build_ssx(observed, bytes(768), rld, 384, use_rom_font=True)
     if first != second:
@@ -71,7 +77,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         'linked_sha256': hashlib.sha256(first).hexdigest(),
         'file': len(first), 'image': len(info['image']),
         'bss': info['bss'], 'stack': info['stack'], 'total': total,
-        'audits': records, 'gate8_complete': False,
+        'audits': records, 'source_patches': source_patch_report,
+        'gate8_complete': False,
     }
 
 
