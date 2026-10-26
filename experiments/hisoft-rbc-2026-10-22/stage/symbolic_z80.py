@@ -144,15 +144,29 @@ class SymbolicProgram:
         _check_protected(original, proposed, self.entries)
         after = _link(proposed, ras, rld, stack)
         pre = rld.parse_ssx(before)
-        post = rld.parse_ssx(after)
+        candidate = rld.parse_ssx(after)
         orig_memory = max(len(before), len(pre["image"]) + pre["bss"] + pre["stack"])
-        new_memory = max(len(after), len(post["image"]) + post["bss"] + post["stack"])
-        # A suspicious enlargement or unchanged size gets no admission.
-        if len(after) >= len(before) or new_memory >= orig_memory:
+        candidate_total = (len(candidate["image"]) + candidate["bss"] +
+                           candidate["stack"])
+        candidate_memory = max(len(after), candidate_total)
+        candidate_file = len(after)
+        # Native candidate measurements must survive even when no saving is
+        # possible. Such a candidate is not published as the optimized output.
+        admitted = candidate_file < len(before) and candidate_memory < orig_memory
+        if admitted:
+            post, new_memory = candidate, candidate_memory
+        else:
             after, post, new_memory = before, pre, orig_memory
         if max_memory and new_memory > max_memory:
             raise SymbolicError(f"linked program requires {new_memory} bytes (limit {max_memory})")
         return after, {"baseline_file_bytes": len(before),
+                       "optimizer_candidate_file_bytes": candidate_file,
+                       "optimizer_candidate_image_bytes": len(candidate["image"]),
+                       "optimizer_candidate_bss_bytes": candidate["bss"],
+                       "optimizer_candidate_stack_bytes": candidate["stack"],
+                       "optimizer_candidate_total_bytes": candidate_total,
+                       "optimizer_candidate_memory_bytes": candidate_memory,
+                       "optimizer_admitted": admitted,
                        "optimized_file_bytes": len(after),
                        "baseline_memory_bytes": orig_memory,
                        "optimized_memory_bytes": new_memory,

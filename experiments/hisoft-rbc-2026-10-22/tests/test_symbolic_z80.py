@@ -121,6 +121,47 @@ class SymbolicTests(unittest.TestCase):
         self.assertEqual(sizes['saved_file_bytes'], 0)
         self.assertEqual(rld.parse_ssx(binary)['image'][3], 0xc3)
 
+    def test_native_candidate_growth_remains_measured_but_unpublished(self):
+        p = self.example()
+        baseline, baseline_stats = p.optimize(lambda asm: asm, ras, rld)
+        changed, stats = p.optimize(
+            lambda asm: asm.replace('    ld a,0\n', '    ld hl,0\n'),
+            ras, rld)
+        self.assertEqual(changed, baseline)
+        self.assertFalse(stats['optimizer_admitted'])
+        self.assertGreater(stats['optimizer_candidate_file_bytes'], len(baseline))
+        self.assertGreater(stats['optimizer_candidate_memory_bytes'],
+                           baseline_stats['baseline_memory_bytes'])
+        self.assertEqual(stats['optimized_file_bytes'], len(baseline))
+        self.assertEqual(stats['saved_file_bytes'], 0)
+        self.assertEqual(stats['saved_memory_bytes'], 0)
+
+    def test_native_candidate_exact_dimensions_even_without_savings(self):
+        p = self.example()
+        binary, stats = p.optimize(lambda asm: asm, ras, rld)
+        parsed = rld.parse_ssx(binary)
+        self.assertFalse(stats['optimizer_admitted'])
+        self.assertEqual(stats['optimizer_candidate_file_bytes'], len(binary))
+        self.assertEqual(stats['optimizer_candidate_image_bytes'], len(parsed['image']))
+        self.assertEqual(stats['optimizer_candidate_bss_bytes'], parsed['bss'])
+        self.assertEqual(stats['optimizer_candidate_stack_bytes'], parsed['stack'])
+        self.assertEqual(stats['optimizer_candidate_total_bytes'],
+                         len(parsed['image']) + parsed['bss'] + parsed['stack'])
+        self.assertEqual(stats['optimizer_candidate_memory_bytes'],
+                         stats['baseline_memory_bytes'])
+
+    def test_admitted_candidate_dimensions_match_published_native_link(self):
+        p = self.example()
+        binary, stats = p.optimize(
+            lambda asm: asm.replace('    ld a,0\n', '    xor a\n'),
+            ras, rld)
+        linked = rld.parse_ssx(binary)
+        self.assertTrue(stats['optimizer_admitted'])
+        self.assertEqual(stats['optimizer_candidate_file_bytes'], len(binary))
+        self.assertEqual(stats['optimizer_candidate_image_bytes'], len(linked['image']))
+        self.assertEqual(stats['optimizer_candidate_memory_bytes'],
+                         stats['optimized_memory_bytes'])
+
     def test_no_growth_keeps_original(self):
         p = self.example()
         ssx, stats = p.optimize(lambda x: x, ras, rld)
