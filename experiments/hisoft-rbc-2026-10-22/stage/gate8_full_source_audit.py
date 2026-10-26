@@ -23,6 +23,7 @@ from symbolic_opcode_pairs import inspect_opcode_pairs, verify_three_opcode_pass
 from symbolic_source_boundaries import inspect_source_boundaries, verify_three_source_maps
 from symbolic_fragments import inspect_fragments, verify_three_fragment_passes
 from runtime_emitter_trace import verify_three_runtime_traces
+from symbolic_emit_sites import inspect_emit_sites, verify_three_emit_sites
 from symbolic_relative_branches import inspect_relative_branches, verify_three_relative_passes
 
 
@@ -45,6 +46,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     source_maps = []
     source_fragments = []
     runtime_source_traces = []
+    compiler_source_sites = []
     relative_groups = []
     original_hook = rbc.install_codegen_optimizer
 
@@ -56,6 +58,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             if result.ok:
                 records.append(audit_result(self, result))
                 runtime_source_traces.append(list(self._zxux_capture.runtime_traces))
+                compiler_source_sites.append(inspect_emit_sites(self._zxux_capture.events))
                 source_words.append(from_emissions(
                     self._zxux_capture.events, result.code,
                     result.code_base, self.data_start))
@@ -100,6 +103,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
                                                  [x.base for x in observed])
     runtime_report = verify_three_runtime_traces(runtime_source_traces,
                                                  [x.base for x in observed])
+    source_site_report = verify_three_emit_sites(compiler_source_sites,
+                                                  [x.base for x in observed])
     relative_report = verify_three_relative_passes(relative_groups,
                                                   [x.base for x in observed])
     first, _ = rbc.build_ssx(baseline, bytes(768), rld, 384, use_rom_font=True)
@@ -126,6 +131,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         'source_byte_ownership': source_map_report,
         'inline_source_fragments': fragment_report,
         'runtime_emitter_sources': runtime_report,
+        'compiler_source_sites': source_site_report,
         'relative_source_branches': relative_report,
         'gate8_complete': False,
     }

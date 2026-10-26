@@ -20,6 +20,7 @@ class Emission:
     source: str
     data: bytes
     symbol_offset: int | None = None
+    source_site: str | None = None
 
 
 @dataclass
@@ -27,13 +28,13 @@ class Capture:
     events: list[Emission] = field(default_factory=list)
     runtime_traces: list[dict] = field(default_factory=list)
 
-    def record(self, compiler, position, kind, source, symbol_offset=None):
+    def record(self, compiler, position, kind, source, symbol_offset=None, source_site=None):
         if not compiler.storing:
             return
         if compiler.pc < position:
             raise ValueError('emitter wrapped 16-bit code address')
         self.events.append(Emission(position, kind, source,
-                                    bytes(compiler.far[position:compiler.pc]), symbol_offset))
+                                    bytes(compiler.far[position:compiler.pc]), symbol_offset, source_site))
 
     def audit(self, image: bytes) -> dict:
         """Compare captured pre-encoding sites to actual image bytes.
@@ -166,6 +167,8 @@ def install(compiler_module):
                 active = getattr(self, '_zxux_capture_active', 0)
                 if active or not getattr(self, 'storing', False):
                     return fn(self, *args, **kwargs)
+                caller = sys._getframe(1)
+                source_site = f'{caller.f_code.co_name}:{caller.f_lineno}'
                 start = self.pc
                 self._zxux_capture_active = active + 1
                 try:
@@ -181,7 +184,7 @@ def install(compiler_module):
                           if method_name == 'emit' and args else
                           str(args[0]) if method_name == 'emit_opcode' and args
                           else str(args[:1]))
-                capture.record(self, start, category, source, symbol)
+                capture.record(self, start, category, source, symbol, source_site)
                 return value
             return call
         setattr(cls, method, wrapping(original, kind, method))
