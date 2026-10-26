@@ -22,17 +22,17 @@ PROGRAMS = {
 }
 
 
-def compile_all(work):
+def compile_all(work, compiler, frontend, tape, rom):
     compiled = {}
     for name, listing in PROGRAMS.items():
         path = work / (name + '.bas')
         target = work / (name + '.ssx')
         path.write_text(listing, encoding='ascii')
-        args = [sys.executable, str(ROOT / 'trial-result/rbc/rbc.py'), str(path),
-                '--frontend', str(ROOT / 'upstream-pyhsb'),
+        args = [sys.executable, str(compiler), str(path),
+                '--frontend', str(frontend),
                 '--sdk', str(ROOT / 'src/zx-ux-sdk'),
-                '--rom', str(ROOT / 'src/zx-ux-sdk/rom/48.rom'),
-                '--tape', str(ROOT / 'trial-result/hisoft48.tap'),
+                '--rom', str(rom),
+                '--tape', str(tape),
                 '--max', '12000', '-o', str(target)]
         run = subprocess.run(args, text=True, capture_output=True, timeout=120)
         if run.returncode or not target.is_file():
@@ -51,6 +51,13 @@ def compile_all(work):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--work', type=Path, default=ROOT / 'build/tmp/rbc-gate7')
+    ap.add_argument('--compiler', type=Path, required=True,
+                    help='recovered current RBC rbc.py')
+    ap.add_argument('--frontend', type=Path, required=True,
+                    help='verified canonical HiSoft frontend directory')
+    ap.add_argument('--tape', type=Path, required=True,
+                    help='original HiSoft 48K compiler TZX')
+    ap.add_argument('--rom', type=Path, default=ROOT / 'src/zx-ux-sdk/rom/48.rom')
     ap.add_argument('--system', type=Path, default=ROOT / 'build/out/ZX-UX.tzx')
     args = ap.parse_args()
     work = args.work.resolve()
@@ -60,7 +67,10 @@ def main():
         raise RuntimeError('Native kernel symbols missing')
     if system.read_bytes() != (ROOT / 'dist/zx-ux/tzx/ZX-UX.tzx').read_bytes():
         raise RuntimeError('Native kernel tape differs from frozen version')
-    compiled = compile_all(work)
+    if not args.compiler.resolve().is_file() or not args.frontend.resolve().is_dir():
+        raise RuntimeError('prepared RBC and canonical frontend required')
+    compiled = compile_all(work, args.compiler.resolve(), args.frontend.resolve(),
+                           args.tape.resolve(), args.rom.resolve())
     # Use a separately booted copy of the same SSX to establish its actual
     # initial graphic bytes. ZX Spectrum UDG data need not start at zero.
     reference = rvm.run_kernel(compiled['after-stop']['path'],
