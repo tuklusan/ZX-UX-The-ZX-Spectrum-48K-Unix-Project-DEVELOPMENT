@@ -20,7 +20,7 @@ class UnresolvedSourceProgram(ValueError):
 _NUMERIC = re.compile(r'(?<![\w])(?:[-+]?(?:0x[0-9a-f]+|\$[0-9a-f]+|[0-9]+))',
                       re.IGNORECASE)
 _SAFE_IMMEDIATE = re.compile(
-    r'(?:ld\s+(?:a|\(hl\))\s*,|(?:and|or|xor|cp|sub)\s+|'
+    r'(?:ld\s+(?:a|b|c|d|e|h|l|\(hl\))\s*,|(?:and|or|xor|cp|sub)\s+|'
     r'(?:add|adc|sbc)\s+a\s*,|(?:bit|res|set)\s+|rst\s+)'
     r'(?:[-+]?(?:0x[0-9a-f]+|\$[0-9a-f]+|[0-9]+))'
     r'(?:\s*,\s*(?:a|b|c|d|e|h|l|\(hl\)))?\Z', re.IGNORECASE)

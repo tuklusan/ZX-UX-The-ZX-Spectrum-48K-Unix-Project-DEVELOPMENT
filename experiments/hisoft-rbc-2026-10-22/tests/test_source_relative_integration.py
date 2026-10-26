@@ -15,11 +15,14 @@ from symbolic_from_source import UnresolvedSourceProgram, from_source
 
 ASM = {'nop': b'\x00', 'dec a': b'\x3d', 'inc a': b'\x3c',
        'jr nz,-3': b'\x20\xfd', 'jr +1': b'\x18\x01',
-       'djnz -3': b'\x10\xfd', 'ret': b'\xc9',
+       'djnz -3': b'\x10\xfd', 'djnz -4': b'\x10\xfc', 'ret': b'\xc9',
        'call 28672': b'\xcd\x00\x70',
        'call $2bf1': b'\xcd\xf1\x2b',
        'jp z,0x0038': b'\xca\x38\x00',
        'jp nz,0x4000': b'\xc2\x00\x40',
+       'ld b,3': b'\x06\x03',
+       'ld c,255': b'\x0e\xff',
+       'ld hl,1': b'\x21\x01\x00',
        'defb $c3': b'\xc3', 'jr z,-1': b'\x28\xff'}
 
 
@@ -88,6 +91,27 @@ class FullSourceRelative(unittest.TestCase):
                 data = b''.join(e.data for e in es)
                 program = from_source(es, data, 0x7000, len(data), 0, assembler)
                 self.assertEqual(link(program)['image'], data)
+
+    def test_eight_bit_register_immediates_are_source_literals(self):
+        for source in ('ld b,3', 'ld c,255'):
+            with self.subTest(source=source):
+                es = events(source, 'ret')
+                data = b''.join(e.data for e in es)
+                program = from_source(es, data, 0x7000, len(data), 0, assembler)
+                self.assertEqual(link(program)['image'], data)
+
+    def test_untyped_sixteen_bit_immediate_is_not_guessed(self):
+        es = events('ld hl,1', 'ret')
+        data = b''.join(e.data for e in es)
+        with self.assertRaisesRegex(UnresolvedSourceProgram, 'address type'):
+            from_source(es, data, 0x7000, len(data), 0, assembler)
+
+    def test_integer_loop_with_numeric_byte_and_relative_jump(self):
+        es = events('ld b,3', 'djnz -4', 'ret')
+        data = b''.join(e.data for e in es)
+        program = from_source(es, data, 0x7000, len(data), 0, assembler)
+        self.assertEqual(link(program)['image'], data)
+        self.assertIn('djnz start', program.assembly())
 
     def test_static_calls_outside_rom_remain_blocked(self):
         for source in ('call 28672', 'jp nz,0x4000'):
