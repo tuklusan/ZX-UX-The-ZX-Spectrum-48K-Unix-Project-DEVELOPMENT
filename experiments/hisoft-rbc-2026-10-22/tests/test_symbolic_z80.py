@@ -105,6 +105,22 @@ class SymbolicTests(unittest.TestCase):
         self.assertEqual(metrics['saved_file_bytes'], 0)
         self.assertTrue(ssx.startswith(b'SSX1'))
 
+    def test_optimizer_cannot_move_instructions_across_binary_resource(self):
+        p = SymbolicProgram()
+        p.label('start', entry=True)
+        p.instruction('jp execution')
+        p.binary(bytes((0xc3,)))
+        p.label('execution')
+        p.instruction('ld a,0')
+        p.instruction('ret')
+        with self.assertRaisesRegex(SymbolicError, 'protected resource boundary'):
+            p.optimize(lambda asm: asm.replace('    jp execution\n    db 195\n',
+                                               '    db 195\n    jp execution\n'),
+                       ras, rld)
+        binary, sizes = p.optimize(lambda asm: asm, ras, rld)
+        self.assertEqual(sizes['saved_file_bytes'], 0)
+        self.assertEqual(rld.parse_ssx(binary)['image'][3], 0xc3)
+
     def test_no_growth_keeps_original(self):
         p = self.example()
         ssx, stats = p.optimize(lambda x: x, ras, rld)

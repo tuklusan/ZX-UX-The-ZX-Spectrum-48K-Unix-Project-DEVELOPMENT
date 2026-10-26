@@ -140,8 +140,8 @@ class SymbolicProgram:
         proposed = optimizer(original)
         if not isinstance(proposed, str):
             raise SymbolicError("optimizer returned non-text")
-        _check_protected(original, proposed, self.entries)
         _check_optimizer_output(proposed)
+        _check_protected(original, proposed, self.entries)
         after = _link(proposed, ras, rld, stack)
         pre = rld.parse_ssx(before)
         post = rld.parse_ssx(after)
@@ -182,11 +182,29 @@ def _protected_lines(asm: str, entries: set[str]) -> list[str]:
     return result
 
 
+def _resource_barriers(assembly: str) -> tuple[str, ...]:
+    """Keep each code run on its original side of a protected resource."""
+    barriers = []
+    for line in assembly.splitlines():
+        statement = line.partition(";")[0].strip().lower()
+        if not statement:
+            continue
+        opcode = statement.split(None, 1)[0]
+        if (statement.endswith(":") or
+                opcode in ("db", "dw", "ds", "section", "global")):
+            barriers.append(statement)
+        elif not barriers or barriers[-1] != "<code>":
+            barriers.append("<code>")
+    return tuple(barriers)
+
+
 def _check_protected(original: str, proposed: str, entries: set[str]) -> None:
     protected = _protected_lines(original, entries)
     observed = _protected_lines(proposed, entries)
     if protected != observed:
         raise SymbolicError("optimizer changed protected data, symbols or sections")
+    if _resource_barriers(original) != _resource_barriers(proposed):
+        raise SymbolicError("optimizer moved code across protected resource boundary")
     if any(x.lower() not in proposed.lower() for x in (name + ":" for name in entries)):
         raise SymbolicError("optimizer dropped a required entry")
 
