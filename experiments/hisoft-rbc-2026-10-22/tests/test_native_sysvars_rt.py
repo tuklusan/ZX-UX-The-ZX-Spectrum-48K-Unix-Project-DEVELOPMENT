@@ -17,8 +17,11 @@ class NativeSysvars(unittest.TestCase):
         # The Z80 helpers contain absolute branches; place them at their
         # actual test addresses and share the process BSS base.
         offset = self.base - self.peek_addr
-        self.mem[self.peek_addr:self.peek_addr+256] = _native_peek(asm,offset,self.peek_addr)
-        self.mem[self.poke_addr:self.poke_addr+256] = _native_poke(asm,offset,self.peek_addr,entry=self.poke_addr-self.peek_addr)
+        peek_code = _native_peek(asm,offset,self.peek_addr)
+        poke_code = _native_poke(asm,offset,self.peek_addr,entry=self.poke_addr-self.peek_addr)
+        self.mem[self.peek_addr:self.peek_addr+len(peek_code)] = peek_code
+        self.mem[self.poke_addr:self.poke_addr+len(poke_code)] = poke_code
+        self.assertEqual(len(self.mem), 65536)
         self.cpu = Z80(self.mem)
         self.cpu.sp = 0x9000
         self.ticks = 0
@@ -39,8 +42,7 @@ class NativeSysvars(unittest.TestCase):
         # The image's UDG bank holds the relocated wrapper cleanup pointer.
         self.mem[0x5c7b:0x5c7d] = (0xa100).to_bytes(2, 'little')
         self.mem[0xa1a8:0xa1aa] = (0x7500).to_bytes(2, 'little')
-        self.mem[0x7500:0x7510] = bytes.fromhex(
-            '2100003e27cd0360210b003e01c30360')
+        self.mem[0x7500:0x7510] = bytes.fromhex('2100003e27cd0360210b003e01c30360')
         # Calling ROM RST 8 would panic the kernel, not exit the process.
         self.cpu.hooks[8] = lambda cpu: self.fail('ROM error reached kernel')
         self.rom_before = {addr: 0xcc for addr in (PIP,FLAGS2,*FRAMES)}
@@ -96,14 +98,19 @@ class NativeSysvars(unittest.TestCase):
     def test_allow_private_process_data_but_not_other_memory(self):
         # The native linker relocates original offsets from a code base.
         # Simulate code at 0x7000 and a process BSS offset of 0x1000.
-        self.mem[self.peek_addr:self.peek_addr+256] = _native_peek(asm,0x1000,0x7000,0x1008)
-        self.mem[self.poke_addr:self.poke_addr+256] = _native_poke(asm,0x1000,0x7000,0x1008,entry=self.poke_addr-self.peek_addr)
+        peek_code = _native_peek(asm,0x1000,0x7000,0x1008)
+        poke_code = _native_poke(asm,0x1000,0x7000,0x1008,entry=self.poke_addr-self.peek_addr)
+        self.mem[self.peek_addr:self.peek_addr+len(peek_code)] = peek_code
+        self.mem[self.poke_addr:self.poke_addr+len(poke_code)] = poke_code
+        self.assertEqual(len(self.mem), 65536)
         self.mem[self.base] = 0x66
         self.assertEqual(self.peek(self.base), 0x66)
         self.poke(self.base, 0x54)
         self.assertEqual(self.peek(self.base), 0x54)
+        # total=0x1008 covers the process image and BSS; 0x8018 is
+        # inside that allocation and must not be rejected.
         with self.assertRaises(PermissionError):
-            self.peek(self.base + BSS_BYTES + 10)
+            self.peek(self.base + 0x1008 + 10)
 
     def test_original_rom_keyboard_scan_service_survives(self):
         def scan(cpu):

@@ -42,6 +42,23 @@ class SpectrumRuntime(unittest.TestCase):
         self.assertEqual(cpu.b,0x1d)
         self.assertEqual(cpu.sp,0xe000)
 
+    def test_ascii_runtime_usr_cannot_reach_rom(self):
+        for source in (b'USR 32768', b'usr 32768', b'UsR(32768)',
+                       b'1+USR 32768'):
+            with self.subTest(source=source):
+                target, cpu = self.evaluate_path(source)
+                self.assertEqual(target, 0x7200)
+                self.assertEqual((cpu.d, cpu.e), (0, 10))
+
+    def test_quoted_or_rem_ascii_usr_text_is_not_executed(self):
+        self.assertEqual(self.evaluate_path(b'"USR 32768"')[0], 0x35de)
+        self.assertEqual(self.evaluate_path(b'1'+bytes([0xea])+b'USR 32768')[0], 0x35de)
+
+    def test_ascii_lookahead_does_not_cross_string_end(self):
+        for source in (b'U', b'US', b'1+U', b'1+US', b'1+USER'):
+            with self.subTest(source=source):
+                self.assertEqual(self.evaluate_path(source)[0], 0x35de)
+
     def test_executable_usr_never_reaches_rom(self):
         target,cpu=self.evaluate_path(b'1+'+bytes([0xc0])+b' 32768')
         self.assertEqual(target,0x7200)

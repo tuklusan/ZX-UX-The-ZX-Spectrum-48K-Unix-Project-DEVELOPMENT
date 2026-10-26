@@ -52,6 +52,24 @@ def guarded_val_bytes():
     jr(0x28, 'blocked')
     emit(0xFE, 0xAE)                # VAL$ can execute a nested expression
     jr(0x28, 'blocked')
+    # A runtime string may contain ASCII keyword letters rather than the
+    # single-byte token. Refuse USR (any case) before ROM VAL can retokenize.
+    emit(0x7E, 0xE6, 0xDF, 0xFE, 0x55)  # (HL) uppercased == U?
+    jr(0x20, 'next')
+    emit(0x78, 0xB7)                # BC must contain at least three bytes
+    jr(0x20, 'ascii_usr_look')
+    emit(0x79, 0xFE, 0x03)
+    jr(0x38, 'next')
+    mark('ascii_usr_look')
+    emit(0x23, 0x7E, 0xE6, 0xDF, 0xFE, 0x53)
+    jr(0x20, 'ascii_usr_back1')
+    emit(0x23, 0x7E, 0xE6, 0xDF, 0xFE, 0x52)
+    jr(0x20, 'ascii_usr_back2')
+    jr(0x18, 'blocked')
+    mark('ascii_usr_back2')
+    emit(0x2B)
+    mark('ascii_usr_back1')
+    emit(0x2B)
     mark('next')
     emit(0x23, 0x0B)                # advance input and decrease length
     jr(0x18, 'scan')
