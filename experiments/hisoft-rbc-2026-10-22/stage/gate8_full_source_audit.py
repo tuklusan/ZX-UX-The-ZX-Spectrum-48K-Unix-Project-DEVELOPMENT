@@ -29,6 +29,7 @@ from typed_whole_pipeline import SourcePipelineError, link_source_pair, verify_a
 from gate8_runtime_source_match import verify_three_runtime_sources
 from gate8_native_runtime_combined import (RuntimeCombinedError,
     verify_three_native_runtime_regions)
+from gate8_runtime_handoff import RuntimeHandoffError, verify_three_runtime_handoffs
 from hisoft_frontend_inputs import KNOWN_COMPILER
 
 
@@ -167,6 +168,16 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             'native_region_verified': False, 'blocker': str(exc),
             'full_program_optimized': False, 'native_behavior_verified': False,
         }
+    try:
+        from z80asm import asm
+        runtime_handoff = verify_three_runtime_handoffs(
+            captured_events, [build.code for build in observed],
+            [build.base for build in observed], text_endpoints,
+            [build.bss for build in observed], asm, native_runtime_region)
+    except (RuntimeHandoffError, ValueError, TypeError) as exc:
+        runtime_handoff = {'runtime_handoff_verified': False, 'blocker': str(exc),
+                           'full_program_optimized': False,
+                           'native_behavior_verified': False}
     first, _ = rbc.build_ssx(baseline, bytes(768), rld, 384, use_rom_font=True)
     second, _ = rbc.build_ssx(observed, bytes(768), rld, 384, use_rom_font=True)
     if first != second:
@@ -197,6 +208,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         'runtime_emitter_sources': runtime_report,
         'original_runtime_source_match': runtime_source_match,
         'native_runtime_region': native_runtime_region,
+        'native_runtime_handoff': runtime_handoff,
         'compiler_source_sites': source_site_report,
         'relative_source_branches': relative_report,
         'whole_program_attempt': whole_attempt,
