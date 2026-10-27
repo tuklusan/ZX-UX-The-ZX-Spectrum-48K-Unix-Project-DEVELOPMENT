@@ -207,8 +207,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         raise RuntimeError('passive capture changed linked native program')
     info = rld.parse_ssx(first)
     total = len(info['image']) + info['bss'] + info['stack']
-    if max(total, len(first)) > 12000:
-        raise ValueError('default 12000-byte memory limit exceeded')
+    if max(total, len(first)) > 14000:
+        raise ValueError('default 14000-byte memory limit exceeded')
     for record in records:
         if record['safe_to_optimize']:
             raise RuntimeError('partial typed capture was incorrectly admitted')

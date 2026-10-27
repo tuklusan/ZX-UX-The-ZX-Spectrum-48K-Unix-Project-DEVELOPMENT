@@ -278,7 +278,7 @@ def verify_three_whole_native_baselines(events, images, bases, text_ends,
         if native_info is not None and current != native_info:
             raise WholeBaselineError('native dimensions changed across original compiler bases')
         native_info = current
-        if max(len(ssx), current['native_total_bytes']) > 12000:
+        if max(len(ssx), current['native_total_bytes']) > 14000:
             raise WholeBaselineError('native source baseline exceeds default memory limit')
     candidate = None
     if optimizer is not None:

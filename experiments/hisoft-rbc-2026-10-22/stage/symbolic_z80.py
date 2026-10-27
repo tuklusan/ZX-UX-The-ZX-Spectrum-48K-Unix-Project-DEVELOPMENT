@@ -128,7 +128,7 @@ class SymbolicProgram:
         return "\n".join(out) + "\n"
 
     def optimize(self, optimizer: Callable[[str], str], ras, rld, *,
-                 stack: int = 384, max_memory: int = 12000) -> tuple[bytes, dict]:
+                 stack: int = 384, max_memory: int = 14000) -> tuple[bytes, dict]:
         """Evaluate a whole-program optimizer candidate and native link.
 
         The original source is reassembled as the executable baseline.

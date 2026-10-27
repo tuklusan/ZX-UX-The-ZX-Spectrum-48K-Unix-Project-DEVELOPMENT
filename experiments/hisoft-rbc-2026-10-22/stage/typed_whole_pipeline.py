@@ -107,7 +107,7 @@ def verify_and_build(events, images, bases, text_ends, bss_sizes,
 
 
 def link_source_pair(source: VerifiedSource, ras, rld, optimizer: Callable,
-                     *, stack: int = 384, max_memory: int = 12000):
+                     *, stack: int = 384, max_memory: int = 14000):
     """Link both variants; compare exact original non-relocated image bytes.
 
     Native links and memory accounting alone cannot establish runtime

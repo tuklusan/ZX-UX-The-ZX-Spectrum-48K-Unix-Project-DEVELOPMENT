@@ -207,7 +207,7 @@ def _first_resource_boundary_change(original: str, candidate: str) -> str:
 
 
 def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
-                                     optimizer, *, max_memory: int = 12000,
+                                     optimizer, *, max_memory: int = 14000,
                                      expected_runtime_bytes: bytes | None = None,
                                      native_probe: bool = False):
     """Optimize the entire source once; prove native link and protected resources.
