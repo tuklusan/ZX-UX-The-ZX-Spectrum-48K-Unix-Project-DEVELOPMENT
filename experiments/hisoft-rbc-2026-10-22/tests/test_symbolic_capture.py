@@ -114,6 +114,28 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(far), len(initial))
         self.assertEqual(owner._zxux_capture.events[0].data, b'\xaa\xbb')
 
+    def test_traced_ram_rejects_untraced_bytearray_mutators_atomically(self):
+        from symbolic_capture import TracedRAM
+        owner = types.SimpleNamespace(counting=False, de_flags=0,
+                                      _zxux_capture=Capture())
+        far = TracedRAM(b'1234', owner)
+        initial = bytes(far)
+        actions = (lambda: far.append(5), lambda: far.extend(b'56'),
+                   lambda: far.insert(1, 5), lambda: far.pop(),
+                   lambda: far.remove(49), lambda: far.clear(),
+                   lambda: far.reverse(),
+                   lambda: far.__delitem__(slice(1, 3)),
+                   lambda: far.__iadd__(b'5'), lambda: far.__imul__(2))
+        for action in actions:
+            with self.subTest(action=action):
+                with self.assertRaisesRegex(ValueError, 'unresolved untraced'):
+                    action()
+                self.assertEqual(bytes(far), initial)
+                self.assertEqual(owner._zxux_capture.events, [])
+        owner.counting = True
+        far.append(53)
+        self.assertEqual(bytes(far), b'12345')
+
     def test_direct_ram_patch_is_visible(self):
         c = Mock()
         c.emit_opcode('jp nn')

@@ -105,6 +105,56 @@ class TracedRAM(bytearray):
         super().__init__(initial)
         self._owner = owner
 
+    def _reject_untraced_mutation(self):
+        """No bytearray mutator may bypass typed emission in the storing pass."""
+        owner = self._owner
+        if (not (getattr(owner, 'counting', True) or
+                 getattr(owner, 'de_flags', 0) & 1 or
+                 getattr(owner, '_zxux_capture_active', False) or
+                 getattr(owner, '_zxux_runtime_emitting', False)) and
+                getattr(owner, '_zxux_capture', None) is not None):
+            raise ValueError('unresolved untraced Z80 RAM mutation')
+
+    def __delitem__(self, key):
+        self._reject_untraced_mutation()
+        return super().__delitem__(key)
+
+    def append(self, value):
+        self._reject_untraced_mutation()
+        return super().append(value)
+
+    def extend(self, values):
+        self._reject_untraced_mutation()
+        return super().extend(values)
+
+    def insert(self, index, value):
+        self._reject_untraced_mutation()
+        return super().insert(index, value)
+
+    def pop(self, index=-1):
+        self._reject_untraced_mutation()
+        return super().pop(index)
+
+    def remove(self, value):
+        self._reject_untraced_mutation()
+        return super().remove(value)
+
+    def clear(self):
+        self._reject_untraced_mutation()
+        return super().clear()
+
+    def reverse(self):
+        self._reject_untraced_mutation()
+        return super().reverse()
+
+    def __iadd__(self, values):
+        self._reject_untraced_mutation()
+        return super().__iadd__(values)
+
+    def __imul__(self, times):
+        self._reject_untraced_mutation()
+        return super().__imul__(times)
+
     def __setitem__(self, key, value):
         owner = self._owner
         tracing = (not (getattr(owner, 'counting', True) or
