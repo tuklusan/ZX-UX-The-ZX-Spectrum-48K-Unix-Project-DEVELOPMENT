@@ -61,8 +61,52 @@ class RuntimeMatch:
     source_signature: tuple
 
 
+def _verify_poke_source(expected: bytes, load: int, entry: int,
+                        settings: dict):
+    """Independently native-link original RBC POKE emitter instructions.
+
+    Settings come from the actual compiler instance, not from guessed
+    addresses in a disassembled image. All relative process pointers and
+    local control labels are resolved by ras/rld at the original load base.
+    """
+    import ras
+    import rld
+    from z80asm import asm
+    if (not isinstance(settings, dict) or
+            set(settings) != {'sysvar_offset', 'process_total', 'font_alias'} or
+            any(type(settings[k]) is not int or not 0 <= settings[k] <= 65535
+                for k in ('sysvar_offset', 'process_total')) or
+            (settings['font_alias'] is not None and
+             (type(settings['font_alias']) is not int or
+              not 0 <= settings['font_alias'] <= 65535)) or
+            not 0 <= load + entry < 65536 or
+            load + entry + len(expected) > 65536):
+        raise RuntimeMatchError('POKE source settings lack verified compiler values')
+    code = run_path(str(Path(__file__).with_name('native_sysvars_rt.py')))
+    raw, listing, sites = code['_native_poke'](
+        asm, settings['sysvar_offset'], load, settings['process_total'],
+        settings['font_alias'], entry, with_source=True)
+    if raw != expected:
+        raise RuntimeMatchError('POKE source emission differs from original program')
+    try:
+        obj = ras.assemble_text(listing, 'rbc-poke.s')
+        linked, *_ = rld.link([rld.Obj(obj, 'rbc-poke.sso')], [],
+                              entry='start', stack=384)
+        parsed = rld.parse_ssx(linked)
+        actual = bytes(rld.relocate(parsed['image'], parsed['relocs'],
+                                    load + entry))
+    except (ValueError, KeyError, TypeError, rld.LinkError,
+            ras.AsmError) as exc:
+        raise RuntimeMatchError('POKE native assembly failed') from exc
+    if (actual != expected or parsed['relocs'] != list(sites) or
+            parsed['bss'] != 0 or parsed['entry'] != 0):
+        raise RuntimeMatchError('POKE native relocation differs from original')
+    return hashlib.sha256(listing.encode('utf-8')).hexdigest(), len(sites)
+
+
 def verify_runtime_source_match(code: bytes, rom: bytes, image: bytes,
-                              base: int, spans, replacements: dict[int, str]):
+                              base: int, spans, replacements: dict[int, str],
+                              replacement_settings=None):
     """Witness each vendor emitter at its actual code offset, not at offset zero.
 
     Replacements are named by the *caller* from installed RBC runtime modules;
@@ -104,7 +148,16 @@ def verify_runtime_source_match(code: bytes, rom: bytes, image: bytes,
         original_entry = int.from_bytes(machine.mem[slot:slot + 2], 'little')
         if n in replacements:
             reason = replacements[n]
-            if reason == 'native-pause':
+            if reason == 'native-poke' and replacement_settings is not None:
+                from native_sysvars_rt import POKE_RT
+                if n != POKE_RT:
+                    raise RuntimeMatchError('POKE source assigned to wrong routine')
+                digest, sites = _verify_poke_source(
+                    image[start:end], base, start, replacement_settings)
+                verified_replacements.append((n, end - start))
+                source_signature.append((n, start, end, 'typed-replacement',
+                                         reason, digest, sites))
+            elif reason == 'native-pause':
                 from rtnames import RT
                 if n != RT.PAUSE:
                     raise RuntimeMatchError('PAUSE source assigned to wrong routine')
@@ -161,14 +214,21 @@ def verify_runtime_source_match(code: bytes, rom: bytes, image: bytes,
 
 
 def verify_three_runtime_sources(code: bytes, rom: bytes, images,
-                                    bases, groups, replacements: dict[int, str]):
+                                    bases, groups, replacements: dict[int, str],
+                                    replacement_settings=None):
     """Require identical original source roles at three independent load bases."""
     if (any(len(x) != 3 for x in (images, bases, groups)) or
             len(set(bases)) != 3):
         raise RuntimeMatchError('three distinct compiler load bases required')
+    if (replacement_settings is not None and
+            (len(replacement_settings) != 3 or
+             any(not isinstance(x, dict) for x in replacement_settings))):
+        raise RuntimeMatchError('three compiler replacement layouts required')
+    settings = replacement_settings if replacement_settings is not None else (None,) * 3
     results = [verify_runtime_source_match(code, rom, image, base, group,
-                                         replacements)
-               for image, base, group in zip(images, bases, groups)]
+                                          replacements, layout)
+               for image, base, group, layout in
+               zip(images, bases, groups, settings)]
     first = results[0]
     if any(other.source_signature != first.source_signature or
            other.report != first.report for other in results[1:]):

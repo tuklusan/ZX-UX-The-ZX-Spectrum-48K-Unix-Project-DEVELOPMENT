@@ -70,6 +70,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     relative_groups = []
     captured_events = []
     text_endpoints = []
+    runtime_layouts = []
     original_hook = rbc.install_codegen_optimizer
 
     def passive_capture(module):
@@ -81,6 +82,11 @@ def run(source: Path, checkpoint: Path, frontend: Path,
                 records.append(audit_result(self, result))
                 captured_events.append(tuple(self._zxux_capture.events))
                 text_endpoints.append(self.data_start)
+                runtime_layouts.append({
+                    'sysvar_offset': getattr(self.m, '_zxux_sysvar_base', None),
+                    'process_total': getattr(self.m, '_zxux_total', None),
+                    'font_alias': getattr(self.m, '_zxux_font_alias', None),
+                })
                 runtime_source_traces.append(list(self._zxux_capture.runtime_traces))
                 compiler_source_sites.append(inspect_emit_sites(self._zxux_capture.events))
                 source_words.append(from_emissions(
@@ -143,7 +149,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         [build.base for build in observed],
         [m.spans for m in source_maps],
         {PEEK_RT: 'native-peek', POKE_RT: 'native-poke',
-         RT.PAUSE: 'native-pause', RT.VAL: 'guarded-val'})
+         RT.PAUSE: 'native-pause', RT.VAL: 'guarded-val'},
+        replacement_settings=runtime_layouts)
     first, _ = rbc.build_ssx(baseline, bytes(768), rld, 384, use_rom_font=True)
     second, _ = rbc.build_ssx(observed, bytes(768), rld, 384, use_rom_font=True)
     if first != second:

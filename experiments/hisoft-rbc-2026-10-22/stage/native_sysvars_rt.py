@@ -24,31 +24,68 @@ class _Code:
         self.jumps = []
         self.absrefs = []
         self.absjumps = []
+        self.source = []  # Typed emitter statements, not a decoded output image.
 
     def op(self, text):
         self.code.extend(self.asm(text))
+        self.source.extend(('op', part.strip()) for part in text.split(';')
+                           if part.strip())
 
     def address(self, text, offset):
         part = self.asm(text)
         if part[-2:] != b'\x00\x00':
             raise AssertionError(f'assembler address operand changed: {text}')
         self.absrefs.append((len(self.code)+len(part)-2, offset))
+        self.source.append(('address', text, offset))
         self.code.extend(part)
 
     def label(self, name):
         if name in self.labels:
             raise AssertionError('duplicate Z80 label ' + name)
         self.labels[name] = len(self.code)
+        self.source.append(('label', name))
 
     def jr(self, target, condition=''):
         opcode = {'': 0x18, 'nz': 0x20, 'z': 0x28, 'nc': 0x30, 'c': 0x38}[condition]
         self.jumps.append((len(self.code), target))
+        self.source.append(('jr', condition, target))
         self.code.extend((opcode,0))
 
     def jp(self, name, condition=''):
         opcode = {'':0xc3,'z':0xca,'nz':0xc2,'c':0xda,'nc':0xd2}[condition]
         self.absjumps.append((len(self.code)+1,name))
+        self.source.append(('jp', condition, name))
         self.code.extend((opcode,0,0))
+
+    def assembly(self, bss_offset: int, entry_offset: int):
+        """Z80 source with named branches and process-relative word operands.
+
+        The start label is the runtime's actual position in the whole text.
+        A BSS reference uses its offset relative to that entry; native ras/rld
+        recomputes the final address after every safe text-size change.
+        """
+        result = ['  section text', '  global start', 'start:']
+        for item in self.source:
+            kind = item[0]
+            if kind == 'label':
+                result.append('rbc_local_' + item[1] + ':')
+            elif kind == 'op':
+                result.append('  ' + item[1])
+            elif kind == 'address':
+                source, offset = item[1:]
+                if source.count('$0000') != 1:
+                    raise ValueError('runtime address source has no exact operand')
+                displacement = bss_offset - entry_offset + offset
+                result.append('  ' + source.replace('$0000',
+                                                     'start+' + str(displacement)))
+            elif kind in ('jp', 'jr'):
+                condition, target = item[1:]
+                result.append('  ' + kind + ' ' +
+                              (condition + ',' if condition else '') +
+                              'rbc_local_' + target)
+            else:
+                raise ValueError('untyped native runtime statement')
+        return '\n'.join(result) + '\n'
 
     def build(self, base, load, entry=0):
         data = bytearray(self.code)
@@ -278,7 +315,8 @@ def _native_peek(asm, base, load, total=0, font_alias=None, entry=0):
     return e.build(base,load,entry)
 
 
-def _native_poke(asm, base, load, total=0, font_alias=None, entry=0):
+def _native_poke(asm, base, load, total=0, font_alias=None, entry=0,
+                 *, with_source=False):
     e = _Code(asm)
     e.op('ld a,h; cp $5c')
     e.jr('poke_trampoline','nz')
@@ -352,7 +390,12 @@ def _native_poke(asm, base, load, total=0, font_alias=None, entry=0):
     e.address('ld ($0000),a',10)
     e.label('chars_sync')
     _select_print_font(e)
-    return e.build(base,load,entry)
+    raw = e.build(base, load, entry)
+    if with_source:
+        return raw, e.assembly(base, entry), tuple(sorted(
+            [position for position, _ in e.absrefs] +
+            [position for position, _ in e.absjumps]))
+    return raw
 
 
 def install(compiler):
