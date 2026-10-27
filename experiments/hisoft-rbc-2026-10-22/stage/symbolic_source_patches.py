@@ -24,6 +24,7 @@ class SourceWord:
 
 _TYPES = {'emit_string_inline': 'literal-length',
           'st_next': 'control-target',
+          'st_deffn': 'control-target',
           'end_of_line': 'control-target',
           'spectrum_for': 'control-target'}
 

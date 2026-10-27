@@ -229,6 +229,32 @@ def install(compiler_module):
                     bytes(self.far[begin:finish])))
             return result
         cls.st_data = st_data
+    # The original DEF FN compiler advances PC over private parameter slots
+    # without invoking any byte emitter. The original `unwritten` producer
+    # identifies exact spans; capture their existing contents at that source
+    # call, rather than inferring holes from a linked binary. These remain
+    # protected data, never code eligible for optimizer rewrites.
+    if hasattr(cls, 'st_deffn'):
+        original_deffn = cls.st_deffn
+        @wraps(original_deffn)
+        def st_deffn(self, *args, **kwargs):
+            old = tuple(getattr(self, 'unwritten', ()))
+            result = original_deffn(self, *args, **kwargs)
+            if getattr(self, 'storing', False):
+                new = tuple(getattr(self, 'unwritten', ()))
+                if new[:len(old)] != old:
+                    raise ValueError('DEF FN reservation history changed')
+                for pos, size in new[len(old):]:
+                    if (type(pos) is not int or type(size) is not int or
+                            size not in (2, 5) or pos < 0 or
+                            pos + size > len(self.far)):
+                        raise ValueError('DEF FN reservation has untyped bounds')
+                    data = bytes(self.far[pos:pos + size])
+                    self._zxux_capture.events.append(Emission(
+                        pos, 'inline-data', 'protected:def-fn-param', data,
+                        source_site='st_deffn:unwritten'))
+            return result
+        cls.st_deffn = st_deffn
     cls._zxux_symbolic_capture_installed = True
 
     # Source declarations are provided separately from runtime output. An

@@ -189,6 +189,42 @@ class Tests(unittest.TestCase):
         self.assertEqual(events[0].data, b'\xc3\x00\x76')
         self.assertEqual(c.far[20:23], b'\xc3\x00\x76')
 
+    def test_def_fn_parameter_reservations_have_typed_producer(self):
+        class FnCompiler(Mock):
+            _zxux_symbolic_capture_installed = False
+            def __init__(self):
+                super().__init__()
+                self.unwritten = []
+            def st_deffn(self):
+                self.emit('ret')
+                self.unwritten.append((self.pc, 5))
+                self.pc += 5
+                self.emit('ret')
+                self.unwritten.append((self.pc, 2))
+                self.pc += 2
+                self.emit('ret')
+        install(types.SimpleNamespace(Compiler=FnCompiler))
+        c = FnCompiler()
+        c.st_deffn()
+        slots = [event for event in c._zxux_capture.events
+                 if event.source_site == 'st_deffn:unwritten']
+        self.assertEqual([(s.position, s.kind, s.source, s.data) for s in slots],
+                         [(1, 'inline-data', 'protected:def-fn-param', bytes(5)),
+                          (7, 'inline-data', 'protected:def-fn-param', bytes(2))])
+        self.assertEqual(c._zxux_capture.audit(bytes(c.far[:c.pc]))['uncovered_bytes'], 0)
+
+    def test_def_fn_rejects_invalid_parameter_extent(self):
+        class CorruptFn(Mock):
+            _zxux_symbolic_capture_installed = False
+            def __init__(self):
+                super().__init__()
+                self.unwritten = []
+            def st_deffn(self):
+                self.unwritten.append((127, 5))
+        install(types.SimpleNamespace(Compiler=CorruptFn))
+        with self.assertRaisesRegex(ValueError, 'untyped bounds'):
+            CorruptFn().st_deffn()
+
     def test_no_compiler_patch_twice(self):
         c = Mock()
         install(types.SimpleNamespace(Compiler=Mock))

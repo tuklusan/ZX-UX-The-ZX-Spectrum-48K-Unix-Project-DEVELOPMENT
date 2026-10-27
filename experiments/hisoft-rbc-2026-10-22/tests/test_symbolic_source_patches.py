@@ -33,6 +33,25 @@ class SourcePatches(unittest.TestCase):
         self.assertEqual(report['word_kinds'], {'literal-length': 1, 'control-target': 2})
         self.assertEqual(words[0][1].target, 24)
 
+    def test_def_fn_skip_jump_is_real_native_control_word(self):
+        bases = (0x6000, 0x5e7b, 0x5d97)
+        groups = []
+        for base in bases:
+            image = bytearray(80)
+            image[19:21] = (base + 51).to_bytes(2, 'little')
+            groups.append(from_emissions(
+                pair(19, 'st_deffn', base + 51), bytes(image), base, 75))
+        report = verify_three_passes(groups,
+                                    [SimpleNamespace(base=b) for b in bases])
+        self.assertEqual(report['word_kinds'],
+                         {'literal-length': 0, 'control-target': 1})
+        self.assertTrue(all(group[0].target == 51 for group in groups))
+        bad = bytearray(80)
+        bad[19:21] = (0x6000 + 77).to_bytes(2, 'little')
+        with self.assertRaisesRegex(UnresolvedSourcePatch, 'outside code'):
+            from_emissions(pair(19, 'st_deffn', 0x6000 + 77),
+                           bytes(bad), 0x6000, 75)
+
     def test_unknown_source_method_fails_closed(self):
         payload = pair(1, 'unknown_patch', 24)
         with self.assertRaises(UnresolvedSourcePatch):
