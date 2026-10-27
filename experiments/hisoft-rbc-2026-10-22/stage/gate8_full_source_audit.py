@@ -27,6 +27,8 @@ from symbolic_emit_sites import inspect_emit_sites, verify_three_emit_sites
 from symbolic_relative_branches import inspect_relative_branches, verify_three_relative_passes
 from typed_whole_pipeline import SourcePipelineError, link_source_pair, verify_and_build
 from gate8_runtime_source_match import verify_three_runtime_sources
+from gate8_native_runtime_combined import (RuntimeCombinedError,
+    verify_three_native_runtime_regions)
 from hisoft_frontend_inputs import KNOWN_COMPILER
 
 
@@ -151,6 +153,19 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         {PEEK_RT: 'native-peek', POKE_RT: 'native-poke',
          RT.PAUSE: 'native-pause', RT.VAL: 'guarded-val'},
         replacement_settings=runtime_layouts)
+    try:
+        native_runtime_region = verify_three_native_runtime_regions(
+            vendor.data, rom.read_bytes(),
+            [build.code for build in observed],
+            [build.base for build in observed],
+            [m.spans for m in source_maps],
+            {POKE_RT: 'native-poke', RT.PAUSE: 'native-pause'},
+            runtime_layouts)
+    except RuntimeCombinedError as exc:
+        native_runtime_region = {
+            'native_region_verified': False, 'blocker': str(exc),
+            'full_program_optimized': False, 'native_behavior_verified': False,
+        }
     first, _ = rbc.build_ssx(baseline, bytes(768), rld, 384, use_rom_font=True)
     second, _ = rbc.build_ssx(observed, bytes(768), rld, 384, use_rom_font=True)
     if first != second:
@@ -180,6 +195,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         'inline_source_fragments': fragment_report,
         'runtime_emitter_sources': runtime_report,
         'original_runtime_source_match': runtime_source_match,
+        'native_runtime_region': native_runtime_region,
         'compiler_source_sites': source_site_report,
         'relative_source_branches': relative_report,
         'whole_program_attempt': whole_attempt,
