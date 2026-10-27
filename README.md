@@ -49,6 +49,19 @@ repository to use or substitute its moving `main` branch.
 The separate authentic HiSoft BASIC v1.1 48K compiler TZX remains a verified,
 untracked tape input. It is not the Python frontend.
 
+## RBC Z80 optimizer — fixed upstream
+
+The RBC Z80 optimizer uses **only** the upstream source at
+https://github.com/tuklusan/upeepz80
+at commit `a48d725704b132c3ff23ac77232a3a412b56b15f`.
+The tracked `stage/upeepz80_codegen.py` pins that revision, and
+`stage/gate8_native_whole_optimizer.py` checks the upstream Git blob
+identities of `upeepz80/__init__.py`, `upeepz80/peephole.py`, and
+`upeepz80/z80.py` before importing the optimizer. In a fresh checkout,
+retrieve the exact revision, check the recorded SHA-1 values, and do not ask
+which upstream to use or substitute its moving `main` branch.
+The fixed source identity does not prove Gate 8 runtime equivalence.
+
 The technical reference index lives in `src/docs/README.md`.
 Future manuals under `src/docs/` use Git LFS, as configured by the committed
 `.gitattributes`. Install Git LFS and run `git lfs install --local` and
