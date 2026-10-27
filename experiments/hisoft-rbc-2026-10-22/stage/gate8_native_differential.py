@@ -20,8 +20,11 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
     except (rld.LinkError, ValueError, TypeError, KeyError) as exc:
         raise NativeProbeBlocked('invalid native input') from exc
     first, last = base, base + len(parsed['image'])
-    if first < 0x6000 or last > 0xa000 or not parsed['image']:
-        raise NativeProbeBlocked('native image outside bounded process area')
+    # The loader reserves the image, zero-initialized BSS and stack together.
+    # Checking only executable bytes admits impossible process layouts.
+    process_end = last + parsed['bss'] + parsed['stack']
+    if first < 0x6000 or process_end > 0xa000 or not parsed['image']:
+        raise NativeProbeBlocked('native image/BSS/stack outside bounded process area')
     try:
         image = rld.relocate(parsed['image'], parsed['relocs'], base)
     except (rld.LinkError, ValueError, OverflowError) as exc:
