@@ -30,32 +30,43 @@ class WholeOptimizerTests(unittest.TestCase):
                         entry='start', stack=384)[0]
 
     def test_full_program_optimizer_relinks_and_preserves_resource(self):
-        # Use register-only no-ops: PUSH/POP writes observable stack bytes.
-        whole = self.source().replace('    push hl\n    pop hl\n',
-                                      '    ld a,a\n    ld a,a\n')
-        obj = ras.assemble_text(whole, 'register-before.s')
-        before = rld.link([rld.Obj(obj, 'register-before.sso')], [],
-                          entry='start', stack=384)[0]
+        # The source is complete, including entry, branches and opaque data.
+        # Byte-identical formatting is safe to audit; changed instructions
+        # have no proof of refresh-register or clock equivalence yet.
+        whole = self.source()
         seen = []
         def optimize(source):
             seen.append(source)
-            return source.replace('    ld a,a\n    ld a,a\n', '')
-        result = verify_whole_optimizer_candidate(whole, before, optimize)
+            return source.replace('    call worker\n', '    call  worker ; same CALL\n')
+        result = verify_whole_optimizer_candidate(whole, self.baseline(), optimize)
         self.assertEqual(seen, [whole])
         self.assertTrue(result['native_candidate_link_verified'])
         self.assertTrue(result['source_cfg_liveness']['source_liveness_converged'])
-        self.assertFalse(result['candidate_cfg_liveness']['rewrite_safe_to_admit'])
         self.assertTrue(result['protected_source_lines_preserved'])
-        self.assertFalse(result['candidate_byte_identical'])
-        self.assertGreaterEqual(result['candidate_file_bytes_saved'], 0)
-        self.assertGreater(result['native_baseline_image_bytes'],
-                           result['native_candidate_image_bytes'])
-        self.assertGreater(result['candidate_total_bytes_saved'], 0)
+        self.assertTrue(result['candidate_byte_identical'])
+        self.assertEqual(result['candidate_file_bytes_saved'], 0)
+        self.assertEqual(result['candidate_total_bytes_saved'], 0)
         self.assertFalse(result['optimizer_candidate_admitted_for_publication'])
         self.assertFalse(result['native_behavior_verified'])
         self.assertFalse(result['full_program_optimized'])
 
+    def test_register_self_load_is_not_a_safe_removal(self):
+        # This used to pass the state guard as an unapproved linked candidate.
+        # R refresh and elapsed T-states change even if A and flags do not.
+        original = self.source().replace('    push hl\n    pop hl\n',
+                                         '    ld a,a\n    ld b,b\n')
+        before = rld.link([rld.Obj(ras.assemble_text(original, 'same-reg.s'),
+                                   'same-reg.sso')], [], entry='start', stack=384)[0]
+        for instr in ('ld a,a', 'ld b,b'):
+            changed = original.replace('    ' + instr + '\n', '')
+            with self.subTest(instr=instr):
+                with self.assertRaisesRegex(WholeOptimizerError,
+                                            'register, flag or address state'):
+                    verify_whole_optimizer_candidate(original, before,
+                                                     lambda _: changed)
+
     def test_runtime_witness_checked_on_changed_native_candidate(self):
+        from unittest.mock import patch
         original = self.source().replace('    push hl\n    pop hl\n',
                                          '    ld a,a\n    ld a,a\n')
         obj = ras.assemble_text(original, 'runtime-witness-before.s')
@@ -64,10 +75,10 @@ class WholeOptimizerTests(unittest.TestCase):
         def optimize(source):
             return source.replace('    ld a,a\n    ld a,a\n', '')
         resource = bytes((195, 0, 118, 255, 24))
-        result = verify_whole_optimizer_candidate(
-            original, before, optimize, expected_runtime_bytes=resource)
-        self.assertFalse(result['candidate_byte_identical'])
-        self.assertFalse(result['optimizer_candidate_admitted_for_publication'])
+        with self.assertRaisesRegex(WholeOptimizerError,
+                                    'register, flag or address state'):
+            verify_whole_optimizer_candidate(
+                original, before, optimize, expected_runtime_bytes=resource)
         attempts = []
         def traced(source):
             attempts.append(source)
@@ -76,29 +87,34 @@ class WholeOptimizerTests(unittest.TestCase):
                                     'runtime resource differs from baseline'):
             verify_whole_optimizer_candidate(
                 original, before, traced, expected_runtime_bytes=b'not present')
-        self.assertEqual(attempts, [])  # Reject the baseline before optimizing.
-        # Data pointers are source-owned relocation words. They can move as
-        # code shrinks; an exact-byte resource witness must not silently pass.
+        self.assertEqual(attempts, [])
+        # Independently exercise the candidate resource fence with the
+        # stricter state check deliberately bypassed inside this one test.
+        # It must still reject a protected relocated-word witness.
         before_image = rld.parse_ssx(before)['image']
-        with self.assertRaisesRegex(WholeOptimizerError,
-                                    'runtime resource differs from candidate'):
-            verify_whole_optimizer_candidate(
-                original, before, optimize, expected_runtime_bytes=before_image[-7:])
+        with patch('gate8_native_whole_optimizer._state_context', return_value=()):
+            with self.assertRaisesRegex(WholeOptimizerError,
+                                        'runtime resource differs from candidate'):
+                verify_whole_optimizer_candidate(
+                    original, before, optimize,
+                    expected_runtime_bytes=before_image[-7:])
 
     def test_opt_in_native_probe_rejects_changed_refresh_and_clock(self):
-        # This rewrite can pass syntactic source guards, but running the
-        # native code proves its changed R refresh value and T-state count.
         original = self.source().replace('    push hl\n    pop hl\n',
                                          '    ld a,a\n    ld a,a\n')
         obj = ras.assemble_text(original, 'native-probe-before.s')
         before = rld.link([rld.Obj(obj, 'native-probe-before.sso')], [],
                           entry='start', stack=384)[0]
-        def optimize(source):
-            return source.replace('    ld a,a\n    ld a,a\n', '')
+        changed = original.replace('    ld a,a\n    ld a,a\n', '')
         with self.assertRaisesRegex(WholeOptimizerError,
-                                    'bounded native candidate state differs'):
-            verify_whole_optimizer_candidate(original, before, optimize,
-                                             native_probe=True)
+                                    'register, flag or address state'):
+            verify_whole_optimizer_candidate(original, before,
+                                             lambda _: changed, native_probe=True)
+        from gate8_native_differential import compare_native_probes
+        candidate_obj = ras.assemble_text(changed, 'native-probe-shorter.s')
+        after = rld.link([rld.Obj(candidate_obj, 'native-probe-shorter.sso')], [],
+                         entry='start', stack=384)[0]
+        self.assertFalse(compare_native_probes(before, after)['bounded_exit_states_match'])
         matched = verify_whole_optimizer_candidate(original, before,
                                                    lambda s: s, native_probe=True)
         probe = matched['bounded_native_execution']

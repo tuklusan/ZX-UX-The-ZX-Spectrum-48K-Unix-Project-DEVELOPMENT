@@ -150,9 +150,10 @@ def _observable_accesses(assembly: str) -> tuple[tuple[str, str, str], ...]:
 # changing LD HL,addr changes which byte a subsequent LD A,(HL) reads.
 # Likewise flags and registers can feed branch conditions and return state.
 # The current CFG/liveness inventory does not prove rewritten arithmetic or
-# address calculations. Only register-to-itself LD is excluded from this
-# *necessary* check; removing one still changes clock/R and is not approved.
-_BYTE_REGISTERS = frozenset(('a', 'b', 'c', 'd', 'e', 'h', 'l'))
+# address calculations. Keep even register-to-itself loads: LD A,A consumes
+# an opcode fetch, changes the refresh register R and advances FRAMES timing.
+# Dropping it is observable even though register A and the ordinary flags stay
+# unchanged. Do not exempt any executable instruction from this guard.
 
 
 def _state_context(assembly: str) -> tuple[tuple[str, str, str], ...]:
@@ -180,10 +181,6 @@ def _state_context(assembly: str) -> tuple[tuple[str, str, str], ...]:
         parts = line.split(None, 1)
         op = parts[0]
         operand = re.sub(r'\s+', '', parts[1]) if len(parts) == 2 else ''
-        if op == 'ld' and ',' in operand:
-            target, value = operand.split(',', 1)
-            if target == value and target in _BYTE_REGISTERS:
-                continue
         instructions.append((owner, op, operand))
     return tuple(instructions)
 
