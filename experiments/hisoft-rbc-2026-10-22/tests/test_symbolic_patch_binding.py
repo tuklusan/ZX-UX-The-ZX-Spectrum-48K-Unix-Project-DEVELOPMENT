@@ -115,6 +115,36 @@ class PatchedSources(unittest.TestCase):
             self.assertEqual(bytes(rld.relocate(ssx['image'], ssx['relocs'], base)),
                              image)
 
+    def test_rewound_loop_word_rebinds_to_latest_native_jump(self):
+        groups, images = [], []
+        for base in self.BASES:
+            earlier = (base + 4).to_bytes(2, 'little')
+            latest = (base + 3).to_bytes(2, 'little')
+            groups.append([
+                Emission(0, 'instruction', 'jp nz,$FFFF', b'\xc2\xff\xff'),
+                Emission(1, 'direct-write', 'spectrum_for', earlier),
+                Emission(0, 'instruction', 'jp nz,$FFFF', b'\xc2\xff\xff'),
+                Emission(1, 'direct-write', 'spectrum_pass', latest),
+                Emission(3, 'instruction', 'ret', b'\xc9'),
+            ])
+            images.append(b'\xc2' + latest + b'\xc9')
+        bound, report = bind_three_source_passes(groups, images,
+                                                 self.BASES, (4,) * 3)
+        self.assertEqual(report['verified_source_words'], 1)
+        self.assertEqual(report['superseded_source_emissions'], 2)
+        for events, image, base in zip(bound, images, self.BASES):
+            self.assertEqual([e.kind for e in events],
+                             ['opcode', 'relocation', 'instruction'])
+            source = from_source(events, image, base, 4, 0,
+                                 assembler).assembly()
+            self.assertIn('jp nz,source_0003', source)
+            obj = ras.assemble_text(source, 'rewound-for.s')
+            linked, *_ = rld.link([rld.Obj(obj, 'rewound-for.sso')], [],
+                                  entry='start', stack=384)
+            parsed = rld.parse_ssx(linked)
+            self.assertEqual(bytes(rld.relocate(parsed['image'],
+                                                 parsed['relocs'], base)), image)
+
     def test_three_base_rewind_history_must_agree(self):
         runs = []
         for base in self.BASES:

@@ -59,6 +59,26 @@ class SourcePatches(unittest.TestCase):
         with self.assertRaisesRegex(UnresolvedSourcePatch, 'changed after capture'):
             from_emissions(events, b'\xcd\x04\x60\xc9', base, 4)
 
+    def test_replaced_loop_jump_patch_requires_new_full_source(self):
+        base = 0x6000
+        old = pair(1, 'spectrum_for', base + 4)
+        new = pair(1, 'spectrum_pass', base + 3)
+        replacement = SimpleNamespace(kind='instruction', position=0,
+                                      source='jp nz,$FFFF', data=b'\xc2\xff\xff')
+        final = b'\xc2' + (base + 3).to_bytes(2, 'little') + b'\xc9'
+        words = from_emissions(old + [replacement] + new, final, base, 4)
+        self.assertEqual([(w.site, w.source, w.target) for w in words],
+                         [(1, 'spectrum_pass', 3)])
+        with self.assertRaisesRegex(UnresolvedSourcePatch, 'overlapping'):
+            from_emissions(old + new, final, base, 4)
+        with self.assertRaisesRegex(UnresolvedSourcePatch, 'overlapping'):
+            from_emissions(old + [SimpleNamespace(
+                kind='opcode', position=0, source='jp nz,nn', data=b'\xc2')]
+                + new, final, base, 4)
+        with self.assertRaises(UnresolvedSourcePatch):
+            from_emissions(old + [replacement] +
+                           pair(1, 'unknown', base + 3), final, base, 4)
+
     def test_def_fn_skip_jump_is_real_native_control_word(self):
         bases = (0x6000, 0x5e7b, 0x5d97)
         groups = []

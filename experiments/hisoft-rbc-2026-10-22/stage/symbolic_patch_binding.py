@@ -78,12 +78,21 @@ def _final_source_events(events, image: bytes, words=None):
     keep = []
     active_sites = ({pos for word in words for pos in (word.site, word.site + 1)}
                     if words is not None else None)
+    live_direct_indices = None
+    if active_sites is not None:
+        last_direct = {}
+        for index, event in enumerate(events):
+            if event.kind == 'direct-write':
+                for n in range(len(event.data)):
+                    pos = event.position + n
+                    if pos in active_sites:
+                        last_direct[pos] = index
+        if set(last_direct) != active_sites:
+            raise PatchBindingError('final direct patch lacks complete source bytes')
+        live_direct_indices = set(last_direct.values())
     for index, event in enumerate(events):
         if event.kind == 'direct-write':
-            positions = {event.position + n for n in range(len(event.data))}
-            if active_sites is not None and not positions <= active_sites:
-                if positions & active_sites:
-                    raise PatchBindingError('partial direct patch remains live')
+            if live_direct_indices is not None and index not in live_direct_indices:
                 removed.append(index)  # Source overwrite stays in audit history.
                 continue
             keep.append(event)

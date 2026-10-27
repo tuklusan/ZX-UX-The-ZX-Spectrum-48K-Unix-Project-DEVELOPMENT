@@ -7,6 +7,7 @@ fail closed. Cross-pass target checks are required before relocation is trusted.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 
 
 class UnresolvedSourcePatch(ValueError):
@@ -26,7 +27,8 @@ _TYPES = {'emit_string_inline': 'literal-length',
           'st_next': 'control-target',
           'st_deffn': 'control-target',
           'end_of_line': 'control-target',
-          'spectrum_for': 'control-target'}
+          'spectrum_for': 'control-target',
+          'spectrum_pass': 'control-target'}
 
 
 # Only compiler-owned, source-typed emitters can supersede an old patch.
@@ -58,13 +60,41 @@ def from_emissions(events, image: bytes, code_base: int,
                 isinstance(event.data, bytes)):
             for n, value in enumerate(event.data):
                 writers[event.position + n] = (index, event.kind, value)
-    # Reject colliding direct words before considering later typed rewinds.
-    if len({item[0] for item in observed}) != len(observed):
-        raise UnresolvedSourcePatch('overlapping source patch bytes')
+    # A prior loop target may be replaced by a newly emitted JP after a
+    # compiler rewind, followed by a second patch to that same word. The
+    # earlier patch is no longer part of the program. Require the intervening
+    # original JP/CALL placeholder as an independently captured whole source
+    # instruction; otherwise overlapping direct words are always rejected.
+    discarded = set()
+    pairs = [observed[n:n+2] for n in range(0, len(observed), 2)]
+    for index, pair in enumerate(pairs):
+        if len(pair) != 2:
+            raise UnresolvedSourcePatch('unpaired direct source byte')
+        start = pair[0][0]
+        for earlier in range(index):
+            previous = pairs[earlier]
+            if {start, pair[1][0]}.isdisjoint({previous[0][0], previous[1][0]}):
+                continue
+            if (previous[0][0] != start or previous[1][0] != pair[1][0] or
+                    earlier in discarded):
+                raise UnresolvedSourcePatch('overlapping source patch bytes')
+            low = previous[1][3] + 1
+            high = pair[0][3]
+            if not any(
+                    event.kind == 'instruction' and event.position == start - 1 and
+                    len(event.data) == 3 and
+                    re.fullmatch(r'(?:jp|call)\s+(?:(?:nz|z|nc|c|po|pe|p|m)\s*,\s*)?(?:0|\$ffff)',
+                                 event.source.strip().lower())
+                    for event in events[low:high]):
+                raise UnresolvedSourcePatch('overlapping source patch bytes')
+            discarded.add(earlier)
     groups = []
     occupied = set()
     i = 0
     while i < len(observed):
+        if i // 2 in discarded:
+            i += 2
+            continue
         first = observed[i]
         if i + 1 == len(observed):
             raise UnresolvedSourcePatch('unpaired direct source byte')
