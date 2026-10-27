@@ -72,6 +72,12 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
             cycles += cpu.step()
         except (NotImplementedError, IndexError) as exc:
             raise NativeProbeBlocked('native instruction not supported by probe') from exc
+        # The probe uses a separate caller sentinel at 0xD000. The SSX
+        # declared stack is the maximum space below that sentinel; a program
+        # cannot borrow extra bytes and then hide an overflow by popping.
+        # RET through the caller sentinel may advance SP by two bytes.
+        if not 0xd000 - parsed['stack'] <= cpu.sp <= 0xd002:
+            raise NativeProbeBlocked('native execution exceeded declared stack')
         returned = (cpu.pc == 0xb000 and is_return and
                     stack == 0xd000 and return_word == 0xb000 and
                     cpu.sp == 0xd002)
