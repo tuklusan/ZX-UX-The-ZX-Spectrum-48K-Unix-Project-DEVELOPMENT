@@ -26,6 +26,8 @@ def assembler(s):
         return b'\x00'
     if s == 'ret':
         return b'\xc9'
+    if s == 'defb 1':
+        return b'\x01'
     raise ValueError(s)
 
 
@@ -66,6 +68,41 @@ class WholePipeline(unittest.TestCase):
         self.assertEqual(rld.parse_ssx(plain)['bss'], 8)
         self.assertEqual(report['plain']['baseline_bss_bytes'], 8)
         self.assertFalse(report['native_behavior_verified'])
+
+    def test_full_instruction_rewind_passes_native_link(self):
+        group = (Emission(0, 'instruction', 'ret', b'\xc9',
+                          source_site='emit:100'),
+                 Emission(0, 'instruction', 'nop', b'\x00',
+                          source_site='emit:101'),
+                 Emission(1, 'instruction', 'ret', b'\xc9',
+                          source_site='emit:102'))
+        source = verify_and_build((group,) * 3, (b'\x00\xc9',) * 3,
+                                  self.bases, (2,) * 3, (0,) * 3, assembler)
+        self.assertEqual(source.source_report['final_source_fragments']
+                         ['instruction_statements'], 2)
+        plain, candidate, report = link_source_pair(
+            source, ras, rld, lambda text: text)
+        self.assertEqual(plain, candidate)
+        self.assertEqual(rld.parse_ssx(plain)['image'], b'\x00\xc9')
+        self.assertTrue(report['native_links_verified'])
+
+    def test_replaced_protected_calculator_data_rejected(self):
+        group = (Emission(0, 'instruction', 'ret; defb 1', b'\xc9\x01',
+                          source_site='emit:100'),
+                 Emission(0, 'instruction', 'nop; ret', b'\x00\xc9',
+                          source_site='emit:101'))
+        with self.assertRaisesRegex(SourcePipelineError, 'protected inline data'):
+            verify_and_build((group,) * 3, (b'\x00\xc9',) * 3,
+                             self.bases, (2,) * 3, (0,) * 3, assembler)
+
+    def test_partial_historical_instruction_rewrite_rejected(self):
+        group = (Emission(0, 'instruction', 'nop; ret', b'\x00\xc9',
+                          source_site='emit:100'),
+                 Emission(0, 'instruction', 'ret', b'\xc9',
+                          source_site='emit:101'))
+        with self.assertRaisesRegex(SourcePipelineError, 'partial'):
+            verify_and_build((group,) * 3, (b'\xc9\xc9',) * 3,
+                             self.bases, (2,) * 3, (0,) * 3, assembler)
 
     def test_bad_compiler_site_rejected_before_any_link(self):
         events, images, bases, ends, bss = self.cases()

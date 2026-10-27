@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from symbolic_emit_sites import inspect_emit_sites, verify_three_emit_sites
+from symbolic_fragments import inspect_final_fragments, verify_three_fragment_passes
 from symbolic_from_source import from_source
 from symbolic_patch_binding import bind_three_source_passes
 from symbolic_original_literals import protect_three_original_literals
@@ -54,6 +55,9 @@ def verify_and_build(events, images, bases, text_ends, bss_sizes,
     try:
         source_sites = [inspect_emit_sites(group) for group in events]
         site_report = verify_three_emit_sites(source_sites, bases)
+        fragments = [inspect_final_fragments(group, image, end, assembler)
+                     for group, image, end in zip(events, images, text_ends)]
+        fragment_report = verify_three_fragment_passes(fragments, bases)
         patched, patch_report = bind_three_source_passes(events, images, bases,
                                                          text_ends)
         typed, literal_report = protect_three_original_literals(patched, images)
@@ -89,6 +93,7 @@ def verify_and_build(events, images, bases, text_ends, bss_sizes,
             reloc_sites.update(range(span.end - 2, span.end))
     return VerifiedSource(programs[0], {
         'passes': 3, 'compiler_call_sites': site_report,
+        'final_source_fragments': fragment_report,
         'source_word_patches': patch_report,
         'protected_original_literals': literal_report,
         'source_line_table': line_report,
