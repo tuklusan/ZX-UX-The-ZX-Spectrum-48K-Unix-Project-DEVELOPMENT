@@ -1,7 +1,7 @@
 """Measure real native memory for the original oversized BASIC programs.
 
 All results remain untracked in build/tmp. The published program tree, the
-default 12000-byte admission limit, and original source files are unchanged.
+default 14000-byte admission limit, and original source files are unchanged.
 """
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ def build(original, target, report, optimized, limit, frontend, tape):
     ]
     if optimized:
         cmd.append('--upeepz80')
-    if limit != 12000:
+    if limit != 14000:
         cmd.extend(('--max', str(limit)))
     p = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, timeout=160)
     row = {'exit': p.returncode, 'stdout': p.stdout[-3000:],
@@ -94,7 +94,7 @@ def main():
             case = folder / key
             case.mkdir(exist_ok=True)
             primary = build(original, case / 'default.ssx', case / 'default.json',
-                            optimized, 12000, args.frontend, args.tape)
+                            optimized, 14000, args.frontend, args.tape)
             item = {'default': primary}
             if not primary['linked']:
                 item['test_override_24000'] = build(

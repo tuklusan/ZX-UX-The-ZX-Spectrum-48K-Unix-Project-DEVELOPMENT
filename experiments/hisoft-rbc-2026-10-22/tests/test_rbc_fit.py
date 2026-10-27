@@ -21,6 +21,9 @@ class FitTests(unittest.TestCase):
         self.assertIn('if not use_rom_font', rules)
         self.assertIn('memory_required(rld.parse_ssx(ssx)', rules)
         self.assertIn('native-memory-limit', rules)
+        self.assertIn('default=14000', rules)
+        self.assertNotIn('default=12000', rules)
+        self.assertIn('args.max and measured > args.max', rules)
         self.assertIn('args.output = output_path', rules)
         self.assertIn('if args.bytecode', rules)
 

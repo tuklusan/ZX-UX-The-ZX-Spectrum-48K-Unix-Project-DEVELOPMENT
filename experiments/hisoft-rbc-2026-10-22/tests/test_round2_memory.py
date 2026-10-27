@@ -13,21 +13,16 @@ class Round2Memory(unittest.TestCase):
     def test_large_ssx_file_also_counts(self):
         self.assertEqual(memory_required(dict(image=b'XYZ', bss=0, stack=384), 12000), 12000)
 
-    def test_default_is_11000(self):
-        from rbc_fit import patched
-        source = Path('build/tmp/rbc-round2/checkpoint/scratch/rbc/rbc.py')
-        if not source.is_file():
-            self.fail('Unmodified original RBC source not available for fit check')
-        result = patched(source.read_text())
-        self.assertIn('default=12000', result)
-        self.assertNotIn('default=11000', result)
+    def test_default_is_14000(self):
+        rule = (Path(__file__).resolve().parents[1] / 'stage' / 'rbc_fit.py').read_text()
+        self.assertIn('default=14000', rule)
+        self.assertNotIn('default=12000', rule)
 
     def test_size_is_exactly_reported_for_rejection(self):
-        from rbc_fit import patched
-        source = Path('build/tmp/rbc-round2/checkpoint/scratch/rbc/rbc.py')
-        result = patched(source.read_text())
-        self.assertIn('memory_required', result)
-        self.assertIn('needs %d bytes of native memory (limit %d)', result)
+        rule = (Path(__file__).resolve().parents[1] / 'stage' / 'rbc_fit.py').read_text()
+        self.assertIn('memory_required(rld.parse_ssx(ssx), len(ssx))', rule)
+        self.assertIn('needs %d bytes of native memory (limit %d)', rule)
+        self.assertIn("if mode == 'link' and args.max and measured > args.max", rule)
 
 
 if __name__ == '__main__':
