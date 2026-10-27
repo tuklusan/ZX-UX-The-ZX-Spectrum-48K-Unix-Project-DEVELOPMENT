@@ -35,6 +35,20 @@ by `git commit` and `git push`). The initial tracked distribution was recovered
 from the last checked-in release snapshot; it has not been freshly rebuilt
 as part of this repository-layout change.
 
+## RBC HiSoft frontend — fixed source
+
+The RBC compiler work under `experiments/hisoft-rbc-2026-10-22/` uses
+**only** the Python HiSoft frontend from
+https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft
+at commit `7cc87dafb58fcf5632b7190320dd11c30b4fe961`.
+The tracked `stage/hisoft_frontend_inputs.py` records that revision and the
+expected Git blob SHA for each upstream Python file. In a fresh checkout,
+retrieve those exact files and check their hashes; do not ask which frontend
+repository to use or substitute its moving `main` branch.
+
+The separate authentic HiSoft BASIC v1.1 48K compiler TZX remains a verified,
+untracked tape input. It is not the Python frontend.
+
 The technical reference index lives in `src/docs/README.md`.
 Future manuals under `src/docs/` use Git LFS, as configured by the committed
 `.gitattributes`. Install Git LFS and run `git lfs install --local` and
