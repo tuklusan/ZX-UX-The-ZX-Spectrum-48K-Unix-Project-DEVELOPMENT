@@ -124,6 +124,33 @@ class NativeFromSource(unittest.TestCase):
             with self.subTest(ins=ins):
                 _validate_static_instruction(ins)
 
+    def test_protected_data_followed_by_branch_target_has_one_label(self):
+        # A verified jump can target the first instruction after opaque data.
+        # Its label is owned by that instruction, never by both producers.
+        base = 0x6000
+        image = b'\xc3\x05\x60\xfe\xed\xc9'
+        src = [e('opcode', 0, b'\xc3', 'jp nn'),
+               e('relocation', 1, b'\x05\x60', '5', 5),
+               e('inline-data', 3, b'\xfe\xed', 'protected:literal'),
+               e('instruction', 5, b'\xc9', 'ret')]
+        def source_asm(value):
+            if value == 'jp 24581':
+                return b'\xc3\x05\x60'
+            if value == 'ret':
+                return b'\xc9'
+            raise ValueError(value)
+        verified = from_source(src, image, base, len(image), 0, source_asm)
+        source = verified.assembly()
+        self.assertEqual(source.count('source_0005:'), 1)
+        self.assertIn('jp source_0005', source)
+        obj = ras.assemble_text(source, 'protected-target.s')
+        ssx, *_ = rld.link([rld.Obj(obj, 'protected-target.sso')], [],
+                           entry='start', stack=384)
+        linked = rld.parse_ssx(ssx)
+        self.assertEqual(bytes(rld.relocate(linked['image'], linked['relocs'], base)),
+                         image)
+        self.assertEqual(linked['relocs'], [1])
+
     def test_inline_source_data_preserved(self):
         image = b'\xef\x31\x04\x38\xc9'
         src = [e('instruction', 0, b'\xef\x31\x04\x38',

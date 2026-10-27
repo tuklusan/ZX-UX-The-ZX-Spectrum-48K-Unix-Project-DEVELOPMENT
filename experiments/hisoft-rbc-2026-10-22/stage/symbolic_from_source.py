@@ -140,7 +140,11 @@ def from_source(events, image: bytes, base: int, text_end: int, bss: int,
             begin = span.start
             for end in (*stops, span.end):
                 program.binary(image[begin:end])
-                if end in marks:
+                # A target at span.end belongs to the following producer;
+                # only labels strictly inside protected data are inserted here.
+                # Labelling the boundary twice breaks a native link even when
+                # both source producers and the target are fully verified.
+                if end in stops:
                     program.label(name(end), entry=end in entry_offsets)
                 begin = end
         else:
