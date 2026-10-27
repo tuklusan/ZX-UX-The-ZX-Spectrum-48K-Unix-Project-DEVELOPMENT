@@ -76,6 +76,15 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
         raise WholeOptimizerError('typed whole source and optimizer required')
     try:
         plain = rld.parse_ssx(native_baseline)
+        # The source itself must independently rebuild the claimed baseline.
+        # Merely relinking the optimizer output against an unrelated SSX lets
+        # missing or substituted compiler source pass a native-link gate.
+        baseline_obj = ras.assemble_text(assembly, 'rbc-whole-original.s')
+        rebuilt, *_ = rld.link(
+            [rld.Obj(baseline_obj, 'rbc-whole-original.sso')], [],
+            entry='start', stack=plain['stack'])
+        if rebuilt != native_baseline:
+            raise WholeOptimizerError('whole source does not reproduce native baseline')
         candidate_text = optimizer(assembly)
         if not isinstance(candidate_text, str):
             raise WholeOptimizerError('optimizer did not return assembly text')
@@ -87,7 +96,7 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
             entry='start', stack=plain['stack'])
         linked = rld.parse_ssx(candidate_ssx)
     except (ValueError, TypeError, KeyError, AttributeError, IndexError,
-            SymbolicError) as exc:
+            SymbolicError, ras.AsmError, rld.LinkError) as exc:
         raise WholeOptimizerError('full-source optimizer candidate rejected: ' + str(exc)) from exc
     if (linked['entry'] != plain['entry'] or
             linked['bss'] != plain['bss'] or linked['stack'] != plain['stack']):
@@ -106,6 +115,7 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
         'optimizer_full_program_source_presented': True,
         'native_baseline_sha256': hashlib.sha256(native_baseline).hexdigest(),
         'native_candidate_sha256': hashlib.sha256(candidate_ssx).hexdigest(),
+        'native_baseline_source_reassembled': True,
         'native_candidate_link_verified': True,
         'protected_source_lines_preserved': True,
         'candidate_byte_identical': unchanged,

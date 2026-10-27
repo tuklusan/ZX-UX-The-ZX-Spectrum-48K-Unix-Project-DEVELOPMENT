@@ -49,6 +49,27 @@ class WholeOptimizerTests(unittest.TestCase):
         self.assertFalse(result['native_behavior_verified'])
         self.assertFalse(result['full_program_optimized'])
 
+    def test_reject_forged_or_stale_native_baseline_before_optimizing(self):
+        genuine = self.baseline()
+        original = self.source()
+        calls = []
+        def spy(text):
+            calls.append(text)
+            return text
+        changed = original.replace('    push hl\n    pop hl\n', '')
+        # Neither an alternate linked image nor altered bytes match this source.
+        for bad in (
+                rld.link([rld.Obj(ras.assemble_text(changed, 'other.s'),
+                                  'other.sso')], [], entry='start', stack=384)[0],
+                genuine[:-1] + bytes([genuine[-1] ^ 1])):
+            with self.subTest(baseline_bytes=len(bad)):
+                with self.assertRaises(WholeOptimizerError):
+                    verify_whole_optimizer_candidate(original, bad, spy)
+        self.assertEqual(calls, [])
+        result = verify_whole_optimizer_candidate(original, genuine, spy)
+        self.assertTrue(result['native_baseline_source_reassembled'])
+        self.assertEqual(calls, [original])
+
     def test_protect_binary_resource(self):
         with self.assertRaisesRegex(WholeOptimizerError, 'protected'):
             verify_whole_optimizer_candidate(
