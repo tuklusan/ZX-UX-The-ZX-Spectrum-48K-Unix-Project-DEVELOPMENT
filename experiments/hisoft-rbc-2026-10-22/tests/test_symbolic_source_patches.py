@@ -33,6 +33,32 @@ class SourcePatches(unittest.TestCase):
         self.assertEqual(report['word_kinds'], {'literal-length': 1, 'control-target': 2})
         self.assertEqual(words[0][1].target, 24)
 
+    def test_rewound_inline_length_requires_full_later_typed_source(self):
+        # Original HiSoft may discard the old inline length and overwrite it
+        # with a new CALL mnemonic after rewinding the compiler's code cursor.
+        base = 0x6000
+        events = [SimpleNamespace(kind='word', position=1,
+                                  source='(3,)', data=b'\x03\x00')]
+        events += pair(1, 'emit_string_inline', 1)
+        events += [SimpleNamespace(kind='opcode', position=0,
+                                   source='call nn', data=b'\xcd'),
+                   SimpleNamespace(kind='relocation', position=1,
+                                   source='(3,)', data=b'\x03\x60')]
+        self.assertEqual(from_emissions(events, b'\xcd\x03\x60\xc9', base, 4), ())
+        # One byte of the old word remaining is not a complete typed rewrite.
+        with self.assertRaisesRegex(UnresolvedSourcePatch, 'changed after capture'):
+            from_emissions(events[:-1] + [SimpleNamespace(
+                kind='byte', position=1, source='(3,)', data=b'\x03')],
+                b'\xcd\x03\x00\xc9', base, 4)
+        # An unknown later byte producer cannot make a stale patch safe.
+        with self.assertRaisesRegex(UnresolvedSourcePatch, 'changed after capture'):
+            from_emissions(events[:-1] + [SimpleNamespace(
+                kind='runtime-opaque', position=1, source='unknown',
+                data=b'\x03\x60')], b'\xcd\x03\x60\xc9', base, 4)
+        # Incorrect final bytes cannot be accepted as a typed rewind either.
+        with self.assertRaisesRegex(UnresolvedSourcePatch, 'changed after capture'):
+            from_emissions(events, b'\xcd\x04\x60\xc9', base, 4)
+
     def test_def_fn_skip_jump_is_real_native_control_word(self):
         bases = (0x6000, 0x5e7b, 0x5d97)
         groups = []

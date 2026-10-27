@@ -52,7 +52,7 @@ def _split_original_control(event, word, image):
                      source_site=event.source_site))
 
 
-def _final_source_events(events, image: bytes):
+def _final_source_events(events, image: bytes, words=None):
     """Drop fully superseded source writes after checking chronological ownership.
 
     The original compiler may rewind and emit new statements over complete
@@ -76,8 +76,16 @@ def _final_source_events(events, image: bytes):
         live_count[index] = live_count.get(index, 0) + 1
     removed = []
     keep = []
+    active_sites = ({pos for word in words for pos in (word.site, word.site + 1)}
+                    if words is not None else None)
     for index, event in enumerate(events):
         if event.kind == 'direct-write':
+            positions = {event.position + n for n in range(len(event.data))}
+            if active_sites is not None and not positions <= active_sites:
+                if positions & active_sites:
+                    raise PatchBindingError('partial direct patch remains live')
+                removed.append(index)  # Source overwrite stays in audit history.
+                continue
             keep.append(event)
             continue
         count = live_count.get(index, 0)
@@ -168,8 +176,8 @@ def bind_three_source_passes(groups, images, bases, text_ends):
     words = [from_emissions(events, image, base, end)
              for events, image, base, end in zip(groups, images, bases, text_ends)]
     report = verify_three_passes(words, [SimpleNamespace(base=b) for b in bases])
-    final_sources = [_final_source_events(events, image)
-                     for events, image in zip(groups, images)]
+    final_sources = [_final_source_events(events, image, live_words)
+                     for events, image, live_words in zip(groups, images, words)]
     first_removed = final_sources[0][1]
     if any(dead != first_removed for _, dead in final_sources[1:]):
         raise PatchBindingError('source rewrite ownership differs across compiler bases')

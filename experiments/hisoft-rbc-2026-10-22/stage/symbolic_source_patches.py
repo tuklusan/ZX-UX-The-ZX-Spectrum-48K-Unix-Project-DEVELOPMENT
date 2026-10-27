@@ -29,18 +29,40 @@ _TYPES = {'emit_string_inline': 'literal-length',
           'spectrum_for': 'control-target'}
 
 
+# Only compiler-owned, source-typed emitters can supersede an old patch.
+# Bytes from DATA/runtime writers, another direct store, or unknown methods
+# cannot justify discarding a previously captured source word.
+_REWRITE_KINDS = frozenset(('instruction', 'opcode', 'relocation',
+                            'word', 'byte', 'binary'))
+
+
 def from_emissions(events, image: bytes, code_base: int,
                    text_end: int) -> tuple[SourceWord, ...]:
-    """Return typed source writes, rejecting partial or non-code references."""
+    """Return final source words and check fully superseded earlier writes.
+
+    HiSoft may rewind its code pointer after writing an inline string length,
+    then emit a different instruction over *both* bytes of that length. The
+    old source write remains in the chronological trace, but is not part of
+    the final program. Both bytes must be owned by later typed emitters, with
+    byte-exact agreement; partial rewrites and unknown owners fail closed.
+    """
     observed = []
-    for event in events:
-        if event.kind != 'direct-write':
-            continue
-        if not 1 <= len(event.data) <= 2:
-            raise UnresolvedSourcePatch('unexpected direct source store length')
-        observed.extend((event.position + n, event.source, value)
-                        for n, value in enumerate(event.data))
+    writers = {}
+    for index, event in enumerate(events):
+        if event.kind == 'direct-write':
+            if not 1 <= len(event.data) <= 2:
+                raise UnresolvedSourcePatch('unexpected direct source store length')
+            observed.extend((event.position + n, event.source, value, index)
+                            for n, value in enumerate(event.data))
+        if (isinstance(event.position, int) and
+                isinstance(event.data, bytes)):
+            for n, value in enumerate(event.data):
+                writers[event.position + n] = (index, event.kind, value)
+    # Reject colliding direct words before considering later typed rewinds.
+    if len({item[0] for item in observed}) != len(observed):
+        raise UnresolvedSourcePatch('overlapping source patch bytes')
     groups = []
+    occupied = set()
     i = 0
     while i < len(observed):
         first = observed[i]
@@ -54,9 +76,27 @@ def from_emissions(events, image: bytes, code_base: int,
             raise UnresolvedSourcePatch('direct source patch outside image')
         if first[0] + 1 >= text_end:
             raise UnresolvedSourcePatch('direct source patch outside executable text')
+        footprint = {first[0], second[0]}
+        if occupied.intersection(footprint):
+            raise UnresolvedSourcePatch('overlapping source patch bytes')
+        occupied.update(footprint)
+        word = (first[2], second[2])
+        final = image[first[0]:second[0] + 1]
+        owners = (writers[first[0]], writers[second[0]])
+        if (owners[0][0] == first[3] and owners[1][0] == second[3]):
+            if final != bytes(word):
+                raise UnresolvedSourcePatch('source write changed after capture')
+        else:
+            # A later emitter must replace *all* bytes, even if one has the
+            # same value. A later direct store or a partial overlap is unsafe.
+            if not all(owner[0] > original[3] and
+                       owner[1] in _REWRITE_KINDS and
+                       owner[2] == final[n]
+                       for n, (owner, original) in enumerate(zip(owners, (first, second)))):
+                raise UnresolvedSourcePatch('source write changed after capture')
+            i += 2
+            continue
         value = first[2] | second[2] << 8
-        if image[first[0]:first[0] + 2] != bytes((value & 255, value >> 8)):
-            raise UnresolvedSourcePatch('source write changed after capture')
         kind = _TYPES[first[1]]
         target = None
         if kind == 'control-target':
@@ -65,12 +105,6 @@ def from_emissions(events, image: bytes, code_base: int,
                 raise UnresolvedSourcePatch('computed control target outside code')
         groups.append(SourceWord(first[0], first[1], kind, value, target))
         i += 2
-    occupied = set()
-    for group in groups:
-        footprint = {group.site, group.site + 1}
-        if occupied.intersection(footprint):
-            raise UnresolvedSourcePatch('overlapping source patch bytes')
-        occupied.update(footprint)
     return tuple(groups)
 
 

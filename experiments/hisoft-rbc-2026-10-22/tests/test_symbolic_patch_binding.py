@@ -19,6 +19,10 @@ from symbolic_source_boundaries import inspect_source_boundaries
 
 
 def assembler(s):
+    if s == 'call nn':
+        return b'\xcd'
+    if s.startswith('call '):
+        return b'\xcd' + int(s[5:]).to_bytes(2, 'little')
     if s == 'jp nn':
         return b'\xc3'
     for source, opcode in (('jp z,', 0xca), ('jp nz,', 0xc2)):
@@ -78,6 +82,55 @@ class PatchedSources(unittest.TestCase):
             native = rld.parse_ssx(ssx)
             self.assertEqual(native['image'], b'\xc3\x04\x00\x00\xc9')
             self.assertEqual(len(native['relocs']), 1)
+
+    def test_discarded_inline_word_is_absent_from_final_three_base_source(self):
+        builds = []
+        for base in self.BASES:
+            operand = (base + 3).to_bytes(2, 'little')
+            original = [Emission(0, 'instruction', 'ld hl,0', b'\x21\x00\x00'),
+                        Emission(1, 'direct-write', 'emit_string_inline', b'\x01'),
+                        Emission(2, 'direct-write', 'emit_string_inline', b'\x00'),
+                        Emission(0, 'opcode', 'call nn', b'\xcd'),
+                        Emission(1, 'relocation', '3', operand, 3),
+                        Emission(3, 'instruction', 'ret', b'\xc9')]
+            builds.append((original, b'\xcd' + operand + b'\xc9'))
+        bound, report = bind_three_source_passes(
+            [b[0] for b in builds], [b[1] for b in builds],
+            self.BASES, (4,) * 3)
+        self.assertEqual(report['verified_source_words'], 0)
+        self.assertEqual(report['superseded_source_emissions'], 3)
+        for (events, image), source, base in zip(builds, bound, self.BASES):
+            self.assertEqual([e.kind for e in source],
+                             ['opcode', 'relocation', 'instruction'])
+            mapping = inspect_source_boundaries(source, image, base, 4, 0,
+                                                assembler)
+            self.assertTrue(mapping.fully_typed)
+            assembly = from_source(source, image, base, 4, 0,
+                                   assembler).assembly()
+            self.assertIn('call source_0003', assembly)
+            obj = ras.assemble_text(assembly, 'rewound-inline.s')
+            linked, *_ = rld.link([rld.Obj(obj, 'rewound-inline.sso')], [],
+                                  entry='start', stack=384)
+            ssx = rld.parse_ssx(linked)
+            self.assertEqual(bytes(rld.relocate(ssx['image'], ssx['relocs'], base)),
+                             image)
+
+    def test_three_base_rewind_history_must_agree(self):
+        runs = []
+        for base in self.BASES:
+            operand = (base + 3).to_bytes(2, 'little')
+            events = [Emission(0, 'instruction', 'ld hl,0', b'\x21\x00\x00'),
+                      Emission(1, 'direct-write', 'emit_string_inline', b'\x01'),
+                      Emission(2, 'direct-write', 'emit_string_inline', b'\x00'),
+                      Emission(0, 'opcode', 'call nn', b'\xcd'),
+                      Emission(1, 'relocation', '3', operand, 3),
+                      Emission(3, 'instruction', 'ret', b'\xc9')]
+            runs.append((events, b'\xcd' + operand + b'\xc9'))
+        runs[-1] = (runs[-1][0][3:], runs[-1][1])
+        with self.assertRaisesRegex(PatchBindingError, 'rewrite ownership differs'):
+            bind_three_source_passes([pair[0] for pair in runs],
+                                     [pair[1] for pair in runs],
+                                     self.BASES, (4,) * 3)
 
     def test_changed_target_in_one_pass_is_refused(self):
         def edit(index, base, pair):
