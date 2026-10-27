@@ -6,14 +6,15 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
-from symbolic_fragments import (FragmentBoundaryError, inspect_fragments,
+from symbolic_fragments import (FragmentBoundaryError, inspect_fragments, inspect_final_fragments,
                                 verify_three_fragment_passes)
 
 
 def assembler(source):
     return {'rst $28': b'\xef', 'defb $31,$04,$38': b'\x31\x04\x38',
             'inc (hl)': b'\x34', 'ret': b'\xc9', 'nop': b'\x00',
-            'jp $6000': b'\xc3\x00\x60', 'jp $6100': b'\xc3\x00\x61'}[source]
+            'jp $6000': b'\xc3\x00\x60', 'jp $6100': b'\xc3\x00\x61',
+            'defb $c9': b'\xc9'}[source]
 
 
 def fragment(source, image, site=0, emitted=None):
@@ -70,6 +71,60 @@ class SourceFragments(unittest.TestCase):
                                  data=b'\x00')
         with self.assertRaises(FragmentBoundaryError):
             inspect_fragments([first, second], b'\x00', 1, assembler)
+
+    def test_final_rewind_requires_fully_replaced_instruction(self):
+        first = SimpleNamespace(kind='instruction', position=0,
+                                source='ret', data=b'\xc9')
+        last = SimpleNamespace(kind='instruction', position=0,
+                               source='nop', data=b'\x00')
+        live = inspect_final_fragments([first, last], b'\x00', 1, assembler)
+        self.assertEqual([(f.source, f.site) for f in live], [('nop', 0)])
+        self.assertFalse(live[0].overwritten)
+
+    def test_partial_rewrite_rejected_even_when_byte_matches(self):
+        old = SimpleNamespace(kind='instruction', position=0,
+                              source='jp $6000', data=b'\xc3\x00\x60')
+        new = SimpleNamespace(kind='instruction', position=1,
+                              source='nop', data=b'\x00')
+        with self.assertRaisesRegex(FragmentBoundaryError, 'partial'):
+            inspect_final_fragments([old, new], b'\xc3\x00\x60',
+                                    3, assembler)
+
+    def test_original_protected_inline_data_cannot_be_rewritten(self):
+        old = SimpleNamespace(kind='instruction', position=0,
+                              source='defb $31,$04,$38', data=b'\x31\x04\x38')
+        new = SimpleNamespace(kind='instruction', position=0,
+                              source='jp $6000', data=b'\xc3\x00\x60')
+        with self.assertRaisesRegex(FragmentBoundaryError, 'protected'):
+            inspect_final_fragments([old, new], b'\xc3\x00\x60',
+                                    3, assembler)
+
+    def test_opaque_replacement_cannot_claim_typed_source(self):
+        old = SimpleNamespace(kind='instruction', position=0,
+                              source='ret', data=b'\xc9')
+        new = SimpleNamespace(kind='runtime-opaque', position=0,
+                              source='RT1', data=b'\xc9')
+        with self.assertRaisesRegex(FragmentBoundaryError, 'untyped'):
+            inspect_final_fragments([old, new], b'\xc9', 1, assembler)
+
+    def test_inline_data_replacement_does_not_count_as_code(self):
+        old = SimpleNamespace(kind='instruction', position=0,
+                              source='ret', data=b'\xc9')
+        later = SimpleNamespace(kind='instruction', position=0,
+                                source='defb $c9', data=b'\xc9')
+        with self.assertRaisesRegex(FragmentBoundaryError, 'untyped'):
+            inspect_final_fragments([old, later], b'\xc9', 1, assembler)
+
+    def test_final_rewrites_agree_at_three_compiler_bases(self):
+        originals = []
+        for base in (0x6000, 0x6100, 0x6200):
+            events = [SimpleNamespace(kind='instruction', position=0,
+                                      source='ret', data=b'\xc9'),
+                      SimpleNamespace(kind='instruction', position=0,
+                                      source='nop', data=b'\x00')]
+            originals.append(inspect_final_fragments(events, b'\x00', 1, assembler))
+        self.assertEqual(verify_three_fragment_passes(
+            originals, (0x6000, 0x6100, 0x6200))['instruction_statements'], 1)
 
     def test_three_native_bases_preserve_inline_data(self):
         groups = [fragment('rst $28; defb $31,$04,$38', b'\xef\x31\x04\x38')

@@ -74,6 +74,62 @@ def inspect_fragments(events, image: bytes, text_end: int, assembler):
     return tuple(result)
 
 
+def inspect_final_fragments(events, image: bytes, text_end: int, assembler):
+    """Audit surviving compiler instructions after complete source rewrites.
+
+    A compiler rewind may discard an entire old instruction emission. The
+    chronological new source must replace every byte of that emission with
+    independently assembled instructions. Partial rewrites, opaque writers,
+    and overwritten inline data remain unresolved. Direct address patches
+    are deliberately excluded; their separate three-base check is required.
+    """
+    last_writer = {}
+    originals = []
+    fragment_kind = {}
+    for index, event in enumerate(events):
+        if event.kind == 'direct-write':
+            continue
+        if (not isinstance(event.position, int) or
+                not isinstance(event.data, bytes) or
+                not event.data or event.position < 0 or
+                event.position + len(event.data) > len(image)):
+            raise FragmentBoundaryError('invalid historical source emission')
+        for position in range(event.position, event.position + len(event.data)):
+            last_writer[position] = index
+        if event.kind == 'instruction':
+            parts = inspect_fragments([event], image, text_end, assembler)
+            originals.append((index, event, parts))
+            for fragment in parts:
+                for position in range(fragment.site, fragment.end):
+                    fragment_kind[(index, position)] = fragment.kind
+    if not originals:
+        raise FragmentBoundaryError('no source instruction fragments')
+    live = []
+    for index, event, fragments in originals:
+        owners = [last_writer[position]
+                  for position in range(event.position,
+                                        event.position + len(event.data))]
+        if all(owner == index for owner in owners):
+            live.extend(fragments)
+            continue
+        if any(owner == index for owner in owners):
+            raise FragmentBoundaryError('partial historical instruction rewrite')
+        if any(fragment.kind != 'instruction' for fragment in fragments):
+            raise FragmentBoundaryError('historical protected inline data rewrite')
+        if any(owner <= index or fragment_kind.get((owner, position)) != 'instruction'
+               for position, owner in zip(range(event.position,
+                                               event.position + len(event.data)), owners)):
+            raise FragmentBoundaryError('historical instruction replaced by untyped source')
+    positions = set()
+    for fragment in live:
+        extent = set(range(fragment.site, fragment.end))
+        if positions.intersection(extent):
+            raise FragmentBoundaryError('overlapping surviving source fragments')
+        positions.update(extent)
+    if not live:
+        raise FragmentBoundaryError('no surviving source instructions')
+    return tuple(live)
+
 def verify_three_fragment_passes(groups, bases):
     """Match source statement boundaries over three distinct load addresses."""
     if len(groups) != 3 or len(bases) != 3 or len(set(bases)) != 3:

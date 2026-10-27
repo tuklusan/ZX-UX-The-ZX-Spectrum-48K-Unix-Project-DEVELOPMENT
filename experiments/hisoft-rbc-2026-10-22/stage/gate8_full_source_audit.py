@@ -21,7 +21,7 @@ from symbolic_relocations import inspect_relocations, verify_three_builds
 from symbolic_instructions import inspect_sources, verify_three_sources
 from symbolic_opcode_pairs import inspect_opcode_pairs, verify_three_opcode_passes
 from symbolic_source_boundaries import inspect_source_boundaries, verify_three_source_maps
-from symbolic_fragments import inspect_fragments, verify_three_fragment_passes
+from symbolic_fragments import inspect_final_fragments, verify_three_fragment_passes
 from runtime_emitter_trace import verify_three_runtime_traces
 from symbolic_emit_sites import inspect_emit_sites, verify_three_emit_sites
 from symbolic_relative_branches import inspect_relative_branches, verify_three_relative_passes
@@ -109,7 +109,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
                 source_maps.append(source_map)
                 relative_groups.append(inspect_relative_branches(
                     source_map.spans, self.data_start, asm))
-                source_fragments.append(inspect_fragments(
+                source_fragments.append(inspect_final_fragments(
                     self._zxux_capture.events, result.code, self.data_start, asm))
             return result
         module.Compiler.compile_whole = recorded
