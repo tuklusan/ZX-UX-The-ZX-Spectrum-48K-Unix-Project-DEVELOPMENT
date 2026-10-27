@@ -15,6 +15,7 @@ _BYTE_REGS = frozenset(('a', 'b', 'c', 'd', 'e', 'h', 'l'))
 _NAME = re.compile(r'[a-z_][a-z_0-9]*\Z')
 _IMM = re.compile(r'(?:\$[0-9a-f]+|0x[0-9a-f]+|[0-9]+)\Z')
 _COND = frozenset(('nz', 'z', 'nc', 'c', 'p', 'm', 'pe', 'po'))
+_SYMBOL = re.compile(r'(?<![a-z_0-9])([a-z_][a-z_0-9]*)(?![a-z_0-9])')
 
 
 class TypedCFGError(ValueError):
@@ -66,6 +67,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
     symbols = {}
     instructions = []
     symbolic_table_targets = set()
+    table_expressions = []
     barrier = False
     for raw in assembly.splitlines():
         line = raw.partition(';')[0].strip().lower()
@@ -92,9 +94,17 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
             if op in ('dw', 'defw') and len(words) == 2:
                 # A word table can pass an entry address to an indirect JP,
                 # ROM callback, or runtime routine without a direct CFG edge.
-                symbolic_table_targets.update(
-                    target for part in words[1].split(',')
-                    if (target := part.strip()).isidentifier())
+                for part in words[1].split(','):
+                    expression = part.strip()
+                    if _NAME.fullmatch(expression):
+                        symbolic_table_targets.add(expression)
+                    else:
+                        table_expressions.append(expression)
+            if op in ('db', 'defb') and len(words) == 2:
+                # Byte-built pointers (HIGH/LOW and masks) also escape the
+                # direct CFG. Their target cannot be inferred as a word edge.
+                table_expressions.extend(part.strip() for part in
+                                         words[1].split(','))
             for label in pending:
                 symbols[label] = None
             pending.clear()
@@ -151,6 +161,29 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
             edges.append((site, site+1))
         elif flow and site + 1 < len(instructions):
             unresolved.append((site, 'protected-data-fallthrough'))
+    # Code addresses can be taken without a DW table or a direct branch:
+    # LD HL,handler; PUSH HL; RET transfers through the return stack.
+    # Other registers can similarly carry callbacks into runtime routines.
+    # Any instruction operand naming a code label is a possible entry.
+    # Arithmetic on such a pointer may instead enter part-way through an
+    # instruction, which cannot be bounded by this instruction-level CFG.
+    address_taken = set()
+    unknown_pointer_expressions = []
+    for site, ins in enumerate(instructions):
+        if ins.opcode in ('jp', 'jr', 'djnz', 'call'):
+            continue  # Direct edges and opaque jump operands were audited.
+        for term in _SYMBOL.findall(ins.operand):
+            if symbols.get(term) is None:
+                continue
+            operands = tuple(part.strip() for part in ins.operand.split(','))
+            if term in operands:
+                address_taken.add(symbols[term])
+            else:
+                unknown_pointer_expressions.append((site, ins.operand))
+    for expression in table_expressions:
+        for term in _SYMBOL.findall(expression):
+            if symbols.get(term) is not None:
+                unknown_pointer_expressions.append((-1, expression))
     entries = {symbols['start']}
     # Source references can identify external routine callbacks; without an
     # independently verified entry manifest, label-only guesses are forbidden.
@@ -175,9 +208,9 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
     # count is only a conservative upper bound, never an optimization permit.
     table_entries = {symbols[name] for name in symbolic_table_targets
                      if symbols.get(name) is not None}
-    indirect_or_unknown = bool(unresolved)
+    indirect_or_unknown = bool(unresolved or unknown_pointer_expressions)
     possible = (set(range(len(instructions))) if indirect_or_unknown else
-                reachable(entries | table_entries))
+                reachable(entries | table_entries | address_taken))
     uses = []
     defines = []
     modelled = 0
@@ -216,6 +249,8 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
         'unreached_instructions': len(instructions)-len(possible),
         'direct_cfg_reachable_instructions': len(direct_reachable),
         'symbolic_table_entry_instructions': len(table_entries),
+        'symbolic_address_entry_instructions': len(address_taken),
+        'unresolved_pointer_expressions': len(unknown_pointer_expressions),
         'unknown_entry_reachability': indirect_or_unknown,
         'unresolved_exit_sites': len(unresolved_sites),
         'unresolved_control_edges': len(unresolved),
