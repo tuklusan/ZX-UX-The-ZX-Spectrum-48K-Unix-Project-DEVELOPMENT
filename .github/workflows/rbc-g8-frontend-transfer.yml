@@ -1,0 +1,40 @@
+name: RBC temporary verified frontend transfer
+on:
+  push:
+    paths:
+      - '.github/workflows/rbc-g8-frontend-transfer.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve fixed original frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.git upstream-pyhsb
+          git -C upstream-pyhsb checkout -q --detach 7cc87dafb58fcf5632b7190320dd11c30b4fe961
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, 'experiments/hisoft-rbc-2026-10-22/stage')
+          from hisoft_frontend_inputs import REVISION, FRONTEND, copy_frontend
+          from zipfile import ZIP_DEFLATED, ZipFile
+          assert REVISION == '7cc87dafb58fcf5632b7190320dd11c30b4fe961'
+          output = Path('build/tmp/rbc-g8-frontend')
+          copy_frontend(output, Path('upstream-pyhsb'))
+          with ZipFile('pinned-hisoft-frontend.zip', 'w', ZIP_DEFLATED) as archive:
+              for name in sorted(FRONTEND):
+                  archive.write(output / name, name)
+          print('HISOFT_FRONTEND_VERIFIED', REVISION, len(FRONTEND))
+          PY
+      - name: Return verified source files
+        uses: actions/upload-artifact@v4
+        with:
+          name: rbc-g8-original-frontend
+          path: pinned-hisoft-frontend.zip
+          if-no-files-found: error
+          retention-days: 1
