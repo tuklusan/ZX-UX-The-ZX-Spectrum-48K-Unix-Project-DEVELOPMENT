@@ -145,6 +145,49 @@ def _observable_accesses(assembly: str) -> tuple[tuple[str, str, str], ...]:
     return tuple(accesses)
 
 
+
+# A memory operation cannot be proved unchanged from its mnemonic alone:
+# changing LD HL,addr changes which byte a subsequent LD A,(HL) reads.
+# Likewise flags and registers can feed branch conditions and return state.
+# The current CFG/liveness inventory does not prove rewritten arithmetic or
+# address calculations. Only register-to-itself LD is excluded from this
+# *necessary* check; removing one still changes clock/R and is not approved.
+_BYTE_REGISTERS = frozenset(('a', 'b', 'c', 'd', 'e', 'h', 'l'))
+
+
+def _state_context(assembly: str) -> tuple[tuple[str, str, str], ...]:
+    """Retain the exact source-ordered state-producing instruction stream.
+
+    This deliberately fails closed for register, flag, address, interrupt and
+    numeric-operand changes not backed by a whole-program semantic proof.
+    Full memory, timing and process-equivalence checks remain outstanding.
+    """
+    section = 'text'
+    owner = ''
+    instructions = []
+    for raw in assembly.splitlines():
+        line = raw.partition(';')[0].strip().lower()
+        if not line:
+            continue
+        if line.startswith('section '):
+            section = line.split(None, 1)[1]
+            continue
+        if line.endswith(':'):
+            owner = line[:-1]
+            continue
+        if section != 'text' or line.startswith('global '):
+            continue
+        parts = line.split(None, 1)
+        op = parts[0]
+        operand = re.sub(r'\s+', '', parts[1]) if len(parts) == 2 else ''
+        if op == 'ld' and ',' in operand:
+            target, value = operand.split(',', 1)
+            if target == value and target in _BYTE_REGISTERS:
+                continue
+        instructions.append((owner, op, operand))
+    return tuple(instructions)
+
+
 def _first_resource_boundary_change(original: str, candidate: str) -> str:
     """Identify the first protected code boundary altered by an optimizer.
 
@@ -202,6 +245,8 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
             raise WholeOptimizerError('optimizer changed unverified control-flow or interrupt instruction')
         if _observable_accesses(assembly) != _observable_accesses(candidate_text):
             raise WholeOptimizerError('optimizer changed unverified memory, I/O or stack effects')
+        if _state_context(assembly) != _state_context(candidate_text):
+            raise WholeOptimizerError('optimizer changed unverified register, flag or address state')
         obj = ras.assemble_text(candidate_text, 'rbc-whole-upeepz80.s')
         candidate_ssx, *_ = rld.link(
             [rld.Obj(obj, 'rbc-whole-upeepz80.sso')], [],

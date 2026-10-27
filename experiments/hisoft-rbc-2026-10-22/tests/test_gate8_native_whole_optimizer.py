@@ -187,6 +187,102 @@ class WholeOptimizerTests(unittest.TestCase):
         self.assertTrue(candidate['candidate_byte_identical'])
         self.assertFalse(candidate['optimizer_candidate_admitted_for_publication'])
 
+    def test_pointer_register_rewrite_must_not_sneak_past_memory_guard(self):
+        # Both programs contain precisely the same memory operation mnemonics;
+        # their HL values direct the read to different source addresses.
+        source = ('    section text\n    global start\nstart:\n'
+                  '    ld hl,23692\n    ld a,(hl)\n'
+                  '    ld (23693),a\n    ret\n')
+        other = source.replace('ld hl,23692', 'ld hl,23694')
+        plain = rld.link([rld.Obj(ras.assemble_text(source, 'hl-before.s'),
+                                  'hl-before.sso')], [], entry='start', stack=384)[0]
+        changed = rld.link([rld.Obj(ras.assemble_text(other, 'hl-after.s'),
+                                    'hl-after.sso')], [], entry='start', stack=384)[0]
+        from gate8_native_whole_optimizer import _observable_accesses
+        self.assertEqual(_observable_accesses(source), _observable_accesses(other))
+        with self.assertRaisesRegex(WholeOptimizerError,
+                                    'register, flag or address state'):
+            verify_whole_optimizer_candidate(source, plain, lambda _: other)
+
+        from z80_python.cpu import Z80CPU
+        for base in (0x7000, 0x8000, 0x9000):
+            def execute(ssx):
+                parsed = rld.parse_ssx(ssx)
+                memory = bytearray([0]) * 65536
+                memory[base:base + len(parsed['image'])] = rld.relocate(
+                    parsed['image'], parsed['relocs'], base)
+                memory[23692], memory[23694] = 0x12, 0xe7
+                memory[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+                cpu = Z80CPU(memory.__getitem__, memory.__setitem__)
+                cpu.pc = base + parsed['entry']
+                cpu.sp = 0xd000
+                for _ in range(8):
+                    if cpu.pc == 0xb000:
+                        break
+                    cpu.step()
+                else:
+                    self.fail('native pointer test did not return')
+                return memory[23693]
+            with self.subTest(base=base):
+                self.assertEqual(execute(plain), 0x12)
+                self.assertEqual(execute(changed), 0xe7)
+
+    def test_register_and_flag_changes_before_unmodified_output_rejected(self):
+        source = ('    section text\n    global start\nstart:\n'
+                  '    ld a,7\n    ld (23692),a\n    ret\n')
+        plain = rld.link([rld.Obj(ras.assemble_text(source, 'register-before.s'),
+                                  'register-before.sso')], [], entry='start', stack=384)[0]
+        changes = (source.replace('ld a,7', 'ld a,8'),
+                   source.replace('ld a,7', 'xor a'),
+                   source.replace('ld a,7\n', ''))
+        for changed in changes:
+            with self.subTest(candidate=changed):
+                with self.assertRaisesRegex(WholeOptimizerError,
+                                            'register, flag or address state'):
+                    verify_whole_optimizer_candidate(source, plain,
+                                                     lambda _: changed)
+
+    def test_native_conditional_branch_shortening_changes_clock(self):
+        # Source-level JP -> JR can leave flags/registers unchanged but alters
+        # elapsed Z80 T-states, affecting clock-dependent native behavior.
+        source = ('    section text\n    global start\nstart:\n'
+                  '    jp z,finish\n    nop\nfinish:\n    ret\n')
+        other = source.replace('jp z,finish', 'jr z,finish')
+        def linked(text):
+            obj = ras.assemble_text(text, 'branch-clock.s')
+            return rld.link([rld.Obj(obj, 'branch-clock.sso')], [],
+                            entry='start', stack=384)[0]
+        before, after = linked(source), linked(other)
+        with self.assertRaisesRegex(WholeOptimizerError,
+                                    'control-flow or interrupt instruction'):
+            verify_whole_optimizer_candidate(source, before, lambda _: other)
+        from z80_python.cpu import Z80CPU
+        def measure(ssx, base, flags):
+            info = rld.parse_ssx(ssx)
+            memory = bytearray(65536)
+            memory[base:base + len(info['image'])] = rld.relocate(
+                info['image'], info['relocs'], base)
+            memory[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+            cpu = Z80CPU(memory.__getitem__, memory.__setitem__)
+            cpu.pc = base + info['entry']
+            cpu.sp = 0xd000
+            cpu.f = flags
+            cycles = 0
+            for _ in range(6):
+                if cpu.pc == 0xb000:
+                    break
+                cycles += cpu.step()
+            else:
+                self.fail('native timed branch did not return')
+            return (cpu.pc, cpu.sp, int(cpu.f), cpu.a), cycles
+        for base in (0x7000, 0x8000, 0x9000):
+            for flags, delta in ((0x40, 2), (0, -3)):
+                with self.subTest(base=base, flags=flags):
+                    old_state, old_t = measure(before, base, flags)
+                    new_state, new_t = measure(after, base, flags)
+                    self.assertEqual(old_state, new_state)
+                    self.assertEqual(new_t - old_t, delta)
+
     def test_wrong_optimizer_output_rejected(self):
         with self.assertRaisesRegex(WholeOptimizerError, 'text'):
             verify_whole_optimizer_candidate(self.source(), self.baseline(),
