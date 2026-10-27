@@ -13,13 +13,20 @@ import ras
 import rld
 from symbolic_capture import Emission
 from symbolic_from_source import from_source
-from symbolic_patch_binding import PatchBindingError, bind_three_source_passes
+from symbolic_patch_binding import (PatchBindingError, _final_source_events,
+                                     bind_three_source_passes)
 from symbolic_source_boundaries import inspect_source_boundaries
 
 
 def assembler(s):
     if s == 'jp nn':
         return b'\xc3'
+    for source, opcode in (('jp z,', 0xca), ('jp nz,', 0xc2)):
+        if s == source + 'nn':
+            return bytes((opcode,))
+        if s.startswith(source):
+            value = int(s[len(source):], 0)
+            return bytes((opcode,)) + value.to_bytes(2, 'little')
     if s.startswith('jp '):
         return b'\xc3' + int(s[3:]).to_bytes(2, 'little')
     if s == 'nop':
@@ -89,7 +96,7 @@ class PatchedSources(unittest.TestCase):
             events, image = pair
             events[0] = replace(events[0], position=10)
             return events, image
-        with self.assertRaisesRegex(PatchBindingError, 'adjacent'):
+        with self.assertRaisesRegex(PatchBindingError, 'outside original image'):
             self.bind(edit)
 
     def test_rewrite_with_no_original_word_fails(self):
@@ -105,7 +112,7 @@ class PatchedSources(unittest.TestCase):
             events, image = pair
             events.insert(2, Emission(2, 'byte', '0', b'\0'))
             return events, image
-        with self.assertRaisesRegex(PatchBindingError, 'overlaps'):
+        with self.assertRaisesRegex(PatchBindingError, 'partial source rewrite'):
             self.bind(edit)
 
     def test_byte_rewrite_without_cross_pass_proof_is_refused(self):
@@ -115,6 +122,104 @@ class PatchedSources(unittest.TestCase):
             return events, image
         with self.assertRaises(ValueError):
             self.bind(edit)
+
+    def test_original_inline_forward_jump_patches_become_typed_words(self):
+        for source, initial, method, opcode in (
+                ('jp z,0', b'\xca\0\0', 'end_of_line', 0xca),
+                ('jp nz,$FFFF', b'\xc2\xff\xff', 'st_next', 0xc2)):
+            with self.subTest(source=source):
+                pairs = []
+                for base in self.BASES:
+                    word = (base + 4).to_bytes(2, 'little')
+                    events = [Emission(0, 'instruction', source, initial,
+                                       source_site='st_if:1934'),
+                              Emission(3, 'instruction', 'nop', b'\0'),
+                              Emission(4, 'instruction', 'ret', b'\xc9'),
+                              Emission(1, 'direct-write', method, word[:1]),
+                              Emission(2, 'direct-write', method, word[1:])]
+                    pairs.append((events, bytes((opcode,)) + word + b'\0\xc9'))
+                groups, images = zip(*pairs)
+                bound, report = bind_three_source_passes(
+                    groups, images, self.BASES, (5,) * 3)
+                self.assertEqual(report['verified_source_words'], 1)
+                for events, image, base in zip(bound, images, self.BASES):
+                    self.assertEqual([e.kind for e in events],
+                                     ['opcode', 'relocation', 'instruction', 'instruction'])
+                    self.assertEqual(events[0].source, source.rsplit(',', 1)[0] + ',nn')
+                    self.assertEqual(events[1].symbol_offset, 4)
+                    owned = inspect_source_boundaries(events, image, base, 5, 0, assembler)
+                    self.assertTrue(owned.fully_typed)
+                    program = from_source(events, image, base, 5, 0, assembler)
+                    assembly = program.assembly()
+                    self.assertIn('source_0004', assembly)
+                    obj = ras.assemble_text(assembly, 'inline-jump.s')
+                    output, *_ = rld.link([rld.Obj(obj, 'inline-jump.sso')], [],
+                                          entry='start', stack=384)
+                    native = rld.parse_ssx(output)
+                    self.assertEqual(native['relocs'], [1])
+                    self.assertEqual(native['image'],
+                                     bytes((opcode,)) + b'\x04\0\0\xc9')
+
+    def test_original_forward_jump_opcode_mismatch_is_rejected(self):
+        for original in (b'\xc3\0\0', b'\xca\x01\0'):
+            groups = []
+            images = []
+            for base in self.BASES:
+                word = (base + 4).to_bytes(2, 'little')
+                groups.append([Emission(0, 'instruction', 'jp z,0', original),
+                               Emission(3, 'instruction', 'nop', b'\0'),
+                               Emission(4, 'instruction', 'ret', b'\xc9'),
+                               Emission(1, 'direct-write', 'end_of_line', word[:1]),
+                               Emission(2, 'direct-write', 'end_of_line', word[1:])])
+                images.append(b'\xca' + word + b'\0\xc9')
+            with self.assertRaisesRegex(PatchBindingError, 'opcode or placeholder'):
+                bind_three_source_passes(groups, images, self.BASES, (5,) * 3)
+
+    def test_inline_forward_patch_conflicting_emitter_is_rejected(self):
+        groups, images = [], []
+        for base in self.BASES:
+            word = (base + 4).to_bytes(2, 'little')
+            groups.append([Emission(0, 'instruction', 'jp z,0', b'\xca\0\0'),
+                           Emission(1, 'relocation', '(4,)', word, 4),
+                           Emission(3, 'instruction', 'nop', b'\0'),
+                           Emission(4, 'instruction', 'ret', b'\xc9'),
+                           Emission(1, 'direct-write', 'end_of_line', word[:1]),
+                           Emission(2, 'direct-write', 'end_of_line', word[1:])])
+            images.append(b'\xca' + word + b'\0\xc9')
+        with self.assertRaisesRegex(PatchBindingError, 'partial source rewrite'):
+            bind_three_source_passes(groups, images, self.BASES, (5,) * 3)
+
+    def test_rewound_source_is_discarded_only_when_entirely_replaced(self):
+        groups, images = [], []
+        for base in self.BASES:
+            addr = (base + 4).to_bytes(2, 'little')
+            groups.append([
+                Emission(1, 'relocation', '(4,)', addr, 4),
+                Emission(0, 'instruction', 'jp z,0', b'\xca\0\0',
+                         source_site='st_if:1934'),
+                Emission(3, 'instruction', 'nop', b'\0'),
+                Emission(4, 'instruction', 'ret', b'\xc9'),
+                Emission(1, 'direct-write', 'end_of_line', addr[:1]),
+                Emission(2, 'direct-write', 'end_of_line', addr[1:])])
+            images.append(b'\xca' + addr + b'\0\xc9')
+        final, report = bind_three_source_passes(groups, images,
+                                                  self.BASES, (5,) * 3)
+        self.assertEqual(report['superseded_source_emissions'], 1)
+        for events in final:
+            self.assertEqual([e.kind for e in events],
+                             ['opcode', 'relocation', 'instruction', 'instruction'])
+
+    def test_partial_source_rewrite_remains_blocked(self):
+        events = [Emission(0, 'instruction', 'jp z,0', b'\xca\0\0'),
+                  Emission(1, 'word', '(0,)', b'\0\0')]
+        with self.assertRaisesRegex(PatchBindingError, 'partial source rewrite'):
+            _final_source_events(events, b'\xca\0\0')
+
+    def test_protected_source_cannot_be_discarded_by_later_writer(self):
+        events = [Emission(0, 'data-source', 'original DATA', b'\xc9'),
+                  Emission(0, 'instruction', 'ret', b'\xc9')]
+        with self.assertRaisesRegex(PatchBindingError, 'protected source'):
+            _final_source_events(events, b'\xc9')
 
     def test_literal_length_is_opaque_inline_data(self):
         bases = self.BASES
