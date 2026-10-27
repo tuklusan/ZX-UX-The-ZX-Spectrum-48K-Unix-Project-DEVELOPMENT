@@ -156,9 +156,15 @@ def verify_three_source_maps(groups, bases) -> dict:
     first = groups[0]
     signature = lambda m: tuple((s.start, s.end, s.kind, s.source, s.target)
                                 for s in m.spans)
+    # A historical emission overwritten by a later writer is unresolved in
+    # every pass regardless of whether its old byte happens to equal the
+    # final byte at a particular load base. Require identical *uniquely*
+    # owned mismatches; never erase an overlap from the unresolved map.
+    unresolved_history = set(first.overlaps)
+    definite_mismatch = lambda m: set(m.mismatches) - unresolved_history
     if any(signature(other) != signature(first) or
            other.gaps != first.gaps or other.overlaps != first.overlaps or
-           other.mismatches != first.mismatches or
+           definite_mismatch(other) != definite_mismatch(first) or
            other.fully_typed != first.fully_typed or
            other.instruction_bytes != first.instruction_bytes or
            other.unresolved_bytes != first.unresolved_bytes
@@ -167,7 +173,12 @@ def verify_three_source_maps(groups, bases) -> dict:
     kinds = {}
     for span in first.spans:
         kinds[span.kind] = kinds.get(span.kind, 0) + span.end - span.start
-    return {'source_instruction_count': first.executable_instruction_count,
+    mismatch_sets = [set(group.mismatches) for group in groups]
+    variable_history = set.union(*mismatch_sets) - set.intersection(*mismatch_sets)
+    if not variable_history <= unresolved_history:
+        raise SourceBoundaryError('source mismatch outside overwritten history')
+    return {'source_history_mismatch_variation_bytes': len(variable_history),
+            'source_instruction_count': first.executable_instruction_count,
             'source_instruction_bytes': first.instruction_bytes,
             'source_unresolved_bytes': first.unresolved_bytes,
             'source_gap_bytes': len(first.gaps),

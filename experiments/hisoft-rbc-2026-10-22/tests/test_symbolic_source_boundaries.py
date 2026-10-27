@@ -50,6 +50,32 @@ class SourceOwnership(unittest.TestCase):
         self.assertEqual(result['source_byte_kinds']['data-source'], 3)
         self.assertFalse(result['complete_program_symbolic'])
 
+    def test_overwritten_history_may_match_by_coincidence_at_one_base(self):
+        # Both sources overlap the same byte in all native passes. A historical
+        # value matching the final byte cannot make that byte source-owned.
+        def historical(earlier, final):
+            return inspect_source_boundaries([
+                e('byte', 0, bytes((earlier,)), 'prior'),
+                e('direct-write', 0, bytes((final,)), 'last')],
+                bytes((final,)), 0x6000, 1, 0, asm)
+        bases = [0x6000, 0x5e1e, 0x5d3a]
+        passes = [historical(42, 42), historical(17, 42), historical(11, 42)]
+        report = verify_three_source_maps(passes, bases)
+        self.assertEqual(report['source_history_mismatch_variation_bytes'], 1)
+        self.assertEqual(report['source_unresolved_bytes'], 1)
+        self.assertTrue(all(q.overlaps == (0,) and not q.fully_typed
+                            for q in passes))
+
+    def test_unique_source_mismatch_still_fails_across_bases(self):
+        bases = [0x6000, 0x5e1e, 0x5d3a]
+        passes = [inspect_source_boundaries(
+            [e('byte', 0, b'\x11', 'prior')], final,
+            base, 1, 0, asm) for base, final in
+            zip(bases, (b'\x11', b'\x22', b'\x11'))]
+        self.assertTrue(all(q.unresolved_bytes == 1 for q in passes))
+        with self.assertRaisesRegex(SourceBoundaryError, 'changed across'):
+            verify_three_source_maps(passes, bases)
+
     def test_unpaired_opcode_not_promoted_by_matching_machine_bytes(self):
         result = inspect_source_boundaries([e('opcode', 0, b'\xc3', 'jp nn'),
             e('binary', 1, b'\x18\x60')], b'\xc3\x18\x60', 0x6000, 3, 0, asm)
