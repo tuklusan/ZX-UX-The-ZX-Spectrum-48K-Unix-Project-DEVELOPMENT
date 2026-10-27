@@ -89,6 +89,7 @@ def verify_and_build(events, images, bases, text_ends, bss_sizes,
         'relative_branches': relative_report,
         'whole_source_control_flow': flow_report,
         'full_program_source_owned': True,
+        'source_bss_bytes': bss_sizes[0],
         'native_behavior_verified': False,
     }, images[0], bases[0], frozenset(reloc_sites))
 
@@ -102,13 +103,27 @@ def link_source_pair(source: VerifiedSource, ras, rld, optimizer: Callable,
     """
     plain, plain_sizes = source.program.optimize(lambda text: text, ras, rld,
                                                  stack=stack, max_memory=max_memory)
-    original = rld.parse_ssx(plain)['image']
+    parsed = rld.parse_ssx(plain)
+    original = parsed['image']
     if len(original) != len(source.compiled_image):
         raise SourcePipelineError('native plain image differs from original extent')
-    if any(before != after for index, (before, after) in
-           enumerate(zip(original, source.compiled_image))
-           if index not in source.reloc_byte_offsets):
-        raise SourcePipelineError('native plain image differs outside typed relocation')
+    expected_bytes = source.reloc_byte_offsets
+    actual_bytes = frozenset(offset for site in parsed['relocs']
+                             for offset in (site, site + 1))
+    if actual_bytes != expected_bytes:
+        raise SourcePipelineError('native relocation sites differ from typed source')
+    if (parsed['size'] != len(plain) or parsed['entry'] != 0 or
+            parsed['bss'] != source.source_report['source_bss_bytes']):
+        raise SourcePipelineError('native entry or storage layout differs from source')
+    loaded = bytes(rld.relocate(original, parsed['relocs'], source.original_base))
+    if loaded != source.compiled_image:
+        offset = next(i for i, pair in enumerate(zip(loaded, source.compiled_image))
+                      if pair[0] != pair[1])
+        if offset in expected_bytes:
+            raise SourcePipelineError(
+                f'native plain relocated operand differs at byte {offset}')
+        raise SourcePipelineError(
+            f'native plain image differs outside typed relocation at byte {offset}')
     candidate, sizes = source.program.optimize(optimizer, ras, rld,
                                                stack=stack, max_memory=max_memory)
     return plain, candidate, {
