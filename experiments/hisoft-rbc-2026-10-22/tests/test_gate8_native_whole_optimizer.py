@@ -88,6 +88,29 @@ class WholeOptimizerTests(unittest.TestCase):
                     verify_whole_optimizer_candidate(self.source(),
                                                      self.baseline(), transformer)
 
+    def test_unverified_control_transfer_rewrite_is_rejected(self):
+        original = self.source()
+        baseline = self.baseline()
+        for transformed in (
+                original.replace('    call worker\n', '    call start\n'),
+                original.replace('    call worker\n', '    jp worker\n'),
+                original.replace('    ret\n', '    reti\n', 1),
+                original.replace('    ret\n', '    di\n    ret\n', 1),
+        ):
+            with self.subTest(transformed=transformed):
+                with self.assertRaisesRegex(WholeOptimizerError, 'control-flow or interrupt'):
+                    verify_whole_optimizer_candidate(original, baseline,
+                                                     lambda _: transformed)
+
+    def test_control_source_comments_and_operand_spacing_are_harmless(self):
+        original = self.source()
+        modified = original.replace('    call worker\n',
+                                    '    call  worker ; preserve branch\n')
+        result = verify_whole_optimizer_candidate(original, self.baseline(),
+                                                  lambda _: modified)
+        self.assertTrue(result['candidate_byte_identical'])
+        self.assertFalse(result['optimizer_candidate_admitted_for_publication'])
+
     def test_wrong_optimizer_output_rejected(self):
         with self.assertRaisesRegex(WholeOptimizerError, 'text'):
             verify_whole_optimizer_candidate(self.source(), self.baseline(),

@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import inspect
+import re
 from pathlib import Path
 import sys
 
@@ -63,6 +64,55 @@ def load_locked_optimizer(root: Path):
     return mod.PeepholeOptimizer()
 
 
+_CONTROL_OPS = frozenset((
+    'call', 'jp', 'jr', 'djnz', 'ret', 'reti', 'retn', 'rst',
+    'halt', 'di', 'ei',
+))
+
+
+def _control_transfers(assembly: str) -> tuple[tuple[str, str, str], ...]:
+    """Match original and revised control-transfer statements conservatively.
+
+    A local tail-branch pattern is normalized only when statements are adjacent.
+    The result does not establish runtime equivalence.
+    """
+    statements = []
+    block = ''
+    section = 'text'
+    for raw in assembly.splitlines():
+        statement = raw.partition(';')[0].strip().lower()
+        if not statement:
+            continue
+        if statement.startswith('section '):
+            section = statement.split(None, 1)[1]
+            statements.append(('boundary', section, ''))
+            continue
+        if statement.endswith(':'):
+            block = statement[:-1]
+            statements.append(('boundary', block, ''))
+            continue
+        if section == 'text':
+            parts = statement.split(None, 1)
+            operand = re.sub(r'\s+', '', parts[1]) if len(parts) == 2 else ''
+            statements.append((block, parts[0], operand))
+        else:
+            statements.append(('boundary', section, ''))
+    transfers = []
+    for i, (label, opcode, operand) in enumerate(statements):
+        if opcode == 'ret' and not operand and i and (
+                statements[i - 1][0] == label and
+                statements[i - 1][1] == 'call' and
+                re.fullmatch(r'[a-z_][a-z_0-9]*', statements[i - 1][2])):
+            continue
+        if opcode == 'call' and re.fullmatch(r'[a-z_][a-z_0-9]*', operand) and (
+                i + 1 < len(statements) and
+                statements[i + 1] == (label, 'ret', '')):
+            transfers.append((label, 'jp', operand))
+        elif opcode in _CONTROL_OPS:
+            transfers.append((label, opcode, operand))
+    return tuple(transfers)
+
+
 def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
                                      optimizer, *, max_memory: int = 12000,
                                      expected_runtime_bytes: bytes | None = None):
@@ -90,6 +140,8 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
             raise WholeOptimizerError('optimizer did not return assembly text')
         _check_optimizer_output(candidate_text)
         _check_protected(assembly, candidate_text, {'start'})
+        if _control_transfers(assembly) != _control_transfers(candidate_text):
+            raise WholeOptimizerError('optimizer changed unverified control-flow or interrupt instruction')
         obj = ras.assemble_text(candidate_text, 'rbc-whole-upeepz80.s')
         candidate_ssx, *_ = rld.link(
             [rld.Obj(obj, 'rbc-whole-upeepz80.sso')], [],
