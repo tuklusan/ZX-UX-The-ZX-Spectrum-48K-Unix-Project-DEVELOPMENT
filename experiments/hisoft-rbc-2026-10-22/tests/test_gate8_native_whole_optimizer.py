@@ -39,6 +39,8 @@ class WholeOptimizerTests(unittest.TestCase):
         result = verify_whole_optimizer_candidate(whole, before, optimize)
         self.assertEqual(seen, [whole])
         self.assertTrue(result['native_candidate_link_verified'])
+        self.assertTrue(result['source_cfg_liveness']['source_liveness_converged'])
+        self.assertFalse(result['candidate_cfg_liveness']['rewrite_safe_to_admit'])
         self.assertTrue(result['protected_source_lines_preserved'])
         self.assertFalse(result['candidate_byte_identical'])
         self.assertGreaterEqual(result['candidate_file_bytes_saved'], 0)

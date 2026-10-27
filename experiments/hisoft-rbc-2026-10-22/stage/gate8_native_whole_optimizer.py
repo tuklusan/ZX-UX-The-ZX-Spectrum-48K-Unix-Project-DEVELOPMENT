@@ -18,6 +18,7 @@ import ras
 import rld
 from symbolic_z80 import _check_optimizer_output, _check_protected, SymbolicError
 from upeepz80_codegen import UPSTREAM_REVISION
+from gate8_typed_cfg_liveness import inspect_typed_cfg_liveness, TypedCFGError
 
 # Blob identities read independently from the locked GitHub upstream commit.
 _LOCKED = {
@@ -140,6 +141,8 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
             raise WholeOptimizerError('optimizer did not return assembly text')
         _check_optimizer_output(candidate_text)
         _check_protected(assembly, candidate_text, {'start'})
+        source_cfg = inspect_typed_cfg_liveness(assembly)
+        candidate_cfg = inspect_typed_cfg_liveness(candidate_text)
         if _control_transfers(assembly) != _control_transfers(candidate_text):
             raise WholeOptimizerError('optimizer changed unverified control-flow or interrupt instruction')
         obj = ras.assemble_text(candidate_text, 'rbc-whole-upeepz80.s')
@@ -148,7 +151,7 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
             entry='start', stack=plain['stack'])
         linked = rld.parse_ssx(candidate_ssx)
     except (ValueError, TypeError, KeyError, AttributeError, IndexError,
-            SymbolicError, ras.AsmError, rld.LinkError) as exc:
+            SymbolicError, ras.AsmError, rld.LinkError, TypedCFGError) as exc:
         raise WholeOptimizerError('full-source optimizer candidate rejected: ' + str(exc)) from exc
     if (linked['entry'] != plain['entry'] or
             linked['bss'] != plain['bss'] or linked['stack'] != plain['stack']):
@@ -165,6 +168,8 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
     return {
         'locked_upstream_revision': _LOCKED_REVISION,
         'optimizer_full_program_source_presented': True,
+        'source_cfg_liveness': source_cfg,
+        'candidate_cfg_liveness': candidate_cfg,
         'native_baseline_sha256': hashlib.sha256(native_baseline).hexdigest(),
         'native_candidate_sha256': hashlib.sha256(candidate_ssx).hexdigest(),
         'native_baseline_source_reassembled': True,
