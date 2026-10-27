@@ -7,7 +7,8 @@ ROOT = Path(__file__).resolve().parents[3]
 STAGE = Path(__file__).resolve().parents[1] / 'stage'
 sys.path[:0] = [str(STAGE), str(ROOT / 'src/zx-ux-sdk')]
 from z80_python.cpu import Z80CPU
-from gate8_native_whole_optimizer import verify_whole_optimizer_candidate
+from gate8_native_whole_optimizer import (
+    WholeOptimizerError, verify_whole_optimizer_candidate)
 import ras
 import rld
 
@@ -49,11 +50,9 @@ def execute(ssx, base, seed):
 class WholeNativeTailProbe(unittest.TestCase):
     def test_native_tail_transfer_keeps_registers_but_changes_stack_storage(self):
         before = assemble(BEFORE)
-        candidate = verify_whole_optimizer_candidate(
-            BEFORE, before, lambda _: AFTER)
-        self.assertTrue(candidate['native_candidate_link_verified'])
-        self.assertFalse(candidate['optimizer_candidate_admitted_for_publication'])
-        self.assertFalse(candidate['native_behavior_verified'])
+        with self.assertRaisesRegex(WholeOptimizerError,
+                                    'control-flow or interrupt'):
+            verify_whole_optimizer_candidate(BEFORE, before, lambda _: AFTER)
         after = assemble(AFTER)
         for base in (0x7000, 0x8000, 0x9000):
             for seed in (0, 1, 127, 255):

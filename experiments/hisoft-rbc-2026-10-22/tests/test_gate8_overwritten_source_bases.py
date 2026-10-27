@@ -36,9 +36,14 @@ class OriginalHistoricalEmissionTests(unittest.TestCase):
                 self.assertTrue(native['native_image_byte_exact'])
                 self.assertEqual(native['native_source_bases'], 3)
                 candidate = native['native_whole_optimizer_candidate']
-                self.assertTrue(candidate['native_baseline_source_reassembled'])
-                self.assertTrue(candidate['native_candidate_link_verified'])
+                if candidate.get('native_candidate_link_verified'):
+                    self.assertTrue(candidate['native_baseline_source_reassembled'])
+                else:
+                    self.assertIn('optimizer', candidate['blocker'])
+                    self.assertEqual(candidate['native_baseline_sha256'],
+                                     native['native_sha256'])
                 self.assertFalse(candidate['optimizer_candidate_admitted_for_publication'])
+                self.assertFalse(candidate['native_behavior_verified'])
                 self.assertFalse(report['gate8_complete'])
 
 

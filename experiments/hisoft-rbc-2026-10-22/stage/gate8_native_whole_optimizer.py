@@ -72,10 +72,11 @@ _CONTROL_OPS = frozenset((
 
 
 def _control_transfers(assembly: str) -> tuple[tuple[str, str, str], ...]:
-    """Match original and revised control-transfer statements conservatively.
+    """Record control transfers without treating CALL + RET as JP.
 
-    A local tail-branch pattern is normalized only when statements are adjacent.
-    The result does not establish runtime equivalence.
+    The two forms leave different bytes under SP even when return registers,
+    flags and SP match. The optimizer cannot discard that observable write.
+    The result still does not establish whole-program runtime equivalence.
     """
     statements = []
     block = ''
@@ -99,17 +100,8 @@ def _control_transfers(assembly: str) -> tuple[tuple[str, str, str], ...]:
         else:
             statements.append(('boundary', section, ''))
     transfers = []
-    for i, (label, opcode, operand) in enumerate(statements):
-        if opcode == 'ret' and not operand and i and (
-                statements[i - 1][0] == label and
-                statements[i - 1][1] == 'call' and
-                re.fullmatch(r'[a-z_][a-z_0-9]*', statements[i - 1][2])):
-            continue
-        if opcode == 'call' and re.fullmatch(r'[a-z_][a-z_0-9]*', operand) and (
-                i + 1 < len(statements) and
-                statements[i + 1] == (label, 'ret', '')):
-            transfers.append((label, 'jp', operand))
-        elif opcode in _CONTROL_OPS:
+    for label, opcode, operand in statements:
+        if opcode in _CONTROL_OPS:
             transfers.append((label, opcode, operand))
     return tuple(transfers)
 

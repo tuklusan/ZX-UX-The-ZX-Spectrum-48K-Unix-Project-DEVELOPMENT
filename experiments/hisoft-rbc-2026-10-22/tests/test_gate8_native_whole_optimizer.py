@@ -104,6 +104,14 @@ class WholeOptimizerTests(unittest.TestCase):
                     verify_whole_optimizer_candidate(original, baseline,
                                                      lambda _: transformed)
 
+    def test_tail_call_return_to_jump_rejected_due_to_stack_write(self):
+        original = self.source()
+        changed = original.replace('    call worker\n    ret\n', '    jp worker\n')
+        with self.assertRaisesRegex(WholeOptimizerError,
+                                    'control-flow or interrupt'):
+            verify_whole_optimizer_candidate(original, self.baseline(),
+                                             lambda _: changed)
+
     def test_control_source_comments_and_operand_spacing_are_harmless(self):
         original = self.source()
         modified = original.replace('    call worker\n',
@@ -123,10 +131,12 @@ class WholeOptimizerTests(unittest.TestCase):
         if not path:
             self.skipTest('locked optimizer source path required')
         optimizer = load_locked_optimizer(Path(path))
-        candidate = verify_whole_optimizer_candidate(
-            self.source(), self.baseline(), optimizer.optimize)
-        self.assertTrue(candidate['native_candidate_link_verified'])
-        self.assertFalse(candidate['native_behavior_verified'])
+        # Native probing shows an observable stack-memory difference for the
+        # proposed tail-transfer shortening, even with equal registers.
+        with self.assertRaisesRegex(WholeOptimizerError,
+                                    'control-flow or interrupt'):
+            verify_whole_optimizer_candidate(
+                self.source(), self.baseline(), optimizer.optimize)
         with tempfile.TemporaryDirectory() as temp:
             fake = Path(temp) / 'upeepz80'
             fake.mkdir()
@@ -150,9 +160,12 @@ class WholeOptimizerTests(unittest.TestCase):
                 base = report['native_whole_source_baseline']
                 self.assertTrue(base['native_whole_source_baseline_linked'])
                 candidate = base['native_whole_optimizer_candidate']
-                self.assertTrue(candidate['optimizer_full_program_source_presented'])
-                self.assertTrue(candidate['native_candidate_link_verified'])
-                self.assertTrue(candidate['protected_source_lines_preserved'])
+                if candidate.get('native_candidate_link_verified'):
+                    self.assertTrue(candidate['optimizer_full_program_source_presented'])
+                    self.assertTrue(candidate['protected_source_lines_preserved'])
+                else:
+                    self.assertIn('blocker', candidate)
+                    self.assertIn('optimizer', candidate['blocker'])
                 self.assertFalse(candidate['optimizer_candidate_admitted_for_publication'])
                 self.assertFalse(candidate['native_behavior_verified'])
                 self.assertFalse(report['gate8_complete'])
