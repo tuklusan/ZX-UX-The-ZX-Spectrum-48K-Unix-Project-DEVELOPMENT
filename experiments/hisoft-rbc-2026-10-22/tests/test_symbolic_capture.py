@@ -96,6 +96,24 @@ class Tests(unittest.TestCase):
         self.assertEqual(report['changed_after_emit'], 0)
         self.assertFalse(report['safe_to_optimize'])
 
+    def test_traced_ram_rejects_resizing_and_strided_writes_atomically(self):
+        from symbolic_capture import TracedRAM
+        owner = types.SimpleNamespace(counting=False, de_flags=0,
+                                      _zxux_capture=Capture())
+        far = TracedRAM(bytes(range(8)), owner)
+        initial = bytes(far)
+        for key, data in ((slice(1, 3), b'\x10\x20\x30'),
+                          (slice(1, 3), b'\x10'),
+                          (slice(1, 5, 2), b'\x10\x20')):
+            with self.subTest(key=key, data=data):
+                with self.assertRaisesRegex(ValueError, 'unresolved'):
+                    far[key] = data
+                self.assertEqual(bytes(far), initial)
+                self.assertEqual(owner._zxux_capture.events, [])
+        far[2:4] = b'\xaa\xbb'
+        self.assertEqual(len(far), len(initial))
+        self.assertEqual(owner._zxux_capture.events[0].data, b'\xaa\xbb')
+
     def test_direct_ram_patch_is_visible(self):
         c = Mock()
         c.emit_opcode('jp nn')

@@ -106,8 +106,19 @@ class TracedRAM(bytearray):
         self._owner = owner
 
     def __setitem__(self, key, value):
-        super().__setitem__(key, value)
         owner = self._owner
+        tracing = (not (getattr(owner, 'counting', True) or
+                        getattr(owner, 'de_flags', 0) & 1 or
+                        getattr(owner, '_zxux_capture_active', False) or
+                        getattr(owner, '_zxux_runtime_emitting', False)) and
+                   getattr(owner, '_zxux_capture', None) is not None)
+        if tracing and isinstance(key, slice):
+            start, stop, step = key.indices(len(self))
+            if step != 1 or stop - start > 4096:
+                raise ValueError('unresolved direct Z80 write slice')
+            if not hasattr(value, '__len__') or len(value) != stop - start:
+                raise ValueError('unresolved resizing Z80 direct write')
+        super().__setitem__(key, value)
         if (getattr(owner, 'counting', True) or
                 getattr(owner, 'de_flags', 0) & 1 or
                 getattr(owner, '_zxux_capture_active', False) or
