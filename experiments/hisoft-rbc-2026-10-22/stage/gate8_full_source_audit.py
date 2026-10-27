@@ -30,6 +30,7 @@ from gate8_runtime_source_match import verify_three_runtime_sources
 from gate8_native_runtime_combined import (RuntimeCombinedError,
     verify_three_native_runtime_regions)
 from gate8_runtime_handoff import RuntimeHandoffError, verify_three_runtime_handoffs
+from gate8_whole_native_baseline import WholeBaselineError, verify_three_whole_native_baselines
 from hisoft_frontend_inputs import KNOWN_COMPILER
 
 
@@ -178,6 +179,20 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         runtime_handoff = {'runtime_handoff_verified': False, 'blocker': str(exc),
                            'full_program_optimized': False,
                            'native_behavior_verified': False}
+    try:
+        from z80asm import asm
+        whole_native_baseline = verify_three_whole_native_baselines(
+            captured_events, [build.code for build in observed],
+            [build.base for build in observed], text_endpoints,
+            [build.bss for build in observed], asm,
+            vendor.data, rom.read_bytes(),
+            {POKE_RT: 'native-poke', RT.PAUSE: 'native-pause',
+             RT.VAL: 'guarded-val'}, runtime_layouts, native_runtime_region)
+    except (WholeBaselineError, ValueError, TypeError) as exc:
+        whole_native_baseline = {'native_whole_source_baseline_linked': False,
+                                 'blocker': str(exc),
+                                 'full_program_optimized': False,
+                                 'native_behavior_verified': False}
     first, _ = rbc.build_ssx(baseline, bytes(768), rld, 384, use_rom_font=True)
     second, _ = rbc.build_ssx(observed, bytes(768), rld, 384, use_rom_font=True)
     if first != second:
@@ -209,6 +224,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         'original_runtime_source_match': runtime_source_match,
         'native_runtime_region': native_runtime_region,
         'native_runtime_handoff': runtime_handoff,
+        'native_whole_source_baseline': whole_native_baseline,
         'compiler_source_sites': source_site_report,
         'relative_source_branches': relative_report,
         'whole_program_attempt': whole_attempt,
