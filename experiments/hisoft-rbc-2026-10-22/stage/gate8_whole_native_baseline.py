@@ -8,6 +8,7 @@ are not proven safe for whole-program peephole optimization by this module.
 from __future__ import annotations
 
 import hashlib
+import re
 
 import ras
 import rld
@@ -75,6 +76,13 @@ def _source_program(events, image, base, text_end, bss, assembler,
     relatives = inspect_relative_branches(spans, text_end, assembler)
     targets.update(branch.target for branch in relatives.values())
     entry_sites = set(source_instructions) | runtime_instruction_sites | set(replacements_at.values())
+    # HiSoft sometimes takes the address of an immediate operand as mutable
+    # storage (not as an instruction entry). A symbol for the *owner's start*
+    # plus its verified operand offset preserves the instruction mnemonic and
+    # relocates this pointer without splitting executable bytes into DB/DW.
+    # Only the immediate word of a typed three-byte LD rr,nn, CALL nn,
+    # or JP nn is supported.
+    interior_words = {}
     for span in spans:
         target = span.target
         if target is None or target >= text_end:
@@ -86,13 +94,25 @@ def _source_program(events, image, base, text_end, bss, assembler,
         elif target not in entry_sites and not any(
                 data.kind == 'inline-data' and data.start <= target < data.end
                 for data in spans):
-            raise WholeBaselineError('source pointer targets an unowned text byte')
+            owners = [owner for owner in spans if owner.start < target < owner.end]
+            if (len(owners) != 1 or owners[0].kind not in
+                    ('instruction', 'instruction-relocated') or
+                    owners[0].end - owners[0].start != 3 or
+                    not re.fullmatch(r'(?:ld\s+(?:bc|de|hl|sp)\s*,\s*|call\s+|jp\s+)(?:nn|(?:\$[0-9a-f]+|\d+))',
+                                     owners[0].source.strip().lower())):
+                raise WholeBaselineError('source pointer targets an unowned text byte')
+            interior_words[target] = (owners[0].start, target - owners[0].start)
     if any(branch.target not in entry_sites for branch in relatives.values()):
         raise WholeBaselineError('relative branch does not target a typed instruction')
     if any(target is None or not 0 <= target < len(image) + bss for target in targets):
         raise WholeBaselineError('source relocation target outside process')
-    name = lambda address: 'start' if address == 0 else f'source_{address:04x}'
-    marks = targets | {0}
+    def name(address):
+        if address in interior_words:
+            owner, offset = interior_words[address]
+            anchor = 'start' if owner == 0 else f'source_{owner:04x}'
+            return f'{anchor}+{offset}'
+        return 'start' if address == 0 else f'source_{address:04x}'
+    marks = targets | {0} | {owner for owner, _ in interior_words.values()}
     program = SymbolicProgram()
     actual = 0
     runtime_inserted = False
