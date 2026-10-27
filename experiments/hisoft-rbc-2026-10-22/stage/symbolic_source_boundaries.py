@@ -110,8 +110,10 @@ def inspect_source_boundaries(events, image: bytes, base: int, data_start: int,
                 raise SourceBoundaryError('unpaired relocation differs from link base')
             kind = 'unpaired-relocation'
         elif kind not in ('word', 'byte', 'binary', 'runtime-opaque',
-                          'data-source', 'direct-write'):
+                          'data-source', 'direct-write', 'inline-data'):
             raise SourceBoundaryError('unknown source producer: ' + str(kind))
+        if kind == 'inline-data' and pos + len(payload) > data_start:
+            raise SourceBoundaryError('source literal crosses BASIC DATA boundary')
         if kind in ('instruction', 'instruction-relocated') and pos + len(payload) > data_start:
             raise SourceBoundaryError('source instruction crosses into BASIC DATA')
         if not payload:
