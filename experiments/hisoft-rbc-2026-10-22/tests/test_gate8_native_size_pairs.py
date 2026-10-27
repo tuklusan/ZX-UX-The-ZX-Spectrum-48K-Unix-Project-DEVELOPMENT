@@ -66,6 +66,21 @@ class NativeDimensions(unittest.TestCase):
         with self.assertRaises(NativeSizeError):
             dimensions(b'not-ssx', rld)
 
+    def test_unverified_size_pair_cannot_claim_native_behavior(self):
+        obj = ras.assemble_text(self.example().assembly(), 'size-gate.s')
+        linked = rld.link([rld.Obj(obj, 'size-gate.sso')], [],
+                          entry='start', stack=384)[0]
+        with self.assertRaisesRegex(NativeSizeError, 'cannot be asserted'):
+            typed_pair(linked, linked, rld, source_verified=True,
+                       native_behavior_verified=True)
+        with self.assertRaisesRegex(NativeSizeError, 'cannot be asserted'):
+            typed_pair(linked, linked, rld, source_verified=True,
+                       native_behavior_verified=None)
+        report = typed_pair(linked, linked, rld, source_verified=True,
+                            native_behavior_verified=False)
+        self.assertFalse(report['native_behavior_verified'])
+        self.assertEqual(report['file_savings_bytes'], 0)
+
     def test_published_data_must_not_be_claimed_post_optimizer(self):
         report = published_baselines(ROOT, rld)
         self.assertEqual(report['original_bas'], 60)

@@ -44,12 +44,15 @@ def typed_pair(plain: bytes, optimized: bytes, rld, *,
     """Report both linked variants, never granting unsupported runtime proof."""
     if source_verified is not True:
         raise NativeSizeError('typed complete original source required')
+    # Linked dimensions cannot establish behavioral equivalence.
+    if native_behavior_verified is not False:
+        raise NativeSizeError('native runtime proof cannot be asserted by size report')
     pre, post = dimensions(plain, rld), dimensions(optimized, rld)
     return {'kind': 'source-owned-native-pair', 'pre_native': pre,
             'post_native': post,
             'file_savings_bytes': pre['file_bytes'] - post['file_bytes'],
             'memory_savings_bytes': pre['admission_bytes'] - post['admission_bytes'],
-            'native_behavior_verified': native_behavior_verified is True,
+            'native_behavior_verified': False,
             'upeepz80_revision_verified': False}
 
 
