@@ -108,6 +108,43 @@ def _control_transfers(assembly: str) -> tuple[tuple[str, str, str], ...]:
     return tuple(transfers)
 
 
+
+# Memory traffic, register-bank changes, and stack writes can be visible even
+# when a register-only dead-code analysis believes the value is unused.
+# Unmodelled instructions remain unapproved; this is a necessary guard,
+# not an equivalence proof for the remaining instruction stream.
+_OBSERVABLE_OPS = frozenset((
+    'push', 'pop', 'ex', 'exx', 'in', 'out', 'ini', 'inir', 'ind', 'indr',
+    'outi', 'otir', 'outd', 'otdr', 'ldi', 'ldir', 'ldd', 'lddr',
+    'cpi', 'cpir', 'cpd', 'cpdr', 'rld', 'rrd', 'di', 'ei', 'halt',
+))
+
+
+def _observable_accesses(assembly: str) -> tuple[tuple[str, str, str], ...]:
+    """Keep source-ordered memory, I/O and stack effects across rewrites."""
+    section = 'text'
+    owner = ''
+    accesses = []
+    for raw in assembly.splitlines():
+        statement = raw.partition(';')[0].strip().lower()
+        if not statement:
+            continue
+        if statement.startswith('section '):
+            section = statement.split(None, 1)[1]
+            continue
+        if statement.endswith(':'):
+            owner = statement[:-1]
+            continue
+        if section != 'text':
+            continue
+        fields = statement.split(None, 1)
+        opcode = fields[0]
+        operand = re.sub(r'\s+', '', fields[1]) if len(fields) > 1 else ''
+        if opcode in _OBSERVABLE_OPS or '(' in operand:
+            accesses.append((owner, opcode, operand))
+    return tuple(accesses)
+
+
 def _first_resource_boundary_change(original: str, candidate: str) -> str:
     """Identify the first protected code boundary altered by an optimizer.
 
@@ -163,6 +200,8 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
         candidate_cfg = inspect_typed_cfg_liveness(candidate_text)
         if _control_transfers(assembly) != _control_transfers(candidate_text):
             raise WholeOptimizerError('optimizer changed unverified control-flow or interrupt instruction')
+        if _observable_accesses(assembly) != _observable_accesses(candidate_text):
+            raise WholeOptimizerError('optimizer changed unverified memory, I/O or stack effects')
         obj = ras.assemble_text(candidate_text, 'rbc-whole-upeepz80.s')
         candidate_ssx, *_ = rld.link(
             [rld.Obj(obj, 'rbc-whole-upeepz80.sso')], [],

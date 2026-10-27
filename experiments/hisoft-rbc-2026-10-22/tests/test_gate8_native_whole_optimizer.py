@@ -30,12 +30,16 @@ class WholeOptimizerTests(unittest.TestCase):
                         entry='start', stack=384)[0]
 
     def test_full_program_optimizer_relinks_and_preserves_resource(self):
-        whole = self.source()
-        before = self.baseline()
+        # Use register-only no-ops: PUSH/POP writes observable stack bytes.
+        whole = self.source().replace('    push hl\n    pop hl\n',
+                                      '    ld a,a\n    ld a,a\n')
+        obj = ras.assemble_text(whole, 'register-before.s')
+        before = rld.link([rld.Obj(obj, 'register-before.sso')], [],
+                          entry='start', stack=384)[0]
         seen = []
         def optimize(source):
             seen.append(source)
-            return source.replace('    push hl\n    pop hl\n', '')
+            return source.replace('    ld a,a\n    ld a,a\n', '')
         result = verify_whole_optimizer_candidate(whole, before, optimize)
         self.assertEqual(seen, [whole])
         self.assertTrue(result['native_candidate_link_verified'])
@@ -156,6 +160,32 @@ class WholeOptimizerTests(unittest.TestCase):
         self.assertIn('protected resource boundary', candidate['blocker'])
         self.assertFalse(candidate['optimizer_candidate_admitted_for_publication'])
         self.assertFalse(report['gate8_complete'])
+
+    def test_memory_reads_and_stack_effects_cannot_be_silently_deleted(self):
+        original = ('    section text\n    global start\nstart:\n'
+                    '    ld a,(23692)\n    push af\n    ld a,255\n'
+                    '    ld (23692),a\n    pop af\n'
+                    '    ld (23692),a\n    ret\n')
+        obj = ras.assemble_text(original, 'memory-before.s')
+        baseline = rld.link([rld.Obj(obj, 'memory-before.sso')], [],
+                            entry='start', stack=384)[0]
+        for changed in (
+                original.replace('    ld a,(23692)\n', ''),
+                original.replace('    ld a,(23692)', '    ld a,12'),
+                original.replace('    push af\n', ''),
+                original.replace('    pop af\n', ''),
+                original.replace('    ld (23692),a\n', '', 1)):
+            with self.subTest(changed=changed):
+                with self.assertRaisesRegex(WholeOptimizerError,
+                                            'memory, I/O or stack effects'):
+                    verify_whole_optimizer_candidate(original, baseline,
+                                                     lambda _: changed)
+        harmless = original.replace('    ld a,(23692)',
+                                    '    ld  a, (23692) ; still reads memory')
+        candidate = verify_whole_optimizer_candidate(original, baseline,
+                                                      lambda _: harmless)
+        self.assertTrue(candidate['candidate_byte_identical'])
+        self.assertFalse(candidate['optimizer_candidate_admitted_for_publication'])
 
     def test_wrong_optimizer_output_rejected(self):
         with self.assertRaisesRegex(WholeOptimizerError, 'text'):
