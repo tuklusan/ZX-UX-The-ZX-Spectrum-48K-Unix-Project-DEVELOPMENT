@@ -132,7 +132,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             raise RuntimeError(f'passive capture changed program bytes at pass {index}')
     source_patch_report = verify_three_passes(source_words, observed)
     relocation_report = verify_three_builds(relocations, [x.base for x in observed])
-    instruction_report = verify_three_sources(instructions, [x.base for x in observed])
+    instruction_report = verify_three_sources(instructions, [x.base for x in observed],
+                                               [m.overlaps for m in source_maps])
     opcode_report = verify_three_opcode_passes(opcode_pairs, [x.base for x in observed])
     source_map_report = verify_three_source_maps(source_maps, [x.base for x in observed])
     fragment_report = verify_three_fragment_passes(source_fragments,
@@ -163,7 +164,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             [build.code for build in observed],
             [build.base for build in observed],
             [m.spans for m in source_maps],
-            {POKE_RT: 'native-poke', RT.PAUSE: 'native-pause',
+            {PEEK_RT: 'native-peek', POKE_RT: 'native-poke',
+             RT.PAUSE: 'native-pause',
              RT.VAL: 'guarded-val'},
             runtime_layouts)
     except RuntimeCombinedError as exc:
@@ -190,7 +192,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             [build.base for build in observed], text_endpoints,
             [build.bss for build in observed], asm,
             vendor.data, rom.read_bytes(),
-            {POKE_RT: 'native-poke', RT.PAUSE: 'native-pause',
+            {PEEK_RT: 'native-peek', POKE_RT: 'native-poke',
+             RT.PAUSE: 'native-pause',
              RT.VAL: 'guarded-val'}, runtime_layouts, native_runtime_region,
             optimizer=optimizer)
     except (WholeBaselineError, WholeOptimizerError, ValueError, TypeError) as exc:

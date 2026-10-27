@@ -235,7 +235,8 @@ def _font_address_alias(e, base, total, action, font_alias=None):
     e.op('pop hl; pop de; pop bc')
 
 
-def _native_peek(asm, base, load, total=0, font_alias=None, entry=0):
+def _native_peek(asm, base, load, total=0, font_alias=None, entry=0,
+                 *, with_source=False):
     e = _Code(asm)
     e.op('ld a,h; cp $5c')
     e.jr('ordinary_trampoline','nz')
@@ -312,7 +313,12 @@ def _native_peek(asm, base, load, total=0, font_alias=None, entry=0):
     _process_address_check(e, base, total, 'read_public')
     e.label('read_public')
     e.op('ld l,(hl); ld h,0; ret')
-    return e.build(base,load,entry)
+    raw = e.build(base, load, entry)
+    if with_source:
+        return raw, e.assembly(base, entry), tuple(sorted(
+            [position for position, _ in e.absrefs] +
+            [position for position, _ in e.absjumps]))
+    return raw
 
 
 def _native_poke(asm, base, load, total=0, font_alias=None, entry=0,

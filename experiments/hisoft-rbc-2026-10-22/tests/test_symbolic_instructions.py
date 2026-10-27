@@ -38,6 +38,23 @@ class InstructionTests(unittest.TestCase):
         row = inspect_sources([emit('instruction', 'ret', b'\xc9', 0)], b'\x76', asm)
         self.assertTrue(row[0].overwritten)
 
+    def test_source_opcode_history_requires_three_matching_overlap_maps(self):
+        first = inspect_sources([emit('opcode', 'jp nn', b'\xc3', 0)],
+                                b'\xc3\x00\x00', asm)
+        second = inspect_sources([emit('opcode', 'jp nn', b'\xc3', 0)],
+                                 b'\xc9\x00\x00', asm)
+        bases = (0x8000, 0x7000, 0x6000)
+        # A source opcode overwritten by later bytes is never declared typed.
+        with self.assertRaises(UnresolvedInstruction):
+            verify_three_sources([first, second, first], bases)
+        with self.assertRaises(UnresolvedInstruction):
+            verify_three_sources([first, second, first], bases,
+                                 [(0,), (1,), (0,)])
+        report = verify_three_sources([first, second, first], bases,
+                                      [(0,), (0,), (0,)])
+        self.assertEqual(report['source_historical_instruction_variation'], 1)
+        self.assertFalse(report['fully_symbolic'])
+
     def test_fake_mnemonic_and_unknown_opcode_fail(self):
         for event in (emit('instruction', 'nop', b'\xc9', 0),
                       emit('opcode', 'ret', b'\xc9', 0),

@@ -19,7 +19,7 @@ from z80_python.disasm import disassemble_bytes
 from native_pause_rt import original_pause_source
 from gate8_native_guarded_val import guarded_val_assembly
 from spectrum_runtime import guarded_val_bytes
-from native_sysvars_rt import _native_poke, POKE_RT
+from native_sysvars_rt import _native_peek, _native_poke, PEEK_RT, POKE_RT
 
 
 class RuntimeCombinedError(ValueError):
@@ -163,6 +163,21 @@ def _replacement_listing(n, start, base, settings, expected):
         sites = ()
         label = 'rbc_val_entry'
         source = source.replace('start:', label+':')
+    elif n == PEEK_RT:
+        if (not isinstance(settings, dict) or
+                any(k not in settings for k in
+                    ('sysvar_offset', 'process_total', 'font_alias'))):
+            raise RuntimeCombinedError('source PEEK layout not independently witnessed')
+        raw, source, sites = _native_peek(
+            asm, settings['sysvar_offset'], base,
+            settings['process_total'], settings['font_alias'], start,
+            with_source=True)
+        if raw != expected:
+            raise RuntimeCombinedError('source PEEK does not match original program')
+        label = 'rbc_peek_entry'
+        source = (source.replace('start:', label+':')
+                  .replace('start+', label+'+')
+                  .replace('rbc_local_', 'rbc_peek_local_'))
     elif n == POKE_RT:
         if (not isinstance(settings, dict) or
                 any(k not in settings for k in
@@ -175,7 +190,9 @@ def _replacement_listing(n, start, base, settings, expected):
         if raw != expected:
             raise RuntimeCombinedError('source POKE does not match original program')
         label = 'rbc_poke_entry'
-        source = source.replace('start:', label+':').replace('start+', label+'+')
+        source = (source.replace('start:', label+':')
+                  .replace('start+', label+'+')
+                  .replace('rbc_local_', 'rbc_poke_local_'))
     else:
         raise RuntimeCombinedError('untyped replacement routine')
     lines = [line for line in source.splitlines()
@@ -248,7 +265,8 @@ def native_runtime_region(code: bytes, rom: bytes, image: bytes, base: int,
     from rtnames import RT
     selected = _runtime_spans(spans, image)
     start, end = selected[0][1], selected[-1][2]
-    replacements_expected = {POKE_RT: 'native-poke', RT.PAUSE: 'native-pause',
+    replacements_expected = {PEEK_RT: 'native-peek', POKE_RT: 'native-poke',
+                             RT.PAUSE: 'native-pause',
                              RT.VAL: 'guarded-val'}
     actual = {n for n, _, _ in selected if n in replacements_expected}
     if not actual or any(replacements.get(n) != replacements_expected[n]

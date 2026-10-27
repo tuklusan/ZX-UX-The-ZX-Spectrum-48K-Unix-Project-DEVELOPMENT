@@ -62,7 +62,7 @@ class RuntimeMatch:
 
 
 def _verify_poke_source(expected: bytes, load: int, entry: int,
-                        settings: dict):
+                        settings: dict, *, peek=False):
     """Independently native-link original RBC POKE emitter instructions.
 
     Settings come from the actual compiler instance, not from guessed
@@ -72,6 +72,7 @@ def _verify_poke_source(expected: bytes, load: int, entry: int,
     import ras
     import rld
     from z80asm import asm
+    kind = 'PEEK' if peek else 'POKE'
     if (not isinstance(settings, dict) or
             set(settings) != {'sysvar_offset', 'process_total', 'font_alias'} or
             any(type(settings[k]) is not int or not 0 <= settings[k] <= 65535
@@ -81,26 +82,26 @@ def _verify_poke_source(expected: bytes, load: int, entry: int,
               not 0 <= settings['font_alias'] <= 65535)) or
             not 0 <= load + entry < 65536 or
             load + entry + len(expected) > 65536):
-        raise RuntimeMatchError('POKE source settings lack verified compiler values')
+        raise RuntimeMatchError(kind + ' source settings lack verified compiler values')
     code = run_path(str(Path(__file__).with_name('native_sysvars_rt.py')))
-    raw, listing, sites = code['_native_poke'](
+    raw, listing, sites = code['_native_peek' if peek else '_native_poke'](
         asm, settings['sysvar_offset'], load, settings['process_total'],
         settings['font_alias'], entry, with_source=True)
     if raw != expected:
-        raise RuntimeMatchError('POKE source emission differs from original program')
+        raise RuntimeMatchError(kind + ' source emission differs from original program')
     try:
-        obj = ras.assemble_text(listing, 'rbc-poke.s')
-        linked, *_ = rld.link([rld.Obj(obj, 'rbc-poke.sso')], [],
+        obj = ras.assemble_text(listing, 'rbc-sysvar.s')
+        linked, *_ = rld.link([rld.Obj(obj, 'rbc-sysvar.sso')], [],
                               entry='start', stack=384)
         parsed = rld.parse_ssx(linked)
         actual = bytes(rld.relocate(parsed['image'], parsed['relocs'],
                                     load + entry))
     except (ValueError, KeyError, TypeError, rld.LinkError,
             ras.AsmError) as exc:
-        raise RuntimeMatchError('POKE native assembly failed') from exc
+        raise RuntimeMatchError(kind + ' native assembly failed') from exc
     if (actual != expected or parsed['relocs'] != list(sites) or
             parsed['bss'] != 0 or parsed['entry'] != 0):
-        raise RuntimeMatchError('POKE native relocation differs from original')
+        raise RuntimeMatchError(kind + ' native relocation differs from original')
     return hashlib.sha256(listing.encode('utf-8')).hexdigest(), len(sites)
 
 
@@ -148,12 +149,14 @@ def verify_runtime_source_match(code: bytes, rom: bytes, image: bytes,
         original_entry = int.from_bytes(machine.mem[slot:slot + 2], 'little')
         if n in replacements:
             reason = replacements[n]
-            if reason == 'native-poke' and replacement_settings is not None:
-                from native_sysvars_rt import POKE_RT
-                if n != POKE_RT:
-                    raise RuntimeMatchError('POKE source assigned to wrong routine')
+            if reason in ('native-peek', 'native-poke') and replacement_settings is not None:
+                from native_sysvars_rt import PEEK_RT, POKE_RT
+                if (n, reason) not in ((PEEK_RT, 'native-peek'),
+                                      (POKE_RT, 'native-poke')):
+                    raise RuntimeMatchError('system variable source assigned to wrong routine')
                 digest, sites = _verify_poke_source(
-                    image[start:end], base, start, replacement_settings)
+                    image[start:end], base, start, replacement_settings,
+                    peek=reason == 'native-peek')
                 verified_replacements.append((n, end - start))
                 source_signature.append((n, start, end, 'typed-replacement',
                                          reason, digest, sites))

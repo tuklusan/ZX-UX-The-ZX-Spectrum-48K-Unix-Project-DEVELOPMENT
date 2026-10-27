@@ -59,23 +59,37 @@ def inspect_sources(events, image: bytes, assembler):
     return tuple(records)
 
 
-def verify_three_sources(groups, bases):
+def verify_three_sources(groups, bases, overlap_sites=None):
     """Check source instruction locations, not just final binary signatures."""
     if len(groups) != 3 or len(bases) != 3 or len(set(bases)) != 3:
         raise UnresolvedInstruction('three distinct native builds required')
     first = groups[0]
+    if overlap_sites is not None:
+        if len(overlap_sites) != 3:
+            raise UnresolvedInstruction('three source overlap maps required')
+        common_overlaps = set.intersection(*(set(sites) for sites in overlap_sites))
+    else:
+        common_overlaps = set()
     if not first:
         raise UnresolvedInstruction('no instructions to verify')
     for current in groups[1:]:
         if len(current) != len(first):
             raise UnresolvedInstruction('instruction source count differs')
         for old, new in zip(first, current):
-            if ((old.site, old.kind, len(old.data), old.overwritten) !=
-                    (new.site, new.kind, len(new.data), new.overwritten)):
+            if ((old.site, old.kind, len(old.data)) !=
+                    (new.site, new.kind, len(new.data))):
+                raise UnresolvedInstruction('instruction source locations differ')
+            if old.overwritten != new.overwritten and not any(
+                    pos in common_overlaps
+                    for pos in range(old.site, old.site + len(old.data))):
                 raise UnresolvedInstruction('instruction source locations differ')
     counts = {'mnemonic': sum(r.kind == 'instruction' for r in first),
               'word_opcode': sum(r.kind == 'opcode' for r in first)}
-    return {'typed_source_events': len(first),
+    historical_variation = sum(
+        any(other[i].overwritten != first[i].overwritten for other in groups[1:])
+        for i in range(len(first)))
+    return {'source_historical_instruction_variation': historical_variation,
+            'typed_source_events': len(first),
             'typed_source_bytes': sum(len(r.data) for r in first),
             'kind_counts': counts,
             'changed_after_source_emit': sum(r.overwritten for r in first),
