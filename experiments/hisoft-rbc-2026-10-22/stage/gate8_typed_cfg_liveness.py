@@ -65,6 +65,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
     section = 'text'
     pending = []
     symbols = {}
+    exported_symbols = set()
     instructions = []
     symbolic_table_targets = set()
     table_expressions = []
@@ -81,6 +82,10 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
             barrier = True
             continue
         if line.startswith('global '):
+            declared = [name.strip() for name in line[7:].split(',')]
+            if not declared or any(not _NAME.fullmatch(name) for name in declared):
+                raise TypedCFGError('invalid exported Z80 source label')
+            exported_symbols.update(declared)
             continue
         if line.endswith(':'):
             name = line[:-1]
@@ -124,6 +129,13 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
         symbols[label] = None
     if symbols.get('start') is None or not instructions:
         raise TypedCFGError('typed source start does not name an instruction')
+    # A global text label is callable by a separately linked object, runtime
+    # trampoline, or shell entry even if this assembly contains no local JP.
+    for name in exported_symbols:
+        if name not in symbols:
+            raise TypedCFGError('exported Z80 label is not defined: ' + name)
+    exported_entries = {symbols[name] for name in exported_symbols
+                        if symbols[name] is not None}
     edges = []
     unresolved = []
     rom_edges = 0
@@ -200,7 +212,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
         for term in _SYMBOL.findall(expression):
             if symbols.get(term) is not None:
                 unknown_pointer_expressions.append((-1, expression))
-    entries = {symbols['start']}
+    entries = {symbols['start']} | exported_entries
     # Source references can identify external routine callbacks; without an
     # independently verified entry manifest, label-only guesses are forbidden.
     successors = {i: set() for i in range(len(instructions))}
@@ -265,6 +277,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
         'unreached_instructions': len(instructions)-len(possible),
         'direct_cfg_reachable_instructions': len(direct_reachable),
         'symbolic_table_entry_instructions': len(table_entries),
+        'exported_entry_instructions': len(exported_entries),
         'symbolic_address_entry_instructions': len(address_taken),
         'unresolved_pointer_expressions': len(unknown_pointer_expressions),
         'unknown_entry_reachability': indirect_or_unknown,

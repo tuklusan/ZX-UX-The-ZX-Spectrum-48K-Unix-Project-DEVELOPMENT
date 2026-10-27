@@ -22,6 +22,72 @@ class TypedWholeCFGTests(unittest.TestCase):
         self.assertTrue(report['source_liveness_converged'])
         self.assertFalse(report['rewrite_safe_to_admit'])
 
+    def test_exported_text_labels_are_external_entry_roots(self):
+        # One object can export multiple entry points even when its own
+        # control flow never branches to the additional exports.
+        source = ('section text\nglobal start\nglobal handler\n'
+                  'start:\n    ret\n'
+                  'hidden:\n    nop\n    ret\n'
+                  'handler:\n    ld a,42\n    ret\n')
+        report = inspect_typed_cfg_liveness(source)
+        self.assertEqual(report['exported_entry_instructions'], 2)
+        self.assertEqual(report['direct_cfg_reachable_instructions'], 3)
+        self.assertEqual(report['unreached_instructions'], 2)
+        self.assertFalse(report['unknown_entry_reachability'])
+        self.assertFalse(report['rewrite_safe_to_admit'])
+
+    def test_native_exported_handler_is_separate_linker_entry(self):
+        import ras
+        import rld
+        from z80_python.cpu import Z80CPU
+        source = ('    section text\n    global start\n    global handler\n'
+                  'start:\n    ret\n'
+                  'hidden:\n    nop\n    ret\n'
+                  'handler:\n    ld a,42\n    ret\n')
+        obj = ras.assemble_text(source, 'exported-entry.s')
+        main, *_ = rld.link([rld.Obj(obj, 'exported-entry.sso')], [],
+                            entry='start', stack=384)
+        external, *_ = rld.link([rld.Obj(obj, 'exported-entry.sso')], [],
+                                entry='handler', stack=384)
+        main_info, info = rld.parse_ssx(main), rld.parse_ssx(external)
+        self.assertEqual(main_info['image'], info['image'])
+        self.assertNotEqual(main_info['entry'], info['entry'])
+        self.assertEqual(info['image'][info['entry']:info['entry'] + 3],
+                         b'\x3e\x2a\xc9')
+        for base in (0x7000, 0x8000, 0x9000):
+            with self.subTest(base=base):
+                memory = bytearray(65536)
+                image = rld.relocate(info['image'], info['relocs'], base)
+                memory[base:base + len(image)] = image
+                memory[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+                cpu = Z80CPU(memory.__getitem__, memory.__setitem__)
+                cpu.pc, cpu.sp = base + info['entry'], 0xd000
+                for _ in range(10):
+                    if cpu.pc == 0xb000:
+                        break
+                    cpu.step()
+                else:
+                    self.fail('exported handler did not return')
+                self.assertEqual(cpu.a, 42)
+                self.assertEqual(cpu.sp, 0xd002)
+
+    def test_global_data_symbol_is_not_a_code_entry(self):
+        source = ('section text\nglobal start\nglobal buffer\n'
+                  'start:\n    ret\n'
+                  'section data\nbuffer:\n    dw 7\n')
+        report = inspect_typed_cfg_liveness(source)
+        self.assertEqual(report['exported_entry_instructions'], 1)
+        self.assertEqual(report['reachable_instructions'], 1)
+
+    def test_missing_or_malformed_export_fails_closed(self):
+        for source in (
+                'section text\nglobal absent\nstart:\n ret\n',
+                'section text\nglobal start,\nstart:\n ret\n',
+                'section text\nglobal 22bad\nstart:\n ret\n'):
+            with self.subTest(source=source):
+                with self.assertRaises(TypedCFGError):
+                    inspect_typed_cfg_liveness(source)
+
     def test_opaque_indirect_and_protected_data_do_not_become_edges(self):
         source = ('    section text\n    global start\nstart:\n'
                   '    jp (hl)\n    db 195,0,118,255\n'
