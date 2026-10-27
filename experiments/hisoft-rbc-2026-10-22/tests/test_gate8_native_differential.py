@@ -62,6 +62,23 @@ class NativeDifferential(unittest.TestCase):
         with self.assertRaisesRegex(NativeProbeBlocked, 'did not return'):
             compare_native_probes(loop, loop, limit=16)
 
+    def test_exact_one_instruction_budget_allows_a_real_return(self):
+        native = link(('ret',))
+        result = compare_native_probes(native, native, limit=1)
+        self.assertEqual(result['checked_exits'], 12)
+        self.assertTrue(result['bounded_exit_states_match'])
+
+    def test_spoofed_caller_stack_pointer_without_return_is_rejected(self):
+        spoof = link(('ld sp,53250', 'jp 45056'))
+        with self.assertRaisesRegex(NativeProbeBlocked, 'caller stack'):
+            compare_native_probes(spoof, spoof)
+
+    def test_real_conditional_return_to_caller_is_accepted(self):
+        source = link(('ret z', 'ret'))
+        result = compare_native_probes(source, source)
+        self.assertEqual(result['checked_exits'], 12)
+        self.assertTrue(result['bounded_exit_states_match'])
+
     def test_invalid_native_location_or_arguments_are_rejected(self):
         native = link(('ret',))
         with self.assertRaisesRegex(NativeProbeBlocked, 'outside bounded'):

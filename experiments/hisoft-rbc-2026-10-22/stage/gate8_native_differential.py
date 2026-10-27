@@ -48,17 +48,32 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
     cpu.sp = 0xd000
     cpu.f = flags
     cycles = 0
+    returned = False
     for _ in range(limit):
         if cpu.pc == 0xb000:
-            if cpu.sp != 0xd002:
+            if cpu.sp != 0xd002 or not returned:
                 raise NativeProbeBlocked('process did not return through caller stack')
             return cpu.capture_state(), cycles, tuple(writes), tuple(ports)
         if not first <= cpu.pc < last:
             raise NativeProbeBlocked('execution escaped the native code image')
+        # An arbitrary JP with SP set to its final value is not a return.
+        # Observe the opcode and original stack word before stepping so a
+        # forged jump to the caller address cannot pass the exit gate.
+        opcode = memory[cpu.pc]
+        stack = cpu.sp
+        return_word = memory[stack] | memory[(stack + 1) & 0xffff] << 8
+        is_return = opcode == 0xc9 or opcode & 0xc7 == 0xc0
+        if opcode == 0xed and memory[(cpu.pc + 1) & 0xffff] in (0x45, 0x4d):
+            is_return = True
         try:
             cycles += cpu.step()
         except (NotImplementedError, IndexError) as exc:
             raise NativeProbeBlocked('native instruction not supported by probe') from exc
+        returned = (cpu.pc == 0xb000 and is_return and
+                    stack == 0xd000 and return_word == 0xb000 and
+                    cpu.sp == 0xd002)
+    if returned:
+        return cpu.capture_state(), cycles, tuple(writes), tuple(ports)
     raise NativeProbeBlocked('bounded native execution did not return')
 
 
