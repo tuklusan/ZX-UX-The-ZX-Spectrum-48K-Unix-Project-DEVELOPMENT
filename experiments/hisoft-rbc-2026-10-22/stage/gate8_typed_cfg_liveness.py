@@ -65,6 +65,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
     pending = []
     symbols = {}
     instructions = []
+    symbolic_table_targets = set()
     barrier = False
     for raw in assembly.splitlines():
         line = raw.partition(';')[0].strip().lower()
@@ -88,6 +89,12 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
         words = line.split(None, 1)
         op = words[0]
         if op in ('db', 'dw', 'ds', 'defb', 'defw'):
+            if op in ('dw', 'defw') and len(words) == 2:
+                # A word table can pass an entry address to an indirect JP,
+                # ROM callback, or runtime routine without a direct CFG edge.
+                symbolic_table_targets.update(
+                    target for part in words[1].split(',')
+                    if (target := part.strip()).isidentifier())
             for label in pending:
                 symbols[label] = None
             pending.clear()
@@ -150,14 +157,27 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
     successors = {i: set() for i in range(len(instructions))}
     for a, b in edges:
         successors[a].add(b)
-    seen = set()
-    todo = list(entries)
-    while todo:
-        at = todo.pop()
-        if at in seen:
-            continue
-        seen.add(at)
-        todo.extend(successors[at] - seen)
+    def reachable(seeds):
+        seen = set()
+        todo = list(seeds)
+        while todo:
+            at = todo.pop()
+            if at in seen:
+                continue
+            seen.add(at)
+            todo.extend(successors[at] - seen)
+        return seen
+
+    direct_reachable = reachable(entries)
+    # Treat every symbol used as a code-pointer word as an entry, even when
+    # no direct CALL or JP names it. If any target is unresolved, a computed
+    # jump might land at any instruction or even in the middle of one; this
+    # count is only a conservative upper bound, never an optimization permit.
+    table_entries = {symbols[name] for name in symbolic_table_targets
+                     if symbols.get(name) is not None}
+    indirect_or_unknown = bool(unresolved)
+    possible = (set(range(len(instructions))) if indirect_or_unknown else
+                reachable(entries | table_entries))
     uses = []
     defines = []
     modelled = 0
@@ -169,6 +189,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
     live_in = [set() for _ in instructions]
     live_out = [set() for _ in instructions]
     # Every exit may expose all registers and process-visible storage.
+    unresolved_sites = {site for site, _target in unresolved}
     changed = True
     passes = 0
     while changed:
@@ -177,7 +198,12 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
             raise TypedCFGError('register liveness did not converge')
         changed = False
         for site in range(len(instructions) - 1, -1, -1):
-            live_after = set().union(*(live_in[x] for x in successors[site])) if successors[site] else set(_REGS)
+            live_after = (set().union(*(live_in[x] for x in successors[site]))
+                          if successors[site] else set(_REGS))
+            if site in unresolved_sites:
+                # A conditional indirect/unknown exit is live on BOTH the
+                # modeled fallthrough and the unmodeled external edge.
+                live_after.update(_REGS)
             live_before = set(uses[site]) | (live_after - set(defines[site]))
             if live_after != live_out[site] or live_before != live_in[site]:
                 live_out[site], live_in[site] = live_after, live_before
@@ -186,8 +212,12 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
         'instruction_count': len(instructions),
         'source_owned_labels': len(symbols),
         'direct_cfg_edges': len(edges),
-        'reachable_instructions': len(seen),
-        'unreached_instructions': len(instructions)-len(seen),
+        'reachable_instructions': len(possible),
+        'unreached_instructions': len(instructions)-len(possible),
+        'direct_cfg_reachable_instructions': len(direct_reachable),
+        'symbolic_table_entry_instructions': len(table_entries),
+        'unknown_entry_reachability': indirect_or_unknown,
+        'unresolved_exit_sites': len(unresolved_sites),
         'unresolved_control_edges': len(unresolved),
         'first_unresolved_edges': unresolved[:5],
         'direct_calls': calls,

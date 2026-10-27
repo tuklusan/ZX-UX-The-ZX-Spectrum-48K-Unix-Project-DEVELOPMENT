@@ -29,9 +29,60 @@ class TypedWholeCFGTests(unittest.TestCase):
                   'section data\ndatum:\n    dw entry\n')
         report = inspect_typed_cfg_liveness(source)
         self.assertGreater(report['unresolved_control_edges'], 0)
-        self.assertEqual(report['reachable_instructions'], 1)
+        self.assertEqual(report['direct_cfg_reachable_instructions'], 1)
+        self.assertEqual(report['reachable_instructions'], report['instruction_count'])
+        self.assertTrue(report['unknown_entry_reachability'])
         self.assertGreater(report['register_effects_unknown'], 0)
         self.assertFalse(report['native_behavior_verified'])
+
+    def test_address_table_is_a_possible_entry_without_direct_branch(self):
+        source = ('section text\nstart:\n    ret\n'
+                  'handler:\n    ld a,42\n    ret\n'
+                  'section data\ntable:\n    dw handler\n')
+        report = inspect_typed_cfg_liveness(source)
+        self.assertEqual(report['direct_cfg_reachable_instructions'], 1)
+        self.assertEqual(report['symbolic_table_entry_instructions'], 1)
+        self.assertEqual(report['reachable_instructions'], 3)
+        self.assertFalse(report['unknown_entry_reachability'])
+        self.assertFalse(report['rewrite_safe_to_admit'])
+
+    def test_native_indirect_table_dispatch_cannot_be_called_dead(self):
+        import ras
+        import rld
+        from z80_python.cpu import Z80CPU
+        source = ('    section text\n    global start\nstart:\n'
+                  '    ld hl,(dispatch)\n    jp (hl)\n'
+                  'unused:\n    ld a,0\n    ret\n'
+                  'handler:\n    ld a,42\n    ret\n'
+                  '    section data\ndispatch:\n    dw handler\n')
+        report = inspect_typed_cfg_liveness(source)
+        self.assertEqual(report['direct_cfg_reachable_instructions'], 2)
+        self.assertEqual(report['symbolic_table_entry_instructions'], 1)
+        self.assertTrue(report['unknown_entry_reachability'])
+        self.assertEqual(report['reachable_instructions'], report['instruction_count'])
+        self.assertGreater(report['unresolved_exit_sites'], 0)
+        self.assertFalse(report['rewrite_safe_to_admit'])
+        obj = ras.assemble_text(source, 'indirect-table.s')
+        ssx, *_ = rld.link([rld.Obj(obj, 'indirect-table.sso')], [],
+                           entry='start', stack=384)
+        info = rld.parse_ssx(ssx)
+        self.assertGreaterEqual(len(info['relocs']), 2)
+        for base in (0x7000, 0x8000, 0x9000):
+            with self.subTest(base=base):
+                memory = bytearray(65536)
+                image = rld.relocate(info['image'], info['relocs'], base)
+                memory[base:base + len(image)] = image
+                memory[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+                cpu = Z80CPU(memory.__getitem__, memory.__setitem__)
+                cpu.pc = base + info['entry']
+                cpu.sp = 0xd000
+                for _ in range(12):
+                    if cpu.pc == 0xb000:
+                        break
+                    cpu.step()
+                else:
+                    self.fail('indirect handler did not return')
+                self.assertEqual(cpu.a, 42)
 
     def test_no_labels_for_opaque_bytes_or_unknown_entry(self):
         for source in (
