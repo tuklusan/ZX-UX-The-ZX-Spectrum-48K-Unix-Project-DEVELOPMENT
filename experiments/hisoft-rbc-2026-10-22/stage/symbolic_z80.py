@@ -129,11 +129,11 @@ class SymbolicProgram:
 
     def optimize(self, optimizer: Callable[[str], str], ras, rld, *,
                  stack: int = 384, max_memory: int = 12000) -> tuple[bytes, dict]:
-        """Optimize the entire symbolic program once, then assemble and link.
+        """Evaluate a whole-program optimizer candidate and native link.
 
-        The unchanged version is first assembled, providing a real baseline.
-        The optimizer must leave every binary, address table and exported
-        entry present and in order. If not, refuse rather than repair text.
+        The original source is reassembled as the executable baseline.
+        Preserve protected resources and report candidate sizes; native
+        relinking alone cannot certify behavior, so return only the baseline.
         """
         original = self.assembly()
         before = _link(original, ras, rld, stack)
@@ -150,13 +150,13 @@ class SymbolicProgram:
                            candidate["stack"])
         candidate_memory = max(len(after), candidate_total)
         candidate_file = len(after)
-        # Native candidate measurements must survive even when no saving is
-        # possible. Such a candidate is not published as the optimized output.
-        admitted = candidate_file < len(before) and candidate_memory < orig_memory
-        if admitted:
-            post, new_memory = candidate, candidate_memory
-        else:
-            after, post, new_memory = before, pre, orig_memory
+        # Size reduction and native linking do not establish Z80 behavior
+        # equivalence. For example, LD A,0 -> XOR A saves one byte but
+        # changes flags; even NOP removal changes timing and refresh state.
+        # Retain native candidate measurements, but only the independently
+        # reassembled source baseline may be returned as executable output.
+        admitted = False
+        after, post, new_memory = before, pre, orig_memory
         if max_memory and new_memory > max_memory:
             raise SymbolicError(f"linked program requires {new_memory} bytes (limit {max_memory})")
         return after, {"baseline_file_bytes": len(before),
@@ -167,6 +167,7 @@ class SymbolicProgram:
                        "optimizer_candidate_total_bytes": candidate_total,
                        "optimizer_candidate_memory_bytes": candidate_memory,
                        "optimizer_admitted": admitted,
+                       "candidate_behavior_verified": False,
                        "optimized_file_bytes": len(after),
                        "baseline_memory_bytes": orig_memory,
                        "optimized_memory_bytes": new_memory,

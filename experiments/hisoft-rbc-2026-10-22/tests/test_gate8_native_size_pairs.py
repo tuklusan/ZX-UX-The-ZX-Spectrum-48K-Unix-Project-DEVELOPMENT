@@ -32,8 +32,16 @@ class NativeDimensions(unittest.TestCase):
     def test_typed_native_pair_is_measured_at_both_actual_links(self):
         p = self.example()
         plain, before = p.optimize(lambda s: s, ras, rld)
-        changed, after = p.optimize(lambda s: s.replace('    ld a,0\n',
-                                                       '    xor a\n'), ras, rld)
+        returned, after = p.optimize(lambda s: s.replace('    ld a,0\n',
+                                                        '    xor a\n'), ras, rld)
+        self.assertEqual(returned, plain)
+        self.assertFalse(after['optimizer_admitted'])
+        # A diagnostic native pair measures the linked candidate separately;
+        # it is not the executable returned by the source pipeline.
+        candidate_obj = ras.assemble_text(
+            p.assembly().replace('    ld a,0\n', '    xor a\n'), 'size-candidate.s')
+        changed, *_ = rld.link([rld.Obj(candidate_obj, 'size-candidate.sso')], [],
+                               entry='start', stack=384)
         result = typed_pair(plain, changed, rld, source_verified=True,
                             native_behavior_verified=False)
         self.assertEqual(result['file_savings_bytes'], 1)
@@ -43,7 +51,7 @@ class NativeDimensions(unittest.TestCase):
         self.assertEqual(result['pre_native']['total_bytes'],
                          before['baseline_total_bytes'])
         self.assertEqual(result['post_native']['total_bytes'],
-                         after['optimized_total_bytes'])
+                         after['optimizer_candidate_total_bytes'])
         self.assertEqual(result['pre_native']['bss_bytes'], 8)
         self.assertEqual(result['post_native']['bss_bytes'], 8)
         self.assertFalse(result['native_behavior_verified'])

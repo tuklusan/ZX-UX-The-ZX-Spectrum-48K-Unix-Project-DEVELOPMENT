@@ -47,16 +47,27 @@ class SymbolicTests(unittest.TestCase):
         ssx, stats = p.optimize(optimizer, ras, rld)
         self.assertEqual(len(called), 1)
         parsed = rld.parse_ssx(ssx)
-        self.assertEqual(stats['saved_file_bytes'], 1)
+        self.assertEqual(stats['saved_file_bytes'], 0)
+        self.assertFalse(stats['optimizer_admitted'])
+        self.assertFalse(stats['candidate_behavior_verified'])
+        self.assertEqual(stats['optimizer_candidate_file_bytes'], len(ssx) - 1)
         self.assertEqual(parsed['bss'], 8)
         self.assertEqual(parsed['image'][-5:], bytes([0xC3, 0, 0x76, 0xFF, 0x18]))
         self.assertEqual(len(parsed['relocs']), 3)  # branch, buffer and data table
         image = parsed['image']
-        # The two uses of the entry symbol and the BSS pointer were
-        # resolved again AFTER instruction removal.
-        self.assertEqual(int.from_bytes(image[3:5], 'little'), 9)
-        self.assertEqual(int.from_bytes(image[6:8], 'little'), len(image))
-        self.assertEqual(int.from_bytes(image[10:12], 'little'), 9)
+        # The linked baseline retains the exact original address layout.
+        self.assertEqual(int.from_bytes(image[4:6], 'little'), 10)
+        self.assertEqual(int.from_bytes(image[7:9], 'little'), len(image))
+        self.assertEqual(int.from_bytes(image[11:13], 'little'), 10)
+        # The separately linked candidate still has its new addresses, but
+        # it is not returned as a runtime-proven executable.
+        candidate_obj = ras.assemble_text(optimizer(p.assembly()), 'candidate.s')
+        candidate, *_ = rld.link([rld.Obj(candidate_obj, 'candidate.sso')], [],
+                                 entry='start', stack=384)
+        new_image = rld.parse_ssx(candidate)['image']
+        self.assertEqual(int.from_bytes(new_image[3:5], 'little'), 9)
+        self.assertEqual(int.from_bytes(new_image[6:8], 'little'), len(new_image))
+        self.assertEqual(int.from_bytes(new_image[10:12], 'little'), 9)
 
     def test_unsafe_change_to_data_fails(self):
         p = self.example()
@@ -150,17 +161,55 @@ class SymbolicTests(unittest.TestCase):
         self.assertEqual(stats['optimizer_candidate_memory_bytes'],
                          stats['baseline_memory_bytes'])
 
-    def test_admitted_candidate_dimensions_match_published_native_link(self):
+    def test_smaller_candidate_remains_unpublished_without_behavior_proof(self):
         p = self.example()
+        baseline, _ = p.optimize(lambda asm: asm, ras, rld)
         binary, stats = p.optimize(
             lambda asm: asm.replace('    ld a,0\n', '    xor a\n'),
             ras, rld)
-        linked = rld.parse_ssx(binary)
-        self.assertTrue(stats['optimizer_admitted'])
-        self.assertEqual(stats['optimizer_candidate_file_bytes'], len(binary))
-        self.assertEqual(stats['optimizer_candidate_image_bytes'], len(linked['image']))
-        self.assertEqual(stats['optimizer_candidate_memory_bytes'],
-                         stats['optimized_memory_bytes'])
+        self.assertEqual(binary, baseline)
+        self.assertFalse(stats['optimizer_admitted'])
+        self.assertFalse(stats['candidate_behavior_verified'])
+        self.assertLess(stats['optimizer_candidate_file_bytes'], len(binary))
+        self.assertLess(stats['optimizer_candidate_memory_bytes'],
+                        stats['optimized_memory_bytes'])
+        self.assertEqual(stats['saved_file_bytes'], 0)
+
+    def test_native_shorter_register_load_changes_carry_at_three_bases(self):
+        from z80_python.cpu import Z80CPU
+        p = SymbolicProgram()
+        p.label('start', entry=True)
+        p.instruction('scf')
+        p.instruction('ld a,0')
+        p.instruction('ret')
+        baseline, _ = p.optimize(lambda asm: asm, ras, rld)
+        rejected, stats = p.optimize(
+            lambda asm: asm.replace('    ld a,0\n', '    xor a\n'),
+            ras, rld)
+        self.assertEqual(rejected, baseline)
+        self.assertFalse(stats['optimizer_admitted'])
+        optimized_obj = ras.assemble_text(
+            p.assembly().replace('    ld a,0\n', '    xor a\n'), 'flags.s')
+        optimized, *_ = rld.link([rld.Obj(optimized_obj, 'flags.sso')], [],
+                                 entry='start', stack=384)
+        for base in (0x7000, 0x8000, 0x9000):
+            for ssx, carry in ((baseline, 1), (optimized, 0)):
+                with self.subTest(base=base, expected_carry=carry):
+                    parsed = rld.parse_ssx(ssx)
+                    memory = bytearray(65536)
+                    image = rld.relocate(parsed['image'], parsed['relocs'], base)
+                    memory[base:base + len(image)] = image
+                    memory[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+                    cpu = Z80CPU(memory.__getitem__, memory.__setitem__)
+                    cpu.pc, cpu.sp = base + parsed['entry'], 0xd000
+                    for _ in range(10):
+                        if cpu.pc == 0xb000:
+                            break
+                        cpu.step()
+                    else:
+                        self.fail('native flag probe did not return')
+                    self.assertEqual(cpu.a, 0)
+                    self.assertEqual(int(cpu.f) & 1, carry)
 
     def test_no_growth_keeps_original(self):
         p = self.example()

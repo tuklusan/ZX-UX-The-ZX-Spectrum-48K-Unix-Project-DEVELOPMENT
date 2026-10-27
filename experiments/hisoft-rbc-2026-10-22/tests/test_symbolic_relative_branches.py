@@ -148,12 +148,19 @@ class RelativeSources(unittest.TestCase):
         better, sizes = p.optimize(lambda a: a.replace('    ld a,0\n',
                                                        '    xor a\n'), ras, rld)
         old = rld.parse_ssx(plain)['image']
-        new = rld.parse_ssx(better)['image']
+        self.assertEqual(plain, better)
         self.assertEqual(old[:8], b'\x06\x03\x3e\x00\x05\x20\xfb\xc9')
+        self.assertFalse(sizes['optimizer_admitted'])
+        self.assertEqual(sizes['saved_file_bytes'], 0)
+        self.assertEqual(sizes['saved_memory_bytes'], 0)
+        self.assertEqual(sizes['optimizer_candidate_file_bytes'], len(plain) - 1)
+        obj = ras.assemble_text(p.assembly().replace('    ld a,0\n',
+                                                      '    xor a\n'), 'short-jr.s')
+        candidate, *_ = rld.link([rld.Obj(obj, 'short-jr.sso')], [],
+                                 entry='start', stack=384)
+        new = rld.parse_ssx(candidate)['image']
         self.assertEqual(new[:7], b'\x06\x03\xaf\x05\x20\xfc\xc9')
         self.assertEqual(old[-3:], new[-3:])
-        self.assertEqual(sizes['saved_file_bytes'], 1)
-        self.assertEqual(sizes['saved_memory_bytes'], 1)
 
 
 if __name__ == '__main__':
