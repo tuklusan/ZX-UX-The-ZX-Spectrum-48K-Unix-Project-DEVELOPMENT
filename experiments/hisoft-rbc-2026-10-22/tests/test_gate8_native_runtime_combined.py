@@ -228,5 +228,39 @@ class NativeOriginalOnlyAndFourteenKilobyteTests(unittest.TestCase):
                 self.assertFalse(report['gate8_complete'])
 
 
+    def test_original_14k_whole_source_compiler_and_optimizer_pairs(self):
+        """Lock native relinks across three bases without calling gameplay proven."""
+        expected = (
+            ('11-defend', 13343, 13013),
+            ('57-bulls-and-cows', 5388, 5543),
+            ('58-invaders', 11937, 12761),
+            ('60-countabout', 11898, 11862),
+        )
+        import os
+        if not os.environ.get('RBC_G8_OPTIMIZER'):
+            self.skipTest('locked source optimizer required for candidate audit')
+        for game, size, total in expected:
+            with self.subTest(game=game):
+                report = self.original(game)
+                full = report['native_whole_source_baseline']
+                self.assertTrue(full['native_whole_source_baseline_linked'])
+                self.assertTrue(full['native_image_byte_exact'])
+                self.assertTrue(full['all_source_relocations_verified'])
+                self.assertEqual(full['native_source_bases'], 3)
+                self.assertEqual(full['native_file_bytes'], size)
+                self.assertEqual(full['native_total_bytes'], total)
+                self.assertLessEqual(max(size, total), 14000)
+                candidate = full['native_whole_optimizer_candidate']
+                self.assertTrue(candidate['native_candidate_link_verified'])
+                self.assertTrue(candidate['candidate_byte_identical'])
+                self.assertEqual(candidate['candidate_file_bytes_saved'], 0)
+                self.assertEqual(candidate['native_baseline_sha256'],
+                                 candidate['native_candidate_sha256'])
+                self.assertFalse(candidate['optimizer_candidate_admitted_for_publication'])
+                self.assertFalse(candidate['native_behavior_verified'])
+                self.assertFalse(full['full_program_optimized'])
+                self.assertFalse(report['gate8_complete'])
+
+
 if __name__ == '__main__':
     unittest.main()
