@@ -26,6 +26,8 @@ from runtime_emitter_trace import verify_three_runtime_traces
 from symbolic_emit_sites import inspect_emit_sites, verify_three_emit_sites
 from symbolic_relative_branches import inspect_relative_branches, verify_three_relative_passes
 from typed_whole_pipeline import SourcePipelineError, link_source_pair, verify_and_build
+from gate8_runtime_source_match import verify_three_runtime_sources
+from hisoft_frontend_inputs import KNOWN_COMPILER
 
 
 def verify_full_source_native(events, results, text_ends, assembler, ras):
@@ -129,6 +131,19 @@ def run(source: Path, checkpoint: Path, frontend: Path,
                                                   [x.base for x in observed])
     relative_report = verify_three_relative_passes(relative_groups,
                                                   [x.base for x in observed])
+    import hbcimage
+    from rtnames import RT
+    from native_sysvars_rt import PEEK_RT, POKE_RT
+    vendor = hbcimage.Image.from_tape(tape)
+    if len(vendor.data) != 11885 or vendor.sha256 != KNOWN_COMPILER:
+        raise ValueError('original HiSoft compiler tape identity differs')
+    runtime_source_match = verify_three_runtime_sources(
+        vendor.data, rom.read_bytes(),
+        [build.code for build in observed],
+        [build.base for build in observed],
+        [m.spans for m in source_maps],
+        {PEEK_RT: 'native-peek', POKE_RT: 'native-poke',
+         RT.PAUSE: 'native-pause', RT.VAL: 'guarded-val'})
     first, _ = rbc.build_ssx(baseline, bytes(768), rld, 384, use_rom_font=True)
     second, _ = rbc.build_ssx(observed, bytes(768), rld, 384, use_rom_font=True)
     if first != second:
@@ -157,6 +172,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         'source_byte_ownership': source_map_report,
         'inline_source_fragments': fragment_report,
         'runtime_emitter_sources': runtime_report,
+        'original_runtime_source_match': runtime_source_match,
         'compiler_source_sites': source_site_report,
         'relative_source_branches': relative_report,
         'whole_program_attempt': whole_attempt,

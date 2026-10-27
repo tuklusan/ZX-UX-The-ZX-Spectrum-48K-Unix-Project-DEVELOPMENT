@@ -1,0 +1,129 @@
+"""Check original HiSoft runtime bytes at their exact whole-program positions.
+
+Actual BASIC compilation supplies selected routine IDs and boundaries.
+Original HiSoft emitter execution supplies independent byte origins and typed
+calculated words. RBC replacement emitters remain explicitly unresolved.
+This proof does not declare a complete typed assembly or native equivalence.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+import re
+
+from gate8_original_runtime_layout import _run_emitter
+from gate8_original_runtime_types import N_ROUTINES, OriginalEmitter, SourceTransactions
+
+
+class RuntimeMatchError(ValueError):
+    """Original runtime emitter does not match the verified source."""
+
+
+_RUNTIME_NAME = re.compile(r'RT([1-9][0-9]*)\Z')
+
+
+@dataclass(frozen=True)
+class RuntimeMatch:
+    report: dict
+    source_signature: tuple
+
+
+def verify_runtime_source_match(code: bytes, rom: bytes, image: bytes,
+                              base: int, spans, replacements: dict[int, str]):
+    """Witness each vendor emitter at its actual code offset, not at offset zero.
+
+    Replacements are named by the *caller* from installed RBC runtime modules;
+    they are never promoted to original HiSoft source, even if bytes match.
+    """
+    if (not isinstance(image, bytes) or type(base) is not int or
+            not 0 <= base <= 65535 or base + len(image) > 65536 or
+            not isinstance(replacements, dict) or any(
+                type(n) is not int or not 1 <= n <= N_ROUTINES or
+                not isinstance(reason, str) or not reason.strip()
+                for n, reason in replacements.items())):
+        raise RuntimeMatchError('invalid whole-program runtime storage or override')
+    selected = []
+    for span in spans:
+        if span.kind != 'runtime-opaque':
+            continue
+        name = _RUNTIME_NAME.fullmatch(span.source)
+        if not name:
+            raise RuntimeMatchError('runtime source has no original emitter ID')
+        n = int(name.group(1))
+        if (not 1 <= n <= N_ROUTINES or type(span.start) is not int or
+                type(span.end) is not int or not 0 <= span.start < span.end <= len(image) or
+                (selected and (n <= selected[-1][0] or span.start != selected[-1][2]))):
+            raise RuntimeMatchError('runtime source order or extent differs')
+        selected.append((n, span.start, span.end))
+    if not selected:
+        raise RuntimeMatchError('original compiler selected no runtime emitters')
+    machine = OriginalEmitter(code, rom, base)
+    for n, start, _ in selected:
+        row = 0x4000 + (n - 1) * 3
+        machine.mem[row] = 1
+        machine.mem[row + 1:row + 3] = start.to_bytes(2, 'little')
+    count = vendor_bytes = copied_bytes = calculated_bytes = replacement_bytes = 0
+    native_replacements = []
+    source_signature = []
+    for n, start, end in selected:
+        slot = 0x77AF + 2 * (n - 1)
+        original_entry = int.from_bytes(machine.mem[slot:slot + 2], 'little')
+        if n in replacements:
+            native_replacements.append((n, end - start, replacements[n]))
+            replacement_bytes += end - start
+            source_signature.append((n, start, end, 'replacement', replacements[n]))
+            continue
+        if not original_entry:
+            raise RuntimeMatchError(f'RT{n}: no original HiSoft source emitter')
+        machine.writes.clear()
+        machine.type_source = SourceTransactions(machine.mem, base)
+        try:
+            actual_end = _run_emitter(machine, n, start, counting=False)
+            computed = machine.type_source.finish()
+        except (ValueError, RuntimeError, IndexError) as exc:
+            raise RuntimeMatchError(f'RT{n}: original emitter failed: {exc}') from exc
+        writes = tuple(machine.writes)
+        if (actual_end != end or len(writes) != end - start or
+                tuple(p for p, _, _ in writes) != tuple(range(start, end)) or
+                bytes(value for _, value, _ in writes) != image[start:end] or
+                len(computed) + sum(origin is not None for _, _, origin in writes)
+                != end - start):
+            raise RuntimeMatchError(f'RT{n}: original source bytes or boundary differ')
+        count += 1
+        vendor_bytes += end - start
+        calculated_bytes += len(computed)
+        copied_bytes += sum(origin is not None for _, _, origin in writes)
+        source_signature.append((
+            n, start, end, 'original',
+            tuple((p, origin) for p, _, origin in writes),
+            tuple((e.position, e.kind, e.source_site, e.helper_pc,
+                   e.target_offset) for e in computed)))
+    total = selected[-1][2] - selected[0][1]
+    if vendor_bytes + replacement_bytes != total:
+        raise RuntimeMatchError('runtime source bytes are not completely accounted for')
+    return RuntimeMatch({
+        'selected_routines': len(selected),
+        'original_routines_verified': count,
+        'original_source_bytes': vendor_bytes,
+        'original_computed_source_bytes': calculated_bytes,
+        'original_copied_source_bytes': copied_bytes,
+        'replacement_routines_untyped': [n for n, _, _ in native_replacements],
+        'replacement_source_bytes_untyped': replacement_bytes,
+        'complete_runtime_assembly_verified': False,
+        'native_behavior_verified': False,
+    }, tuple(source_signature))
+
+
+def verify_three_runtime_sources(code: bytes, rom: bytes, images,
+                                    bases, groups, replacements: dict[int, str]):
+    """Require identical original source roles at three independent load bases."""
+    if (any(len(x) != 3 for x in (images, bases, groups)) or
+            len(set(bases)) != 3):
+        raise RuntimeMatchError('three distinct compiler load bases required')
+    results = [verify_runtime_source_match(code, rom, image, base, group,
+                                         replacements)
+               for image, base, group in zip(images, bases, groups)]
+    first = results[0]
+    if any(other.source_signature != first.source_signature or
+           other.report != first.report for other in results[1:]):
+        raise RuntimeMatchError('original runtime source roles changed across bases')
+    return {**first.report, 'original_source_bases_verified': 3}
