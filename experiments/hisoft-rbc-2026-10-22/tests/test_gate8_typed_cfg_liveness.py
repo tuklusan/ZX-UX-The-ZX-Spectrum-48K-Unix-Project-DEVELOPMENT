@@ -5,12 +5,13 @@ import unittest
 
 STAGE = Path(__file__).resolve().parents[1] / 'stage'
 sys.path.insert(0, str(STAGE))
-from gate8_typed_cfg_liveness import inspect_typed_cfg_liveness, TypedCFGError
+from gate8_typed_cfg_liveness import (inspect_typed_cfg_liveness, TypedCFGError,
+                                      _effects)
 
 
 class TypedWholeCFGTests(unittest.TestCase):
     def test_reachable_internal_branch_and_unreachable_instruction(self):
-        source = ('section text\nglobal start\nstart:\n'
+        source = ('    section text\n    global start\nstart:\n'
                   '    ld a,1\n    jp done\n    nop\n'
                   'done:\n    ld a,2\n    ret\n')
         report = inspect_typed_cfg_liveness(source)
@@ -22,7 +23,7 @@ class TypedWholeCFGTests(unittest.TestCase):
         self.assertFalse(report['rewrite_safe_to_admit'])
 
     def test_opaque_indirect_and_protected_data_do_not_become_edges(self):
-        source = ('section text\nglobal start\nstart:\n'
+        source = ('    section text\n    global start\nstart:\n'
                   '    jp (hl)\n    db 195,0,118,255\n'
                   'entry:\n    call datum\n    ret\n'
                   'section data\ndatum:\n    dw entry\n')
@@ -40,6 +41,64 @@ class TypedWholeCFGTests(unittest.TestCase):
             with self.subTest(source=source):
                 with self.assertRaises(TypedCFGError):
                     inspect_typed_cfg_liveness(source)
+
+    def test_byte_inc_dec_keep_input_carry_live(self):
+        # INC and DEC preserve the incoming carry flag on a real Z80.
+        # Treating F as write-only would erase a live condition dependency.
+        for opcode in ('inc', 'dec'):
+            for register in ('a', 'b', 'c', 'd', 'e', 'h', 'l'):
+                with self.subTest(opcode=opcode, register=register):
+                    read, written, modelled = _effects(opcode, register)
+                    self.assertTrue(modelled)
+                    self.assertEqual(read, frozenset((register, 'f')))
+                    self.assertEqual(written, frozenset((register, 'f')))
+        # 16-bit forms do not have the same flag behavior: keep them unknown.
+        for opcode in ('inc', 'dec'):
+            reads, writes, modelled = _effects(opcode, 'hl')
+            self.assertFalse(modelled)
+            self.assertIn('f', reads)
+            self.assertIn('f', writes)
+
+    def test_native_carry_survives_inc_dec_and_controls_a_branch(self):
+        import ras
+        import rld
+        from z80_python.cpu import Z80CPU
+        for opcode, value, expected in (('inc', 255, 0), ('dec', 0, 255)):
+            source = ('    section text\n    global start\nstart:\n'
+                      '    scf\n'
+                      f'    ld b,{value}\n'
+                      f'    {opcode} b\n'
+                      '    jr c,was_carried\n'
+                      '    ld a,0\n'
+                      '    ret\n'
+                      'was_carried:\n'
+                      '    ld a,1\n'
+                      '    ret\n')
+            obj = ras.assemble_text(source, 'carry-liveness.s')
+            ssx, *_ = rld.link([rld.Obj(obj, 'carry-liveness.sso')], [],
+                               entry='start', stack=384)
+            info = rld.parse_ssx(ssx)
+            audit = inspect_typed_cfg_liveness(source)
+            self.assertTrue(audit['source_liveness_converged'])
+            self.assertFalse(audit['rewrite_safe_to_admit'])
+            for base in (0x7000, 0x8000, 0x9000):
+                with self.subTest(opcode=opcode, base=base):
+                    memory = bytearray(65536)
+                    image = rld.relocate(info['image'], info['relocs'], base)
+                    memory[base:base + len(image)] = image
+                    memory[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+                    cpu = Z80CPU(memory.__getitem__, memory.__setitem__)
+                    cpu.pc = base + info['entry']
+                    cpu.sp = 0xd000
+                    for _ in range(15):
+                        if cpu.pc == 0xb000:
+                            break
+                        cpu.step()
+                    else:
+                        self.fail('native carry probe did not return')
+                    self.assertEqual(cpu.a, 1)
+                    self.assertEqual(cpu.b, expected)
+                    self.assertEqual(int(cpu.f) & 1, 1)
 
     def test_backward_register_liveness_is_conservative(self):
         source = ('section text\nstart:\n'

@@ -41,7 +41,11 @@ def _effects(opcode: str, operand: str):
         if _IMM.fullmatch(src):
             return frozenset(), frozenset((dst,)), True
     if opcode in ('inc', 'dec') and operand in _BYTE_REGS:
-        return frozenset((operand,)), frozenset((operand, 'f')), True
+        # Z80 INC/DEC preserve carry. With flags tracked as one coarse 'f'
+        # register, these instructions READ the previous flags as well as
+        # writing the changed bits. Without the read, backward liveness
+        # incorrectly kills carry before a later conditional transfer.
+        return frozenset((operand, 'f')), frozenset((operand, 'f')), True
     if opcode in ('jr', 'jp', 'djnz', 'ret', 'call', 'rst', 'reti', 'retn'):
         return _REGS, _REGS, False
     return _REGS, _REGS, False
