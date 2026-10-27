@@ -113,8 +113,10 @@ class VendorSourceVerification(unittest.TestCase):
         source_report = result['original_runtime_source_match']
         self.assertEqual(source_report['original_routines_verified'], 40)
         self.assertEqual(source_report['original_source_bytes'], 610)
-        self.assertEqual(source_report['replacement_routines_untyped'], [43, 55])
-        self.assertEqual(source_report['replacement_source_bytes_untyped'], 428)
+        self.assertEqual(source_report['replacement_routines_untyped'], [43])
+        self.assertEqual(source_report['typed_replacement_routines_verified'], [55])
+        self.assertEqual(source_report['typed_replacement_source_bytes'], 46)
+        self.assertEqual(source_report['replacement_source_bytes_untyped'], 382)
         self.assertEqual(source_report['original_source_bases_verified'], 3)
         self.assertFalse(result['whole_program_attempt']['native_link_verified'])
 

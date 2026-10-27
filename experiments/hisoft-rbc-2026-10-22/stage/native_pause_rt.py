@@ -8,20 +8,28 @@ and any key may interrupt it. All paths clear FLAGS bit 5 on return.
 from __future__ import annotations
 
 
-def _pause_code(asm):
+def _pause_code(asm, *, with_source=False):
+    """Emit the native bytes and optionally their original typed Z80 source."""
     code = bytearray()
+    source_lines = ['  section text', '  global start', 'start:']
     labels = {}
     relative = []
 
-    def emit(source):
+    def emit(source, *, typed_source=None):
         code.extend(asm(source))
+        statement = typed_source if typed_source is not None else source
+        source_lines.extend('  ' + part.strip() for part in statement.split(';')
+                            if part.strip())
 
     def mark(label):
         labels[label] = len(code)
+        source_lines.append('rbc_pause_' + label + ':')
 
     def branch(mnemonic, label):
         start = len(code)
-        emit(mnemonic + ',+0' if mnemonic != 'jr' else 'jr +0')
+        emit(mnemonic + ',+0' if mnemonic != 'jr' else 'jr +0',
+             typed_source=(mnemonic + ' rbc_pause_' + label if mnemonic == 'jr'
+                           else mnemonic + ',rbc_pause_' + label))
         assert len(code) == start + 2
         relative.append((start + 1, label))
 
@@ -45,7 +53,15 @@ def _pause_code(asm):
         if not -128 <= dist <= 127:
             raise ValueError('PAUSE jump too distant')
         code[where] = dist & 255
-    return bytes(code)
+    native = bytes(code)
+    if with_source:
+        return native, '\n'.join(source_lines) + '\n'
+    return native
+
+
+def original_pause_source(asm):
+    """Return one source-owned PAUSE routine and its emitted reference bytes."""
+    return _pause_code(asm, with_source=True)
 
 
 def install(compiler):

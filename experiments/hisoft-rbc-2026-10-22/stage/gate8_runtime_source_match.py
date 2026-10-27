@@ -8,6 +8,9 @@ This proof does not declare a complete typed assembly or native equivalence.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+from runpy import run_path
+import hashlib
 import re
 
 from gate8_original_runtime_layout import _run_emitter
@@ -19,6 +22,37 @@ class RuntimeMatchError(ValueError):
 
 
 _RUNTIME_NAME = re.compile(r'RT([1-9][0-9]*)\Z')
+
+
+def _verify_pause_source(expected: bytes):
+    """Check the replacement against its original Python Z80 instruction source.
+
+    The reference is produced through the same statements as the installed
+    runtime. The native assembler resolves every named relative branch.
+    Output image bytes are checked, never used as an instruction listing.
+    """
+    import ras
+    import rld
+    from z80asm import asm
+    # The compiler checkpoint can contain an older installed runtime module.
+    # Audit the canonical checked stage file, then compare it with real bytes.
+    original_pause_source = run_path(
+        str(Path(__file__).with_name('native_pause_rt.py')))['original_pause_source']
+    raw, listing = original_pause_source(asm)
+    if raw != expected:
+        raise RuntimeMatchError('PAUSE source emission differs from original program')
+    try:
+        obj = ras.assemble_text(listing, 'rbc-pause.s')
+        linked, *_ = rld.link([rld.Obj(obj, 'rbc-pause.sso')], [],
+                              entry='start', stack=384)
+        parsed = rld.parse_ssx(linked)
+    except (ValueError, KeyError, TypeError, rld.LinkError,
+            ras.AsmError) as exc:
+        raise RuntimeMatchError('PAUSE native assembly failed') from exc
+    if (parsed['image'] != expected or parsed['relocs'] or
+            parsed['bss'] != 0 or parsed['entry'] != 0):
+        raise RuntimeMatchError('PAUSE native assembly differs from original')
+    return hashlib.sha256(listing.encode('utf-8')).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -63,14 +97,25 @@ def verify_runtime_source_match(code: bytes, rom: bytes, image: bytes,
         machine.mem[row + 1:row + 3] = start.to_bytes(2, 'little')
     count = vendor_bytes = copied_bytes = calculated_bytes = replacement_bytes = 0
     native_replacements = []
+    verified_replacements = []
     source_signature = []
     for n, start, end in selected:
         slot = 0x77AF + 2 * (n - 1)
         original_entry = int.from_bytes(machine.mem[slot:slot + 2], 'little')
         if n in replacements:
-            native_replacements.append((n, end - start, replacements[n]))
-            replacement_bytes += end - start
-            source_signature.append((n, start, end, 'replacement', replacements[n]))
+            reason = replacements[n]
+            if reason == 'native-pause':
+                from rtnames import RT
+                if n != RT.PAUSE:
+                    raise RuntimeMatchError('PAUSE source assigned to wrong routine')
+                digest = _verify_pause_source(image[start:end])
+                verified_replacements.append((n, end - start))
+                source_signature.append((n, start, end, 'typed-replacement',
+                                         reason, digest))
+            else:
+                native_replacements.append((n, end - start, reason))
+                replacement_bytes += end - start
+                source_signature.append((n, start, end, 'replacement', reason))
             continue
         if not original_entry:
             raise RuntimeMatchError(f'RT{n}: no original HiSoft source emitter')
@@ -98,7 +143,7 @@ def verify_runtime_source_match(code: bytes, rom: bytes, image: bytes,
             tuple((e.position, e.kind, e.source_site, e.helper_pc,
                    e.target_offset) for e in computed)))
     total = selected[-1][2] - selected[0][1]
-    if vendor_bytes + replacement_bytes != total:
+    if vendor_bytes + replacement_bytes + sum(size for _, size in verified_replacements) != total:
         raise RuntimeMatchError('runtime source bytes are not completely accounted for')
     return RuntimeMatch({
         'selected_routines': len(selected),
@@ -108,6 +153,8 @@ def verify_runtime_source_match(code: bytes, rom: bytes, image: bytes,
         'original_copied_source_bytes': copied_bytes,
         'replacement_routines_untyped': [n for n, _, _ in native_replacements],
         'replacement_source_bytes_untyped': replacement_bytes,
+        'typed_replacement_routines_verified': [n for n, _ in verified_replacements],
+        'typed_replacement_source_bytes': sum(size for _, size in verified_replacements),
         'complete_runtime_assembly_verified': False,
         'native_behavior_verified': False,
     }, tuple(source_signature))
