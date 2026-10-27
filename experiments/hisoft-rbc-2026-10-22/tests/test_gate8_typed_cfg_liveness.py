@@ -196,6 +196,54 @@ class TypedWholeCFGTests(unittest.TestCase):
                 self.assertEqual(report['unresolved_control_edges'], 1)
                 self.assertFalse(report['rewrite_safe_to_admit'])
 
+    def test_conditional_returns_and_rom_jumps_have_external_live_exits(self):
+        # The taken path is visible to a caller, even when the fallthrough
+        # overwrites all the registers. It must not be treated as only a
+        # single in-program edge.
+        for transfer in ('ret c', 'ret z', 'jp c,0100', 'jp nz,$64'):
+            source = ('section text\nstart:\n    ld a,11\n    '
+                      + transfer + '\n    ld a,22\n    ret\n')
+            with self.subTest(transfer=transfer):
+                report = inspect_typed_cfg_liveness(source)
+                self.assertEqual(report['conditional_external_exit_sites'], 1)
+                self.assertFalse(report['unknown_entry_reachability'])
+                self.assertFalse(report['rewrite_safe_to_admit'])
+        # Unconditional RET already has no source successor and all-live exit.
+        report = inspect_typed_cfg_liveness(
+            'section text\nstart:\n    ret\n')
+        self.assertEqual(report['conditional_external_exit_sites'], 0)
+
+    def test_native_conditional_return_exposes_state_at_three_bases(self):
+        import ras
+        import rld
+        from z80_python.cpu import Z80CPU
+        for flag_code, expected in (('scf', 11), ('or a', 22)):
+            source = ('    section text\n    global start\nstart:\n'
+                      '    ld a,11\n    ' + flag_code + '\n'
+                      '    ret c\n    ld a,22\n    ret\n')
+            report = inspect_typed_cfg_liveness(source)
+            self.assertEqual(report['conditional_external_exit_sites'], 1)
+            obj = ras.assemble_text(source, 'conditional-ret.s')
+            ssx, *_ = rld.link([rld.Obj(obj, 'conditional-ret.sso')], [],
+                              entry='start', stack=384)
+            info = rld.parse_ssx(ssx)
+            for base in (0x7000, 0x8000, 0x9000):
+                with self.subTest(flag_code=flag_code, base=base):
+                    memory = bytearray(65536)
+                    code = rld.relocate(info['image'], info['relocs'], base)
+                    memory[base:base+len(code)] = code
+                    memory[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+                    cpu = Z80CPU(memory.__getitem__, memory.__setitem__)
+                    cpu.pc, cpu.sp = base + info['entry'], 0xd000
+                    for _ in range(10):
+                        if cpu.pc == 0xb000:
+                            break
+                        cpu.step()
+                    else:
+                        self.fail('conditional return did not exit')
+                    self.assertEqual(cpu.a, expected)
+                    self.assertEqual(cpu.sp, 0xd002)
+
     def test_no_labels_for_opaque_bytes_or_unknown_entry(self):
         for source in (
                 'section text\nstart:\n db 0\n',

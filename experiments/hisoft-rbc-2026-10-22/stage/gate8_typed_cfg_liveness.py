@@ -128,6 +128,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
     unresolved = []
     rom_edges = 0
     calls = 0
+    conditional_exit_sites = set()
     for site, ins in enumerate(instructions):
         terms = [part.strip() for part in ins.operand.split(',') if part.strip()]
         op = ins.opcode
@@ -157,12 +158,19 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
                     value = int(target, 10)
                 if value < 0x4000:
                     rom_edges += 1
+                    if op == 'jp' and conditional:
+                        conditional_exit_sites.add(site)
                 else:
                     unresolved.append((site, target))
             else:
                 unresolved.append((site, target))
         elif op in ('ret', 'reti', 'retn'):
             flow = op == 'ret' and ins.operand in _COND
+            if flow:
+                # Taken conditional RET exits to an unknown caller. Its
+                # state is observable even when fallthrough instructions
+                # overwrite the same registers.
+                conditional_exit_sites.add(site)
         elif op == 'rst':
             rom_edges += 1
         if flow and site + 1 < len(instructions) and instructions[site+1].next_line:
@@ -241,9 +249,9 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
         for site in range(len(instructions) - 1, -1, -1):
             live_after = (set().union(*(live_in[x] for x in successors[site]))
                           if successors[site] else set(_REGS))
-            if site in unresolved_sites:
-                # A conditional indirect/unknown exit is live on BOTH the
-                # modeled fallthrough and the unmodeled external edge.
+            if site in unresolved_sites or site in conditional_exit_sites:
+                # Conditional returns and ROM jumps expose the taken path;
+                # they must not inherit only the source fallthrough's liveness.
                 live_after.update(_REGS)
             live_before = set(uses[site]) | (live_after - set(defines[site]))
             if live_after != live_out[site] or live_before != live_in[site]:
@@ -261,6 +269,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
         'unresolved_pointer_expressions': len(unknown_pointer_expressions),
         'unknown_entry_reachability': indirect_or_unknown,
         'unresolved_exit_sites': len(unresolved_sites),
+        'conditional_external_exit_sites': len(conditional_exit_sites),
         'unresolved_control_edges': len(unresolved),
         'first_unresolved_edges': unresolved[:5],
         'direct_calls': calls,
