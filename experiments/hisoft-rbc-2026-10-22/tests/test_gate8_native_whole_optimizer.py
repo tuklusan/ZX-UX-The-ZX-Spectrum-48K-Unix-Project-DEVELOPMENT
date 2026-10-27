@@ -55,6 +55,36 @@ class WholeOptimizerTests(unittest.TestCase):
         self.assertFalse(result['native_behavior_verified'])
         self.assertFalse(result['full_program_optimized'])
 
+    def test_runtime_witness_checked_on_changed_native_candidate(self):
+        original = self.source().replace('    push hl\n    pop hl\n',
+                                         '    ld a,a\n    ld a,a\n')
+        obj = ras.assemble_text(original, 'runtime-witness-before.s')
+        before = rld.link([rld.Obj(obj, 'runtime-witness-before.sso')], [],
+                          entry='start', stack=384)[0]
+        def optimize(source):
+            return source.replace('    ld a,a\n    ld a,a\n', '')
+        resource = bytes((195, 0, 118, 255, 24))
+        result = verify_whole_optimizer_candidate(
+            original, before, optimize, expected_runtime_bytes=resource)
+        self.assertFalse(result['candidate_byte_identical'])
+        self.assertFalse(result['optimizer_candidate_admitted_for_publication'])
+        attempts = []
+        def traced(source):
+            attempts.append(source)
+            return optimize(source)
+        with self.assertRaisesRegex(WholeOptimizerError,
+                                    'runtime resource differs from baseline'):
+            verify_whole_optimizer_candidate(
+                original, before, traced, expected_runtime_bytes=b'not present')
+        self.assertEqual(attempts, [])  # Reject the baseline before optimizing.
+        # Data pointers are source-owned relocation words. They can move as
+        # code shrinks; an exact-byte resource witness must not silently pass.
+        before_image = rld.parse_ssx(before)['image']
+        with self.assertRaisesRegex(WholeOptimizerError,
+                                    'runtime resource differs from candidate'):
+            verify_whole_optimizer_candidate(
+                original, before, optimize, expected_runtime_bytes=before_image[-7:])
+
     def test_reject_forged_or_stale_native_baseline_before_optimizing(self):
         genuine = self.baseline()
         original = self.source()

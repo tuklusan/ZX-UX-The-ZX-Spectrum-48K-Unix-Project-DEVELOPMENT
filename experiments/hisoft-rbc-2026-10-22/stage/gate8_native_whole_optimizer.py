@@ -228,6 +228,14 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
             entry='start', stack=plain['stack'])
         if rebuilt != native_baseline:
             raise WholeOptimizerError('whole source does not reproduce native baseline')
+        # A required runtime witness is independent of the optimizer. Check
+        # the original even when the candidate changes; otherwise a shorter
+        # linked image can bypass the resource witness entirely.
+        if expected_runtime_bytes is not None:
+            if (not isinstance(expected_runtime_bytes, bytes) or
+                    not expected_runtime_bytes or
+                    expected_runtime_bytes not in plain['image']):
+                raise WholeOptimizerError('verified runtime resource differs from baseline')
         candidate_text = optimizer(assembly)
         if not isinstance(candidate_text, str):
             raise WholeOptimizerError('optimizer did not return assembly text')
@@ -264,9 +272,9 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
     unchanged = candidate_ssx == native_baseline
     if unchanged and linked['image'] != plain['image']:
         raise WholeOptimizerError('candidate binary consistency check failed')
-    if expected_runtime_bytes is not None and unchanged and (
-            expected_runtime_bytes not in plain['image']):
-        raise WholeOptimizerError('verified runtime resource differs from baseline')
+    if (expected_runtime_bytes is not None and
+            expected_runtime_bytes not in linked['image']):
+        raise WholeOptimizerError('verified runtime resource differs from candidate')
     return {
         'locked_upstream_revision': _LOCKED_REVISION,
         'optimizer_full_program_source_presented': True,
