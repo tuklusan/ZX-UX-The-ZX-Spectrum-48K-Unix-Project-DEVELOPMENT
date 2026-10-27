@@ -208,7 +208,8 @@ def _first_resource_boundary_change(original: str, candidate: str) -> str:
 
 def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
                                      optimizer, *, max_memory: int = 12000,
-                                     expected_runtime_bytes: bytes | None = None):
+                                     expected_runtime_bytes: bytes | None = None,
+                                     native_probe: bool = False):
     """Optimize the entire source once; prove native link and protected resources.
 
     Native byte changes alone cannot establish process behavior equivalence:
@@ -275,6 +276,19 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
     if (expected_runtime_bytes is not None and
             expected_runtime_bytes not in linked['image']):
         raise WholeOptimizerError('verified runtime resource differs from candidate')
+    probe_result = None
+    if native_probe:
+        # This finite execution check does not cover ROM/device callbacks or
+        # full gameplay, and cannot independently admit whole-program rewrites.
+        from gate8_native_differential import (compare_native_probes,
+                                               NativeProbeBlocked)
+        try:
+            probe_result = compare_native_probes(native_baseline, candidate_ssx)
+        except NativeProbeBlocked as exc:
+            raise WholeOptimizerError('bounded native execution unavailable: ' +
+                                      str(exc)) from exc
+        if not probe_result['bounded_exit_states_match']:
+            raise WholeOptimizerError('bounded native candidate state differs')
     return {
         'locked_upstream_revision': _LOCKED_REVISION,
         'optimizer_full_program_source_presented': True,
@@ -299,5 +313,6 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
         'candidate_within_default_limit': candidate_memory <= max_memory,
         'optimizer_candidate_admitted_for_publication': False,
         'native_behavior_verified': False,
+        'bounded_native_execution': probe_result,
         'full_program_optimized': False,
     }

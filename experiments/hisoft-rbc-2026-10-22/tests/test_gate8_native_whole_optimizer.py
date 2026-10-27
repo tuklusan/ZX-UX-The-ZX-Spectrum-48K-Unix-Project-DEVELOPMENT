@@ -85,6 +85,38 @@ class WholeOptimizerTests(unittest.TestCase):
             verify_whole_optimizer_candidate(
                 original, before, optimize, expected_runtime_bytes=before_image[-7:])
 
+    def test_opt_in_native_probe_rejects_changed_refresh_and_clock(self):
+        # This rewrite can pass syntactic source guards, but running the
+        # native code proves its changed R refresh value and T-state count.
+        original = self.source().replace('    push hl\n    pop hl\n',
+                                         '    ld a,a\n    ld a,a\n')
+        obj = ras.assemble_text(original, 'native-probe-before.s')
+        before = rld.link([rld.Obj(obj, 'native-probe-before.sso')], [],
+                          entry='start', stack=384)[0]
+        def optimize(source):
+            return source.replace('    ld a,a\n    ld a,a\n', '')
+        with self.assertRaisesRegex(WholeOptimizerError,
+                                    'bounded native candidate state differs'):
+            verify_whole_optimizer_candidate(original, before, optimize,
+                                             native_probe=True)
+        matched = verify_whole_optimizer_candidate(original, before,
+                                                   lambda s: s, native_probe=True)
+        probe = matched['bounded_native_execution']
+        self.assertTrue(probe['bounded_exit_states_match'])
+        self.assertEqual(probe['checked_exits'], 12)
+        self.assertFalse(matched['native_behavior_verified'])
+        self.assertFalse(matched['optimizer_candidate_admitted_for_publication'])
+
+    def test_opt_in_native_probe_rejects_missing_rom_execution(self):
+        source = '    section text\n    global start\nstart:\n    jp 56\n'
+        obj = ras.assemble_text(source, 'rom-probe-before.s')
+        before = rld.link([rld.Obj(obj, 'rom-probe-before.sso')], [],
+                          entry='start', stack=384)[0]
+        with self.assertRaisesRegex(WholeOptimizerError,
+                                    'bounded native execution unavailable'):
+            verify_whole_optimizer_candidate(source, before,
+                                             lambda s: s, native_probe=True)
+
     def test_reject_forged_or_stale_native_baseline_before_optimizing(self):
         genuine = self.baseline()
         original = self.source()
