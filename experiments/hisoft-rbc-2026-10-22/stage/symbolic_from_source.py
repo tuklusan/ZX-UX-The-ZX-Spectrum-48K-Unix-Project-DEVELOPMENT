@@ -82,7 +82,8 @@ def from_source(events, image: bytes, base: int, text_end: int, bss: int,
         relatives = inspect_relative_branches(spans, text_end, assembler)
     except RelativeBranchError as exc:
         raise UnresolvedSourceProgram(str(exc)) from exc
-    targets = {s.target for s in spans if s.kind == 'instruction-relocated'}
+    targets = {s.target for s in spans
+               if s.kind in ('instruction-relocated', 'table-relocated')}
     if None in targets:
         raise UnresolvedSourceProgram('relocation target is missing')
     if any(t < 0 or t >= len(image) + bss for t in targets):
@@ -131,6 +132,8 @@ def from_source(events, image: bytes, base: int, text_end: int, bss: int,
                     source = span.source
                     _validate_static_instruction(source)
             program.instruction(source)
+        elif span.kind == 'table-relocated':
+            program.reference(name(span.target))
         elif span.kind in ('inline-data', 'data-source'):
             # Split protected source data only where an explicit typed label lands.
             stops = sorted(t for t in marks if span.start < t < span.end)

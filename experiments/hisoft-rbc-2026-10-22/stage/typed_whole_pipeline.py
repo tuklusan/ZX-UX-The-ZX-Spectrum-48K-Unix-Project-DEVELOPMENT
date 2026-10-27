@@ -12,6 +12,7 @@ from symbolic_emit_sites import inspect_emit_sites, verify_three_emit_sites
 from symbolic_from_source import from_source
 from symbolic_patch_binding import bind_three_source_passes
 from symbolic_original_literals import protect_three_original_literals
+from symbolic_line_table import bind_three_line_tables
 from symbolic_relative_branches import (inspect_relative_branches,
                                         verify_three_relative_passes)
 from symbolic_source_boundaries import (inspect_source_boundaries,
@@ -56,6 +57,8 @@ def verify_and_build(events, images, bases, text_ends, bss_sizes,
         patched, patch_report = bind_three_source_passes(events, images, bases,
                                                          text_ends)
         typed, literal_report = protect_three_original_literals(patched, images)
+        typed, line_report = bind_three_line_tables(typed, images, bases,
+                                                   text_ends, bss_sizes)
         maps = [inspect_source_boundaries(group, image, base, end, bss,
                                          assembler)
                 for group, image, base, end, bss in
@@ -82,12 +85,13 @@ def verify_and_build(events, images, bases, text_ends, bss_sizes,
         raise SourcePipelineError('symbolic assembly changed between compiler passes')
     reloc_sites = set()
     for span in maps[0].spans:
-        if span.kind == 'instruction-relocated':
+        if span.kind in ('instruction-relocated', 'table-relocated'):
             reloc_sites.update(range(span.end - 2, span.end))
     return VerifiedSource(programs[0], {
         'passes': 3, 'compiler_call_sites': site_report,
         'source_word_patches': patch_report,
         'protected_original_literals': literal_report,
+        'source_line_table': line_report,
         'source_boundaries': map_report,
         'relative_branches': relative_report,
         'whole_source_control_flow': flow_report,

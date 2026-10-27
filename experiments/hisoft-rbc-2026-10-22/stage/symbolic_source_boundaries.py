@@ -102,13 +102,14 @@ def inspect_source_boundaries(events, image: bytes, base: int, data_start: int,
                 emitted.append(fragment.encoded)
             i += 1
             continue
-        elif kind == 'relocation':
+        elif kind in ('relocation', 'table-relocated'):
             target = event.symbol_offset
             if not isinstance(target, int) or not 0 <= target < len(image) + bss:
                 raise SourceBoundaryError('source relocation target outside image and BSS')
             if payload != ((base + target) & 65535).to_bytes(2, 'little'):
                 raise SourceBoundaryError('unpaired relocation differs from link base')
-            kind = 'unpaired-relocation'
+            if kind == 'relocation':
+                kind = 'unpaired-relocation'
         elif kind not in ('word', 'byte', 'binary', 'runtime-opaque',
                           'data-source', 'direct-write', 'inline-data'):
             raise SourceBoundaryError('unknown source producer: ' + str(kind))
@@ -135,7 +136,8 @@ def inspect_source_boundaries(events, image: bytes, base: int, data_start: int,
                 mismatches.add(absolute)
     gaps = tuple(i for i, contributors in enumerate(owner) if not contributors)
     overlaps = tuple(i for i, contributors in enumerate(owner) if len(contributors) != 1)
-    typed = {'instruction', 'instruction-relocated', 'inline-data', 'data-source'}
+    typed = {'instruction', 'instruction-relocated', 'inline-data', 'data-source',
+             'table-relocated'}
     unresolved = tuple(i for i, contributors in enumerate(owner)
                        if (len(contributors) != 1 or
                            spans[contributors[0]].kind not in typed or
