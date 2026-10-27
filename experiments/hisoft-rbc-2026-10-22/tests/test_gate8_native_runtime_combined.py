@@ -17,6 +17,7 @@ from gate8_native_runtime_combined import (
     verify_three_native_runtime_regions, VendorSection,
 )
 from gate8_original_runtime_types import compiler_image, OriginalEmitter, SourceTransactions
+from spectrum_runtime import guarded_val_bytes
 from gate8_original_runtime_layout import _run_emitter
 from z80_python.disasm import disassemble_bytes
 
@@ -81,6 +82,21 @@ class OriginalSourceSections(unittest.TestCase):
                 with self.assertRaises(RuntimeCombinedError):
                     _runtime_spans((a,wrong), bytes(58))
 
+    def test_guarded_val_is_native_source_and_fail_closed(self):
+        from rtnames import RT
+        expected = guarded_val_bytes()
+        self.assertEqual(len(expected), 122)
+        lines, sites = _replacement_listing(RT.VAL, 500, 0x6000, {}, expected)
+        self.assertEqual(sites, ())
+        self.assertEqual(lines[0], 'rbc_val_entry:')
+        self.assertTrue(any('rbc_val_blocked:' == line for line in lines))
+        changed = bytearray(expected)
+        changed[44] ^= 1
+        with self.assertRaisesRegex(RuntimeCombinedError, 'guarded VAL source'):
+            _replacement_listing(RT.VAL, 500, 0x6000, {}, bytes(changed))
+        with self.assertRaisesRegex(RuntimeCombinedError, 'untyped replacement'):
+            _replacement_listing(999, 500, 0x6000, {}, expected)
+
     def test_bad_three_pass_parameters_fail_closed(self):
         for bases in ((0x6000,0x6000,0x6200),(0x6000,0x6100)):
             with self.subTest(bases=bases):
@@ -112,6 +128,33 @@ class LinkedOriginalRegion(unittest.TestCase):
         self.assertEqual(region['all_relocations'],58)
         self.assertEqual(region['total_region_storage_bytes'], 1422)
         self.assertEqual(region['native_file_bytes'],1116)
+        self.assertFalse(region['full_program_optimized'])
+        self.assertFalse(result['gate8_complete'])
+        self.assertFalse(result['whole_program_attempt']['native_link_verified'])
+
+    def test_original_roots_reassembles_val_and_poke_together(self):
+        import os
+        checkpoint = Path(os.environ.get('RBC_G8_CHECKPOINT',
+                               ROOT / 'build/tmp/rbc-latest-checkpoint/rbc'))
+        frontend = Path(os.environ.get('RBC_G8_FRONTEND',
+                             ROOT / 'build/tmp/rbc-g8-frontend-verified'))
+        original_tap = Path(os.environ.get('RBC_G8_TAPE',
+                                 ROOT / 'build/tmp/rbc-g8-hisoft-original.tap'))
+        if not ((checkpoint / 'rbc.py').is_file() and
+                (frontend / 'compiler.py').is_file() and original_tap.is_file()):
+            self.skipTest('original frontend/tape checkpoint not available')
+        import gate8_full_source_audit as audit
+        root = ROOT / 'src/bonus/60-programs/56-roots/BASIC/56-roots.bas'
+        result = audit.run(root, checkpoint, frontend, original_tap,
+                           ROOT / 'src/zx-ux-sdk/rom/48.rom')
+        region = result['native_runtime_region']
+        self.assertTrue(region['native_region_verified'])
+        self.assertEqual(region['passes'], 3)
+        self.assertEqual((region['routines'], region['original_routines'],
+                          region['replacement_routines']), (46, 44, 2))
+        self.assertEqual(region['runtime_bytes'], 1083)
+        self.assertEqual(region['all_relocations'], 60)
+        self.assertEqual(region['native_file_bytes'], 1165)
         self.assertFalse(region['full_program_optimized'])
         self.assertFalse(result['gate8_complete'])
         self.assertFalse(result['whole_program_attempt']['native_link_verified'])

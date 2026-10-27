@@ -159,7 +159,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             [build.code for build in observed],
             [build.base for build in observed],
             [m.spans for m in source_maps],
-            {POKE_RT: 'native-poke', RT.PAUSE: 'native-pause'},
+            {POKE_RT: 'native-poke', RT.PAUSE: 'native-pause',
+             RT.VAL: 'guarded-val'},
             runtime_layouts)
     except RuntimeCombinedError as exc:
         native_runtime_region = {

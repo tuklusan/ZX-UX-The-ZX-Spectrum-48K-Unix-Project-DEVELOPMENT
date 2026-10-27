@@ -17,6 +17,8 @@ from gate8_original_runtime_layout import _run_emitter
 from gate8_original_runtime_types import OriginalEmitter, SourceTransactions, START
 from z80_python.disasm import disassemble_bytes
 from native_pause_rt import original_pause_source
+from gate8_native_guarded_val import guarded_val_assembly
+from spectrum_runtime import guarded_val_bytes
 from native_sysvars_rt import _native_poke, POKE_RT
 
 
@@ -153,6 +155,14 @@ def _replacement_listing(n, start, base, settings, expected):
         label = 'rbc_pause_entry'
         # The sole entry label is renamed; distinct internal labels are stable.
         source = source.replace('start:', label+':')
+    elif n == RT.VAL:
+        raw = guarded_val_bytes()
+        source = guarded_val_assembly()
+        if raw != expected:
+            raise RuntimeCombinedError('guarded VAL source does not match original program')
+        sites = ()
+        label = 'rbc_val_entry'
+        source = source.replace('start:', label+':')
     elif n == POKE_RT:
         if (not isinstance(settings, dict) or
                 any(k not in settings for k in
@@ -238,10 +248,14 @@ def native_runtime_region(code: bytes, rom: bytes, image: bytes, base: int,
     from rtnames import RT
     selected = _runtime_spans(spans, image)
     start, end = selected[0][1], selected[-1][2]
-    if {n for n, _, _ in selected if n in replacements} != {POKE_RT, RT.PAUSE}:
+    replacements_expected = {POKE_RT: 'native-poke', RT.PAUSE: 'native-pause',
+                             RT.VAL: 'guarded-val'}
+    actual = {n for n, _, _ in selected if n in replacements_expected}
+    if not actual or any(replacements.get(n) != replacements_expected[n]
+                         for n in actual):
         raise RuntimeCombinedError('selected runtime needs complete typed replacement sources')
-    if any(replacements[n] != ('native-poke' if n == POKE_RT else 'native-pause')
-           for n, _, _ in selected if n in replacements):
+    if any(n not in replacements_expected or replacements[n] != replacements_expected[n]
+           for n in replacements):
         raise RuntimeCombinedError('unknown runtime replacement source kind')
     sections = _original_sections(code, rom, image, base, selected, replacements)
     by_id = {section.number: section for section in sections}
