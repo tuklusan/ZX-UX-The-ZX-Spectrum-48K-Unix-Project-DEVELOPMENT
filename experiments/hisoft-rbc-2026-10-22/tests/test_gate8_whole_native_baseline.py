@@ -84,6 +84,29 @@ class WholeNativeBaselineTests(unittest.TestCase):
                 _source_program(events, b'\xc9\x00', 0x6000, 2, 0,
                                 asm, b'', b'', {}, {})
 
+    def test_optimizer_resource_rejection_preserves_original_native_proof(self):
+        required = tuple(os.environ.get(name) for name in (
+            'RBC_G8_CHECKPOINT', 'RBC_G8_FRONTEND', 'RBC_G8_TAPE',
+            'RBC_G8_OPTIMIZER'))
+        if not all(required):
+            self.skipTest('exact compiler and optimizer sources required')
+        from gate8_full_source_audit import run
+        game = '23-biorhythms'
+        source = ROOT / 'src/bonus/60-programs' / game / 'BASIC' / (game + '.bas')
+        report = run(source, Path(required[0]), Path(required[1]),
+                     Path(required[2]), ROOT / 'src/zx-ux-sdk/rom/48.rom')
+        baseline = report['native_whole_source_baseline']
+        self.assertTrue(baseline['native_whole_source_baseline_linked'])
+        self.assertTrue(baseline['native_image_byte_exact'])
+        self.assertTrue(baseline['all_source_relocations_verified'])
+        self.assertEqual(baseline['native_source_bases'], 3)
+        candidate = baseline['native_whole_optimizer_candidate']
+        self.assertIn('protected resource boundary', candidate['blocker'])
+        self.assertFalse(candidate['native_candidate_link_verified'])
+        self.assertFalse(candidate['optimizer_candidate_admitted_for_publication'])
+        self.assertEqual(candidate['native_baseline_sha256'], baseline['native_sha256'])
+        self.assertFalse(report['gate8_complete'])
+
     def test_real_originals_three_native_bases(self):
         compiler = os.environ.get('RBC_G8_CHECKPOINT')
         frontend = os.environ.get('RBC_G8_FRONTEND')

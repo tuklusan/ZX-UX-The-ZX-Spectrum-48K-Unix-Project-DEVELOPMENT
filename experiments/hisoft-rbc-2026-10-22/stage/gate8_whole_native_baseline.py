@@ -192,7 +192,8 @@ def _source_program(events, image, base, text_end, bss, assembler,
 
 def verify_three_whole_native_baselines(events, images, bases, text_ends,
                                          bss_sizes, assembler, code, rom,
-                                         replacements, settings, native_runtime):
+                                         replacements, settings, native_runtime,
+                                         *, optimizer=None):
     """Native-link *all* original source bytes, compare three relocated images.
 
     The SSX wrapper, game behavior, and optimizer are explicitly outside this
@@ -259,8 +260,29 @@ def verify_three_whole_native_baselines(events, images, bases, text_ends,
         native_info = current
         if max(len(ssx), current['native_total_bytes']) > 12000:
             raise WholeBaselineError('native source baseline exceeds default memory limit')
+    candidate = None
+    if optimizer is not None:
+        from gate8_native_whole_optimizer import (WholeOptimizerError,
+                                                  verify_whole_optimizer_candidate)
+        try:
+            candidate = verify_whole_optimizer_candidate(sources[0], ssx, optimizer)
+        except WholeOptimizerError as exc:
+            # Failure to prove a safe optimizer candidate must not invalidate
+            # the separately linked, byte-identical original native program.
+            # Record that rejection, never promote it to a successful link.
+            candidate = {
+                'blocker': str(exc),
+                'native_baseline_sha256': native_sha,
+                'native_candidate_link_verified': False,
+                'optimizer_candidate_admitted_for_publication': False,
+                'native_behavior_verified': False,
+                'full_program_optimized': False,
+            }
+        if candidate['native_baseline_sha256'] != native_sha:
+            raise WholeBaselineError('optimizer compared a different native baseline')
     return {
         **counts[0], **native_info,
+        'native_whole_optimizer_candidate': candidate,
         'source_assembly_sha256': hashlib.sha256(sources[0].encode()).hexdigest(),
         'native_sha256': native_sha,
         'native_source_bases': 3,
