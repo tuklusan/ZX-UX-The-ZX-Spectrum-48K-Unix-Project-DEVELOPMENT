@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -31,6 +32,7 @@ from gate8_native_runtime_combined import (RuntimeCombinedError,
     verify_three_native_runtime_regions)
 from gate8_runtime_handoff import RuntimeHandoffError, verify_three_runtime_handoffs
 from gate8_whole_native_baseline import WholeBaselineError, verify_three_whole_native_baselines
+from gate8_native_whole_optimizer import load_locked_optimizer, WholeOptimizerError
 from hisoft_frontend_inputs import KNOWN_COMPILER
 
 
@@ -180,6 +182,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
                            'full_program_optimized': False,
                            'native_behavior_verified': False}
     try:
+        locked = os.environ.get('RBC_G8_OPTIMIZER')
+        optimizer = load_locked_optimizer(Path(locked)).optimize if locked else None
         from z80asm import asm
         whole_native_baseline = verify_three_whole_native_baselines(
             captured_events, [build.code for build in observed],
@@ -187,8 +191,9 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             [build.bss for build in observed], asm,
             vendor.data, rom.read_bytes(),
             {POKE_RT: 'native-poke', RT.PAUSE: 'native-pause',
-             RT.VAL: 'guarded-val'}, runtime_layouts, native_runtime_region)
-    except (WholeBaselineError, ValueError, TypeError) as exc:
+             RT.VAL: 'guarded-val'}, runtime_layouts, native_runtime_region,
+            optimizer=optimizer)
+    except (WholeBaselineError, WholeOptimizerError, ValueError, TypeError) as exc:
         whole_native_baseline = {'native_whole_source_baseline_linked': False,
                                  'blocker': str(exc),
                                  'full_program_optimized': False,
