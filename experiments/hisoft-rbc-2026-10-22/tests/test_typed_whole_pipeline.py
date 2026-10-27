@@ -86,6 +86,17 @@ class WholePipeline(unittest.TestCase):
         self.assertEqual(rld.parse_ssx(plain)['image'], b'\x00\xc9')
         self.assertTrue(report['native_links_verified'])
 
+    def test_untyped_byte_after_rewind_is_still_refused(self):
+        group = (Emission(0, 'instruction', 'ret', b'\xc9',
+                          source_site='emit:100'),
+                 Emission(0, 'byte', '(0,)', b'\x00',
+                          source_site='emit_byte:101'),
+                 Emission(1, 'instruction', 'ret', b'\xc9',
+                          source_site='emit:102'))
+        with self.assertRaisesRegex(SourcePipelineError, 'unresolved source bytes'):
+            verify_and_build((group,) * 3, (b'\x00\xc9',) * 3,
+                             self.bases, (2,) * 3, (0,) * 3, assembler)
+
     def test_replaced_protected_calculator_data_rejected(self):
         group = (Emission(0, 'instruction', 'ret; defb 1', b'\xc9\x01',
                           source_site='emit:100'),

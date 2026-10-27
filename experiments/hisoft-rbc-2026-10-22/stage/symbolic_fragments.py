@@ -116,10 +116,19 @@ def inspect_final_fragments(events, image: bytes, text_end: int, assembler):
             raise FragmentBoundaryError('partial historical instruction rewrite')
         if any(fragment.kind != 'instruction' for fragment in fragments):
             raise FragmentBoundaryError('historical protected inline data rewrite')
-        if any(owner <= index or fragment_kind.get((owner, position)) != 'instruction'
-               for position, owner in zip(range(event.position,
-                                               event.position + len(event.data)), owners)):
-            raise FragmentBoundaryError('historical instruction replaced by untyped source')
+        for position, owner in zip(range(event.position,
+                                         event.position + len(event.data)), owners):
+            if owner <= index:
+                raise FragmentBoundaryError('historical source owner is out of order')
+            replacement = events[owner]
+            if replacement.kind == 'instruction':
+                if fragment_kind.get((owner, position)) != 'instruction':
+                    raise FragmentBoundaryError('historical instruction replaced by untyped inline data')
+            elif replacement.kind not in ('opcode', 'relocation', 'word',
+                                          'byte', 'binary'):
+                raise FragmentBoundaryError('historical instruction replaced by untyped source')
+            # Final opcode and numeric writers are not promoted to typed code.
+            # Full source ownership still independently rejects unresolved bytes.
     positions = set()
     for fragment in live:
         extent = set(range(fragment.site, fragment.end))

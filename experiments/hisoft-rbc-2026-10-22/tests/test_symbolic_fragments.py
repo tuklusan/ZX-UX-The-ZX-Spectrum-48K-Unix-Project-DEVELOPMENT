@@ -90,6 +90,28 @@ class SourceFragments(unittest.TestCase):
             inspect_final_fragments([old, new], b'\xc3\x00\x60',
                                     3, assembler)
 
+    def test_historical_opcode_and_word_emissions_do_not_claim_code(self):
+        old = SimpleNamespace(kind='instruction', position=0,
+                              source='ret', data=b'\xc9')
+        opcode = SimpleNamespace(kind='opcode', position=0,
+                                 source='call nn', data=b'\xcd')
+        live_ret = SimpleNamespace(kind='instruction', position=1,
+                                   source='ret', data=b'\xc9')
+        fragments = inspect_final_fragments(
+            [old, opcode, live_ret], b'\xcd\xc9', 2, assembler)
+        self.assertEqual([(f.source, f.site) for f in fragments], [('ret', 1)])
+
+    def test_historical_direct_literal_cannot_be_promoted_to_code(self):
+        old = SimpleNamespace(kind='instruction', position=0,
+                              source='ret', data=b'\xc9')
+        raw = SimpleNamespace(kind='byte', position=0,
+                              source='(0,)', data=b'\x00')
+        end = SimpleNamespace(kind='instruction', position=1,
+                              source='ret', data=b'\xc9')
+        fragments = inspect_final_fragments(
+            [old, raw, end], b'\x00\xc9', 2, assembler)
+        self.assertEqual([(f.source, f.site) for f in fragments], [('ret', 1)])
+
     def test_original_protected_inline_data_cannot_be_rewritten(self):
         old = SimpleNamespace(kind='instruction', position=0,
                               source='defb $31,$04,$38', data=b'\x31\x04\x38')
