@@ -146,7 +146,15 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
                 else:
                     edges.append((site, destination))
             elif _IMM.fullmatch(target) and op in ('jp', 'call'):
-                value = int(target[1:], 16) if target.startswith('$') else int(target, 0)
+                # Z80 accepts leading-zero *decimal* operands; Python's
+                # int(text, 0) rejects them as old-style octal. Keep
+                # source language syntax, not host-language guessing.
+                if target.startswith('$'):
+                    value = int(target[1:], 16)
+                elif target.startswith('0x'):
+                    value = int(target, 16)
+                else:
+                    value = int(target, 10)
                 if value < 0x4000:
                     rom_edges += 1
                 else:

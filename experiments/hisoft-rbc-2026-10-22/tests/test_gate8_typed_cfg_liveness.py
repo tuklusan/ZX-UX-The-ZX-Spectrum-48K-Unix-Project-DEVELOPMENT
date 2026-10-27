@@ -147,6 +147,55 @@ class TypedWholeCFGTests(unittest.TestCase):
                 self.assertGreater(report['unresolved_pointer_expressions'], 0)
                 self.assertFalse(report['rewrite_safe_to_admit'])
 
+    def test_zero_prefixed_decimal_rom_control_targets(self):
+        # ras accepts leading zeros as decimal, not Python's base-0 syntax.
+        # The CFG must classify the exact number used by the native linker.
+        import ras
+        import rld
+        from z80_python.cpu import Z80CPU
+        spellings = ('0100', '000100', '100', '$64', '0x64')
+        for spelling in spellings:
+            source = ('    section text\n    global start\nstart:\n'
+                      f'    jp {spelling}\n')
+            with self.subTest(spelling=spelling):
+                report = inspect_typed_cfg_liveness(source)
+                self.assertEqual(report['rom_transfer_edges'], 1)
+                self.assertEqual(report['unresolved_control_edges'], 0)
+                self.assertEqual(report['direct_cfg_reachable_instructions'], 1)
+                self.assertFalse(report['rewrite_safe_to_admit'])
+                obj = ras.assemble_text(source, 'leading-zero-jp.s')
+                ssx, *_ = rld.link([rld.Obj(obj, 'leading-zero-jp.sso')], [],
+                                  entry='start', stack=384)
+                info = rld.parse_ssx(ssx)
+                self.assertEqual(info['image'], b'\xc3\x64\x00')
+                for base in (0x7000, 0x8000, 0x9000):
+                    memory = bytearray(65536)
+                    code = rld.relocate(info['image'], info['relocs'], base)
+                    memory[base:base+len(code)] = code
+                    # A small ROM-address test stub, independent of the
+                    # actual Spectrum ROM, returns through the process stack.
+                    memory[0x64:0x67] = b'\x3e\x2a\xc9'
+                    memory[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+                    cpu = Z80CPU(memory.__getitem__, memory.__setitem__)
+                    cpu.pc, cpu.sp = base + info['entry'], 0xd000
+                    for _ in range(8):
+                        if cpu.pc == 0xb000:
+                            break
+                        cpu.step()
+                    else:
+                        self.fail('native decimal ROM jump did not return')
+                    self.assertEqual(cpu.a, 42)
+
+    def test_leading_zero_decimal_above_rom_not_called_a_rom_edge(self):
+        for literal in ('016384', '16384', '$4000', '0x4000'):
+            with self.subTest(literal=literal):
+                report = inspect_typed_cfg_liveness(
+                    '    section text\nstart:\n    jp ' + literal + '\n')
+                self.assertEqual(report['rom_transfer_edges'], 0)
+                self.assertTrue(report['unknown_entry_reachability'])
+                self.assertEqual(report['unresolved_control_edges'], 1)
+                self.assertFalse(report['rewrite_safe_to_admit'])
+
     def test_no_labels_for_opaque_bytes_or_unknown_entry(self):
         for source in (
                 'section text\nstart:\n db 0\n',
