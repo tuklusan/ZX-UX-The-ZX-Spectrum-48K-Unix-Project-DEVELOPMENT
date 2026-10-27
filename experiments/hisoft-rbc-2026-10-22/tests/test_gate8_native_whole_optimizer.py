@@ -121,6 +121,42 @@ class WholeOptimizerTests(unittest.TestCase):
         self.assertTrue(result['candidate_byte_identical'])
         self.assertFalse(result['optimizer_candidate_admitted_for_publication'])
 
+    def test_removed_label_anchored_noops_are_reported_and_rejected(self):
+        # Two adjacent bytes are instructions, not disposable label storage.
+        source = self.source().replace(
+            'worker:\n    ld hl',
+            'worker:\n    ld a, a\nsecond:\n    ld a, a\nlast:\n    ld hl')
+        obj = ras.assemble_text(source, 'label-noops-before.s')
+        baseline = rld.link([rld.Obj(obj, 'label-noops-before.sso')], [],
+                            entry='start', stack=384)[0]
+        def drop_labeled_instructions(text):
+            return text.replace('    ld a, a\n', '')
+        with self.assertRaisesRegex(WholeOptimizerError,
+                                    'protected resource boundary; first change after worker:'):
+            verify_whole_optimizer_candidate(
+                source, baseline, drop_labeled_instructions)
+
+    def test_original_biorhythms_protected_resource_failure_is_precise(self):
+        env = tuple(os.environ.get(name) for name in (
+            'RBC_G8_CHECKPOINT', 'RBC_G8_FRONTEND', 'RBC_G8_TAPE',
+            'RBC_G8_OPTIMIZER'))
+        if not all(env):
+            self.skipTest('requires exact original compiler and optimizer')
+        from gate8_full_source_audit import run
+        game = '23-biorhythms'
+        source = ROOT / 'src/bonus/60-programs' / game / 'BASIC' / (game + '.bas')
+        report = run(source, Path(env[0]), Path(env[1]), Path(env[2]),
+                     ROOT / 'src/zx-ux-sdk/rom/48.rom')
+        baseline = report['native_whole_source_baseline']
+        candidate = baseline['native_whole_optimizer_candidate']
+        self.assertTrue(baseline['native_whole_source_baseline_linked'])
+        self.assertTrue(baseline['native_image_byte_exact'])
+        self.assertFalse(candidate['native_candidate_link_verified'])
+        self.assertIn('original_rt_150b:', candidate['blocker'])
+        self.assertIn('protected resource boundary', candidate['blocker'])
+        self.assertFalse(candidate['optimizer_candidate_admitted_for_publication'])
+        self.assertFalse(report['gate8_complete'])
+
     def test_wrong_optimizer_output_rejected(self):
         with self.assertRaisesRegex(WholeOptimizerError, 'text'):
             verify_whole_optimizer_candidate(self.source(), self.baseline(),

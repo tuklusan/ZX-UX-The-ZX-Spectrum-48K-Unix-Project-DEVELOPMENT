@@ -8,6 +8,7 @@ A candidate is never granted runtime-equivalence or publication by this gate.
 from __future__ import annotations
 
 import hashlib
+from difflib import SequenceMatcher
 import importlib
 import inspect
 import re
@@ -16,7 +17,8 @@ import sys
 
 import ras
 import rld
-from symbolic_z80 import _check_optimizer_output, _check_protected, SymbolicError
+from symbolic_z80 import (_check_optimizer_output, _check_protected,
+                          _resource_barriers, SymbolicError)
 from upeepz80_codegen import UPSTREAM_REVISION
 from gate8_typed_cfg_liveness import inspect_typed_cfg_liveness, TypedCFGError
 
@@ -106,6 +108,24 @@ def _control_transfers(assembly: str) -> tuple[tuple[str, str, str], ...]:
     return tuple(transfers)
 
 
+def _first_resource_boundary_change(original: str, candidate: str) -> str:
+    """Identify the first protected code boundary altered by an optimizer.
+
+    A removed instruction between preserved labels can merge distinct entry
+    addresses. Report the source label, but never accept or repair the edit.
+    """
+    before, after = _resource_barriers(original), _resource_barriers(candidate)
+    for kind, first, last, new_first, new_last in SequenceMatcher(
+            a=before, b=after, autojunk=False).get_opcodes():
+        if kind == 'equal':
+            continue
+        preceding = before[first - 1] if first else '<start>'
+        expected = ', '.join(before[first:last]) or '<none>'
+        observed = ', '.join(after[new_first:new_last]) or '<none>'
+        return f'after {preceding}: expected {expected}; observed {observed}'
+    return 'protected resource boundary change could not be localized'
+
+
 def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
                                      optimizer, *, max_memory: int = 12000,
                                      expected_runtime_bytes: bytes | None = None):
@@ -132,7 +152,13 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
         if not isinstance(candidate_text, str):
             raise WholeOptimizerError('optimizer did not return assembly text')
         _check_optimizer_output(candidate_text)
-        _check_protected(assembly, candidate_text, {'start'})
+        try:
+            _check_protected(assembly, candidate_text, {'start'})
+        except SymbolicError as exc:
+            if str(exc) == 'optimizer moved code across protected resource boundary':
+                detail = _first_resource_boundary_change(assembly, candidate_text)
+                raise SymbolicError(f'{exc}; first change {detail}') from exc
+            raise
         source_cfg = inspect_typed_cfg_liveness(assembly)
         candidate_cfg = inspect_typed_cfg_liveness(candidate_text)
         if _control_transfers(assembly) != _control_transfers(candidate_text):
