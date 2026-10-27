@@ -87,6 +87,10 @@ def compare_native_probes(plain: bytes, candidate: bytes, *,
     """Contrast bounded deterministic exits without approving publication."""
     if (not isinstance(plain, bytes) or not isinstance(candidate, bytes)
             or type(limit) is not int or not 1 <= limit <= 100000
+            # One-shot iterators can be empty or silently exhaust after the
+            # first base, reporting a match without a complete probe matrix.
+            or type(bases) not in (tuple, list)
+            or type(flags) not in (tuple, list)
             or not bases or not flags):
         raise NativeProbeBlocked('invalid bounded native probe parameters')
     checked = 0
