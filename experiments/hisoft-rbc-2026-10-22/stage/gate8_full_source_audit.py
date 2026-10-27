@@ -207,8 +207,11 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         raise RuntimeError('passive capture changed linked native program')
     info = rld.parse_ssx(first)
     total = len(info['image']) + info['bss'] + info['stack']
-    if max(total, len(first)) > 14000:
-        raise ValueError('default 14000-byte memory limit exceeded')
+    passive_admitted = max(total, len(first)) <= 14000
+    # This is an audit, never a compiler admission path. Keep the exact
+    # passive dimensions even when they exceed the default limit so the
+    # independently relinked whole-source result (already checked above)
+    # can be inspected. Never publish the over-limit passive SSX.
     for record in records:
         if record['safe_to_optimize']:
             raise RuntimeError('partial typed capture was incorrectly admitted')
@@ -222,6 +225,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         'linked_sha256': hashlib.sha256(first).hexdigest(),
         'file': len(first), 'image': len(info['image']),
         'bss': info['bss'], 'stack': info['stack'], 'total': total,
+        'passive_within_default_limit': passive_admitted,
+        'passive_loader_admitted': False,  # Audit cannot admit a native file.
         'audits': records, 'source_patches': source_patch_report,
         'source_relocations': relocation_report,
         'source_instructions': instruction_report,

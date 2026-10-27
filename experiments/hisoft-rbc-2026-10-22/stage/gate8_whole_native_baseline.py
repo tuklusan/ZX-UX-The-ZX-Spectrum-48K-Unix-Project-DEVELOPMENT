@@ -279,7 +279,11 @@ def verify_three_whole_native_baselines(events, images, bases, text_ends,
             raise WholeBaselineError('native dimensions changed across original compiler bases')
         native_info = current
         if max(len(ssx), current['native_total_bytes']) > 14000:
-            raise WholeBaselineError('native source baseline exceeds default memory limit')
+            raise WholeBaselineError(
+                'native source baseline exceeds default memory limit: '
+                f"file={len(ssx)}, image={len(parsed['image'])}, "
+                f"bss={parsed['bss']}, stack={parsed['stack']}, "
+                f"total={current['native_total_bytes']}, limit=14000")
     candidate = None
     if optimizer is not None:
         from gate8_native_whole_optimizer import (WholeOptimizerError,
