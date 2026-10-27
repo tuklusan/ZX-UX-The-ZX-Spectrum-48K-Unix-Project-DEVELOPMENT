@@ -13,7 +13,7 @@ sys.path[:0] = [str(STAGE), str(ROOT / 'src/zx-ux-sdk')]
 
 from gate8_native_runtime_combined import (
     RuntimeCombinedError, _ROM_CALCULATOR, _original_z80_and_calculator,
-    _runtime_spans, _replacement_listing, _vendor_listing,
+    _runtime_spans, _replacement_listing, _vendor_listing, native_runtime_region,
     verify_three_native_runtime_regions, VendorSection,
 )
 from gate8_original_runtime_types import compiler_image, OriginalEmitter, SourceTransactions
@@ -97,6 +97,15 @@ class OriginalSourceSections(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeCombinedError, 'untyped replacement'):
             _replacement_listing(999, 500, 0x6000, {}, expected)
 
+    def test_selected_native_replacement_must_still_be_source_owned(self):
+        from rtnames import RT
+        span = SimpleNamespace(kind='runtime-opaque',
+                               source=f'RT{RT.PAUSE}', start=0, end=1)
+        with self.assertRaisesRegex(RuntimeCombinedError,
+                                    'complete typed replacement sources'):
+            native_runtime_region(b'', b'', b'\xc9', 0x6000,
+                                  (span,), {}, {})
+
     def test_bad_three_pass_parameters_fail_closed(self):
         for bases in ((0x6000,0x6000,0x6200),(0x6000,0x6100)):
             with self.subTest(bases=bases):
@@ -158,6 +167,65 @@ class LinkedOriginalRegion(unittest.TestCase):
         self.assertFalse(region['full_program_optimized'])
         self.assertFalse(result['gate8_complete'])
         self.assertFalse(result['whole_program_attempt']['native_link_verified'])
+
+
+class NativeOriginalOnlyAndFourteenKilobyteTests(unittest.TestCase):
+    """Use unchanged corpus sources and the independently checked compiler."""
+
+    def original(self, game):
+        import os
+        checkpoint = Path(os.environ.get('RBC_G8_CHECKPOINT',
+                                   ROOT / 'build/tmp/rbc-latest-checkpoint/rbc'))
+        frontend = Path(os.environ.get('RBC_G8_FRONTEND',
+                                 ROOT / 'build/tmp/rbc-g8-frontend-verified'))
+        tape = Path(os.environ.get('RBC_G8_TAPE',
+                             ROOT / 'build/tmp/rbc-g8-hisoft-original.tap'))
+        if not ((checkpoint / 'rbc.py').is_file() and
+                (frontend / 'compiler.py').is_file() and tape.is_file()):
+            self.skipTest('locked HiSoft source and original tape required')
+        from gate8_full_source_audit import run
+        source = ROOT / f'src/bonus/60-programs/{game}/BASIC/{game}.bas'
+        return run(source, checkpoint, frontend, tape,
+                   ROOT / 'src/zx-ux-sdk/rom/48.rom')
+
+    def test_critical_path_original_only_runtime_native_relinks(self):
+        report = self.original('07-critical-path-analysis')
+        region = report['native_runtime_region']
+        self.assertTrue(region['native_region_verified'])
+        self.assertEqual(region['passes'], 3)
+        self.assertEqual((region['routines'],region['original_routines'],
+                          region['replacement_routines']), (46, 46, 0))
+        self.assertEqual(region['runtime_bytes'], 653)
+        self.assertEqual(region['all_relocations'], 21)
+        full = report['native_whole_source_baseline']
+        self.assertTrue(full['native_whole_source_baseline_linked'])
+        self.assertTrue(full['native_image_byte_exact'])
+        self.assertTrue(full['all_source_relocations_verified'])
+        self.assertEqual(full['native_source_bases'], 3)
+        self.assertEqual(full['native_total_bytes'], 13180)
+        self.assertEqual(full['native_file_bytes'], 11293)
+        self.assertFalse(full['full_program_optimized'])
+        self.assertFalse(full['native_behavior_verified'])
+        self.assertFalse(report['gate8_complete'])
+
+    def test_fall_guy_and_chomper_14k_native_source_limit(self):
+        for game, expected_file, expected_memory in (
+                ('02-fall-guy', 12765, 12664),
+                ('08-chomper', 12829, 12087)):
+            with self.subTest(game=game):
+                report = self.original(game)
+                full = report['native_whole_source_baseline']
+                self.assertTrue(full['native_whole_source_baseline_linked'])
+                self.assertTrue(full['native_image_byte_exact'])
+                self.assertTrue(full['all_source_relocations_verified'])
+                self.assertEqual(full['native_source_bases'], 3)
+                self.assertEqual(full['native_file_bytes'], expected_file)
+                self.assertEqual(full['native_total_bytes'], expected_memory)
+                self.assertGreater(max(expected_file, expected_memory), 12000)
+                self.assertLessEqual(max(expected_file, expected_memory), 14000)
+                self.assertFalse(full['full_program_optimized'])
+                self.assertFalse(full['native_behavior_verified'])
+                self.assertFalse(report['gate8_complete'])
 
 
 if __name__ == '__main__':

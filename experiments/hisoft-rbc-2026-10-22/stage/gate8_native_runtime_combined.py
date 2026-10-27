@@ -269,8 +269,8 @@ def native_runtime_region(code: bytes, rom: bytes, image: bytes, base: int,
                              RT.PAUSE: 'native-pause',
                              RT.VAL: 'guarded-val'}
     actual = {n for n, _, _ in selected if n in replacements_expected}
-    if not actual or any(replacements.get(n) != replacements_expected[n]
-                         for n in actual):
+    if any(replacements.get(n) != replacements_expected[n]
+           for n in actual):
         raise RuntimeCombinedError('selected runtime needs complete typed replacement sources')
     if any(n not in replacements_expected or replacements[n] != replacements_expected[n]
            for n in replacements):
