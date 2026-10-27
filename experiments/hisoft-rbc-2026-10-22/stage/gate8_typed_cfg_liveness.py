@@ -30,22 +30,28 @@ class _Instruction:
 
 
 def _effects(opcode: str, operand: str):
-    """Unmodelled operations read and write all tracked state, by design."""
+    """Unmodelled effects are opaque; even NOP changes the Z80 R register.
+
+    An instruction fetch updates R's low seven bits (M1 refresh cycle).
+    LD A,R makes that state observable, so deleting a seemingly idle opcode
+    cannot be justified by register liveness that ignores instruction fetches.
+    This is only a dependency approximation, not a timing/semantics proof.
+    """
     if opcode == 'nop':
-        return frozenset(), frozenset(), True
+        return frozenset(('r',)), frozenset(('r',)), True
     parts = [s.strip() for s in operand.split(',')]
     if opcode == 'ld' and len(parts) == 2 and parts[0] in _BYTE_REGS:
         dst, src = parts
         if src in _BYTE_REGS:
-            return frozenset((src,)), frozenset((dst,)), True
+            return frozenset((src, 'r')), frozenset((dst, 'r')), True
         if _IMM.fullmatch(src):
-            return frozenset(), frozenset((dst,)), True
+            return frozenset(('r',)), frozenset((dst, 'r')), True
     if opcode in ('inc', 'dec') and operand in _BYTE_REGS:
         # Z80 INC/DEC preserve carry. With flags tracked as one coarse 'f'
         # register, these instructions READ the previous flags as well as
         # writing the changed bits. Without the read, backward liveness
         # incorrectly kills carry before a later conditional transfer.
-        return frozenset((operand, 'f')), frozenset((operand, 'f')), True
+        return frozenset((operand, 'f', 'r')), frozenset((operand, 'f', 'r')), True
     if opcode in ('jr', 'jp', 'djnz', 'ret', 'call', 'rst', 'reti', 'retn'):
         return _REGS, _REGS, False
     return _REGS, _REGS, False

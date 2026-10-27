@@ -50,8 +50,8 @@ class TypedWholeCFGTests(unittest.TestCase):
                 with self.subTest(opcode=opcode, register=register):
                     read, written, modelled = _effects(opcode, register)
                     self.assertTrue(modelled)
-                    self.assertEqual(read, frozenset((register, 'f')))
-                    self.assertEqual(written, frozenset((register, 'f')))
+                    self.assertEqual(read, frozenset((register, 'f', 'r')))
+                    self.assertEqual(written, frozenset((register, 'f', 'r')))
         # 16-bit forms do not have the same flag behavior: keep them unknown.
         for opcode in ('inc', 'dec'):
             reads, writes, modelled = _effects(opcode, 'hl')
@@ -99,6 +99,60 @@ class TypedWholeCFGTests(unittest.TestCase):
                     self.assertEqual(cpu.a, 1)
                     self.assertEqual(cpu.b, expected)
                     self.assertEqual(int(cpu.f) & 1, 1)
+
+    def test_fetch_refresh_is_live_even_for_nop_and_register_loads(self):
+        # Every M1 fetch changes low R bits, observable via LD A,R. A purely
+        # dataflow-driven NOP removal would otherwise lose this dependency.
+        for opcode, operand, uses, writes in (
+                ('nop', '', ('r',), ('r',)),
+                ('ld', 'a,b', ('b', 'r'), ('a', 'r')),
+                ('ld', 'a,7', ('r',), ('a', 'r')),
+                ('inc', 'b', ('b', 'f', 'r'), ('b', 'f', 'r')),
+                ('dec', 'b', ('b', 'f', 'r'), ('b', 'f', 'r'))):
+            with self.subTest(opcode=opcode, operand=operand):
+                use, define, known = _effects(opcode, operand)
+                self.assertTrue(known)
+                self.assertEqual(use, frozenset(uses))
+                self.assertEqual(define, frozenset(writes))
+
+    def test_native_refresh_read_detects_deleted_nop_at_three_bases(self):
+        import ras
+        import rld
+        from z80_python.cpu import Z80CPU
+        original = ('    section text\n    global start\nstart:\n'
+                    '    nop\n    ld a,r\n    ret\n')
+        changed = original.replace('    nop\n', '')
+        def link(source):
+            obj = ras.assemble_text(source, 'refresh-register.s')
+            return rld.link([rld.Obj(obj, 'refresh-register.sso')], [],
+                            entry='start', stack=384)[0]
+        before, after = link(original), link(changed)
+        self.assertNotEqual(before, after)
+        audit = inspect_typed_cfg_liveness(original)
+        self.assertTrue(audit['source_liveness_converged'])
+        self.assertFalse(audit['rewrite_safe_to_admit'])
+        for base in (0x7000, 0x8000, 0x9000):
+            for initial_r in (0, 0x7e, 0xff):
+                def execute(ssx):
+                    info = rld.parse_ssx(ssx)
+                    memory = bytearray(65536)
+                    code = rld.relocate(info['image'], info['relocs'], base)
+                    memory[base:base + len(code)] = code
+                    memory[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+                    cpu = Z80CPU(memory.__getitem__, memory.__setitem__)
+                    cpu.pc, cpu.sp, cpu.r = base + info['entry'], 0xd000, initial_r
+                    for _ in range(8):
+                        if cpu.pc == 0xb000:
+                            break
+                        cpu.step()
+                    else:
+                        self.fail('native refresh probe did not return')
+                    return cpu.a, cpu.r
+                with self.subTest(base=base, initial_r=initial_r):
+                    original_a, original_r = execute(before)
+                    changed_a, changed_r = execute(after)
+                    self.assertEqual((original_a - changed_a) & 127, 1)
+                    self.assertEqual((original_r - changed_r) & 127, 1)
 
     def test_backward_register_liveness_is_conservative(self):
         source = ('section text\nstart:\n'
