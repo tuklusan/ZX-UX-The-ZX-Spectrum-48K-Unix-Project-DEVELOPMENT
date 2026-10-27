@@ -24,7 +24,7 @@ class Gate8Attempt(unittest.TestCase):
     def test_a_complete_source_creates_native_plain_link(self):
         group = (Emission(0, 'instruction', 'ret', b'\xc9',
                           source_site='emit:1'),)
-        passes = [SimpleNamespace(code=b'\xc9', code_base=base, var_bytes=0)
+        passes = [SimpleNamespace(code=b'\xc9', base=base, entry=base, bss=0)
                   for base in (0x6000, 0x6100, 0x6200)]
         report = verify_full_source_native([group]*3, passes, [1]*3,
                                            assemble, ras)
@@ -35,7 +35,7 @@ class Gate8Attempt(unittest.TestCase):
 
     def test_untyped_runtime_keeps_native_link_unverified(self):
         group = (Emission(0, 'runtime-opaque', 'RT1', b'\xc9'),)
-        passes = [SimpleNamespace(code=b'\xc9', code_base=base, var_bytes=0)
+        passes = [SimpleNamespace(code=b'\xc9', base=base, entry=base, bss=0)
                   for base in (0x6000, 0x6100, 0x6200)]
         result = verify_full_source_native([group]*3, passes, [1]*3,
                                            assemble, ras)

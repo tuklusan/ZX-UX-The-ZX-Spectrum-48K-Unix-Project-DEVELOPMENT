@@ -33,8 +33,8 @@ def verify_full_source_native(events, results, text_ends, assembler, ras):
     try:
         source = verify_and_build(
             events, [r.code for r in results],
-            [r.code_base for r in results], text_ends,
-            [r.var_bytes for r in results], assembler)
+            [r.base for r in results], text_ends,
+            [r.bss for r in results], assembler)
         plain, _, sizes = link_source_pair(source, ras, rld, lambda text: text)
     except (ValueError, TypeError, KeyError) as exc:
         return {'source_owned': False, 'native_link_verified': False,
