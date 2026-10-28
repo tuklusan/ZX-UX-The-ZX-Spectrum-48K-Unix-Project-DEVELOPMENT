@@ -29,6 +29,24 @@ class SymbolicTests(unittest.TestCase):
         p.reserve(8)
         return p
 
+    def test_source_instruction_must_be_one_ascii_line(self):
+        # Python splitlines and native assembly disagree about CR and other
+        # line separators. Typed input must not smuggle a second statement.
+        for suffix in ('\nsection data', '\rsection data',
+                       '\vsection data', '\fsection data',
+                       '\x00', '\x7f', '\u0085',
+                       '\u2028section data', '\u2029section data'):
+            with self.subTest(suffix=repr(suffix)):
+                p = SymbolicProgram()
+                p.label('start', entry=True)
+                with self.assertRaisesRegex(SymbolicError, 'one ASCII instruction'):
+                    p.instruction('ld a,1' + suffix)
+        p = SymbolicProgram()
+        p.label('start', entry=True)
+        p.instruction('ld\ta, 1')
+        p.instruction('ret')
+        self.assertIn('ld\ta, 1', p.assembly())
+
     def test_symbolic_entries_and_data_are_preserved(self):
         p = self.example()
         text = p.assembly()

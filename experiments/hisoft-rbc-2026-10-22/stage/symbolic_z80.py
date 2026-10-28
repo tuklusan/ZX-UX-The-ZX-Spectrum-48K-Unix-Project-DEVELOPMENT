@@ -68,8 +68,10 @@ class SymbolicProgram:
     def instruction(self, text: str) -> None:
         if self._section != "text":
             raise SymbolicError("instructions belong in text")
-        if not isinstance(text, str) or '\n' in text or ';' in text:
-            raise SymbolicError("one instruction per call")
+        if (not isinstance(text, str) or not text.isascii() or ';' in text or
+                any((ord(char) < 32 and char != '\t') or ord(char) == 127
+                    for char in text)):
+            raise SymbolicError("one ASCII instruction per call")
         words = text.strip().split(None, 1)
         if not words or words[0].lower() not in _INSTRUCTIONS:
             raise SymbolicError("unrecognized Z80 instruction")
