@@ -99,7 +99,10 @@ class NativeInputSourceCandidate(unittest.TestCase):
              {'abc': 55, 'xxx': 7, '1234': 7}),
             ('10 REM : OPEN #\n20 INPUT A$\n'
              '30 POKE 22528,LEN A$+20\n40 STOP\n',
-             {'abc': 23, 'xxx': 23, '1234': 24}),
+             {'abc': 23, 'xxx': 23, '1234': 24, '': 20}),
+            ('10 REM : OPEN #\n20 INPUT A\n'
+             '30 IF A=1234 THEN POKE 22528,55\n40 STOP\n',
+             {'1234': 55, '999': 7, '123x{DELETE}4': 55}),
         )
         with tempfile.TemporaryDirectory(prefix='rbc-input-source-') as tmp:
             for i, (basic, cases) in enumerate(fixtures):
