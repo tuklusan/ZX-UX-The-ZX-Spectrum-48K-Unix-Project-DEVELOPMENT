@@ -18,7 +18,8 @@ import sys
 import ras
 import rld
 from symbolic_z80 import (_check_optimizer_output, _check_protected,
-                          _resource_barriers, SymbolicError)
+                          _resource_barriers, _canonical_source_line,
+                          SymbolicError)
 from gate8_volatile_memory_fence import (protect_volatile_reads,
     strip_volatile_fences)
 from gate8_unreachable_rewrite import (check_unreachable_deletions,
@@ -88,7 +89,7 @@ def _control_transfers(assembly: str) -> tuple[tuple[str, str, str], ...]:
     block = ''
     section = 'text'
     for raw in assembly.splitlines():
-        statement = raw.partition(';')[0].strip().lower()
+        statement = _canonical_source_line(raw, strip_comment=True)
         if not statement:
             continue
         if statement.startswith('section '):
@@ -130,7 +131,7 @@ def _observable_accesses(assembly: str) -> tuple[tuple[str, str, str], ...]:
     owner = ''
     accesses = []
     for raw in assembly.splitlines():
-        statement = raw.partition(';')[0].strip().lower()
+        statement = _canonical_source_line(raw, strip_comment=True)
         if not statement:
             continue
         if statement.startswith('section '):
@@ -171,7 +172,7 @@ def _state_context(assembly: str) -> tuple[tuple[str, str, str], ...]:
     owner = ''
     instructions = []
     for raw in assembly.splitlines():
-        line = raw.partition(';')[0].strip().lower()
+        line = _canonical_source_line(raw, strip_comment=True)
         if not line:
             continue
         if line.startswith('section '):
