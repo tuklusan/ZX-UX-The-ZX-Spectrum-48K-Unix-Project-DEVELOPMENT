@@ -254,7 +254,8 @@ def _source_program(events, image, base, text_end, bss, assembler,
 def verify_three_whole_native_baselines(events, images, bases, text_ends,
                                          bss_sizes, assembler, code, rom,
                                          replacements, settings, native_runtime,
-                                         *, optimizer=None):
+                                         *, optimizer=None, source_sink=None,
+                                         max_bytes=14000):
     """Native-link *all* original source bytes, compare three relocated images.
 
     The SSX wrapper, game behavior, and optimizer are explicitly outside this
@@ -319,12 +320,12 @@ def verify_three_whole_native_baselines(events, images, bases, text_ends,
         if native_info is not None and current != native_info:
             raise WholeBaselineError('native dimensions changed across original compiler bases')
         native_info = current
-        if max(len(ssx), current['native_total_bytes']) > 14000:
+        if max_bytes and max(len(ssx), current['native_total_bytes']) > max_bytes:
             raise WholeBaselineError(
                 'native source baseline exceeds default memory limit: '
                 f"file={len(ssx)}, image={len(parsed['image'])}, "
                 f"bss={parsed['bss']}, stack={parsed['stack']}, "
-                f"total={current['native_total_bytes']}, limit=14000")
+                f"total={current['native_total_bytes']}, limit={max_bytes}")
     candidate = None
     if optimizer is not None:
         from gate8_native_whole_optimizer import (WholeOptimizerError,
@@ -345,6 +346,10 @@ def verify_three_whole_native_baselines(events, images, bases, text_ends,
             }
         if candidate['native_baseline_sha256'] != native_sha:
             raise WholeBaselineError('optimizer compared a different native baseline')
+    if source_sink is not None:
+        # Expose only the fully checked, three-base byte-identical pre-link
+        # source. Callers must perform their own native wrapper/loader checks.
+        source_sink(sources[0])
     return {
         **counts[0], **native_info,
         'native_whole_optimizer_candidate': candidate,

@@ -67,7 +67,8 @@ def verify_full_source_native(events, results, text_ends, assembler, ras,
 
 
 def run(source: Path, checkpoint: Path, frontend: Path,
-        tape: Path, rom: Path, *, original_runtime_statements=None) -> dict:
+        tape: Path, rom: Path, *, original_runtime_statements=None,
+        source_sink=None, max_bytes=14000) -> dict:
     if not (checkpoint / 'rbc.py').is_file():
         raise ValueError('reconstructed RBC checkpoint required')
     if not (frontend / 'compiler.py').is_file():
@@ -210,7 +211,8 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             {PEEK_RT: 'native-peek', POKE_RT: 'native-poke',
              RT.PAUSE: 'native-pause',
              RT.VAL: 'guarded-val'}, runtime_layouts, native_runtime_region,
-            optimizer=optimizer)
+            optimizer=optimizer, source_sink=source_sink,
+            max_bytes=max_bytes)
     except (WholeBaselineError, WholeOptimizerError, ValueError, TypeError) as exc:
         whole_native_baseline = {'native_whole_source_baseline_linked': False,
                                  'blocker': str(exc),

@@ -1,0 +1,123 @@
+"""Assemble the ZX-UX process wrapper around independently witnessed HiSoft Z80.
+
+This consumes a *pre-link* source program, not an SSX, object disassembly,
+patched image, or address dump. All executable wrapper bytes are Z80 mnemonics;
+only verified source-owned data, the font, and private storage use db/dw/ds.
+No optimizer or post-link image fixup is involved.
+"""
+from __future__ import annotations
+
+import re
+
+import ras
+import rld
+
+from native_error_exit import UDG_BYTES
+
+ROM_COLORS = ((0x5C8D, 0x38), (0x5C8E, 0),
+              (0x5C8F, 0x38), (0x5C90, 0))
+ROM_CONTROLS = (0x5C6A, 0x5C39)
+PREFIX = 'rbc_wrapper_'
+
+
+class NativeWrapperError(ValueError):
+    """Fail closed when the source layout or assembler result cannot be proven."""
+
+
+def wrapper_source(original_source: str, font: bytes, *,
+                   use_rom_font: bool = False, restart_slot: bool = False) -> str:
+    """Return typed native text/data/BSS for the entire wrapped program.
+
+    `original_source` must be a complete, independently three-base-verified
+    HiSoft pre-link source produced by gate8_whole_native_baseline. Its first
+    text label is the original HiSoft `start`, which is renamed here only so
+    the SSX wrapper can own the loader's global `start` entry.
+    """
+    if not isinstance(original_source, str) or not isinstance(font, bytes):
+        raise NativeWrapperError('typed source and font bytes required')
+    if len(font) != 768:
+        raise NativeWrapperError('font32 must contain exactly 768 original bytes')
+    if type(use_rom_font) is not bool or type(restart_slot) is not bool:
+        raise NativeWrapperError('wrapper flags must be boolean')
+    lines = original_source.splitlines()
+    if (len(lines) < 5 or lines[:3] !=
+            ['    section text', '    global start', 'start:'] or
+            lines.count('    section data') != 1 or
+            lines.count('    section bss') != 1 or
+            any(PREFIX in line for line in lines) or
+            lines.index('    section data') >= lines.index('    section bss')):
+        raise NativeWrapperError('unsupported original pre-link source layout')
+    if not original_source.isascii():
+        raise NativeWrapperError('non-ASCII native source')
+    body = re.sub(r'(?<![A-Za-z0-9_])start(?![A-Za-z0-9_])',
+                  PREFIX + 'hisoft_entry', original_source)
+    text_and_data, bss = body.split('    section bss\n', 1)
+    # Ordinary emitted source (rather than fixed byte sequences) owns all
+    # wrapper instructions and the loader entry point.
+    pro = ['    section text', '    global start', 'start:',
+           '    ld hl,1', '    ld a,39', '    call $6003',
+           '    ld hl,($5c36)', f'    ld ({PREFIX}saved_chars),hl',
+           '    ld hl,($5c7b)', f'    ld ({PREFIX}saved_udg),hl',
+           '    ld hl,$3c00' if use_rom_font else f'    ld hl,{PREFIX}font',
+           '    ld ($5c36),hl', f'    ld hl,{PREFIX}udg',
+           '    ld ($5c7b),hl']
+    for i, (address, value) in enumerate(ROM_COLORS):
+        pro.extend((f'    ld a,(${address:04x})',
+                    f'    ld ({PREFIX}color_{i}),a',
+                    f'    ld a,{value}', f'    ld (${address:04x}),a'))
+    for i, address in enumerate(ROM_CONTROLS):
+        pro.extend((f'    ld a,(${address:04x})',
+                    f'    ld ({PREFIX}control_{i}),a'))
+    pro.extend((f'    call {PREFIX}restart' if restart_slot else
+                f'    call {PREFIX}hisoft_entry',
+                '    ld de,0', f'{PREFIX}exit:', '    push de',
+                f'    ld hl,({PREFIX}saved_udg)', '    ld ($5c7b),hl',
+                f'    ld hl,({PREFIX}saved_chars)', '    ld ($5c36),hl'))
+    for i, (address, _) in enumerate(ROM_COLORS):
+        pro.extend((f'    ld a,({PREFIX}color_{i})',
+                    f'    ld (${address:04x}),a'))
+    for i, address in enumerate(ROM_CONTROLS):
+        pro.extend((f'    ld a,({PREFIX}control_{i})',
+                    f'    ld (${address:04x}),a'))
+    pro.extend(('    ld hl,0', '    ld a,39', '    call $6003',
+                '    pop hl', '    ld a,1', '    call $6003', '    halt'))
+    if restart_slot:
+        pro.extend((f'{PREFIX}restart:',
+                    f'    ld ({PREFIX}bss_end-2),sp',
+                    f'    jp {PREFIX}hisoft_entry'))
+    data = [f'{PREFIX}saved_chars:', '    dw 0',
+            f'{PREFIX}saved_udg:', '    dw 0']
+    for i in range(len(ROM_COLORS)):
+        data.extend((f'{PREFIX}color_{i}:', '    db 0'))
+    for i in range(len(ROM_CONTROLS)):
+        data.extend((f'{PREFIX}control_{i}:', '    db 0'))
+    if not use_rom_font:
+        data.extend((f'{PREFIX}font:', '    ds 256'))
+        for i in range(0, len(font), 32):
+            data.append('    db ' + ','.join(map(str, font[i:i + 32])))
+    data.extend((f'{PREFIX}udg:', f'    ds {UDG_BYTES}',
+                 f'{PREFIX}error_pointer:', f'    dw {PREFIX}exit'))
+    return ('\n'.join(pro) + '\n' + text_and_data +
+            '\n'.join(data) + '\n    section bss\n' + bss +
+            f'{PREFIX}bss_end:\n')
+
+
+def assemble_link(original_source: str, font: bytes, *,
+                  use_rom_font: bool = False, restart_slot: bool = False,
+                  stack: int = 384) -> tuple[str, bytes, bytes]:
+    """Emit typed assembly, real ras object, and actual rld-linked SSX."""
+    if type(stack) is not int or not 1 <= stack <= 65535:
+        raise NativeWrapperError('invalid native stack size')
+    source = wrapper_source(original_source, font,
+                            use_rom_font=use_rom_font,
+                            restart_slot=restart_slot)
+    try:
+        obj = ras.assemble_text(source, 'rbc-native-whole.s')
+        ssx, *_ = rld.link([rld.Obj(obj, 'rbc-native-whole.sso')], [],
+                           entry='start', stack=stack)
+        parsed = rld.parse_ssx(ssx)
+    except (ras.AsmError, rld.LinkError, IndexError, ValueError) as exc:
+        raise NativeWrapperError('native wrapper assemble/link failed: ' + str(exc)) from exc
+    if parsed['entry'] != 0 or parsed['stack'] != stack:
+        raise NativeWrapperError('native wrapper entry/stack differs from source')
+    return source, obj, ssx
