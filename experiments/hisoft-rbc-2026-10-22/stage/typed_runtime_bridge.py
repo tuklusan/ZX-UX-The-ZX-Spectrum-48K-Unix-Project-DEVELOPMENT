@@ -9,10 +9,12 @@ all three compile passes; other compiler source events retain exact ownership.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import re
 
 from runtime_typed_source import RuntimeSourceError, typed_runtime_events
 from gate8_original_runtime_types import N_ROUTINES
+from runtime_emitter_trace import verify_three_runtime_traces, RuntimeTraceError
 from symbolic_emit_sites import inspect_emit_sites, verify_three_emit_sites
 
 
@@ -32,14 +34,48 @@ class RuntimeWitness:
 _RT = re.compile(r'RT([1-9][0-9]*)\Z')
 
 
-def splice_three_runtime_sources(events, images, bases, witnesses, assembler):
+def _compare_writer_trace(witness: RuntimeWitness, report: dict) -> None:
+    """Match a typed witness against the ORIGINAL machine's write history.
+
+    The digest is made from chronological writer PCs and output offsets,
+    never from a disassembled or linked program image. A replacement writer
+    list cannot stand in for the compiler's separate source capture.
+    """
+    if (not isinstance(report, dict) or
+            report.get('fully_observed') is not True or
+            report.get('routine') != witness.number or
+            report.get('output_bytes') != witness.end - witness.start or
+            report.get('staging_write_count') != len(witness.writes) or
+            report.get('covered_bytes') != witness.end - witness.start or
+            report.get('uncovered_bytes') != 0 or
+            report.get('changed_after_write') != 0 or
+            report.get('rewritten_bytes') != 0 or
+            report.get('outside_emitter_bytes') != 0 or
+            report.get('untraced_pc_writes') != 0):
+        raise RuntimeBridgeError('original runtime trace is incomplete or reordered')
+    digest = hashlib.sha256()
+    for write in witness.writes:
+        position, pc = getattr(write, 'position', None), getattr(write, 'emitter_pc', None)
+        if (type(position) is not int or type(pc) is not int or
+                not witness.start <= position < witness.end or not 0 <= pc <= 65535):
+            raise RuntimeBridgeError('runtime witness has unverified writer PC')
+        digest.update(position.to_bytes(2, 'little'))
+        digest.update(pc.to_bytes(3, 'little'))
+    if report.get('source_write_sites_sha256') != digest.hexdigest():
+        raise RuntimeBridgeError('runtime witness differs from original Z80 writer trace')
+
+
+def splice_three_runtime_sources(events, images, bases, witnesses, assembler,
+                                 *, observed_traces):
     """Replace ALL runtime-opaque spans only after a three-base source proof.
 
     The verification deliberately operates before the existing whole-program
     pipeline: its independent source maps still reject any surviving unknown
     emitter, untraced patch, data boundary or unresolved control target.
     """
-    if (any(len(group) != 3 for group in (events, images, witnesses)) or
+    if (observed_traces is None or
+            any(len(group) != 3 for group in
+                (events, images, witnesses, observed_traces)) or
             len(bases) != 3 or len(set(bases)) != 3 or
             any(type(base) is not int or not 0 <= base <= 0xffff
                 for base in bases) or
@@ -49,7 +85,8 @@ def splice_three_runtime_sources(events, images, bases, witnesses, assembler):
     signatures = []
     site_groups = []
     totals = []
-    for group, image, base, witness_group in zip(events, images, bases, witnesses):
+    for group, image, base, witness_group, reports in zip(
+            events, images, bases, witnesses, observed_traces):
         original = tuple(group)
         spans = []
         occupied = set()
@@ -81,16 +118,19 @@ def splice_three_runtime_sources(events, images, bases, witnesses, assembler):
                for event in original):
             raise RuntimeBridgeError('original compiler rewrote runtime bytes')
         witness_group = tuple(witness_group)
-        if (len(witness_group) != len(spans) or
+        reports = tuple(reports)
+        if (len(reports) != len(spans) or
+                len(witness_group) != len(spans) or
                 any(not isinstance(w, RuntimeWitness) or
                     (w.number, w.start, w.end) != expected
                     for w, expected in zip(witness_group, spans))):
             raise RuntimeBridgeError('missing or reordered original runtime witness')
         replacement = {}
         signature = []
-        for w in witness_group:
+        for w, report in zip(witness_group, reports):
             if not isinstance(w.writes, tuple) or not isinstance(w.statements, tuple):
                 raise RuntimeBridgeError('runtime producer or source statements missing')
+            _compare_writer_trace(w, report)
             try:
                 converted = typed_runtime_events(
                     w.writes, w.statements, image[w.start:w.end],
@@ -120,14 +160,16 @@ def splice_three_runtime_sources(events, images, bases, witnesses, assembler):
     if signatures[1:] != signatures[:1] * 2 or len(set(totals)) != 1:
         raise RuntimeBridgeError('original runtime typed source varies by compiler base')
     try:
+        trace_report = verify_three_runtime_traces(observed_traces, bases)
         site_report = verify_three_emit_sites(site_groups, bases)
-    except ValueError as exc:
+    except (RuntimeTraceError, ValueError) as exc:
         raise RuntimeBridgeError('original runtime writer PCs vary by compiler base') from exc
     return tuple(output), {
         'runtime_source_passes': 3,
         'runtime_source_routines': len(signatures[0]),
         'runtime_source_bytes': totals[0],
         'runtime_source_sites': site_report,
+        'original_runtime_traces': trace_report,
         'typed_runtime_source_spliced': True,
         'whole_program_optimized': False,
         'native_behavior_verified': False,

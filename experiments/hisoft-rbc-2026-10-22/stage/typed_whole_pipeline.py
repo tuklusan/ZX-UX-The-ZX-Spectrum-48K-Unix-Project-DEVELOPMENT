@@ -149,7 +149,7 @@ def link_source_pair(source: VerifiedSource, ras, rld, optimizer: Callable,
 
 def verify_and_build_with_runtime_sources(events, images, bases, text_ends,
                                           bss_sizes, assembler, witnesses,
-                                          *, entry_offsets=(0,)):
+                                          observed_traces, *, entry_offsets=(0,)):
     """Admit externally typed runtime spans to the normal full-source gate.
 
     A runtime witness never bypasses unresolved boundaries elsewhere in the
@@ -160,7 +160,8 @@ def verify_and_build_with_runtime_sources(events, images, bases, text_ends,
     from typed_runtime_bridge import splice_three_runtime_sources
 
     typed, report = splice_three_runtime_sources(
-        events, images, bases, witnesses, assembler)
+        events, images, bases, witnesses, assembler,
+        observed_traces=observed_traces)
     result = verify_and_build(typed, images, bases, text_ends, bss_sizes,
                               assembler, entry_offsets=entry_offsets)
     return replace(result, source_report={**result.source_report,
