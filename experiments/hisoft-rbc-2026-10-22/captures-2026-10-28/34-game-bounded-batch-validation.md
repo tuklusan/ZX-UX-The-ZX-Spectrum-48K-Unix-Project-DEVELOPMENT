@@ -56,3 +56,30 @@ command. There is no project GitHub Actions workflow dedicated to RBC, and no
 workflow was added. The external tool invocation of the all-34 command was
 interrupted during its second group; the seven smaller group invocations
 finished and provide the complete 34-game result set above.
+
+## Follow-up: corrected Scuba and Swordsman source-guided timing
+
+The same 34 unchanged SSX games were tested again in seven smaller batches.
+The game-specific screen comparisons used the separately observed timing of
+Scuba ENTER and Swordsman uppercase Y replay. **34/34 finished: 29 display
+changes; five unchanged INPUT-game screens; zero emulator errors/timeouts.**
+The two newly changed screens are real ZX-UX framebuffer results, not a
+complete gameplay result. Previously captured genuine Scuba and Swordsman
+screens remain in the same experiment capture directory.
+
+The remaining broad input-gate cases are Minelay, Critical Path Analysis,
+Biorhythms, Space Traffic and Roots. Their original published programs still
+use the unmodified INPUT path. No production reader or game SSX changed.
+
+The seven follow-up raw-output files are untracked under `build/tmp/`.
+Each file names its unique per-game subprocess log directory.
+
+| Group | Games | SHA-256 of `build/tmp/rbc-gameplay-after-timingNN.log` |
+| --- | ---: | --- |
+| 01 | 5 | `add69189e1b104f1e2b0ac7175912af0b5da2203adda6cf26813e687bca4d49f` |
+| 02 | 5 | `25fe84611acb45cb674ff6bc4347ea054e6bcb1a4f714acabd1e8046110ffb81` |
+| 03 | 5 | `911b06433725fd67c34e3486be777de317fe45dec9d268499582ceb22c2ae143` |
+| 04 | 5 | `20c6b2b57a285e73a3ddb075456281e54ba16c7969c448f787b43d8bb4e97c5c` |
+| 05 | 5 | `53a8e2ddd8a0aadc947a213047362b052eb8028a77a7417575dc536ada26ddc4` |
+| 06 | 5 | `7b7d63a7db383ac329f69f154683a2c4a5cb4625563dc9d282fd55a34ac93407` |
+| 07 | 4 | `c5fc75f93f8f7c70e0e6c66e712fc414f72cdf1cf48037ecfe8f9d9e5a73aaa6` |

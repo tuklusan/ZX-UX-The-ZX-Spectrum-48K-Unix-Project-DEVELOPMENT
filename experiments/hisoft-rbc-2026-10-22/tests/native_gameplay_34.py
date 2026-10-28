@@ -33,7 +33,7 @@ SCRIPTS = {
     '09-battleships': '6{WAIT 90}8{WAIT 60}0',
     '10-tanx': 'a{WAIT 100}z{WAIT 80}{ENTER}',
     '12-flying-bomb': 'a{WAIT 100}m{WAIT 50}k',
-    '14-scuba': '{WAIT 800}x{WAIT 90}z',
+    '14-scuba': '{WAIT 1600}{ENTER}{WAIT 120}x',
     '16-snap': 'a{WAIT 120}{SPACE}',
     '17-paypackets': 'a{ENTER}',
     '18-newmarket': '3{ENTER}',
@@ -55,12 +55,14 @@ SCRIPTS = {
     '47-exocet': 'z{WAIT 90}x',
     '49-drag-racer': 'm{WAIT 70}1',
     '50-moonlander': 'a{WAIT 100}z{WAIT 80}{ENTER}',
-    '54-swordsman': 'q{WAIT 100}z',
+    '54-swordsman': '{WAIT 250}Y',
     '56-roots': '{WAIT 400}{ENTER}{WAIT 70}{ENTER}',
     '57-bulls-and-cows': '9{ENTER}{WAIT 50}1234{ENTER}',
     '59-mushroom-invasion': '1{WAIT 90}5',
     '60-countabout': 'a{WAIT 90}a',
 }
+# Real game-screen entry/replay requires the observed keys at these frame counts.
+FRAME_LIMITS = {'14-scuba': 2400, '54-swordsman': 620}
 LATE = frozenset(('01-minelay', '06-motocross',
                   '07-critical-path-analysis', '14-scuba',
                   '23-biorhythms', '24-aben', '30-space-traffic',
@@ -109,7 +111,7 @@ def main(argv=None):
     changed = []
     unchanged = []
     for game in games:
-        frames = 1300 if game.name in LATE else 900
+        frames = FRAME_LIMITS.get(game.name, 1300 if game.name in LATE else 900)
         control, state_a = capture(game, '', frames)
         response, state_b = capture(game, '{WAIT 300}' + SCRIPTS[game.name], frames)
         if control == response:

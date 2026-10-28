@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from native_gameplay_batch import classify, parse_args, run_one, save_result
+from native_gameplay_34 import FRAME_LIMITS, SCRIPTS
 
 
 class NativeGameplayBatchClassification(unittest.TestCase):
@@ -26,6 +27,12 @@ class NativeGameplayBatchClassification(unittest.TestCase):
                           (0, good + good), (0, good.replace('42-', '43-'))):
             with self.subTest(code=code, out=out[:20]):
                 self.assertTrue(classify('42-bricklayer', code, out, '').startswith('ERROR'))
+
+    def test_source_guided_inkey_game_timings(self):
+        self.assertEqual(FRAME_LIMITS['14-scuba'], 2400)
+        self.assertEqual(FRAME_LIMITS['54-swordsman'], 620)
+        self.assertEqual(SCRIPTS['14-scuba'], '{WAIT 1600}{ENTER}{WAIT 120}x')
+        self.assertEqual(SCRIPTS['54-swordsman'], '{WAIT 250}Y')
 
     def test_forty_minute_defaults_and_bounds(self):
         args = parse_args([])
