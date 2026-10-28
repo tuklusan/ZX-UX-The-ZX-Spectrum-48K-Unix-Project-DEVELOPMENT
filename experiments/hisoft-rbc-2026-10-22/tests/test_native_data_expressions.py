@@ -310,8 +310,152 @@ class OriginalRomNativeTests(unittest.TestCase):
                           'inc hl; ld a,(hl); cp 126; jr nz,+2; '
                           'rst 8; defb $0B'), res.code)
 
+    def test_dynamic_data_string_read_rejects_each_scalar_marker(self):
+        from z80asm import asm
+        from z80_python.cpu import Z80CPU
+        guard = asm('ld hl,($5C6C); ld a,(hl); or a; jr nz,+12; '
+                    'inc hl; ld a,(hl); cp $7b; jr c,+6; '
+                    'cp $7f; jr nc,+2; rst 8; defb $0b')
+        c, result = self.compile_listing(
+            '10 DATA "safe",F+1\n20 READ A$,B\n')
+        self.assertTrue(result.ok, (result.error, result.detail))
+        self.assertIn(guard, result.code)
+        for marker in (0x7b, 0x7c, 0x7d, 0x7e):
+            with self.subTest(marker=marker):
+                memory = bytearray(65536)
+                memory[:0x4000] = self.rom
+                memory[0x8000:0x8000+len(guard)+1] = guard + asm('ret')
+                memory[0x8800:0x8805] = bytes((0,marker,1,0,0))
+                memory[0x5C6C:0x5C6E] = (0x8800).to_bytes(2, 'little')
+                memory[0xA000:0xA002] = (0xF000).to_bytes(2, 'little')
+                cpu = Z80CPU(lambda addr: memory[addr],
+                             lambda addr, val: memory.__setitem__(addr, val))
+                cpu.pc, cpu.sp = 0x8000, 0xA000
+                for _ in range(40):
+                    if cpu.pc in (0x0008, 0xF000):
+                        break
+                    cpu.step()
+                self.assertEqual(cpu.pc, 0x0008)
+                self.assertEqual(memory[cpu.sp:cpu.sp+2],
+                                 (0x8000 + len(guard) - 1).to_bytes(2, 'little'))
+        for field in (b'\x01\x00', b'\x00\x00', b'\x00\xff'):
+            memory = bytearray(65536)
+            memory[:0x4000] = self.rom
+            memory[0x8000:0x8000+len(guard)+1] = guard + asm('ret')
+            memory[0x8800:0x8802] = field
+            memory[0x5C6C:0x5C6E] = (0x8800).to_bytes(2, 'little')
+            memory[0xA000:0xA002] = (0xF000).to_bytes(2, 'little')
+            cpu = Z80CPU(lambda addr: memory[addr],
+                         lambda addr, val: memory.__setitem__(addr, val))
+            cpu.pc, cpu.sp = 0x8000, 0xA000
+            for _ in range(40):
+                if cpu.pc in (0x0008, 0xF000):
+                    break
+                cpu.step()
+            self.assertEqual(cpu.pc, 0xF000)
+
+    def test_runtime_scalar_data_operations_use_original_rom(self):
+        from native_data_expressions import (
+            _extended_read_body, _DYNAMIC_NEGATE, _DYNAMIC_ADD_ONE,
+            _DYNAMIC_SUB_ONE, _DYNAMIC_MARKER)
+        from romfp import int_form
+        from z80asm import asm
+        from z80_python.cpu import Z80CPU
+        from compiler import ROM as ROM_ADDRESSES, RT
+        examples = [('-F', _DYNAMIC_NEGATE),
+                    ('F+1', _DYNAMIC_ADD_ONE), ('F-1', _DYNAMIC_SUB_ONE),
+                    ('1+F', _DYNAMIC_ADD_ONE)]
+        body = _extended_read_body(ROM_ADDRESSES['STACK_NUM'])
+        prefix = asm('ld hl,($5C6C); ld a,(hl); or a; '
+                     'jr nz,+{}; inc hl; ld a,(hl); '
+                     'cp {}; jr c,+{}; cp {}; jr nc,+{}'.format(
+                         len(body)+10, _DYNAMIC_SUB_ONE, len(body)+4,
+                         _DYNAMIC_MARKER + 1, len(body)))
+        for expr, marker in examples:
+            with self.subTest(expr=expr):
+                c, res = self.compile_listing(
+                    '10 LET F=5\n20 DATA '+expr+'\n30 READ A\n')
+                self.assertTrue(res.ok, (res.error, res.detail))
+                self.assertEqual(c.far[c.data_start+1], marker)
+                variable = next(addr for name, kind, addr in res.variables if name == 'f')
+                field = res.load + c.data_start
+                from compiler import RT
+                read_rt = dict(res.rts)[RT.READ_REAL]
+                read_call = asm('call {}'.format(read_rt))
+                self.assertIn(prefix + body + read_call, res.code)
+                for number in (0, 1, 7, 253):
+                    memory = bytearray(65536)
+                    memory[:0x4000] = self.rom
+                    memory[res.load:res.load+len(res.code)] = res.code
+                    code = prefix + body + read_call + asm('ret')
+                    memory[0x8000:0x8000+len(code)] = code
+                    memory[variable:variable+5] = int_form(number)
+                    memory[0x5C6C:0x5C6E] = field.to_bytes(2, 'little')
+                    memory[0x5C63:0x5C65] = (0x9000).to_bytes(2, 'little')
+                    memory[0x5C65:0x5C67] = (0x9000).to_bytes(2, 'little')
+                    memory[0x5C68:0x5C6A] = (0x5C92).to_bytes(2, 'little')
+                    memory[0xA000:0xA002] = (0xF000).to_bytes(2, 'little')
+                    cpu = Z80CPU(lambda addr: memory[addr],
+                                 lambda addr, val: memory.__setitem__(addr, val))
+                    cpu.pc = 0x8000
+                    cpu.sp = 0xA000
+                    cpu.iy = 0x5C3A
+                    for _ in range(2000):
+                        if cpu.pc == 0xF000:
+                            break
+                        cpu.step()
+                    self.assertEqual(cpu.pc, 0xF000)
+                    self.assertEqual(cpu.sp, 0xA002)
+                    self.assertEqual(memory[0x5C6C:0x5C6E], (field + 5).to_bytes(2,'little'))
+                    self.assertEqual(memory[0x5C65:0x5C67], (0x9005).to_bytes(2,'little'))
+                    x = int_form(number)
+                    if marker == _DYNAMIC_NEGATE:
+                        expected = c.fp.negate(x)
+                    elif marker == _DYNAMIC_ADD_ONE:
+                        expected = c.fp.calc([x,int_form(1)],[0x0f])[-1]
+                    elif marker == _DYNAMIC_SUB_ONE:
+                        expected = c.fp.calc([x,int_form(1)],[0x03])[-1]
+                    else:
+                        expected = x
+                    self.assertEqual(memory[0x9000:0x9005], expected)
+
+    def test_native_link_scalar_operations_and_bss_relocations(self):
+        import subprocess
+        import tempfile
+        import rld
+        checkpoint = Path(os.environ.get('RBC_G8_CHECKPOINT', ''))
+        if not (checkpoint / 'rbc.py').is_file():
+            self.skipTest('set RBC_G8_CHECKPOINT to recovered RBC compiler')
+        with tempfile.TemporaryDirectory() as folder:
+            source_file = Path(folder) / 'dynamic-operations.bas'
+            ssx = Path(folder) / 'dynamic-operations.ssx'
+            source_file.write_text(
+                '10 LET F=10\n20 RESTORE 100: READ A,B,C,D,E\n'
+                '30 LET F=20: RESTORE 100: READ P,Q,R,S,T\n'
+                '100 DATA F,-F,F+1,F-1,1+F\n', encoding='ascii')
+            proc = subprocess.run([
+                sys.executable, str(checkpoint / 'rbc.py'), str(source_file),
+                '--frontend', str(FRONTEND), '--tape', str(TAPE),
+                '--rom', str(ROM), '--sdk', str(STAGE.parents[2] / 'src/zx-ux-sdk'),
+                '-o', str(ssx)], capture_output=True, text=True, timeout=120)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertLessEqual(ssx.stat().st_size, 14000)
+            native = rld.parse_ssx(ssx.read_bytes())
+            image = native['image']
+            refs = [(i, int.from_bytes(image[i+2:i+4], 'little'))
+                    for i in range(len(image) - 4)
+                    if image[i] == 0 and 0x7b <= image[i+1] <= 0x7e
+                    and i+2 in native['relocs']]
+            self.assertEqual(len(refs), 5, refs)
+            self.assertEqual(sorted(image[i+1] for i, _ in refs),
+                             [0x7b, 0x7c, 0x7c, 0x7d, 0x7e])
+            for site, variable in refs:
+                self.assertGreaterEqual(variable, len(image))
+                self.assertLess(variable + 5, len(image) + native['bss'] + 1)
+
     def test_dynamic_data_complex_expressions_still_rejected(self):
-        for expr in ('F+1', 'F^2', 'F(1)', 'INT F', 'SQR F'):
+        for expr in ('F+2', 'F*2', 'F^2', 'F(1)', 'INT F', 'SQR F',
+                     'F+1+1', '-(F+1)', 'F/1'):
             with self.subTest(expr=expr):
                 _, res = self.compile_listing('10 DATA '+expr+'\n20 READ X\n')
                 self.assertFalse(res.ok)
@@ -331,7 +475,7 @@ class OriginalRomNativeTests(unittest.TestCase):
         self.assertIn(b'2+3', res.code)
 
     def test_value_dependent_data_fails_closed(self):
-        for data in ['A+1', 'RND+1', 'INT (5/2)', 'A^2', '(-2)^2']:
+        for data in ['A+2', 'RND+1', 'INT (5/2)', 'A^2', '(-2)^2']:
             with self.subTest(data=data):
                 _, res = self.compile_listing('10 DATA '+data+'\n20 READ A\n')
                 self.assertFalse(res.ok)

@@ -1,10 +1,10 @@
 """Compile numeric DATA with the 48K ROM and safe scalar READ-time references.
 
 The original BASIC bytes and cached Sinclair numeric metadata are unchanged.
-Literal expressions use the actual 48K ROM; bare numeric scalar variables are
-represented by five-byte typed absolute references, relocated by the
-normal three-base native linker, and resolved only at READ time. Other
-variable-dependent expressions remain unsupported.
+Literal expressions use the original 48K ROM. Scalar references and a
+limited set of scalar arithmetic operations use typed five-byte descriptors,
+relocated by the native linker and evaluated with ROM instructions at READ
+time. All other dependent expressions remain unsupported.
 """
 from __future__ import annotations
 
@@ -16,11 +16,61 @@ C_ADDITION, C_SUBTRACT, C_MULTIPLY, C_DIVISION, C_POWER = 0x0f, 0x03, 0x04, 0x05
 # stores a 16-bit REAL scalar address, which changes across all three HiSoft
 # compiler bases. The normal native relocation resolver sends it into BSS.
 _DYNAMIC_MARKER = 0x7E
+_DYNAMIC_NEGATE = 0x7D
+_DYNAMIC_ADD_ONE = 0x7C
+_DYNAMIC_SUB_ONE = 0x7B
 _READ_DYNAMIC_BODY = (
     'inc hl; ld e,(hl); inc hl; ld d,(hl); ex de,hl; '
     'push hl; ld hl,($5C6C); ld de,5; add hl,de; '
     'ld ($5C6C),hl; pop hl; call {} ; jr +3'
 )
+
+
+
+def _extended_read_body(stack_num):
+    """Assemble original-ROM scalar operations without final-image patching."""
+    from z80asm import asm
+    # A is a typed marker and HL points at its byte. Preserve that marker
+    # across the ROM's STACK_NUM, which may alter all general registers.
+    setup = asm('push af; inc hl; ld e,(hl); inc hl; ld d,(hl); ex de,hl; '
+                'push hl; ld hl,($5C6C); ld de,5; add hl,de; '
+                'ld ($5C6C),hl; pop hl; call {}; pop af'.format(stack_num))
+    subtract = asm('rst $28; defb $a1,$03,$38')  # stk-one, subtract, end-calc
+    negative = asm('rst $28; defb $1b,$38')      # negate, end-calc
+    addition = asm('rst $28; defb $a1,$0f,$38')  # stk-one, addition, end-calc
+    skip_negative_and_addition = asm('jr +{}'.format(len(negative) + 2 + len(addition)))
+    skip_addition = asm('jr +{}'.format(len(addition)))
+    choose_plus = asm('cp {}; jr z,+{}'.format(
+        _DYNAMIC_ADD_ONE, len(subtract) + len(skip_negative_and_addition)
+        + len(negative) + len(skip_addition)))
+    choose_negative = asm('cp {}; jr z,+{}'.format(
+        _DYNAMIC_NEGATE, len(choose_plus) + len(subtract)
+        + len(skip_negative_and_addition)))
+    choose_scalar = asm('cp {}; jr z,+{}'.format(
+        _DYNAMIC_MARKER, len(choose_negative) + len(choose_plus)
+        + len(subtract) + len(skip_negative_and_addition)
+        + len(negative) + len(skip_addition) + len(addition)))
+    result = (setup + choose_scalar + choose_negative + choose_plus + subtract
+              + skip_negative_and_addition + negative + skip_addition
+              + addition + asm('jr +3'))  # Skip ordinary READ_REAL.
+    if len(result) + 10 > 127:
+        raise ValueError('dynamic DATA ROM handler exceeds Z80 short branch')
+    return result
+
+
+def _is_dynamic_descriptor(value):
+    return (isinstance(value, bytes) and len(value) == 5
+            and value[0] == 0 and _DYNAMIC_SUB_ONE <= value[1] <= _DYNAMIC_MARKER
+            and value[4] == 0)
+
+
+def _scalar_ref(value):
+    return (_is_dynamic_descriptor(value) and value[1] == _DYNAMIC_MARKER)
+
+
+def _update_scalar(value, marker):
+    return value[:1] + bytes((marker,)) + value[2:]
+
 
 _BINARY = {ord('+'): (1, C_ADDITION), ord('-'): (1, C_SUBTRACT),
            ord('*'): (2, C_MULTIPLY), ord('/'): (2, C_DIVISION),
@@ -32,6 +82,7 @@ def with_literal_data_expressions(base):
         def reset(self, program):
             super().reset(program)
             self._zxux_dynamic_data = False
+            self._zxux_dynamic_ops = False
 
         def let_value(self):
             # Pass 0 records every DATA field before the sizing/storage passes.
@@ -44,6 +95,16 @@ def with_literal_data_expressions(base):
             if self.target != REAL:
                 self.not_supported('dynamic DATA requires real numeric READ targets')
             from z80asm import asm
+            if self._zxux_dynamic_ops:
+                body = _extended_read_body(ROM['STACK_NUM'])
+                self.emit('ld hl,($5C6C); ld a,(hl); or a; '
+                          'jr nz,+{}; inc hl; ld a,(hl); '
+                          'cp {}; jr c,+{}; cp {}; jr nc,+{}',
+                          len(body) + 10, _DYNAMIC_SUB_ONE, len(body) + 4,
+                          _DYNAMIC_MARKER + 1, len(body))
+                self.emit_bytes(body)
+                self.call_rt(RT.READ_REAL)
+                return
             body = asm(_READ_DYNAMIC_BODY.format(ROM['STACK_NUM']))
             # Branch 1 skips the six-byte marker check plus the dynamic body;
             # branch 2 skips just the body. The body jumps past the three-byte
@@ -61,9 +122,15 @@ def with_literal_data_expressions(base):
                 # READ a$ is still valid for an ordinary string DATA field.
                 # A numeric reference has marker 00 7E, and must never be
                 # misread as a 32256-byte string length by HiSoft READ_STR.
-                self.emit('ld hl,($5C6C); ld a,(hl); or a; jr nz,+8; '
-                          'inc hl; ld a,(hl); cp {}; jr nz,+2; '
-                          'rst 8; defb $0B', _DYNAMIC_MARKER)
+                if self._zxux_dynamic_ops:
+                    self.emit('ld hl,($5C6C); ld a,(hl); or a; jr nz,+12; '
+                              'inc hl; ld a,(hl); cp {}; jr c,+6; '
+                              'cp {}; jr nc,+2; rst 8; defb $0B',
+                              _DYNAMIC_SUB_ONE, _DYNAMIC_MARKER + 1)
+                else:
+                    self.emit('ld hl,($5C6C); ld a,(hl); or a; jr nz,+8; '
+                              'inc hl; ld a,(hl); cp {}; jr nz,+2; '
+                              'rst 8; defb $0B', _DYNAMIC_MARKER)
             return super().let_string_value()
 
         def st_data(self):
@@ -78,6 +145,8 @@ def with_literal_data_expressions(base):
             if not getattr(self, '_zxux_in_data', False):
                 return super().number_maybe_val()
             value = self._zxux_data_expression(0)
+            if not self.at_end() and self.get_char() != ord(','):
+                self.not_supported('DATA expression has a trailing operand')
             self.calc.append(value)
             self.classify_const()
 
@@ -88,8 +157,6 @@ def with_literal_data_expressions(base):
                 # array subscripts, and expressions require a separate typed
                 # runtime expression implementation and stay fail-closed.
                 addr = self.var_ref()
-                if not self.at_end() and self.get_char() != ord(','):
-                    self.not_supported('dynamic DATA expression requires bare scalar')
                 from compiler import REAL
                 if self.t != REAL:
                     self.not_supported('dynamic DATA requires real numeric scalar')
@@ -125,7 +192,13 @@ def with_literal_data_expressions(base):
                 self.next_char()
                 lhs = self._zxux_data_expression(3)
                 if token == ord('-'):
-                    lhs = self.fp.negate(lhs)
+                    if _scalar_ref(lhs):
+                        self._zxux_dynamic_ops = True
+                        lhs = _update_scalar(lhs, _DYNAMIC_NEGATE)
+                    elif _is_dynamic_descriptor(lhs):
+                        self.not_supported('nested dynamic DATA operations')
+                    else:
+                        lhs = self.fp.negate(lhs)
             else:
                 lhs = self._zxux_data_atom()
             while True:
@@ -136,6 +209,22 @@ def with_literal_data_expressions(base):
                 self.next_char()
                 rhs = self._zxux_data_expression(
                     precedence if rom_operator == C_POWER else precedence + 1)
-                lhs = self.fp.calc([lhs, rhs], [rom_operator])[-1]
+                if _scalar_ref(lhs) and rom_operator in (C_ADDITION, C_SUBTRACT):
+                    from romfp import int_form
+                    if rhs != int_form(1):
+                        self.not_supported('dynamic DATA supports only scalar +/-1')
+                    self._zxux_dynamic_ops = True
+                    lhs = _update_scalar(lhs, _DYNAMIC_ADD_ONE if
+                                         rom_operator == C_ADDITION else _DYNAMIC_SUB_ONE)
+                elif _scalar_ref(rhs) and rom_operator == C_ADDITION:
+                    from romfp import int_form
+                    if lhs != int_form(1):
+                        self.not_supported('dynamic DATA supports only 1+scalar')
+                    self._zxux_dynamic_ops = True
+                    lhs = _update_scalar(rhs, _DYNAMIC_ADD_ONE)
+                elif _is_dynamic_descriptor(lhs) or _is_dynamic_descriptor(rhs):
+                    self.not_supported('nested dynamic DATA operations')
+                else:
+                    lhs = self.fp.calc([lhs, rhs], [rom_operator])[-1]
 
     return LiteralData
