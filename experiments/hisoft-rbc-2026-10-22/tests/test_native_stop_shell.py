@@ -126,14 +126,54 @@ class NativeStopShell(unittest.TestCase):
             self.assertEqual(outcome.session.last_line(), '#')
             self.assertEqual(outcome.session.word(0x5c36), 0x3c00)
 
-    def test_zero_bss_end_pointer_remains_blocked(self):
-        # Original compiler points to one-past-end of an empty data image.
-        # Do not redefine that out-of-process address as safe by assertion.
+    def test_zero_bss_stkend_end_marker_stops_and_returns_to_shell(self):
+        # HiSoft emits LD HL,one-past-image; LD (STKEND),HL. This is
+        # a pointer sentinel, not a writable BSS byte or a generic exception.
         with tempfile.TemporaryDirectory(prefix='rbc-zero-bss-stop-') as tmp:
             source = Path(tmp) / 'zero-bss-stop.bas'
+            target = Path(tmp) / 'zero-bss-stop.ssx'
             source.write_text('10 REM : OPEN #\n20 STOP\n', encoding='ascii')
-            with self.assertRaisesRegex(ValueError, 'relocation points beyond code and BSS'):
-                compile_native(source, CHECKPOINT, FRONTEND, TAPE, ROM)
+            asm, obj, ssx, proof = compile_native(
+                source, CHECKPOINT, FRONTEND, TAPE, ROM)
+            self.assertTrue(obj.startswith(b'SSO1'))
+            self.assertTrue(proof['native_three_base_source_verified'])
+            self.assertTrue(proof['native_and_legacy_ssx_byte_identical'])
+            self.assertFalse(proof['optimizer_used'])
+            self.assertEqual(rld.parse_ssx(ssx)['bss'], 0)
+            self.assertIn('source_0049:', asm)
+            self.assertLessEqual(max(len(ssx), proof['total']), 14000)
+            target.write_bytes(ssx)
+            first = rvm.run_kernel(target, frames=1200, system=SYSTEM)
+            self.assertEqual(first.why, 'exit', first.summary())
+            self.assertEqual(first.fg.status, 0)
+            session = first.session
+            self.assertIsNone(session.slot_of(first.fg.pid))
+            self.assertFalse(session.owns_screen(first.fg.pid))
+            session.wait_prompt(1500)
+            self.assertEqual(session.last_line(), '#')
+            self.assertEqual(session.word(0x5c36), 0x3c00)
+            after_first = bytes(session.m.mem[n] for n in
+                (0x5c36, 0x5c37, 0x5c7b, 0x5c7c, 0x5c6a,
+                 0x5c39, 0x5c8d, 0x5c8e, 0x5c8f, 0x5c90))
+            second = session.launch(ssx, 'stop2')
+            for _ in range(1600):
+                session.step()
+                if second.ended is not None:
+                    break
+            else:
+                self.fail('second zero-BSS STOP did not exit')
+            self.assertEqual(second.status, 0)
+            self.assertIsNone(session.slot_of(second.pid))
+            self.assertFalse(session.owns_screen(second.pid))
+            session.wait_prompt(1500)
+            self.assertEqual(session.last_line(), '#')
+            self.assertEqual(bytes(session.m.mem[n] for n in
+                (0x5c36, 0x5c37, 0x5c7b, 0x5c7c, 0x5c6a,
+                 0x5c39, 0x5c8d, 0x5c8e, 0x5c8f, 0x5c90)), after_first)
+            count = session.syscalls
+            session.kb.type('\n')
+            session.wait_prompt(1500)
+            self.assertGreater(session.syscalls, count)
 
 
 if __name__ == '__main__':

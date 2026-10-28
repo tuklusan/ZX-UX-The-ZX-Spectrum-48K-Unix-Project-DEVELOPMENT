@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from stkend_end_pointer import original_stkend_end_marker
+
 
 class UnresolvedRelocation(ValueError):
     """A source relocation does not have stable, verifiable identity."""
@@ -37,7 +39,8 @@ def inspect_relocations(events, image: bytes, base: int, bss: int):
             raise UnresolvedRelocation('invalid typed relocation event')
         site = event.position
         target = event.symbol_offset
-        if target >= len(image) + bss:
+        if (target >= len(image) + bss and
+                not original_stkend_end_marker(events, image, base, bss, site, target)):
             raise UnresolvedRelocation('relocation points beyond code and BSS')
         encoded = (base + target) & 65535
         if event.data != encoded.to_bytes(2, 'little'):

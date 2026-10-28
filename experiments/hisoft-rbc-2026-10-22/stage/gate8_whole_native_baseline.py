@@ -23,6 +23,7 @@ from gate8_native_runtime_combined import (
     _original_sections, _runtime_spans, _replacement_listing, _vendor_listing)
 from gate8_runtime_handoff import verify_three_runtime_handoffs
 from native_sysvars_rt import PEEK_RT, POKE_RT, BSS_BYTES, _native_peek, _native_poke
+from stkend_end_pointer import original_stkend_end_marker
 
 
 class WholeBaselineError(ValueError):
@@ -125,7 +126,11 @@ def _source_program(events, image, base, text_end, bss, assembler,
             interior_words[target] = (owners[0].start, target - owners[0].start)
     if any(branch.target not in entry_sites for branch in relatives.values()):
         raise WholeBaselineError('relative branch does not target a typed instruction')
-    if any(target is None or not 0 <= target < len(image) + bss for target in targets):
+    if any(target is None or (not 0 <= target < len(image) + bss and
+              not any(original_stkend_end_marker(events, image, base, bss,
+                                                  event.position, target)
+                      for event in events if event.kind == 'relocation' and
+                      event.symbol_offset == target)) for target in targets):
         raise WholeBaselineError('source relocation target outside process')
     def name(address):
         if address in interior_words:
@@ -225,7 +230,7 @@ def _source_program(events, image, base, text_end, bss, assembler,
         actual = span.end
     if actual != len(image) or not runtime_inserted:
         raise WholeBaselineError('native runtime or original source extent missing')
-    if bss:
+    if bss or len(image) in marks:
         program.section('bss')
         last = len(image)
         bounds = sorted(t for t in marks | set(native_bss_labels)
@@ -240,6 +245,8 @@ def _source_program(events, image, base, text_end, bss, assembler,
         program.reserve(len(image) + bss - last)
         if len(image) + bss in native_bss_labels:
             program.label(native_bss_labels[len(image) + bss])
+        if bss == 0 and len(image) in marks:
+            program.label(name(len(image)))
     source = program.assembly()
     return source, {
         'source_emitter_instructions': mapping.executable_instruction_count,

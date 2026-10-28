@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import re
 
 from symbolic_fragments import FragmentBoundaryError, inspect_fragments
+from stkend_end_pointer import original_stkend_end_marker
 
 
 class SourceBoundaryError(ValueError):
@@ -111,7 +112,9 @@ def inspect_source_boundaries(events, image: bytes, base: int, data_start: int,
                         type(operand.position) is int and
                         type(operand.symbol_offset) is int):
                     target = operand.symbol_offset
-                    if not 0 <= target < len(image) + bss:
+                    if (not 0 <= target < len(image) + bss and
+                            not original_stkend_end_marker(events, image, base, bss,
+                                                           operand.position, target)):
                         raise SourceBoundaryError('source relocation target outside image and BSS')
                     expected_operand = (base + target).to_bytes(2, 'little')
                     if operand.data != expected_operand:
@@ -140,7 +143,10 @@ def inspect_source_boundaries(events, image: bytes, base: int, data_start: int,
             continue
         elif kind in ('relocation', 'table-relocated'):
             target = event.symbol_offset
-            if type(target) is not int or not 0 <= target < len(image) + bss:
+            if (type(target) is not int or
+                    (not 0 <= target < len(image) + bss and
+                     not original_stkend_end_marker(events, image, base, bss,
+                                                    event.position, target))):
                 raise SourceBoundaryError('source relocation target outside image and BSS')
             if payload != (base + target).to_bytes(2, 'little'):
                 raise SourceBoundaryError('unpaired relocation differs from link base')
