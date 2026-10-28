@@ -74,6 +74,26 @@ class OriginalRomNativeTests(unittest.TestCase):
         wanted = c.fp.calc([n, m], [0x0F])[-1]
         self.assertEqual(bytes(c.far[c.data_start:c.data_start+5]), wanted)
 
+    def test_power_precedence_and_rom_exact_result(self):
+        from romfp import int_form
+        c, res = self.compile_listing(
+            '10 DATA 2^3^2,-2^2,(2+1)^2,2^-2\n'
+            '20 READ A,B,C,D\n')
+        self.assertTrue(res.ok, (res.error, res.detail))
+        values = [bytes(c.far[c.data_start + i * 5:
+                              c.data_start + (i + 1) * 5]) for i in range(4)]
+        # Keep the ROM's intermediate FP rounding; 3^2 is not necessarily
+        # byte-identical to the 5-byte integer literal 9.
+        rhs = c.fp.calc([int_form(3), int_form(2)], [0x06])[-1]
+        self.assertEqual(values[0],
+                         c.fp.calc([int_form(2), rhs], [0x06])[-1])
+        self.assertEqual(values[1],
+                         c.fp.negate(c.fp.calc([int_form(2), int_form(2)], [0x06])[-1]))
+        self.assertEqual(values[2],
+                         c.fp.calc([int_form(3), int_form(2)], [0x06])[-1])
+        self.assertEqual(values[3],
+                         c.fp.calc([int_form(2), int_form(-2)], [0x06])[-1])
+
     def test_plain_literals_produce_identical_code(self):
         listing = '10 DATA 1,-2,.25,5\n20 READ A,B,C,D\n30 PRINT A,B,C,D\n'
         _, old = self.compile_listing(listing, compiler.Compiler)
@@ -89,7 +109,7 @@ class OriginalRomNativeTests(unittest.TestCase):
         self.assertIn(b'2+3', res.code)
 
     def test_value_dependent_data_fails_closed(self):
-        for data in ['A+1', 'RND+1', 'INT (5/2)', '2^3']:
+        for data in ['A+1', 'RND+1', 'INT (5/2)', 'A^2', '(-2)^2']:
             with self.subTest(data=data):
                 _, res = self.compile_listing('10 DATA '+data+'\n20 READ A\n')
                 self.assertFalse(res.ok)

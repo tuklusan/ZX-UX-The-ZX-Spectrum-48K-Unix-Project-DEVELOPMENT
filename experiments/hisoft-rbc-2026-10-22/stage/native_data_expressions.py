@@ -7,10 +7,11 @@ comparisons and any value determined at READ time remain unsupported.
 from __future__ import annotations
 
 # Spectrum 48K ROM calculator instructions (RST 28).
-C_ADDITION, C_SUBTRACT, C_MULTIPLY, C_DIVISION = 0x0f, 0x03, 0x04, 0x05
+C_ADDITION, C_SUBTRACT, C_MULTIPLY, C_DIVISION, C_POWER = 0x0f, 0x03, 0x04, 0x05, 0x06
 
 _BINARY = {ord('+'): (1, C_ADDITION), ord('-'): (1, C_SUBTRACT),
-           ord('*'): (2, C_MULTIPLY), ord('/'): (2, C_DIVISION)}
+           ord('*'): (2, C_MULTIPLY), ord('/'): (2, C_DIVISION),
+           ord('^'): (4, C_POWER)}
 
 
 def with_literal_data_expressions(base):
@@ -32,10 +33,6 @@ def with_literal_data_expressions(base):
 
         def _zxux_data_atom(self):
             token = self.get_char()
-            if token in (ord('-'), ord('+')):
-                self.next_char()
-                value = self._zxux_data_atom()
-                return self.fp.negate(value) if token == ord('-') else value
             if token == ord('('):
                 self.next_char()
                 value = self._zxux_data_expression(0)
@@ -54,14 +51,24 @@ def with_literal_data_expressions(base):
             return self.calc.pop()
 
         def _zxux_data_expression(self, min_bp):
-            lhs = self._zxux_data_atom()
+            # Spectrum priority: ^ before unary minus, then */ and +-.
+            # The power operator associates right-to-left (2^3^2 = 512).
+            token = self.get_char()
+            if token in (ord('-'), ord('+')):
+                self.next_char()
+                lhs = self._zxux_data_expression(3)
+                if token == ord('-'):
+                    lhs = self.fp.negate(lhs)
+            else:
+                lhs = self._zxux_data_atom()
             while True:
                 pair = _BINARY.get(self.get_char())
                 if pair is None or pair[0] < min_bp:
                     return lhs
                 precedence, rom_operator = pair
                 self.next_char()
-                rhs = self._zxux_data_expression(precedence + 1)
+                rhs = self._zxux_data_expression(
+                    precedence if rom_operator == C_POWER else precedence + 1)
                 lhs = self.fp.calc([lhs, rhs], [rom_operator])[-1]
 
     return LiteralData
