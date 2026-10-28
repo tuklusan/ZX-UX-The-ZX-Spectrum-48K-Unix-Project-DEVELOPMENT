@@ -104,7 +104,11 @@ def _run(payload: bytes, base: int, flags: int, limit: int, *,
                 returned):
             raise NativeProbeBlocked('native execution exceeded declared stack or caller stack')
     if returned:
-        return cpu.capture_state(), cycles, tuple(writes), tuple(ports)
+        # The return may happen on the final permitted instruction. Keep
+        # the same external-RAM read witness as the earlier exit path;
+        # otherwise an exact-limit probe silently drops address dependencies.
+        result = cpu.capture_state(), cycles, tuple(writes), tuple(ports)
+        return result + (tuple(external_reads),) if record_external_reads else result
     raise NativeProbeBlocked('bounded native execution did not return')
 
 

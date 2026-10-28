@@ -32,6 +32,22 @@ class ExternalMemoryDependencies(unittest.TestCase):
         self.assertNotIn('t_states',
                          result['first_mismatches'][0]['changed'])
 
+    def test_final_instruction_exit_keeps_external_ram_read_trace(self):
+        # With an exact three-instruction limit, RET finishes on the last
+        # permitted step rather than via the normal next-iteration exit.
+        # RAM is zero-filled, so neither register state nor timing can
+        # distinguish the two source addresses after XOR A.
+        before = native(('ld a,(23692)', 'xor a', 'ret'))
+        after = native(('ld a,(23693)', 'xor a', 'ret'))
+        report = compare_native_probes(before, after, limit=3)
+        self.assertEqual(report['checked_exits'], 12)
+        self.assertFalse(report['bounded_exit_states_match'])
+        for mismatch in report['first_mismatches']:
+            self.assertEqual(mismatch['changed'], ('external_memory_reads',))
+        matched = compare_native_probes(before, before, limit=3)
+        self.assertTrue(matched['bounded_exit_states_match'])
+        self.assertEqual(matched['checked_exits'], 12)
+
     def test_same_ram_reads_match_across_all_bases(self):
         original = native(('ld a,(23692)', 'ld hl,(23693)', 'ret'))
         result = compare_native_probes(original, original)
