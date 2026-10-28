@@ -53,7 +53,7 @@ class SysvarRestorationTests(unittest.TestCase):
         before = native_link(ORIGINAL)
         after = native_link(CANDIDATE)
         with self.assertRaisesRegex(WholeOptimizerError,
-                                    'memory, I/O or stack effects'):
+                                    'memory, I/O or stack effects|volatile fence'):
             verify_whole_optimizer_candidate(ORIGINAL, before,
                                              lambda _: CANDIDATE)
         for base in (0x7000, 0x8000, 0x9000):

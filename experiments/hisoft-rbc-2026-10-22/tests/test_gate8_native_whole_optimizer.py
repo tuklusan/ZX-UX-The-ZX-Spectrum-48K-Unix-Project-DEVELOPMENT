@@ -255,13 +255,16 @@ class WholeOptimizerTests(unittest.TestCase):
                 original.replace('    ld (23692),a\n', '', 1)):
             with self.subTest(changed=changed):
                 with self.assertRaisesRegex(WholeOptimizerError,
-                                            'memory, I/O or stack effects'):
-                    verify_whole_optimizer_candidate(original, baseline,
-                                                     lambda _: changed)
-        harmless = original.replace('    ld a,(23692)',
-                                    '    ld  a, (23692) ; still reads memory')
+                                            'memory, I/O or stack effects|volatile fence'):
+                    def candidate(fenced):
+                        if '    ld a,(23692)' in changed:
+                            return changed.replace('    ld a,(23692)',
+                                '__rbc_volatile_read_00000:\n    ld a,(23692)')
+                        return changed
+                    verify_whole_optimizer_candidate(original, baseline, candidate)
         candidate = verify_whole_optimizer_candidate(original, baseline,
-                                                      lambda _: harmless)
+            lambda fenced: fenced.replace('    ld a,(23692)',
+                '    ld  a, (23692) ; still reads memory'))
         self.assertTrue(candidate['candidate_byte_identical'])
         self.assertFalse(candidate['optimizer_candidate_admitted_for_publication'])
 
@@ -280,7 +283,8 @@ class WholeOptimizerTests(unittest.TestCase):
         self.assertEqual(_observable_accesses(source), _observable_accesses(other))
         with self.assertRaisesRegex(WholeOptimizerError,
                                     'register, flag or address state'):
-            verify_whole_optimizer_candidate(source, plain, lambda _: other)
+            verify_whole_optimizer_candidate(source, plain,
+                lambda fenced: fenced.replace('ld hl,23692', 'ld hl,23694'))
 
         from z80_python.cpu import Z80CPU
         for base in (0x7000, 0x8000, 0x9000):

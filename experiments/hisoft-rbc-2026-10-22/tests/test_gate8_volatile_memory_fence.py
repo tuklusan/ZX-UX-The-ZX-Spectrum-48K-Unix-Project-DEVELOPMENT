@@ -8,7 +8,8 @@ STAGE = Path(__file__).resolve().parents[1] / 'stage'
 sys.path[:0] = [str(STAGE), str(ROOT / 'src/zx-ux-sdk')]
 import ras
 import rld
-from gate8_volatile_memory_fence import VolatileFenceError, protect_volatile_reads
+from gate8_volatile_memory_fence import (VolatileFenceError, protect_volatile_reads,
+                                        strip_volatile_fences)
 
 
 def native(text):
@@ -35,6 +36,44 @@ class VolatileSourceFenceTests(unittest.TestCase):
                     '    ld (23692),a\n    ld a,(23692)\n    ret\n')
         optimized = PeepholeOptimizer().optimize(protect_volatile_reads(original))
         self.assertIn('ld a,(23692)', optimized)
+
+    def test_fence_roundtrip_restores_exact_source(self):
+        source = ('    section text\n    global start\nstart:\n'
+                  '    ld a,(hl)\n    ld a,(23692)\n    ret\n')
+        fenced = protect_volatile_reads(source)
+        self.assertEqual(strip_volatile_fences(fenced, fenced), source)
+        self.assertEqual(native(source), native(fenced))
+
+    def test_missing_duplicated_or_unknown_fences_fail_closed(self):
+        source = ('    section text\n    global start\nstart:\n'
+                  '    ld a,(hl)\n    ld a,(23692)\n    ret\n')
+        fenced = protect_volatile_reads(source)
+        marker = '__rbc_volatile_read_00000:\n'
+        cases = (fenced.replace(marker, ''),
+                 fenced.replace(marker, marker + marker),
+                 fenced.replace(marker, '__rbc_volatile_read_99999:\n' + marker))
+        for candidate in cases:
+            with self.subTest(candidate=candidate):
+                with self.assertRaisesRegex(VolatileFenceError, 'volatile fence'):
+                    strip_volatile_fences(candidate, fenced)
+
+    def test_fence_moved_away_from_original_read_fails_closed(self):
+        source = ('    section text\n    global start\nstart:\n'
+                  '    ld a,(hl)\n    ld a,(23692)\n    ret\n')
+        fenced = protect_volatile_reads(source)
+        moved = fenced.replace('__rbc_volatile_read_00000:\n    ld a,(hl)\n',
+                               '    ld a,(hl)\n__rbc_volatile_read_00000:\n')
+        with self.assertRaisesRegex(VolatileFenceError, 'volatile fence'):
+            strip_volatile_fences(moved, fenced)
+        rewritten = fenced.replace('    ld a,(hl)\n', '    ld b,(hl)\n', 1)
+        with self.assertRaisesRegex(VolatileFenceError, 'volatile fence'):
+            strip_volatile_fences(rewritten, fenced)
+
+    def test_original_reserved_label_with_unrelated_suffix_fails_closed(self):
+        text = ('    section text\n    global start\nstart:\n'
+                '__rbc_volatile_read_99999:\n    ret\n')
+        with self.assertRaisesRegex(VolatileFenceError, 'fence label'):
+            protect_volatile_reads(text)
 
     def test_data_is_not_treated_as_executable_memory_read(self):
         assembly = ('    section text\n    global start\nstart:\n    ret\n'
