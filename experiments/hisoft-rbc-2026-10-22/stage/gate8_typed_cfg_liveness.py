@@ -194,6 +194,11 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
             edges.append((site, site+1))
         elif flow and site + 1 < len(instructions):
             unresolved.append((site, 'protected-data-fallthrough'))
+        elif flow:
+            # Missing terminal transfer may enter DATA, BSS or unmapped RAM.
+            # Do not count it as a clean process exit.
+            unresolved.append((site, 'protected-data-fallthrough' if barrier
+                               else 'end-of-code-fallthrough'))
     # Code addresses can be taken without a DW table or a direct branch:
     # LD HL,handler; PUSH HL; RET transfers through the return stack.
     # Other registers can similarly carry callbacks into runtime routines.

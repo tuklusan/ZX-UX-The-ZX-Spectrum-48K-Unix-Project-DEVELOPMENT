@@ -350,6 +350,61 @@ class TypedWholeCFGTests(unittest.TestCase):
                 with self.assertRaises(TypedCFGError):
                     inspect_typed_cfg_liveness(source)
 
+    def test_implicit_terminal_fallthrough_is_not_a_clean_exit(self):
+        for text, reason in (
+            ('section text\nstart:\n nop\n',
+             'end-of-code-fallthrough'),
+            ('section text\nstart:\n call $100\n',
+             'end-of-code-fallthrough'),
+            ('section text\nstart:\n ret c\n',
+             'end-of-code-fallthrough'),
+            ('section text\nstart:\n nop\nsection data\n'
+             'payload:\n db $3e,$2a,$c9\n',
+             'protected-data-fallthrough'),
+        ):
+            with self.subTest(reason=reason, source=text):
+                report = inspect_typed_cfg_liveness(text)
+                self.assertEqual(report['unresolved_control_edges'], 1)
+                self.assertEqual(report['first_unresolved_edges'], [(0, reason)])
+                self.assertTrue(report['unknown_entry_reachability'])
+                self.assertFalse(report['rewrite_safe_to_admit'])
+        # An explicit exit is not a fallthrough, including a ROM jump.
+        for exit_source in ('ret', 'jp $100', 'jp start'):
+            text = 'section text\nstart:\n ' + exit_source + '\n'
+            report = inspect_typed_cfg_liveness(text)
+            self.assertEqual(report['unresolved_control_edges'], 0)
+
+    def test_native_terminal_text_fallthrough_executes_protected_data(self):
+        import ras
+        import rld
+        from z80_python.cpu import Z80CPU
+        source = ('    section text\n    global start\nstart:\n    nop\n'
+                  '    section data\npayload:\n    db $3e,$2a,$c9\n')
+        report = inspect_typed_cfg_liveness(source)
+        self.assertEqual(report['first_unresolved_edges'][0][1],
+                         'protected-data-fallthrough')
+        ssx, *_ = rld.link([rld.Obj(ras.assemble_text(source, 'unsafe-fallthrough.s'),
+                                    'unsafe-fallthrough.sso')], [], entry='start',
+                           stack=384)
+        info = rld.parse_ssx(ssx)
+        self.assertEqual(info['image'][:4], b'\x00\x3e\x2a\xc9')
+        for base in (0x7000, 0x8000, 0x9000):
+            with self.subTest(base=base):
+                mem = bytearray(65536)
+                code = rld.relocate(info['image'], info['relocs'], base)
+                mem[base:base + len(code)] = code
+                mem[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+                cpu = Z80CPU(mem.__getitem__, mem.__setitem__)
+                cpu.pc, cpu.sp = base + info['entry'], 0xd000
+                for _ in range(6):
+                    if cpu.pc == 0xb000:
+                        break
+                    cpu.step()
+                else:
+                    self.fail('protected data did not execute after fallthrough')
+                self.assertEqual(cpu.a, 42)
+                self.assertEqual(cpu.sp, 0xd002)
+
     def test_byte_inc_dec_keep_input_carry_live(self):
         # INC and DEC preserve the incoming carry flag on a real Z80.
         # Treating F as write-only would erase a live condition dependency.
