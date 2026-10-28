@@ -60,6 +60,55 @@ def _effects(opcode: str, operand: str):
     return _REGS, _REGS, False
 
 
+def _source_without_comment(raw: str) -> str:
+    """Remove assembler comments, never a semicolon inside quoted DB text.
+
+    This is a source parser, not a disassembler: a literal string may contain
+    label-like words and commas but cannot denote code-address operands.
+    """
+    quoted = None
+    index = 0
+    while index < len(raw):
+        char = raw[index]
+        if quoted is not None:
+            if char == quoted:
+                # Z80 assembler strings can double their quote delimiter.
+                if index + 1 < len(raw) and raw[index + 1] == quoted:
+                    index += 2
+                    continue
+                quoted = None
+        elif char in ("'", '"'):
+            quoted = char
+        elif char == ';':
+            return raw[:index]
+        index += 1
+    if quoted is not None:
+        raise TypedCFGError('unterminated quoted Z80 data')
+    return raw
+
+
+def _unquoted_data_expressions(operands: str) -> list[str]:
+    """Return only source operands outside literal DB string characters.
+
+    Commas inside quoted text are not operand boundaries. Symbolic bytes
+    outside the quotes stay opaque because they may encode code pointers.
+    """
+    masked = list(operands)
+    quoted = None
+    for index, char in enumerate(operands):
+        if quoted is not None:
+            masked[index] = ' '
+            if char == quoted:
+                quoted = None
+        elif char in ("'", '"'):
+            quoted = char
+            masked[index] = ' '
+    if quoted is not None:
+        raise TypedCFGError('unterminated quoted Z80 data')
+    return [part.strip() for part in ''.join(masked).split(',')
+            if part.strip()]
+
+
 def inspect_typed_cfg_liveness(assembly: str) -> dict:
     """Inspect direct source edges; never infer a target from binary bytes."""
     if not isinstance(assembly, str) or not assembly:
@@ -74,7 +123,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
     table_expressions = []
     barrier = False
     for raw in assembly.splitlines():
-        line = raw.partition(';')[0].strip().lower()
+        line = _source_without_comment(raw).strip().lower()
         if not line:
             continue
         if line.startswith('section '):
@@ -121,8 +170,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
             if op in ('db', 'defb') and len(words) == 2:
                 # Byte-built pointers (HIGH/LOW and masks) also escape the
                 # direct CFG. Their target cannot be inferred as a word edge.
-                table_expressions.extend(part.strip() for part in
-                                         words[1].split(','))
+                table_expressions.extend(_unquoted_data_expressions(words[1]))
             for label in pending:
                 symbols[label] = None
             pending.clear()
