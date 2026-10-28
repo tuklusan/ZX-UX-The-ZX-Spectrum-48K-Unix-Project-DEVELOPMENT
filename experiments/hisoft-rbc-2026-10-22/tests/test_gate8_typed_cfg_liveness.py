@@ -350,6 +350,24 @@ class TypedWholeCFGTests(unittest.TestCase):
                 with self.assertRaises(TypedCFGError):
                     inspect_typed_cfg_liveness(source)
 
+    def test_unsupported_source_operation_cannot_be_a_cfg_instruction(self):
+        # The CFG must use the very same Z80 opcode set as the typed source
+        # owner; a directive must not create a fake reachable instruction.
+        for directive in ('org $7000', 'equ 42', 'include "other.asm"',
+                          'defm "bytes"', 'align 2', 'macro fake'):
+            with self.subTest(directive=directive):
+                source = ('section text\nstart:\n '
+                          + directive + '\n ret\n')
+                with self.assertRaisesRegex(TypedCFGError,
+                                            'unrecognized typed Z80 instruction'):
+                    inspect_typed_cfg_liveness(source)
+        for valid in ('ld a,42', 'exx', 'di', 'rld', 'sl1 a'):
+            with self.subTest(valid=valid):
+                report = inspect_typed_cfg_liveness(
+                    'section text\nstart:\n ' + valid + '\n ret\n')
+                self.assertEqual(report['instruction_count'], 2)
+                self.assertEqual(report['unresolved_control_edges'], 0)
+
     def test_implicit_terminal_fallthrough_is_not_a_clean_exit(self):
         for text, reason in (
             ('section text\nstart:\n nop\n',

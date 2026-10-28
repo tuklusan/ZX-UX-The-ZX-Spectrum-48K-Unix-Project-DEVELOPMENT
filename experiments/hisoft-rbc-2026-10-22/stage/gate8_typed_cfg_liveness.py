@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 
+from symbolic_z80 import _INSTRUCTIONS
+
 _REGS = frozenset(('a', 'b', 'c', 'd', 'e', 'h', 'l', 'f', 'sp', 'ix', 'iy',
                    'mem', 'i', 'r', 'alt'))
 _BYTE_REGS = frozenset(('a', 'b', 'c', 'd', 'e', 'h', 'l'))
@@ -122,6 +124,10 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
             continue
         if section != 'text':
             raise TypedCFGError('executable instruction outside text section')
+        if op not in _INSTRUCTIONS:
+            # A misspelled assembler directive or an unknown source operation
+            # cannot stand in for a decoded Z80 instruction in the CFG.
+            raise TypedCFGError('unrecognized typed Z80 instruction: ' + op)
         here = len(instructions)
         for label in pending:
             symbols[label] = here
