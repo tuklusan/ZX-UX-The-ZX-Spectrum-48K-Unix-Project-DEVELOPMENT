@@ -79,6 +79,37 @@ class TypedWholeCFGTests(unittest.TestCase):
         self.assertEqual(report['exported_entry_instructions'], 1)
         self.assertEqual(report['reachable_instructions'], 1)
 
+    def test_section_boundary_label_does_not_disappear(self):
+        source = ('section text\nstart:\n    ret\n'
+                  'trailing:\nsection data\nnumber:\n    dw 7\n')
+        report = inspect_typed_cfg_liveness(source)
+        self.assertEqual(report['source_owned_labels'], 3)
+        self.assertEqual(report['instruction_count'], 1)
+        self.assertEqual(report['unreached_instructions'], 0)
+        self.assertFalse(report['rewrite_safe_to_admit'])
+
+    def test_repeated_section_boundary_label_fails_closed(self):
+        # Previously the first label vanished at a section transition,
+        # allowing the duplicate through the typed CFG inventory.
+        for source in (
+            'section text\nstart:\n ret\nduplicate:\n'
+            'section data\nduplicate:\n dw 7\n',
+            'section text\nstart:\n ret\nduplicate:\n'
+            'section data\nnumber:\n dw 7\n'
+            'section bss\nduplicate:\n ds 1\n',
+        ):
+            with self.subTest(source=source):
+                with self.assertRaises(TypedCFGError):
+                    inspect_typed_cfg_liveness(source)
+
+    def test_jump_to_section_boundary_label_remains_unresolved(self):
+        source = ('section text\nstart:\n jp boundary\n'
+                  'boundary:\nsection data\nresource:\n db 7\n')
+        report = inspect_typed_cfg_liveness(source)
+        self.assertEqual(report['unresolved_control_edges'], 1)
+        self.assertEqual(report['first_unresolved_edges'][0][1], 'boundary')
+        self.assertTrue(report['unknown_entry_reachability'])
+
     def test_missing_or_malformed_export_fails_closed(self):
         for source in (
                 'section text\nglobal absent\nstart:\n ret\n',

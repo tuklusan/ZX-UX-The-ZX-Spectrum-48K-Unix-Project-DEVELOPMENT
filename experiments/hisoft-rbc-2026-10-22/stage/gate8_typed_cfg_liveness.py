@@ -75,6 +75,11 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
         if not line:
             continue
         if line.startswith('section '):
+            # A label immediately before a section switch still owns an
+            # address. It is never an instruction entry, but it must remain
+            # defined so duplicate labels and direct branches are caught.
+            for label in pending:
+                symbols[label] = None
             section = line.split(None, 1)[1]
             if section not in ('text', 'data', 'bss'):
                 raise TypedCFGError('unknown source section')
