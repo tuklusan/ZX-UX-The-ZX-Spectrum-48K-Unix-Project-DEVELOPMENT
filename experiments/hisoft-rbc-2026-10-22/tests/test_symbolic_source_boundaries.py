@@ -43,6 +43,20 @@ class SourceOwnership(unittest.TestCase):
                          ['instruction', 'instruction-relocated', 'data-source'])
         self.assertTrue(result.fully_typed)
 
+    def test_source_boundary_rejects_fabricated_zero_opcode(self):
+        # An assembler returning 1 instead of b'\0' used to be silently
+        # coerced by bytes(1), authorizing an opcode never actually emitted.
+        instruction = [e('instruction', 0, b'\0', 'nop')]
+        for result in (1, True, False, [True], [False], [0.0], [256], [-1]):
+            with self.subTest(result=result), self.assertRaises(SourceBoundaryError):
+                inspect_source_boundaries(instruction, b'\0', 0x6000, 1, 0,
+                                          lambda _: result)
+        for result in (b'\0', bytearray(b'\0'), [0]):
+            with self.subTest(result=result):
+                report = inspect_source_boundaries(instruction, b'\0', 0x6000,
+                                                   1, 0, lambda _: result)
+                self.assertTrue(report.fully_typed)
+
     def test_three_bases_track_the_same_source_sites(self):
         bases = [0x6000, 0x5e1e, 0x5d3a]
         result = verify_three_source_maps([probe(b) for b in bases], bases)

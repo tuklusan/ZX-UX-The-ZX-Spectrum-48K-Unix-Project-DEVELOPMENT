@@ -56,8 +56,19 @@ def replace_typed_address(source: str, address: str) -> str | None:
 
 def _encoded(assembler, source: str) -> bytes:
     try:
-        return bytes(assembler(source))
-    except (ValueError, TypeError, KeyError, IndexError) as exc:
+        raw = assembler(source)
+        # bytes(N) invents N zero bytes without any assembled instruction.
+        # Do not let integer lengths or bool elements certify source ownership.
+        if type(raw) in (int, bool):
+            raise TypeError('assembler returned a length, not bytes')
+        if isinstance(raw, (bytes, bytearray)):
+            return bytes(raw)
+        values = tuple(raw)
+        if any(type(value) is not int or not 0 <= value <= 255
+               for value in values):
+            raise TypeError('assembler returned non-byte elements')
+        return bytes(values)
+    except (ValueError, TypeError, KeyError, IndexError, OverflowError) as exc:
         raise SourceBoundaryError('invalid source Z80 mnemonic') from exc
 
 
