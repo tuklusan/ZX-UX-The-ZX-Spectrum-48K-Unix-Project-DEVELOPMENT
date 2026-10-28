@@ -1,219 +1,225 @@
-"""Source-only code and protected DATA ownership regression tests."""
+"""Fail-closed instruction/data ownership map from original HiSoft emit calls.
+
+Only a source mnemonic or a source opcode joined to its relocation operand
+may own executable instructions. Numeric emitters, runtime code, and BASIC DATA
+remain unoptimized until their exact source boundaries have been resolved.
+Never disassemble emitted bytes to fill a gap in the source trace.
+"""
 from __future__ import annotations
 
-import sys
-import unittest
-from pathlib import Path
-from types import SimpleNamespace
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
-from symbolic_source_boundaries import (SourceBoundaryError,
-    inspect_source_boundaries, verify_three_source_maps)
+from dataclasses import dataclass
+import re
+
+from symbolic_fragments import FragmentBoundaryError, inspect_fragments
 
 
-def e(kind, position, data, source='source', symbol_offset=None):
-    return SimpleNamespace(kind=kind, position=position, data=data,
-                           source=source, symbol_offset=symbol_offset)
+class SourceBoundaryError(ValueError):
+    """An emission cannot be assigned an unambiguous source footprint."""
 
 
-def asm(source):
-    return {'nop': b'\x00', 'ret': b'\xc9', 'rst $28': b'\xef',
-            'defb $31,$04,$38': b'\x31\x04\x38',
-            'inc (hl)': b'\x34',
-            'rst $28; defb $31,$04,$38; inc (hl)': b'\xef\x31\x04\x38\x34',
-            'jp 24600': b'\xc3\x18\x60',
-            'jp 24118': b'\xc3\x36\x5e', 'jp 23890': b'\xc3\x52\x5d'}[source]
+@dataclass(frozen=True)
+class SourceBoundary:
+    start: int
+    end: int
+    kind: str
+    source: str
+    target: int | None = None
 
 
-def probe(base, target=24):
-    program = b'\x00\xc3' + ((base + target) & 65535).to_bytes(2, 'little') + b'\xc3\x00\x76'
-    events = [e('instruction', 0, b'\x00', 'nop'),
-              e('opcode', 1, b'\xc3', 'jp nn'),
-              e('relocation', 2, program[2:4], '24', target),
-              e('data-source', 4, b'\xc3\x00\x76', 'BASIC DATA')]
-    return inspect_source_boundaries(events, program, base, 4, 30, asm)
+@dataclass(frozen=True)
+class BoundaryMap:
+    spans: tuple[SourceBoundary, ...]
+    gaps: tuple[int, ...]
+    overlaps: tuple[int, ...]
+    mismatches: tuple[int, ...]
+    instruction_bytes: int
+    unresolved_bytes: int
+    executable_instruction_count: int
+    fully_typed: bool
 
 
-class SourceOwnership(unittest.TestCase):
-    def test_source_opcode_and_relocation_are_one_instruction(self):
-        result = probe(0x6000)
-        self.assertEqual(result.instruction_bytes, 4)
-        self.assertEqual(result.executable_instruction_count, 2)
-        self.assertEqual(result.unresolved_bytes, 0)
-        self.assertEqual([x.kind for x in result.spans],
-                         ['instruction', 'instruction-relocated', 'data-source'])
-        self.assertTrue(result.fully_typed)
+_OPERAND = re.compile(r'(?<![A-Za-z_0-9])nn(?![A-Za-z_0-9])', re.IGNORECASE)
 
-    def test_source_boundary_rejects_fabricated_zero_opcode(self):
-        # An assembler returning 1 instead of b'\0' used to be silently
-        # coerced by bytes(1), authorizing an opcode never actually emitted.
-        instruction = [e('instruction', 0, b'\0', 'nop')]
-        for result in (1, True, False, [True], [False], [0.0], [256], [-1]):
-            with self.subTest(result=result), self.assertRaises(SourceBoundaryError):
-                inspect_source_boundaries(instruction, b'\0', 0x6000, 1, 0,
-                                          lambda _: result)
-        for result in (b'\0', bytearray(b'\0'), [0]):
-            with self.subTest(result=result):
-                report = inspect_source_boundaries(instruction, b'\0', 0x6000,
-                                                   1, 0, lambda _: result)
-                self.assertTrue(report.fully_typed)
 
-    def test_process_storage_must_fit_without_z80_address_wrap(self):
-        # Before this guard, the relocation at 0xfffd+5 wrapped to 0x0002
-        # and the source map incorrectly called the native process typed.
-        bad = [e('opcode', 0, b'\xc3', 'jp nn'),
-               e('relocation', 1, b'\x02\x00', '5', 5)]
-        for image, base, bss in (
-                (b'\xc3\x02\x00', 0xfffd, 6),
-                (b'\xc9', 0xffff, 1),
-                (b'\xc9\xc9', 0xffff, 0)):
-            with self.subTest(base=base, bss=bss), self.assertRaisesRegex(
-                    SourceBoundaryError, 'address space'):
-                inspect_source_boundaries(
-                    bad if len(image) == 3 else [e('instruction', 0, image, 'ret')],
-                    image, base, len(image), bss, lambda _: image)
-        # End-exclusive address 0x10000 is a valid top-of-RAM boundary.
-        result = inspect_source_boundaries(
-            [e('instruction', 0, b'\xc9', 'ret')], b'\xc9', 0xffff, 1, 0,
-            lambda _: b'\xc9')
-        self.assertTrue(result.fully_typed)
+def replace_typed_address(source: str, address: str) -> str | None:
+    """Replace one unquoted symbolic word; never guess from opcode bytes."""
+    if not isinstance(source, str) or not isinstance(address, str):
+        return None
+    if "'" in source or '"' in source:
+        return None
+    matches = tuple(_OPERAND.finditer(source))
+    if len(matches) != 1:
+        return None
+    match = matches[0]
+    return source[:match.start()] + address + source[match.end():]
 
-    def test_bool_or_malformed_address_types_do_not_own_source(self):
-        for base, bss, data_start in ((True, 0, 1), (0, False, 1),
-                                      (0, 0, True)):
-            with self.subTest(base=base, bss=bss, data_start=data_start):
-                with self.assertRaises(SourceBoundaryError):
-                    inspect_source_boundaries(
-                        [e('instruction', 0, b'\xc9', 'ret')], b'\xc9',
-                        base, data_start, bss, lambda _: b'\xc9')
-        for invalid in (True, False, 1.0, '0'):
-            with self.subTest(position=invalid), self.assertRaises(SourceBoundaryError):
-                inspect_source_boundaries(
-                    [e('byte', invalid, b'\xc9')], b'\xc9',
-                    0x6000, 1, 0, asm)
-        with self.assertRaises(SourceBoundaryError):
-            inspect_source_boundaries(
-                [e('opcode', 0, b'\xc3', 'jp nn'),
-                 e('relocation', 1, b'\x00\x60', 'zero', False)],
-                b'\xc3\x00\x60', 0x6000, 3, 0, asm)
 
-    def test_three_bases_track_the_same_source_sites(self):
-        bases = [0x6000, 0x5e1e, 0x5d3a]
-        result = verify_three_source_maps([probe(b) for b in bases], bases)
-        self.assertEqual(result['source_instruction_bytes'], 4)
-        self.assertEqual(result['source_byte_kinds']['data-source'], 3)
-        self.assertFalse(result['complete_program_symbolic'])
+def _encoded(assembler, source: str) -> bytes:
+    try:
+        raw = assembler(source)
+        # bytes(N) invents N zero bytes without any assembled instruction.
+        # Do not let integer lengths or bool elements certify source ownership.
+        if type(raw) in (int, bool):
+            raise TypeError('assembler returned a length, not bytes')
+        if isinstance(raw, (bytes, bytearray)):
+            return bytes(raw)
+        values = tuple(raw)
+        if any(type(value) is not int or not 0 <= value <= 255
+               for value in values):
+            raise TypeError('assembler returned non-byte elements')
+        return bytes(values)
+    except (ValueError, TypeError, KeyError, IndexError, OverflowError) as exc:
+        raise SourceBoundaryError('invalid source Z80 mnemonic') from exc
 
-    def test_overwritten_history_may_match_by_coincidence_at_one_base(self):
-        # Both sources overlap the same byte in all native passes. A historical
-        # value matching the final byte cannot make that byte source-owned.
-        def historical(earlier, final):
-            return inspect_source_boundaries([
-                e('byte', 0, bytes((earlier,)), 'prior'),
-                e('direct-write', 0, bytes((final,)), 'last')],
-                bytes((final,)), 0x6000, 1, 0, asm)
-        bases = [0x6000, 0x5e1e, 0x5d3a]
-        passes = [historical(42, 42), historical(17, 42), historical(11, 42)]
-        report = verify_three_source_maps(passes, bases)
-        self.assertEqual(report['source_history_mismatch_variation_bytes'], 1)
-        self.assertEqual(report['source_unresolved_bytes'], 1)
-        self.assertTrue(all(q.overlaps == (0,) and not q.fully_typed
-                            for q in passes))
 
-    def test_unique_source_mismatch_still_fails_across_bases(self):
-        bases = [0x6000, 0x5e1e, 0x5d3a]
-        passes = [inspect_source_boundaries(
-            [e('byte', 0, b'\x11', 'prior')], final,
-            base, 1, 0, asm) for base, final in
-            zip(bases, (b'\x11', b'\x22', b'\x11'))]
-        self.assertTrue(all(q.unresolved_bytes == 1 for q in passes))
-        with self.assertRaisesRegex(SourceBoundaryError, 'changed across'):
-            verify_three_source_maps(passes, bases)
+def inspect_source_boundaries(events, image: bytes, base: int, data_start: int,
+                              bss: int, assembler) -> BoundaryMap:
+    """Account for all image bytes with their live source producer.
 
-    def test_unpaired_opcode_not_promoted_by_matching_machine_bytes(self):
-        result = inspect_source_boundaries([e('opcode', 0, b'\xc3', 'jp nn'),
-            e('binary', 1, b'\x18\x60')], b'\xc3\x18\x60', 0x6000, 3, 0, asm)
-        self.assertEqual(result.instruction_bytes, 0)
-        self.assertEqual(result.unresolved_bytes, 3)
-        self.assertFalse(result.fully_typed)
+    This is an ownership audit, not optimizer approval: even completely owned
+    bytes still require CFG, entry, address, and runtime-emitter conversion.
+    """
+    if (type(image) is not bytes or type(data_start) is not int or
+            not 0 <= data_start <= len(image)):
+        raise SourceBoundaryError('invalid compiled text/data extent')
+    if (type(base) is not int or type(bss) is not int or
+            not 0 <= base <= 65535 or not 0 <= bss <= 65535 or
+            base + len(image) + bss > 65536):
+        # A wrapped address can match two compiler passes by coincidence,
+        # while native relocation cannot safely place that process in RAM.
+        raise SourceBoundaryError('link base, image or BSS outside Z80 address space')
+    spans = []
+    emitted = []
+    consumed = set()
+    i = 0
+    while i < len(events):
+        event = events[i]
+        kind = event.kind
+        pos = event.position
+        payload = event.data
+        target = None
+        if (type(pos) is not int or type(payload) is not bytes or
+                not isinstance(event.source, str)):
+            raise SourceBoundaryError('source emission has invalid position or payload')
+        if kind == 'opcode':
+            text = event.source.strip()
+            if replace_typed_address(text, '0') is not None and i + 1 < len(events):
+                operand = events[i + 1]
+                if (operand.kind == 'relocation' and
+                        operand.position == pos + len(payload) and
+                        len(operand.data) == 2 and
+                        type(operand.position) is int and
+                        type(operand.symbol_offset) is int):
+                    target = operand.symbol_offset
+                    if not 0 <= target < len(image) + bss:
+                        raise SourceBoundaryError('source relocation target outside image and BSS')
+                    expected_operand = (base + target).to_bytes(2, 'little')
+                    if operand.data != expected_operand:
+                        raise SourceBoundaryError('source operand differs from link base')
+                    resolved = replace_typed_address(text, str(base + target))
+                    candidate = _encoded(assembler, resolved)
+                    if candidate != payload + operand.data:
+                        raise SourceBoundaryError('source opcode/operand encoding differs')
+                    payload = candidate
+                    consumed.add(i + 1)
+                    kind = 'instruction-relocated'
+            if kind == 'opcode':
+                kind = 'unpaired-opcode'
+        elif kind == 'instruction':
+            if payload != _encoded(assembler, event.source.strip()):
+                raise SourceBoundaryError('source mnemonic encoding differs')
+            try:
+                fragments = inspect_fragments([event], image, data_start, assembler)
+            except FragmentBoundaryError as exc:
+                raise SourceBoundaryError(str(exc)) from exc
+            for fragment in fragments:
+                spans.append(SourceBoundary(fragment.site, fragment.end,
+                                            fragment.kind, fragment.source))
+                emitted.append(fragment.encoded)
+            i += 1
+            continue
+        elif kind in ('relocation', 'table-relocated'):
+            target = event.symbol_offset
+            if type(target) is not int or not 0 <= target < len(image) + bss:
+                raise SourceBoundaryError('source relocation target outside image and BSS')
+            if payload != (base + target).to_bytes(2, 'little'):
+                raise SourceBoundaryError('unpaired relocation differs from link base')
+            if kind == 'relocation':
+                kind = 'unpaired-relocation'
+        elif kind not in ('word', 'byte', 'binary', 'runtime-opaque',
+                          'data-source', 'direct-write', 'inline-data'):
+            raise SourceBoundaryError('unknown source producer: ' + str(kind))
+        if kind == 'inline-data' and pos + len(payload) > data_start:
+            raise SourceBoundaryError('source literal crosses BASIC DATA boundary')
+        if kind in ('instruction', 'instruction-relocated') and pos + len(payload) > data_start:
+            raise SourceBoundaryError('source instruction crosses into BASIC DATA')
+        if not payload:
+            raise SourceBoundaryError('zero-length source producer')
+        if not 0 <= pos <= len(image) - len(payload):
+            raise SourceBoundaryError('source emission outside final image')
+        spans.append(SourceBoundary(pos, pos + len(payload), kind, event.source, target))
+        emitted.append(payload)
+        i += 1
+        while i in consumed:
+            i += 1
+    owner = [[] for _ in image]
+    mismatches = set()
+    for number, (span, source_bytes) in enumerate(zip(spans, emitted)):
+        for offset, value in enumerate(source_bytes):
+            absolute = span.start + offset
+            owner[absolute].append(number)
+            if image[absolute] != value:
+                mismatches.add(absolute)
+    gaps = tuple(i for i, contributors in enumerate(owner) if not contributors)
+    overlaps = tuple(i for i, contributors in enumerate(owner) if len(contributors) != 1)
+    typed = {'instruction', 'instruction-relocated', 'inline-data', 'data-source',
+             'table-relocated'}
+    unresolved = tuple(i for i, contributors in enumerate(owner)
+                       if (len(contributors) != 1 or
+                           spans[contributors[0]].kind not in typed or
+                           i in mismatches))
+    instructions = [s for s in spans if s.kind in ('instruction', 'instruction-relocated')]
+    return BoundaryMap(tuple(spans), gaps, overlaps, tuple(sorted(mismatches)),
+                       sum(s.end - s.start for s in instructions),
+                       len(unresolved), len(instructions),
+                       not gaps and not overlaps and not mismatches and not unresolved)
 
-    def test_opaque_runtime_is_never_disassembled(self):
-        result = inspect_source_boundaries([e('runtime-opaque', 0, b'\xc9')],
-                                          b'\xc9', 0x6000, 1, 0, asm)
-        self.assertEqual(result.instruction_bytes, 0)
-        self.assertEqual(result.unresolved_bytes, 1)
 
-    def test_inline_calculator_bytes_are_protected_not_executable(self):
-        image = b'\xef\x31\x04\x38\x34'
-        event = e('instruction', 0, image,
-                  'rst $28; defb $31,$04,$38; inc (hl)')
-        result = inspect_source_boundaries([event], image, 0x6000, 5, 0, asm)
-        self.assertEqual([span.kind for span in result.spans],
-                         ['instruction', 'inline-data', 'instruction'])
-        self.assertEqual(result.instruction_bytes, 2)
-        self.assertEqual(result.executable_instruction_count, 2)
-        self.assertTrue(result.fully_typed)
-
-    def test_inline_rewrite_remains_visible_as_mismatch(self):
-        orig = b'\xef\x31\x04\x38\x34'
-        final = b'\xef\x31\x04\x39\x34'
-        event = e('instruction', 0, orig,
-                  'rst $28; defb $31,$04,$38; inc (hl)')
-        result = inspect_source_boundaries([event], final, 0x6000, 5, 0, asm)
-        self.assertEqual(result.mismatches, (3,))
-        self.assertFalse(result.fully_typed)
-
-    def test_data_that_looks_like_jump_remains_data(self):
-        result = inspect_source_boundaries([e('data-source', 0, b'\xc3\x00\x76')],
-                                          b'\xc3\x00\x76', 0, 0, 0, asm)
-        self.assertEqual(result.instruction_bytes, 0)
-        self.assertTrue(result.fully_typed)
-
-    def test_untyped_direct_rewrite_is_detected(self):
-        result = inspect_source_boundaries([e('byte', 0, b'\x00'),
-             e('direct-write', 0, b'\xc9')], b'\xc9', 0, 1, 0, asm)
-        self.assertEqual(result.overlaps, (0,))
-        self.assertEqual(result.mismatches, (0,))
-        self.assertFalse(result.fully_typed)
-
-    def test_paired_instruction_rewrite_is_not_hidden(self):
-        program = b'\xc3\x19\x60'
-        result = inspect_source_boundaries([
-            e('opcode', 0, b'\xc3', 'jp nn'),
-            e('relocation', 1, b'\x18\x60', '24', 24)],
-            program, 0x6000, 3, 30, asm)
-        self.assertEqual(result.mismatches, (1,))
-        self.assertFalse(result.fully_typed)
-
-    def test_missing_bytes_stay_missing(self):
-        result = inspect_source_boundaries([e('instruction', 0, b'\xc9', 'ret')],
-                                          b'\xc9\x00', 0, 2, 0, asm)
-        self.assertEqual(result.gaps, (1,))
-        self.assertEqual(result.unresolved_bytes, 1)
-
-    def test_relocation_target_and_encoded_operand_must_agree(self):
-        bad = [e('opcode', 0, b'\xc3', 'jp nn'),
-               e('relocation', 1, b'\x08\x60', '24', 24)]
-        with self.assertRaises(SourceBoundaryError):
-            inspect_source_boundaries(bad, b'\xc3\x08\x60', 0x6000, 3, 0, asm)
-
-    def test_instruction_cannot_cross_data_boundary(self):
-        with self.assertRaises(SourceBoundaryError):
-            inspect_source_boundaries([e('instruction', 0, b'\xc9', 'ret')],
-                                      b'\xc9', 0, 0, 0, asm)
-
-    def test_emission_outside_final_image_rejected(self):
-        with self.assertRaises(SourceBoundaryError):
-            inspect_source_boundaries([e('byte', -1, b'\xc9')],
-                                      b'\xc9', 0, 1, 0, asm)
-
-    def test_different_source_sites_across_passes_fail(self):
-        bases = [0x6000, 0x5e1e, 0x5d3a]
-        records = [probe(b) for b in bases]
-        records[-1] = inspect_source_boundaries(
-            [e('binary', 0, b'\x00\xc3\x52\x5d\xc3\x00\x76')],
-            b'\x00\xc3\x52\x5d\xc3\x00\x76', bases[-1], 7, 10, asm)
-        with self.assertRaises(SourceBoundaryError):
-            verify_three_source_maps(records, bases)
-
-if __name__ == '__main__':
-    unittest.main()
+def verify_three_source_maps(groups, bases) -> dict:
+    """Prove source-owned boundaries are stable at three native link bases."""
+    if len(groups) != 3 or len(bases) != 3 or len(set(bases)) != 3:
+        raise SourceBoundaryError('three distinct native bases required')
+    first = groups[0]
+    signature = lambda m: tuple((s.start, s.end, s.kind, s.source, s.target)
+                                for s in m.spans)
+    # A historical emission overwritten by a later writer is unresolved in
+    # every pass regardless of whether its old byte happens to equal the
+    # final byte at a particular load base. Require identical *uniquely*
+    # owned mismatches; never erase an overlap from the unresolved map.
+    unresolved_history = set(first.overlaps)
+    definite_mismatch = lambda m: set(m.mismatches) - unresolved_history
+    if any(signature(other) != signature(first) or
+           other.gaps != first.gaps or other.overlaps != first.overlaps or
+           definite_mismatch(other) != definite_mismatch(first) or
+           other.fully_typed != first.fully_typed or
+           other.instruction_bytes != first.instruction_bytes or
+           other.unresolved_bytes != first.unresolved_bytes
+           for other in groups[1:]):
+        raise SourceBoundaryError('source ownership changed across native bases')
+    kinds = {}
+    for span in first.spans:
+        kinds[span.kind] = kinds.get(span.kind, 0) + span.end - span.start
+    mismatch_sets = [set(group.mismatches) for group in groups]
+    variable_history = set.union(*mismatch_sets) - set.intersection(*mismatch_sets)
+    if not variable_history <= unresolved_history:
+        raise SourceBoundaryError('source mismatch outside overwritten history')
+    return {'source_history_mismatch_variation_bytes': len(variable_history),
+            'source_instruction_count': first.executable_instruction_count,
+            'source_instruction_bytes': first.instruction_bytes,
+            'source_unresolved_bytes': first.unresolved_bytes,
+            'source_gap_bytes': len(first.gaps),
+            'source_overlap_bytes': len(first.overlaps),
+            'source_mismatch_bytes': len(first.mismatches),
+            'source_byte_kinds': kinds,
+            'typed_source_ownership': first.fully_typed,
+            'complete_program_symbolic': False}
