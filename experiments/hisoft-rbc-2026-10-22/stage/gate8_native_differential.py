@@ -6,6 +6,7 @@ interrupts and nonterminating code require separate native execution gates.
 """
 from __future__ import annotations
 
+from dataclasses import replace
 import rld
 from z80_python.cpu import Z80CPU
 
@@ -31,7 +32,10 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
         raise NativeProbeBlocked('invalid native relocation') from exc
     memory = bytearray(65536)
     memory[first:last] = image
-    memory[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+    # Place the kernel's caller return word immediately above the process's
+    # reserved stack. Guest PUSH instructions must stay inside the admitted
+    # image/BSS/stack extent, not in a fictitious external 0xD000 stack.
+    memory[process_end:process_end + 2] = (0xb000).to_bytes(2, 'little')
     writes = []
     ports = []
 
@@ -57,13 +61,13 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
     cpu = Z80CPU(read_byte, write_byte, read_port=read_port,
                  write_port=write_port)
     cpu.pc = first + parsed['entry']
-    cpu.sp = 0xd000
+    cpu.sp = process_end
     cpu.f = flags
     cycles = 0
     returned = False
     for _ in range(limit):
         if cpu.pc == 0xb000:
-            if cpu.sp != 0xd002 or not returned:
+            if cpu.sp != process_end + 2 or not returned:
                 raise NativeProbeBlocked('process did not return through caller stack')
             return cpu.capture_state(), cycles, tuple(writes), tuple(ports)
         if not first <= cpu.pc < last:
@@ -81,18 +85,32 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
             cycles += cpu.step()
         except (NotImplementedError, IndexError) as exc:
             raise NativeProbeBlocked('native instruction not supported by probe') from exc
-        # The probe uses a separate caller sentinel at 0xD000. The SSX
-        # declared stack is the maximum space below that sentinel; a program
-        # cannot borrow extra bytes and then hide an overflow by popping.
-        # RET through the caller sentinel may advance SP by two bytes.
-        if not 0xd000 - parsed['stack'] <= cpu.sp <= 0xd002:
-            raise NativeProbeBlocked('native execution exceeded declared stack')
+        # SP must stay within the linked allocation. The only permitted
+        # excursion above it is the caller's two-byte RET consumption.
+        if not process_end - parsed['stack'] <= cpu.sp <= process_end + 2:
+            raise NativeProbeBlocked('native execution exceeded declared stack or caller stack')
         returned = (cpu.pc == 0xb000 and is_return and
-                    stack == 0xd000 and return_word == 0xb000 and
-                    cpu.sp == 0xd002)
+                    stack == process_end and return_word == 0xb000 and
+                    cpu.sp == process_end + 2)
     if returned:
         return cpu.capture_state(), cycles, tuple(writes), tuple(ports)
     raise NativeProbeBlocked('bounded native execution did not return')
+
+
+def _relative_stack_state(observed: tuple, parsed: dict, base: int) -> tuple:
+    """Compare legitimate loader relocation without ignoring escaped pointers.
+
+    Shorter linked code moves the guest stack with the process extent. SP and
+    stack writes are normalized relative to that extent, but every other Z80
+    register, clock, I/O and absolute memory write stays observable.
+    """
+    cpu, cycles, writes, ports = observed
+    top = base + len(parsed['image']) + parsed['bss'] + parsed['stack']
+    bottom = top - parsed['stack']
+    normalized_writes = tuple((('stack', address - top) if bottom <= address < top
+                               else ('absolute', address), value)
+                              for address, value in writes)
+    return replace(cpu, sp=cpu.sp - top), cycles, normalized_writes, ports
 
 
 def compare_native_probes(plain: bytes, candidate: bytes, *,
@@ -108,6 +126,11 @@ def compare_native_probes(plain: bytes, candidate: bytes, *,
             or type(flags) not in (tuple, list)
             or not bases or not flags):
         raise NativeProbeBlocked('invalid bounded native probe parameters')
+    try:
+        original_layout = rld.parse_ssx(plain)
+        candidate_layout = rld.parse_ssx(candidate)
+    except (rld.LinkError, ValueError, TypeError, KeyError) as exc:
+        raise NativeProbeBlocked('invalid native input') from exc
     checked = 0
     mismatches = []
     for base in bases:
@@ -116,8 +139,10 @@ def compare_native_probes(plain: bytes, candidate: bytes, *,
         for initial_flags in flags:
             if type(initial_flags) is not int or not 0 <= initial_flags <= 255:
                 raise NativeProbeBlocked('invalid initial Z80 flags')
-            before = _run(plain, base, initial_flags, limit)
-            after = _run(candidate, base, initial_flags, limit)
+            before = _relative_stack_state(
+                _run(plain, base, initial_flags, limit), original_layout, base)
+            after = _relative_stack_state(
+                _run(candidate, base, initial_flags, limit), candidate_layout, base)
             checked += 1
             if before != after:
                 changed = tuple(name for name, a, b in zip(
