@@ -77,6 +77,10 @@ def _source_without_comment(raw: str) -> str:
                     index += 2
                     continue
                 quoted = None
+        elif char == "'" and index > 0 and (raw[index-1].isalnum() or
+                                              raw[index-1] == '_'):
+            # EX AF,AF' is not an unterminated quoted text resource.
+            pass
         elif char in ("'", '"'):
             quoted = char
         elif char == ';':

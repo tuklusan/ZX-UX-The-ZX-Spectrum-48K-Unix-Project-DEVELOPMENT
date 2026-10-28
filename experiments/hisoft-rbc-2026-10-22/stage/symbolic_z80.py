@@ -219,6 +219,10 @@ def _canonical_source_line(raw: str, *, strip_comment: bool = False) -> str:
                     index += 2
                     continue
                 quoted = None
+        elif char == "'" and index > 0 and (text[index-1].isalnum() or
+                                              text[index-1] == '_'):
+            # EX AF,AF' names the Z80 shadow register, not a string.
+            out.append(char)
         elif char in ("'", '"'):
             quoted = char
             out.append(char)
