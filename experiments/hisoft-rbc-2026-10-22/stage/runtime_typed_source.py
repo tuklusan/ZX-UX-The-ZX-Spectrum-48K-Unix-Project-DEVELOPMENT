@@ -35,6 +35,7 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
     No byte is promoted from the completed program or a decoded binary.
     """
     from symbolic_capture import Emission
+    from symbolic_z80 import _canonical_source_line
 
     if (not isinstance(image, bytes) or not isinstance(start, int) or
             not isinstance(end, int) or not isinstance(base, int) or
@@ -74,9 +75,18 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
         if (not isinstance(statement.emitter_pc, int) or
                 not 0 <= statement.emitter_pc <= 0xffff or
                 not isinstance(statement.source, str) or
-                not statement.source.strip() or ';' in statement.source or
-                '\n' in statement.source):
+                not statement.source.strip() or '\n' in statement.source):
             raise RuntimeSourceError('runtime source location or statement invalid')
+        # A semicolon inside a quoted data literal is a byte, not a comment.
+        # The source provider may not slip untyped assembly after a comment.
+        try:
+            full_source = _canonical_source_line(statement.source)
+            without_comment = _canonical_source_line(statement.source,
+                                                     strip_comment=True)
+        except ValueError as exc:
+            raise RuntimeSourceError('runtime source has an invalid quote') from exc
+        if full_source != without_comment:
+            raise RuntimeSourceError('runtime source has untyped comment')
         kind = statement.kind
         source = statement.source.strip()
         if kind not in ('instruction', 'literal', 'relocated'):
@@ -132,7 +142,11 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
                                    source_site=f'runtime_pc:{sites[split]}',
                                    producer_pcs=sites[split:]))
         else:
-            result.append(Emission(cursor, 'instruction', source, encoded,
+            # Original byte resources stay protected DATA, even when their
+            # values decode to legal Z80 instructions (HALT, RST, etc.).
+            result.append(Emission(cursor,
+                                   'inline-data' if kind == 'literal' else 'instruction',
+                                   source, encoded,
                                    source_site=f'runtime_pc:{sites[0]}',
                                    producer_pcs=sites))
         cursor += len(encoded)

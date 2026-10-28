@@ -135,7 +135,7 @@ class BridgeTests(unittest.TestCase):
         c.m._zxux_typed_runtime_source = original_sources
         self.assertEqual(c.m.run_emitter(9, 0, False, 0x6000), 2)
         events = c._zxux_capture.events
-        self.assertEqual([e.kind for e in events], ['instruction', 'instruction'])
+        self.assertEqual([e.kind for e in events], ['instruction', 'inline-data'])
         self.assertEqual(c._zxux_capture.runtime_traces[0]['typed_source_events'], 2)
         self.assertTrue(c._zxux_capture.runtime_traces[0]['typed_instructions'])
         sites = inspect_emit_sites(events)

@@ -41,7 +41,7 @@ class RuntimeTypedSources(unittest.TestCase):
         events = typed_runtime_events(writes, source, image, 0, 4, 0x7000, assemble)
         self.assertEqual([(e.kind, e.source) for e in events],
                          [('instruction', 'ld a,1'), ('instruction', 'ret'),
-                          ('instruction', 'defb $76')])
+                          ('inline-data', 'defb $76')])
         self.assertEqual(b''.join(e.data for e in events), image)
         self.assertEqual(events[-1].source, 'defb $76')
 

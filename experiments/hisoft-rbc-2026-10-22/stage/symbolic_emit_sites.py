@@ -29,9 +29,16 @@ def inspect_emit_sites(events) -> tuple[SourceSite, ...]:
     """Retain source call sites; do not infer roles from generated opcodes."""
     result = []
     for event in events:
-        if event.kind not in _SOURCE_KINDS:
-            continue
         name = getattr(event, 'source_site', None)
+        # Runtime literals are protected data, not Z80 instructions, but
+        # match their writer-PC sequences across all three compiler passes.
+        # DEF FN and ordinary inline bytes have no runtime PC and remain
+        # outside this executable source-call inventory.
+        runtime_literal = (event.kind == 'inline-data' and
+                           isinstance(name, str) and
+                           name.startswith('runtime_pc:'))
+        if event.kind not in _SOURCE_KINDS and not runtime_literal:
+            continue
         if not isinstance(name, str) or ':' not in name:
             raise EmitSiteError('source emission lacks compiler call site')
         method, line = name.rsplit(':', 1)

@@ -90,6 +90,26 @@ class Sites(unittest.TestCase):
             verify_three_emit_sites([observed, observed,
                 inspect_emit_sites([e((0, 0x7111))])], [0x6000, 0x6100, 0x6200])
 
+    def test_protected_runtime_literals_keep_writer_pc_source_witnesses(self):
+        runtime_literal = SimpleNamespace(
+            kind='inline-data', position=3, data=b'A;B',
+            source_site='runtime_pc:28928', producer_pcs=(28928,) * 3)
+        unchanged_def_fn = SimpleNamespace(
+            kind='inline-data', position=6, data=b'\0' * 2,
+            source_site='st_deffn:unwritten', producer_pcs=None)
+        observed = inspect_emit_sites([runtime_literal, unchanged_def_fn])
+        self.assertEqual(len(observed), 1)
+        self.assertEqual(observed[0].kind, 'inline-data')
+        self.assertEqual(observed[0].producer_pcs, (28928,) * 3)
+        report = verify_three_emit_sites([observed] * 3,
+                                         [0x6000, 0x6100, 0x6200])
+        self.assertEqual(report['source_emitted_bytes'], 3)
+        with self.assertRaises(EmitSiteError):
+            inspect_emit_sites([SimpleNamespace(
+                kind='inline-data', position=3, data=b'A;B',
+                source_site='runtime_pc:28928',
+                producer_pcs=(28928, 28928, 65536))])
+
     def test_missing_site_and_changed_three_pass_source_fail(self):
         def e(site):
             return SimpleNamespace(kind='instruction', position=0,
