@@ -72,6 +72,32 @@ class ProcessStackPlacement(unittest.TestCase):
             compare_native_probes(native, native,
                                   bases=(base,), flags=(0,), limit=16)
 
+    def test_guest_cannot_read_caller_return_word_as_data(self):
+        for instructions in (('pop bc', 'push bc', 'ret'),
+                             ('ld hl,0', 'add hl,sp', 'ld a,(hl)', 'ret'),
+                             ('ex (sp),hl', 'ret')):
+            with self.subTest(instructions=instructions):
+                source = ('    section text\n    global start\nstart:\n'
+                          + ''.join('    ' + op + '\n' for op in instructions))
+                obj = ras.assemble_text(source, 'native-caller-read.s')
+                native = rld.link([rld.Obj(obj, 'native-caller-read.sso')], [],
+                                  entry='start', stack=16)[0]
+                with self.assertRaisesRegex(NativeProbeBlocked,
+                                            'caller stack outside process'):
+                    compare_native_probes(native, native,
+                                          bases=(0x6000,), flags=(0,), limit=16)
+
+    def test_terminal_ret_may_consume_only_caller_return_word(self):
+        source = ('    section text\n    global start\nstart:\n'
+                  '    call inner\n    ret\ninner:\n    ret\n')
+        obj = ras.assemble_text(source, 'native-ordinary-ret.s')
+        native = rld.link([rld.Obj(obj, 'native-ordinary-ret.sso')], [],
+                          entry='start', stack=16)[0]
+        result = compare_native_probes(native, native,
+                                       bases=(0x6000,), flags=(0,), limit=16)
+        self.assertEqual(result['checked_exits'], 1)
+        self.assertTrue(result['bounded_exit_states_match'])
+
     def test_two_candidates_still_match_at_relocated_stack_addresses(self):
         native = native_stack_program(stack=8, bss=12)
         match = compare_native_probes(native, native)

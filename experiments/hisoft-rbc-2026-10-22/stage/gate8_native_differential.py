@@ -40,12 +40,19 @@ def _run(payload: bytes, base: int, flags: int, limit: int, *,
     writes = []
     ports = []
     external_reads = []
+    allow_caller_pop = False
 
     def read_byte(address: int) -> int:
         # A zero-filled probe buffer is not the original 48K ROM. Refuse
         # ROM reads rather than claiming equivalence for invented contents.
         if not 0x4000 <= address <= 0xffff:
             raise NativeProbeBlocked('native execution read unmodelled ROM')
+        # The caller's return word is outside the guest's stack allocation.
+        # Only the terminal RET may read it. A POP/LD/EX that inspects the
+        # caller frame would make a bounded comparison depend on an invented
+        # harness address rather than the actual ZX-UX shell stack.
+        if process_end <= address < process_end + 2 and not allow_caller_pop:
+            raise NativeProbeBlocked('native execution read caller stack outside process')
         # Z80CPU fetches opcodes and inline instruction operands through
         # this same callback. Record reads outside the linked code image;
         # their addresses remain observable even when a zero-filled RAM
@@ -90,10 +97,14 @@ def _run(payload: bytes, base: int, flags: int, limit: int, *,
         is_return = opcode == 0xc9 or opcode & 0xc7 == 0xc0
         if opcode == 0xed and memory[(cpu.pc + 1) & 0xffff] in (0x45, 0x4d):
             is_return = True
+        allow_caller_pop = (is_return and stack == process_end and
+                            return_word == 0xb000)
         try:
             cycles += cpu.step()
         except (NotImplementedError, IndexError) as exc:
             raise NativeProbeBlocked('native instruction not supported by probe') from exc
+        finally:
+            allow_caller_pop = False
         returned = (cpu.pc == 0xb000 and is_return and
                     stack == process_end and return_word == 0xb000 and
                     cpu.sp == process_end + 2)
