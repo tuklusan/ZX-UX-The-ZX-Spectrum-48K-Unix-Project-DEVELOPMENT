@@ -79,6 +79,35 @@ class NativeDifferential(unittest.TestCase):
         self.assertEqual(result['checked_exits'], 12)
         self.assertTrue(result['bounded_exit_states_match'])
 
+    def test_truncated_immediate_and_prefix_cannot_fetch_zero_filled_bss(self):
+        for emitted in (0x3e, 0xdd, 0xed):
+            with self.subTest(opcode=hex(emitted)):
+                obj = ras.assemble_text(
+                    ('    section text\n    global start\nstart:\n'
+                     f'    db {emitted}\n'
+                     '    section bss\n    ds 8\n'),
+                    'native-truncated-fetch.s')
+                native = rld.link([rld.Obj(obj, 'native-truncated-fetch.sso')], [],
+                                  entry='start', stack=16)[0]
+                with self.assertRaisesRegex(NativeProbeBlocked,
+                                            'instruction fetch outside linked image'):
+                    compare_native_probes(native, native,
+                                          bases=(0x6000,), flags=(0,), limit=8)
+
+    def test_normal_data_reads_from_bss_are_not_instruction_fetches(self):
+        source = ('    section text\n    global start\nstart:\n'
+                  '    ld hl,slot\n    ld a,(hl)\n    ret\n'
+                  '    section bss\nslot:\n    defs 1\n')
+        obj = ras.assemble_text(source, 'native-bss-data-read.s')
+        native = rld.link([rld.Obj(obj, 'native-bss-data-read.sso')], [],
+                          entry='start', stack=16)[0]
+        # Valid zero-initialized BSS reads remain allowed: only code fetches
+        # must stay within the linked instruction image.
+        result = compare_native_probes(native, native,
+                                       bases=(0x6000,), flags=(0,), limit=16)
+        self.assertTrue(result['bounded_exit_states_match'])
+        self.assertEqual(result['checked_exits'], 1)
+
     def test_invalid_native_location_or_arguments_are_rejected(self):
         native = link(('ret',))
         with self.assertRaisesRegex(NativeProbeBlocked, 'outside bounded'):

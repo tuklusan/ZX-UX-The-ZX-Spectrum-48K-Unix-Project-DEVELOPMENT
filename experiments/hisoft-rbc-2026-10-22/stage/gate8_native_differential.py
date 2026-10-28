@@ -79,6 +79,23 @@ def _run(payload: bytes, base: int, flags: int, limit: int, *,
 
     cpu = Z80CPU(read_byte, write_byte, read_port=read_port,
                  write_port=write_port)
+    # Instruction prefixes and immediate operands use the same memory bus as
+    # ordinary LD (HL) reads. Check the two CPU instruction-fetch paths, not
+    # all RAM reads: valid programs may still load BSS and Spectrum variables.
+    # Otherwise a truncated opcode can borrow zero-filled BSS as executable
+    # bytes and appear to have meaningful native behavior.
+    fetch_opcode = cpu._fetch_byte
+    fetch_operand = cpu._read_operand_byte
+
+    def bounded_fetch(fetch):
+        def checked():
+            if not first <= cpu.pc < last:
+                raise NativeProbeBlocked('native instruction fetch outside linked image')
+            return fetch()
+        return checked
+
+    cpu._fetch_byte = bounded_fetch(fetch_opcode)
+    cpu._read_operand_byte = bounded_fetch(fetch_operand)
     cpu.pc = first + parsed['entry']
     cpu.sp = process_end
     cpu.f = flags
