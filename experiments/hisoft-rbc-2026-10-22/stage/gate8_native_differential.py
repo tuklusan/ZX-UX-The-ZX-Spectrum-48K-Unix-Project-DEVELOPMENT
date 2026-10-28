@@ -85,13 +85,15 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
             cycles += cpu.step()
         except (NotImplementedError, IndexError) as exc:
             raise NativeProbeBlocked('native instruction not supported by probe') from exc
-        # SP must stay within the linked allocation. The only permitted
-        # excursion above it is the caller's two-byte RET consumption.
-        if not process_end - parsed['stack'] <= cpu.sp <= process_end + 2:
-            raise NativeProbeBlocked('native execution exceeded declared stack or caller stack')
         returned = (cpu.pc == 0xb000 and is_return and
                     stack == process_end and return_word == 0xb000 and
                     cpu.sp == process_end + 2)
+        # Only a witnessed return may consume the caller's two-byte word.
+        # Letting other opcodes temporarily borrow it permits out-of-process
+        # stack access followed by a forged restoration of SP.
+        if not (process_end - parsed['stack'] <= cpu.sp <= process_end or
+                returned):
+            raise NativeProbeBlocked('native execution exceeded declared stack or caller stack')
     if returned:
         return cpu.capture_state(), cycles, tuple(writes), tuple(ports)
     raise NativeProbeBlocked('bounded native execution did not return')

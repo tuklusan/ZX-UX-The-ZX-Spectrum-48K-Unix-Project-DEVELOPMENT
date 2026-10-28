@@ -8,7 +8,7 @@ sys.path[:0] = [str(Path(__file__).resolve().parents[1] / 'stage'),
                 str(ROOT / 'src/zx-ux-sdk')]
 import ras
 import rld
-from gate8_native_differential import _run, compare_native_probes
+from gate8_native_differential import _run, compare_native_probes, NativeProbeBlocked
 
 
 def native_stack_program(stack=8, bss=0):
@@ -56,6 +56,21 @@ class ProcessStackPlacement(unittest.TestCase):
         self.assertFalse(report['native_behavior_verified'])
         self.assertNotEqual(_run(original, 0x6000, 0, 32)[2],
                             _run(candidate, 0x6000, 0, 32)[2])
+
+    def test_guest_cannot_borrow_caller_return_space_then_restore_sp(self):
+        base = 0x6000
+        stack = 16
+        code_bytes = 7  # two three-byte LD SP instructions and RET
+        top = base + code_bytes + stack
+        source = ('    section text\n    global start\nstart:\n'
+                  f'    ld sp,{top + 2}\n    ld sp,{top}\n    ret\n')
+        obj = ras.assemble_text(source, 'native-sp-caller-escape.s')
+        native = rld.link([rld.Obj(obj, 'native-sp-caller-escape.sso')], [],
+                          entry='start', stack=stack)[0]
+        self.assertEqual(len(rld.parse_ssx(native)['image']), code_bytes)
+        with self.assertRaisesRegex(NativeProbeBlocked, 'declared stack'):
+            compare_native_probes(native, native,
+                                  bases=(base,), flags=(0,), limit=16)
 
     def test_two_candidates_still_match_at_relocated_stack_addresses(self):
         native = native_stack_program(stack=8, bss=12)
