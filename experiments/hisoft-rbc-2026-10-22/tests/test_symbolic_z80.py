@@ -47,6 +47,29 @@ class SymbolicTests(unittest.TestCase):
         p.instruction('ret')
         self.assertIn('ld\ta, 1', p.assembly())
 
+    def test_exported_entry_must_anchor_executable_instruction(self):
+        # Resource bytes can contain Z80 opcode values; they are not typed
+        # executable entry points, even if the linker can name their offset.
+        for kind in ('data', 'bss', 'binary', 'trailing'):
+            with self.subTest(kind=kind):
+                p = SymbolicProgram()
+                if kind in ('data', 'bss'):
+                    p.section(kind)
+                p.label('start', entry=True)
+                if kind == 'data' or kind == 'binary':
+                    p.binary(b'\xc9')
+                elif kind == 'bss':
+                    p.reserve(1)
+                with self.assertRaisesRegex(SymbolicError,
+                                            'exported entry must name executable text'):
+                    p.assembly()
+        p = SymbolicProgram()
+        p.label('start', entry=True)
+        p.label('alias', entry=True)
+        p.instruction('ret')
+        assembly = p.assembly()
+        self.assertIn('start:\nalias:\n    ret', assembly)
+
     def test_symbolic_entries_and_data_are_preserved(self):
         p = self.example()
         text = p.assembly()

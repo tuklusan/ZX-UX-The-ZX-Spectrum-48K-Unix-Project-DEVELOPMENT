@@ -101,6 +101,20 @@ class SymbolicProgram:
         defined = {n.value.lower() for n in self.nodes if n.kind == "label"}
         if any(n.lower() not in defined for n in self.entries):
             raise SymbolicError("exported entry not defined")
+        # An exported entry must name executable code, never a resource byte,
+        # an empty trailing label or a DATA/BSS address. Adjacent labels may
+        # legitimately share the same first instruction.
+        exported = {name.lower() for name in self.entries}
+        for index, node in enumerate(self.nodes):
+            if node.kind != "label" or node.value.lower() not in exported:
+                continue
+            following = index + 1
+            while following < len(self.nodes) and self.nodes[following].kind == "label":
+                following += 1
+            if (node.section != "text" or following == len(self.nodes) or
+                    self.nodes[following].section != "text" or
+                    self.nodes[following].kind != "instruction"):
+                raise SymbolicError("exported entry must name executable text")
         # Require monotonic sections. Moving source-level data across a
         # control-flow boundary would change label meanings.
         ranks = [_SECTIONS.index(n.section) for n in self.nodes]
