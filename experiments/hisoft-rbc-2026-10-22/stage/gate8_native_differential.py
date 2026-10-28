@@ -36,6 +36,8 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
     ports = []
 
     def write_byte(address: int, value: int) -> None:
+        if not 0x4000 <= address <= 0xffff:
+            raise NativeProbeBlocked('native execution attempted ROM write')
         writes.append((address, value))
         memory[address] = value
 
