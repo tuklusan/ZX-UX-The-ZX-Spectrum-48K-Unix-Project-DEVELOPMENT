@@ -35,6 +35,13 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
     writes = []
     ports = []
 
+    def read_byte(address: int) -> int:
+        # A zero-filled probe buffer is not the original 48K ROM. Refuse
+        # ROM reads rather than claiming equivalence for invented contents.
+        if not 0x4000 <= address <= 0xffff:
+            raise NativeProbeBlocked('native execution read unmodelled ROM')
+        return memory[address]
+
     def write_byte(address: int, value: int) -> None:
         if not 0x4000 <= address <= 0xffff:
             raise NativeProbeBlocked('native execution attempted ROM write')
@@ -47,7 +54,7 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
     def write_port(address: int, value: int) -> None:
         ports.append((address, value))
 
-    cpu = Z80CPU(memory.__getitem__, write_byte, read_port=read_port,
+    cpu = Z80CPU(read_byte, write_byte, read_port=read_port,
                  write_port=write_port)
     cpu.pc = first + parsed['entry']
     cpu.sp = 0xd000
