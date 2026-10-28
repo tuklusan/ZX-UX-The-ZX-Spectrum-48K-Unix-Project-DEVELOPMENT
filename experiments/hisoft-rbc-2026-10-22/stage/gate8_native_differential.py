@@ -15,7 +15,8 @@ class NativeProbeBlocked(ValueError):
     """The finite native probe cannot establish a comparable exit."""
 
 
-def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
+def _run(payload: bytes, base: int, flags: int, limit: int, *,
+         record_external_reads: bool = False) -> tuple:
     try:
         parsed = rld.parse_ssx(payload)
     except (rld.LinkError, ValueError, TypeError, KeyError) as exc:
@@ -38,12 +39,19 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
     memory[process_end:process_end + 2] = (0xb000).to_bytes(2, 'little')
     writes = []
     ports = []
+    external_reads = []
 
     def read_byte(address: int) -> int:
         # A zero-filled probe buffer is not the original 48K ROM. Refuse
         # ROM reads rather than claiming equivalence for invented contents.
         if not 0x4000 <= address <= 0xffff:
             raise NativeProbeBlocked('native execution read unmodelled ROM')
+        # Z80CPU fetches opcodes and inline instruction operands through
+        # this same callback. Record reads outside the linked code image;
+        # their addresses remain observable even when a zero-filled RAM
+        # model returns the same byte from two different system variables.
+        if record_external_reads and not first <= address < last:
+            external_reads.append(address)
         return memory[address]
 
     def write_byte(address: int, value: int) -> None:
@@ -69,7 +77,8 @@ def _run(payload: bytes, base: int, flags: int, limit: int) -> tuple:
         if cpu.pc == 0xb000:
             if cpu.sp != process_end + 2 or not returned:
                 raise NativeProbeBlocked('process did not return through caller stack')
-            return cpu.capture_state(), cycles, tuple(writes), tuple(ports)
+            result = cpu.capture_state(), cycles, tuple(writes), tuple(ports)
+            return result + (tuple(external_reads),) if record_external_reads else result
         if not first <= cpu.pc < last:
             raise NativeProbeBlocked('execution escaped the native code image')
         # An arbitrary JP with SP set to its final value is not a return.
@@ -106,13 +115,21 @@ def _relative_stack_state(observed: tuple, parsed: dict, base: int) -> tuple:
     stack writes are normalized relative to that extent, but every other Z80
     register, clock, I/O and absolute memory write stays observable.
     """
-    cpu, cycles, writes, ports = observed
+    cpu, cycles, writes, ports, *reads = observed
     top = base + len(parsed['image']) + parsed['bss'] + parsed['stack']
     bottom = top - parsed['stack']
     normalized_writes = tuple((('stack', address - top) if bottom <= address < top
                                else ('absolute', address), value)
                               for address, value in writes)
-    return replace(cpu, sp=cpu.sp - top), cycles, normalized_writes, ports
+    if not reads:
+        return replace(cpu, sp=cpu.sp - top), cycles, normalized_writes, ports
+    # The loader relocates the guest stack with the process extent. Guest
+    # reads from that region have the same meaning at either native size;
+    # all other RAM reads retain their absolute addresses in the trace.
+    normalized_reads = tuple((('stack', address - top) if bottom <= address <= top + 1
+                              else ('absolute', address))
+                             for address in reads[0])
+    return replace(cpu, sp=cpu.sp - top), cycles, normalized_writes, ports, normalized_reads
 
 
 def compare_native_probes(plain: bytes, candidate: bytes, *,
@@ -142,13 +159,16 @@ def compare_native_probes(plain: bytes, candidate: bytes, *,
             if type(initial_flags) is not int or not 0 <= initial_flags <= 255:
                 raise NativeProbeBlocked('invalid initial Z80 flags')
             before = _relative_stack_state(
-                _run(plain, base, initial_flags, limit), original_layout, base)
+                _run(plain, base, initial_flags, limit, record_external_reads=True),
+                original_layout, base)
             after = _relative_stack_state(
-                _run(candidate, base, initial_flags, limit), candidate_layout, base)
+                _run(candidate, base, initial_flags, limit, record_external_reads=True),
+                candidate_layout, base)
             checked += 1
             if before != after:
                 changed = tuple(name for name, a, b in zip(
-                    ('processor_state', 't_states', 'memory_writes', 'port_writes'),
+                    ('processor_state', 't_states', 'memory_writes', 'port_writes',
+                     'external_memory_reads'),
                     before, after) if a != b)
                 mismatches.append({'base': base, 'flags': initial_flags,
                                    'changed': changed})
