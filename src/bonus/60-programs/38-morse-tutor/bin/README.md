@@ -1,8 +1,11 @@
-# 38-morse-tutor: RBC Round 2
+Native Z80 source coverage is incomplete; compilation is blocked.
 
-Independent original BAS and tokenized TZX results using the same RBC revision.
+Original BASIC: `38-morse-tutor.bas`; SHA-256: `8f031a3a4bbe29bf91dd3ff0b3c9d70e4d5929aa74c5d30f3e1870de395ca45f`.
 
-- BAS: failed (exit 1); %RBC HIS_EXPECT_NUMBER Line: 9060 Statement: 1 Expected a numeric value in this statement. Expecting a number | -RBC 9060 DATA s,l,0,0,0,l,s,s,s,0,l,s,l,s,0,l,s,s,0,0,s,0,0,0,0,s,s,l,s,0,l,l,s,0,0,s,s,s,s,0,s,s,0,0,0,s,l,l,l,0,l,s,l,0,0,s,l,s,s,0,l,l,0,0,0,l,s,0,0,0,l,l,l,0,0,s,l,l,s,0,l,l,s,l,0,s,l,s,0,0,s,s,s,0,0,l,0,0,0,0,s,s,l,0,0,s,s,s,l,0,s,l,l,0,0,l,s,s,l,0,l,s,l,l,0,l,l,s,s,0 |           ^
-- TZX: failed (exit 1); %RBC HIS_EXPECT_NUMBER Line: 9060 Statement: 1 Expected a numeric value in this statement. Expecting a number | -RBC 9060 DATA s,l,0,0,0,l,s,s,s,0,l,s,l,s,0,l,s,s,0,0,s,0,0,0,0,s,s,l,s,0,l,l,s,0,0,s,s,s,s,0,s,s,0,0,0,s,l,l,l,0,l,s,l,0,0,s,l,s,s,0,l,l,0,0,0,l,s,0,0,0,l,l,l,0,0,s,l,l,s,0,l,l,s,l,0,s,l,s,0,0,s,s,s,0,0,l,0,0,0,0,s,s,l,0,0,s,s,s,l,0,s,l,l,0,0,l,s,s,l,0,l,s,l,l,0,l,l,s,s,0 |           ^
-- Comparison: unavailable; at least one path failed or fidelity could not be proved
+Original tape: `38-morse-tutor.tzx`; SHA-256: `cce431a4b92016d3da276c538f11fe6712ac1f4d10f8055119c74c841fe7a142`. Independent TZX extraction, strict ASCII conversion, token round-trip, and BAS/TZX line comparison succeeded.
 
+- BAS compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: unresolved compiler bytes extend beyond native runtime`
+
+- TZX compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: unresolved compiler bytes extend beyond native runtime`
+
+No runnable native SSX is included. The default limit is 14,000 bytes; a successful assembler/linker alone does not prove execution.

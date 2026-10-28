@@ -1,8 +1,13 @@
-# 20-ambush: RBC Round 2
+Native program is too large for the 14,000-byte loader limit.
 
-Independent original BAS and tokenized TZX results using the same RBC revision.
+Original BASIC: `20-ambush.bas`; SHA-256: `0120e802884977481127ce5f2ec21aa323ff14c170356b44b7caa1cf6945367e`.
 
-- BAS: failed (exit 1); %RBC RBC_USR_MACHINE_CODE Line: 615 Statement: 4 Executable USR machine-code calls are prohibited in ZX-UX BASIC programs. ZX-UX memory check stopped line 615: USR raw_machine_code_address. 2 blocked operation(s); use --memory-policy review only for isolated tests | -RBC  615 FOR x=0 TO 7: FOR y=1 TO 9: READ a: POKE USR CHR$ (143+y)+x,a: NEXT y: NEXT x |                                                    ^
-- TZX: failed (exit 1); %RBC RBC_USR_MACHINE_CODE Line: 615 Statement: 4 Executable USR machine-code calls are prohibited in ZX-UX BASIC programs. ZX-UX memory check stopped line 615: USR raw_machine_code_address. 2 blocked operation(s); use --memory-policy review only for isolated tests | -RBC  615 FOR x=0 TO 7: FOR y=1 TO 9: READ a: POKE USR CHR$ (143+y)+x,a: NEXT y: NEXT x |                                                    ^
-- Comparison: unavailable; at least one path failed or fidelity could not be proved
+Original tape: `20-ambush.tzx`; SHA-256: `d5f05e24af01297db1c85909b433c7fe18f3465f4e79767f3c13b77a07aa7809`. Independent TZX extraction, strict ASCII conversion, token round-trip, and BAS/TZX line comparison succeeded.
 
+- BAS compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: native source baseline exceeds default memory limit: file=13911, image=12159, bss=2227, stack=384, total=14770, limit=14000`
+
+- TZX compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: native source baseline exceeds default memory limit: file=13911, image=12159, bss=2227, stack=384, total=14770, limit=14000`
+
+Measured link values from the failing baseline: file 13911, image 12159, BSS 2227, stack 384, total 14770 bytes; permitted maximum 14000 bytes. These are diagnostics, not a published executable.
+
+No runnable native SSX is included. The default limit is 14,000 bytes; a successful assembler/linker alone does not prove execution.

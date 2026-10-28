@@ -1,8 +1,13 @@
-# 21-numbers: RBC Round 2
+Native program is too large for the 14,000-byte loader limit.
 
-Independent original BAS and tokenized TZX results using the same RBC revision.
+Original BASIC: `21-numbers.bas`; SHA-256: `ab2625f8b40e7b0cf98258d9c544a5d9142928906ad60bbfc67105c4666243ed`.
 
-- BAS: failed (exit 1); %RBC RBC_UDG_ADDRESS Line: 555 Statement: 2 Address of the intended user-defined graphics byte cannot be established safely. RBC E_POKE_ADDRESS: Line 555: loop has no proved NEXT | -RBC  555 FOR x=0 TO 7: POKE USR "{90}"+x,32-32*INT (x/5)+(64 AND X=1): NEXT x |                         ^
-- TZX: failed (exit 1); %RBC RBC_UDG_ADDRESS Line: 555 Statement: 2 Address of the intended user-defined graphics byte cannot be established safely. RBC E_POKE_ADDRESS: Line 555: loop has no proved NEXT | -RBC  555 FOR x=0 TO 7: POKE USR "{90}"+x,32-32*INT (x/5)+(64 AND X=1): NEXT x |                         ^
-- Comparison: unavailable; at least one path failed or fidelity could not be proved
+Original tape: `21-numbers.tzx`; SHA-256: `8e0afa7b5c7c5d1f34f8e259f03085ca414d337661eee23fbf682d423bdfeb91`. Independent TZX extraction, strict ASCII conversion, token round-trip, and BAS/TZX line comparison succeeded.
 
+- BAS compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: native memory limit exceeded: file=15146, image=13669, bss=803, stack=384, total=14856, max=14000`
+
+- TZX compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: native memory limit exceeded: file=15146, image=13669, bss=803, stack=384, total=14856, max=14000`
+
+Measured link values from the failing baseline: file 15146, image 13669, BSS 803, stack 384, total 14856 bytes; permitted maximum 14000 bytes. These are diagnostics, not a published executable.
+
+No runnable native SSX is included. The default limit is 14,000 bytes; a successful assembler/linker alone does not prove execution.
