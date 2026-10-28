@@ -199,17 +199,49 @@ class SymbolicProgram:
                        "saved_memory_bytes": orig_memory - new_memory}
 
 
+def _canonical_source_line(raw: str, *, strip_comment: bool = False) -> str:
+    """Normalize assembler syntax, never the case of quoted resource bytes.
+
+    Source mnemonics and labels are case insensitive; bytes inside an ASCII
+    DB string are not. A semicolon inside a quote is data, not a comment.
+    """
+    text = raw.strip()
+    out = []
+    quoted = None
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if quoted is not None:
+            out.append(char)
+            if char == quoted:
+                if index + 1 < len(text) and text[index + 1] == quoted:
+                    out.append(text[index + 1])
+                    index += 2
+                    continue
+                quoted = None
+        elif char in ("'", '"'):
+            quoted = char
+            out.append(char)
+        elif strip_comment and char == ';':
+            break
+        else:
+            out.append(char.lower())
+        index += 1
+    if quoted is not None:
+        raise SymbolicError('unterminated quoted Z80 source data')
+    return ''.join(out).strip()
+
+
 def _protected_lines(asm: str, entries: set[str]) -> list[str]:
     result = []
     for line in asm.splitlines():
-        s = line.strip()
-        lower = s.lower()
-        if lower.startswith(("db ", "dw ", "ds ", "section ", "global ")):
-            result.append(lower)
-        elif s.endswith(":"):
+        normalized = _canonical_source_line(line)
+        if normalized.startswith(("db ", "dw ", "ds ", "section ", "global ")):
+            result.append(normalized)
+        elif normalized.endswith(":"):
             # A private branch target or address-table label is as important
             # as a public entry. Never infer reachability from exports alone.
-            result.append(lower)
+            result.append(normalized)
     return result
 
 
@@ -217,7 +249,7 @@ def _resource_barriers(assembly: str) -> tuple[str, ...]:
     """Keep each code run on its original side of a protected resource."""
     barriers = []
     for line in assembly.splitlines():
-        statement = line.partition(";")[0].strip().lower()
+        statement = _canonical_source_line(line, strip_comment=True)
         if not statement:
             continue
         opcode = statement.split(None, 1)[0]
@@ -250,7 +282,7 @@ def _check_optimizer_output(assembly: str) -> None:
     """
     section = "text"
     for line in assembly.splitlines():
-        statement = line.partition(";")[0].strip().lower()
+        statement = _canonical_source_line(line, strip_comment=True)
         if not statement:
             continue
         words = statement.split(None, 1)
