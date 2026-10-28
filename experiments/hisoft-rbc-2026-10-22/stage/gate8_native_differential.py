@@ -186,14 +186,19 @@ def compare_native_probes(plain: bytes, candidate: bytes, *,
         candidate_layout = rld.parse_ssx(candidate)
     except (rld.LinkError, ValueError, TypeError, KeyError) as exc:
         raise NativeProbeBlocked('invalid native input') from exc
+    # Multiple identical bases/flags are not independent native checks.
+    # Validate the complete requested matrix before running any candidate,
+    # so a repeated case cannot inflate checked_exits or disguise coverage.
+    if any(type(base) is not int for base in bases):
+        raise NativeProbeBlocked('invalid native process base')
+    if any(type(f) is not int or not 0 <= f <= 255 for f in flags):
+        raise NativeProbeBlocked('invalid initial Z80 flags')
+    if len(set(bases)) != len(bases) or len(set(flags)) != len(flags):
+        raise NativeProbeBlocked('repeated native process base or initial Z80 flags')
     checked = 0
     mismatches = []
     for base in bases:
-        if type(base) is not int:
-            raise NativeProbeBlocked('invalid native process base')
         for initial_flags in flags:
-            if type(initial_flags) is not int or not 0 <= initial_flags <= 255:
-                raise NativeProbeBlocked('invalid initial Z80 flags')
             before = _relative_stack_state(
                 _run(plain, base, initial_flags, limit, record_external_reads=True),
                 original_layout, base)

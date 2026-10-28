@@ -117,6 +117,20 @@ class NativeDifferential(unittest.TestCase):
         with self.assertRaisesRegex(NativeProbeBlocked, 'invalid bounded'):
             compare_native_probes(native, native, limit=0)
 
+    def test_repeated_probe_inputs_cannot_inflate_independent_base_count(self):
+        native = link(('ret',))
+        for matrix in ({'bases': (0x6000, 0x6000)},
+                       {'bases': [0x6000, 0x6000]},
+                       {'flags': (0, 0)},
+                       {'flags': [0, 0]}):
+            with self.subTest(matrix=matrix):
+                with self.assertRaisesRegex(NativeProbeBlocked, 'repeated'):
+                    compare_native_probes(native, native, **matrix)
+        with self.assertRaisesRegex(NativeProbeBlocked, 'invalid'):
+            compare_native_probes(native, native, bases=(0x6000, True))
+        with self.assertRaisesRegex(NativeProbeBlocked, 'invalid'):
+            compare_native_probes(native, native, flags=(0, 1.0))
+
     def test_exiting_without_stack_return_fails_closed(self):
         jump = link(('jp 45056',))
         with self.assertRaisesRegex(NativeProbeBlocked, 'caller stack'):
