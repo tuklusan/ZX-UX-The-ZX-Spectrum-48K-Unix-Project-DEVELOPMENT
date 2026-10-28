@@ -24,10 +24,20 @@ class Emission:
     producer_pcs: tuple[int, ...] | None = None
 
 
+@dataclass(frozen=True)
+class CapturedRuntime:
+    """Original Z80-emitter writes retained before source-type assignment."""
+    number: int
+    start: int
+    end: int
+    writes: tuple
+
+
 @dataclass
 class Capture:
     events: list[Emission] = field(default_factory=list)
     runtime_traces: list[dict] = field(default_factory=list)
+    runtime_sources: list[CapturedRuntime] = field(default_factory=list)
 
     def record(self, compiler, position, kind, source, symbol_offset=None, source_site=None):
         if not compiler.storing:
@@ -357,6 +367,8 @@ def install(compiler_module):
                     if tracing:
                         report = source_trace.inspect(pc, end, bytes(self.far[pc:end]))
                         report['routine'] = n
+                        trace.runtime_sources.append(CapturedRuntime(
+                            n, pc, end, tuple(source_trace.writes)))
                         provider = getattr(self, '_zxux_typed_runtime_source', None)
                         if provider is not None:
                             if not report['fully_observed']:

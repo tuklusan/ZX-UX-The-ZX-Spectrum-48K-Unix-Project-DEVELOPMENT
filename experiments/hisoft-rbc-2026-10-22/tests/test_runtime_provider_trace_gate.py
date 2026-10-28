@@ -1,5 +1,6 @@
 """A typed runtime provider must not conceal unobserved Z80 staging writes."""
 from pathlib import Path
+from dataclasses import replace
 import sys
 import types
 import unittest
@@ -8,6 +9,8 @@ STAGE = Path(__file__).resolve().parents[1] / 'stage'
 sys.path.insert(0, str(STAGE))
 from runtime_typed_source import RuntimeStatement
 from symbolic_capture import install
+from typed_runtime_bridge import (witnesses_from_compiler_captures,
+                                  RuntimeBridgeError, splice_three_runtime_sources)
 
 
 class CPU:
@@ -117,6 +120,60 @@ class RuntimeProviderTraceTests(unittest.TestCase):
         self.assertEqual(c._zxux_capture.events[0].kind, 'runtime-opaque')
         self.assertFalse(c._zxux_capture.runtime_traces[0]['fully_observed'])
         self.assertFalse(c._zxux_capture.audit(bytes(c.m.far[:1]))['complete_byte_trace'])
+
+    def test_original_captured_writes_feed_three_pass_native_source(self):
+        import ras
+        import rld
+        from z80asm import asm
+        from typed_whole_pipeline import (verify_and_build_with_runtime_sources,
+                                          link_source_pair)
+        bases = (0x6000, 0x6100, 0x6200)
+        captures = []
+        groups = []
+        images = []
+        for base in bases:
+            c = Compiler()
+            c.m.run_emitter(7, 0, 0, base)
+            captures.append(c._zxux_capture)
+            groups.append(tuple(c._zxux_capture.events))
+            images.append(bytes(c.m.far[:1]))
+        statement = RuntimeStatement(0, 0x7000, 'instruction', 'ret')
+        sources = (((statement,),),) * 3
+        witnesses, reports = witnesses_from_compiler_captures(captures, sources)
+        self.assertEqual(witnesses[0][0].writes[0].emitter_pc, 0x7000)
+        typed, report = splice_three_runtime_sources(
+            groups, images, bases, witnesses, asm, observed_traces=reports)
+        self.assertTrue(report['typed_runtime_source_spliced'])
+        self.assertEqual(typed[0][0].source, 'ret')
+        verified = verify_and_build_with_runtime_sources(
+            groups, images, bases, [1] * 3, [0] * 3, asm,
+            witnesses, reports)
+        plain, candidate, sizes = link_source_pair(verified, ras, rld,
+                                                   lambda text: text)
+        self.assertEqual(plain, candidate)
+        self.assertEqual(rld.parse_ssx(plain)['image'], b'\xc9')
+        self.assertTrue(sizes['native_links_verified'])
+        self.assertFalse(sizes['native_behavior_verified'])
+
+        changed = replace(captures[1].runtime_sources[0], writes=())
+        captures[1].runtime_sources[0] = changed
+        with self.assertRaisesRegex(RuntimeBridgeError, 'trace'):
+            witnesses_from_compiler_captures(captures, sources)
+        with self.assertRaisesRegex(RuntimeBridgeError, 'missing typed statements'):
+            witnesses_from_compiler_captures(captures[:2] + [captures[2]],
+                                             [sources[0], (), sources[2]])
+
+    def test_runtime_capture_cannot_type_an_unobserved_writer(self):
+        captures = []
+        for base in (0x6000, 0x6100, 0x6200):
+            c = Compiler()
+            c.m.extra = 'outside' if base == 0x6100 else None
+            c.m.run_emitter(7, 0, 0, base)
+            captures.append(c._zxux_capture)
+        statement = RuntimeStatement(0, 0x7000, 'instruction', 'ret')
+        with self.assertRaisesRegex(RuntimeBridgeError, 'trace'):
+            witnesses_from_compiler_captures(
+                captures, (((statement,),),) * 3)
 
 
 if __name__ == '__main__':

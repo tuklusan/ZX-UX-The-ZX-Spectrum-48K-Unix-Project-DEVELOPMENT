@@ -65,6 +65,39 @@ def _compare_writer_trace(witness: RuntimeWitness, report: dict) -> None:
         raise RuntimeBridgeError('runtime witness differs from original Z80 writer trace')
 
 
+def witnesses_from_compiler_captures(captures, source_statements):
+    """Connect original Z80 write captures with separately supplied statements.
+
+    The source statements are not reconstructed from output bytes. The
+    compiler's own runtime trace must agree with every retained writer PC.
+    This prepares the existing strict three-pass bridge, not a link pass.
+    """
+    from symbolic_capture import Capture, CapturedRuntime
+    if (len(captures) != 3 or len(source_statements) != 3 or
+            any(not isinstance(c, Capture) for c in captures)):
+        raise RuntimeBridgeError('three original compiler captures required')
+    witness_groups = []
+    trace_groups = []
+    for capture, source_group in zip(captures, source_statements):
+        sources = tuple(source_group)
+        records = tuple(capture.runtime_sources)
+        reports = tuple(capture.runtime_traces)
+        if not records or len(records) != len(reports) or len(sources) != len(records):
+            raise RuntimeBridgeError('original runtime capture has missing typed statements')
+        witnesses = []
+        for record, statements, report in zip(records, sources, reports):
+            if (not isinstance(record, CapturedRuntime) or
+                    not isinstance(statements, tuple) or not statements):
+                raise RuntimeBridgeError('original runtime capture has invalid statements')
+            witness = RuntimeWitness(record.number, record.start,
+                                     record.end, record.writes, statements)
+            _compare_writer_trace(witness, report)
+            witnesses.append(witness)
+        witness_groups.append(tuple(witnesses))
+        trace_groups.append(reports)
+    return tuple(witness_groups), tuple(trace_groups)
+
+
 def splice_three_runtime_sources(events, images, bases, witnesses, assembler,
                                  *, observed_traces):
     """Replace ALL runtime-opaque spans only after a three-base source proof.
