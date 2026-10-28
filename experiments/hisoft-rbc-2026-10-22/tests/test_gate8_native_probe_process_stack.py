@@ -87,6 +87,20 @@ class ProcessStackPlacement(unittest.TestCase):
                     compare_native_probes(native, native,
                                           bases=(0x6000,), flags=(0,), limit=16)
 
+    def test_guest_cannot_overwrite_caller_return_word(self):
+        for instructions in (('ld hl,0', 'add hl,sp', 'ld (hl),a', 'ret'),
+                             ('ld hl,1', 'add hl,sp', 'ld (hl),a', 'ret')):
+            with self.subTest(instructions=instructions):
+                source = ('    section text\n    global start\nstart:\n'
+                          + ''.join('    ' + op + '\n' for op in instructions))
+                obj = ras.assemble_text(source, 'native-caller-write.s')
+                native = rld.link([rld.Obj(obj, 'native-caller-write.sso')], [],
+                                  entry='start', stack=16)[0]
+                with self.assertRaisesRegex(NativeProbeBlocked,
+                                            'wrote caller stack outside process'):
+                    compare_native_probes(native, native,
+                                          bases=(0x6000,), flags=(0,), limit=16)
+
     def test_terminal_ret_may_consume_only_caller_return_word(self):
         source = ('    section text\n    global start\nstart:\n'
                   '    call inner\n    ret\ninner:\n    ret\n')

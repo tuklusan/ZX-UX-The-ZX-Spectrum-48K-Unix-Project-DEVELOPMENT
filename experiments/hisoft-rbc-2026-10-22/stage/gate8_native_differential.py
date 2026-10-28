@@ -64,6 +64,10 @@ def _run(payload: bytes, base: int, flags: int, limit: int, *,
     def write_byte(address: int, value: int) -> None:
         if not 0x4000 <= address <= 0xffff:
             raise NativeProbeBlocked('native execution attempted ROM write')
+        # The kernel owns the return word immediately after process stack.
+        # No instruction, including an eventual RET, may rewrite it.
+        if process_end <= address < process_end + 2:
+            raise NativeProbeBlocked('native execution wrote caller stack outside process')
         writes.append((address, value))
         memory[address] = value
 
