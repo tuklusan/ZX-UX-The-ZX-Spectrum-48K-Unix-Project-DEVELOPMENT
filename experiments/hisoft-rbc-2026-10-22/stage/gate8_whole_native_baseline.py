@@ -22,6 +22,7 @@ from symbolic_relative_branches import inspect_relative_branches, verify_three_r
 from gate8_native_runtime_combined import (
     _original_sections, _runtime_spans, _replacement_listing, _vendor_listing)
 from gate8_runtime_handoff import verify_three_runtime_handoffs
+from native_sysvars_rt import PEEK_RT, POKE_RT, BSS_BYTES, _native_peek, _native_poke
 
 
 class WholeBaselineError(ValueError):
@@ -39,8 +40,28 @@ def _runtime_listing(code, rom, image, base, spans, replacements, settings):
     entry_aliases = {}
     for n, first, last in selected:
         if n in replacements:
-            lines, _ = _replacement_listing(n, first, base, settings,
-                                             image[first:last])
+            if n in (PEEK_RT, POKE_RT):
+                from z80asm import asm
+                if (not isinstance(settings, dict) or
+                        any(key not in settings for key in
+                            ('sysvar_offset', 'process_total', 'font_alias'))):
+                    raise WholeBaselineError('native sysvar runtime layout has no source witness')
+                entry = 'rbc_peek_entry' if n == PEEK_RT else 'rbc_poke_entry'
+                fn = _native_peek if n == PEEK_RT else _native_poke
+                raw, source = fn(
+                    asm, settings['sysvar_offset'], base,
+                    settings['process_total'], settings['font_alias'], first,
+                    whole_program_symbols={
+                        'entry_label': entry,
+                        'bss_label': 'rbc_sysvar_storage',
+                        'end_label': 'rbc_process_end',
+                        'start_label': 'start'})
+                if raw != image[first:last]:
+                    raise WholeBaselineError('symbolic native sysvar source differs from original bytes')
+                lines = source.splitlines()
+            else:
+                lines, _ = _replacement_listing(n, first, base, settings,
+                                                 image[first:last])
             labels = [line.strip()[:-1] for line in lines
                       if line.strip().endswith('_entry:')]
             if len(labels) != 1 or labels[0] in entry_aliases:
@@ -113,6 +134,19 @@ def _source_program(events, image, base, text_end, bss, assembler,
             return f'{anchor}+{offset}'
         return 'start' if address == 0 else f'source_{address:04x}'
     marks = targets | {0} | {owner for owner, _ in interior_words.values()}
+    native_bss_labels = {}
+    if any(n in (PEEK_RT, POKE_RT) for n, _, _ in selected):
+        if (not isinstance(settings, dict) or
+                type(settings.get('sysvar_offset')) is not int or
+                type(settings.get('process_total')) is not int):
+            raise WholeBaselineError('native sysvar storage positions not independently typed')
+        bss_start = settings['sysvar_offset']
+        process_end = settings['process_total']
+        if not (len(image) <= bss_start and
+                bss_start + BSS_BYTES <= process_end <= len(image) + bss):
+            raise WholeBaselineError('native sysvar storage exceeds compiler BSS')
+        native_bss_labels = {bss_start: 'rbc_sysvar_storage',
+                             process_end: 'rbc_process_end'}
     program = SymbolicProgram()
     actual = 0
     runtime_inserted = False
@@ -194,11 +228,18 @@ def _source_program(events, image, base, text_end, bss, assembler,
     if bss:
         program.section('bss')
         last = len(image)
-        for offset in sorted(t for t in marks if len(image) <= t < len(image) + bss):
+        bounds = sorted(t for t in marks | set(native_bss_labels)
+                        if len(image) <= t < len(image) + bss)
+        for offset in bounds:
             program.reserve(offset - last)
-            program.label(name(offset))
+            if offset in marks:
+                program.label(name(offset))
+            if offset in native_bss_labels:
+                program.label(native_bss_labels[offset])
             last = offset
         program.reserve(len(image) + bss - last)
+        if len(image) + bss in native_bss_labels:
+            program.label(native_bss_labels[len(image) + bss])
     source = program.assembly()
     return source, {
         'source_emitter_instructions': mapping.executable_instruction_count,

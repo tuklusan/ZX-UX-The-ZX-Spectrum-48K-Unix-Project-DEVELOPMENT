@@ -22,7 +22,7 @@ BASES = (0x6000, 0x7000, 0x8000)
 def native_pair(fn, prefix, tail, extra_bss, base, font_alias=None):
     length = len(fn(asm, 0, 0, font_alias=font_alias))
     bss = prefix + length + tail
-    total = bss + BSS_BYTES + extra_bss
+    total = bss + BSS_BYTES
     raw, body = fn(asm, bss, base, total, font_alias, prefix,
                    whole_program_symbols=SYMBOLS)
     source = ('    section text\n    global start\nstart:\n' +
@@ -31,8 +31,8 @@ def native_pair(fn, prefix, tail, extra_bss, base, font_alias=None):
                '\n' if tail else '') +
               '    section bss\nrbc_sysvar_storage:\n' +
               f'    ds {BSS_BYTES}\n' +
-              (f'    ds {extra_bss}\n' if extra_bss else '') +
-              'rbc_process_end:\n')
+              'rbc_process_end:\n' +
+              (f'    ds {extra_bss}\n' if extra_bss else ''))
     obj = ras.assemble_text(source, 'rbc-sysvar-symbolic.s')
     ssx, *_ = rld.link([rld.Obj(obj, 'rbc-sysvar-symbolic.sso')], [],
                        entry='start', stack=384)
