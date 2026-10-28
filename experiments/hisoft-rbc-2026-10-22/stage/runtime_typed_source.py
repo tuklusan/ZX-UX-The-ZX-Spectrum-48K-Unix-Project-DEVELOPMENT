@@ -8,6 +8,7 @@ Unidentified producers and rewrites remain unresolved.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import Callable, Iterable
 
 
@@ -35,7 +36,7 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
     No byte is promoted from the completed program or a decoded binary.
     """
     from symbolic_capture import Emission
-    from symbolic_z80 import _canonical_source_line
+    from symbolic_z80 import _canonical_source_line, _INSTRUCTIONS
 
     if (not isinstance(image, bytes) or not isinstance(start, int) or
             not isinstance(end, int) or not isinstance(base, int) or
@@ -75,7 +76,8 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
         if (not isinstance(statement.emitter_pc, int) or
                 not 0 <= statement.emitter_pc <= 0xffff or
                 not isinstance(statement.source, str) or
-                not statement.source.strip() or '\n' in statement.source):
+                not statement.source.strip() or not statement.source.isascii() or
+                any(ord(c) < 32 or ord(c) == 127 for c in statement.source)):
             raise RuntimeSourceError('runtime source location or statement invalid')
         # A semicolon inside a quoted data literal is a byte, not a comment.
         # The source provider may not slip untyped assembly after a comment.
@@ -91,22 +93,30 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
         source = statement.source.strip()
         if kind not in ('instruction', 'literal', 'relocated'):
             raise RuntimeSourceError('runtime source kind not typed')
+        mnemonic = without_comment.split(None, 1)[0]
         if kind == 'literal':
-            if source.split(None, 1)[0].lower() not in ('defb', 'defw'):
+            if mnemonic not in ('defb', 'defw'):
                 raise RuntimeSourceError('runtime literal lacks source data directive')
-        elif source.split(None, 1)[0].lower() in ('defb', 'defw'):
-            raise RuntimeSourceError('runtime source data declared executable')
+        elif mnemonic not in _INSTRUCTIONS:
+            # Assembler aliases such as DB, DW, ORG and a label definition
+            # must never become optimizer-reachable instructions merely
+            # because a supplied assembler returns matching bytes.
+            raise RuntimeSourceError('runtime executable source is not a Z80 instruction')
         if kind == 'relocated':
             offset = statement.symbol_offset
-            if (not isinstance(offset, int) or not 0 <= offset or
-                    source.count('nn') != 1):
+            operands = tuple(re.finditer(r'(?<![a-zA-Z0-9_])nn(?![a-zA-Z0-9_])',
+                                             source, flags=re.IGNORECASE))
+            if (type(offset) is not int or offset < 0 or
+                    len(operands) != 1 or '"' in source or "'" in source):
                 raise RuntimeSourceError('runtime relocated operand has no target')
             # The target may be in another emitter, BASIC DATA or the BSS.
             # Whole-program symbol resolution checks actual storage bounds.
             target = base + offset
             if target > 0xffff:
                 raise RuntimeSourceError('runtime relocation outside address space')
-            encoded_source = source.replace('nn', str(target))
+            mark = operands[0]
+            encoded_source = (source[:mark.start()] + str(target) +
+                              source[mark.end():])
         else:
             if statement.symbol_offset is not None:
                 raise RuntimeSourceError('runtime address has no relocation type')

@@ -122,6 +122,53 @@ class RuntimeTypedSources(unittest.TestCase):
                 (RuntimeStatement(0, 0x7011, 'relocated', 'jp nn', 0x10000),),
                 image, 0, 3, 0x6000, asm)
 
+    def test_data_directives_and_assembler_pseudo_ops_cannot_become_code(self):
+        # A fake source provider can return correct image bytes. Without a
+        # mnemonic check it can still disguise protected DATA as executable.
+        statements = ('db 201', 'dw 201', 'org 0', 'section text',
+                      'global start', 'defb 201', 'defw 201', 'start:')
+        for statement in statements:
+            with self.subTest(statement=statement), self.assertRaisesRegex(
+                    RuntimeSourceError, 'not a Z80 instruction'):
+                typed_runtime_events(
+                    [Write(0, 0xc9, 0x7001)],
+                    [RuntimeStatement(0, 0x7001, 'instruction', statement)],
+                    b'\xc9', 0, 1, 0x6000, lambda _: b'\xc9')
+        # Source which really declares protected data continues to work.
+        events = typed_runtime_events(
+            [Write(0, 0xc9, 0x7001)],
+            [RuntimeStatement(0, 0x7001, 'literal', 'defb 201')],
+            b'\xc9', 0, 1, 0x6000, lambda _: b'\xc9')
+        self.assertEqual(events[0].kind, 'inline-data')
+
+    def test_relocation_placeholder_is_a_distinct_source_operand(self):
+        base = 0x6000
+        image = b'\xc3\x07\x60'
+        writes = [Write(i, v, 0x7011) for i, v in enumerate(image)]
+        with self.assertRaisesRegex(RuntimeSourceError, 'has no target'):
+            typed_runtime_events(
+                writes, [RuntimeStatement(0, 0x7011, 'relocated', 'jp nn_suffix', 7)],
+                image, 0, 3, base, lambda _: image)
+        with self.assertRaisesRegex(RuntimeSourceError, 'not a Z80 instruction'):
+            typed_runtime_events(
+                writes, [RuntimeStatement(0, 0x7011, 'relocated', 'db nn', 7)],
+                image, 0, 3, base, lambda _: image)
+        with self.assertRaisesRegex(RuntimeSourceError, 'location or statement invalid'):
+            typed_runtime_events(
+                writes, [RuntimeStatement(0, 0x7011, 'relocated', 'jp nn\x00', 7)],
+                image, 0, 3, base, lambda _: image)
+        for bad in ("ld hl,'nn'", 'jp "nn"', 'jp nn,nn'):
+            with self.subTest(bad=bad), self.assertRaisesRegex(
+                    RuntimeSourceError, 'has no target'):
+                typed_runtime_events(
+                    writes, [RuntimeStatement(0, 0x7011, 'relocated', bad, 7)],
+                    image, 0, 3, base, lambda _: image)
+        events = typed_runtime_events(
+            writes, [RuntimeStatement(0, 0x7011, 'relocated', 'JP NN', 7)],
+            image, 0, 3, base,
+            lambda text: image if text == 'JP 24583' else b'')
+        self.assertEqual(events[1].symbol_offset, 7)
+
     def test_missing_duplicate_changed_and_unknown_writer_rejected(self):
         image, source, writes = fixture()
         bad = (writes[:2] + writes[3:], writes + writes[:1],
