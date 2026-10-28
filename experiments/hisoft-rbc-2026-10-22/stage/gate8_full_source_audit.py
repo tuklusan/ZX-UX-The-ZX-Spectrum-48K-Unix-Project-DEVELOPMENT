@@ -26,7 +26,10 @@ from symbolic_fragments import inspect_final_fragments, verify_three_fragment_pa
 from runtime_emitter_trace import verify_three_runtime_traces
 from symbolic_emit_sites import inspect_emit_sites, verify_three_emit_sites
 from symbolic_relative_branches import inspect_relative_branches, verify_three_relative_passes
-from typed_whole_pipeline import SourcePipelineError, link_source_pair, verify_and_build
+from typed_whole_pipeline import (SourcePipelineError, link_source_pair,
+    verify_and_build, verify_and_build_with_runtime_sources)
+from typed_runtime_bridge import (RuntimeBridgeError,
+    witnesses_from_compiler_captures)
 from gate8_runtime_source_match import verify_three_runtime_sources
 from gate8_native_runtime_combined import (RuntimeCombinedError,
     verify_three_native_runtime_regions)
@@ -36,25 +39,35 @@ from gate8_native_whole_optimizer import load_locked_optimizer, WholeOptimizerEr
 from hisoft_frontend_inputs import KNOWN_COMPILER
 
 
-def verify_full_source_native(events, results, text_ends, assembler, ras):
+def verify_full_source_native(events, results, text_ends, assembler, ras,
+                              *, runtime_witnesses=None, runtime_traces=None):
     """Attempt a real native link, recording missing typed sources honestly."""
     try:
-        source = verify_and_build(
-            events, [r.code for r in results],
-            [r.base for r in results], text_ends,
-            [r.bss for r in results], assembler)
+        images = [r.code for r in results]
+        bases = [r.base for r in results]
+        bss = [r.bss for r in results]
+        if runtime_witnesses is None and runtime_traces is None:
+            source = verify_and_build(events, images, bases, text_ends,
+                                      bss, assembler)
+        elif runtime_witnesses is not None and runtime_traces is not None:
+            source = verify_and_build_with_runtime_sources(
+                events, images, bases, text_ends, bss, assembler,
+                runtime_witnesses, runtime_traces)
+        else:
+            raise SourcePipelineError('runtime source and original trace must be paired')
         plain, _, sizes = link_source_pair(source, ras, rld, lambda text: text)
-    except (ValueError, TypeError, KeyError) as exc:
+    except (ValueError, TypeError, KeyError, AttributeError) as exc:
         return {'source_owned': False, 'native_link_verified': False,
                 'blocker': str(exc), 'native_behavior_verified': False}
     return {'source_owned': True, 'native_link_verified': True,
             'plain_sha256': hashlib.sha256(plain).hexdigest(),
             'plain_sizes': sizes['plain'],
+            'typed_runtime_bridge': source.source_report.get('runtime_source_bridge'),
             'native_behavior_verified': False}
 
 
 def run(source: Path, checkpoint: Path, frontend: Path,
-        tape: Path, rom: Path) -> dict:
+        tape: Path, rom: Path, *, original_runtime_statements=None) -> dict:
     if not (checkpoint / 'rbc.py').is_file():
         raise ValueError('reconstructed RBC checkpoint required')
     if not (frontend / 'compiler.py').is_file():
@@ -77,6 +90,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     captured_events = []
     text_endpoints = []
     runtime_layouts = []
+    original_captures = []
     original_hook = rbc.install_codegen_optimizer
 
     def passive_capture(module):
@@ -86,6 +100,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             result = parent(self, *args, **kwargs)
             if result.ok:
                 records.append(audit_result(self, result))
+                original_captures.append(self._zxux_capture)
                 captured_events.append(tuple(self._zxux_capture.events))
                 text_endpoints.append(self.data_start)
                 runtime_layouts.append({
@@ -217,8 +232,24 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             raise RuntimeError('partial typed capture was incorrectly admitted')
     import ras
     from z80asm import asm
-    whole_attempt = verify_full_source_native(
-        captured_events, observed, text_endpoints, asm, ras)
+    runtime_witnesses = None
+    original_traces = None
+    runtime_provider_error = None
+    if original_runtime_statements is not None:
+        try:
+            runtime_witnesses, original_traces = witnesses_from_compiler_captures(
+                original_captures, original_runtime_statements)
+        except (RuntimeBridgeError, ValueError, TypeError, AttributeError) as exc:
+            runtime_provider_error = str(exc)
+    if runtime_provider_error is None:
+        whole_attempt = verify_full_source_native(
+            captured_events, observed, text_endpoints, asm, ras,
+            runtime_witnesses=runtime_witnesses,
+            runtime_traces=original_traces)
+    else:
+        whole_attempt = {'source_owned': False, 'native_link_verified': False,
+                         'blocker': runtime_provider_error,
+                         'native_behavior_verified': False}
     return {
         'source_sha256': source_hash, 'source': source.name,
         'passive_capture_byte_identical': True,
