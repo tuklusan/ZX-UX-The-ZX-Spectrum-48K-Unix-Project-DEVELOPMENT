@@ -85,6 +85,31 @@ class DataSourceTests(unittest.TestCase):
                          ['direct-write'])
         self.assertEqual(c._zxux_capture.events[0].position, 0)
 
+    def test_previous_data_field_rewrite_does_not_hide_in_active_data_mode(self):
+        c = Compiler()
+        c.st_data()
+        self.assertEqual([e.kind for e in c._zxux_capture.events],
+                         ['data-source'])
+        c._zxux_in_data = True
+        # Field 0 belongs to the earlier DATA producer. Merely having a
+        # second DATA statement active does not transfer ownership.
+        c.far[c.data_start] = ord('Z')
+        self.assertEqual([e.kind for e in c._zxux_capture.events],
+                         ['data-source', 'direct-write'])
+        report = c._zxux_capture.audit(bytes(c.far[:c.vars_start]))
+        self.assertEqual(report['unresolved_direct_write_bytes'], 1)
+        self.assertFalse(report['safe_to_optimize'])
+
+    def test_current_data_field_remains_single_source_owned(self):
+        c = Compiler()
+        c.st_data()
+        c._zxux_in_data = True
+        c.vars_start = c.data_start + c.data_size + 3
+        cursor = c.data_start + c.data_size
+        c.far[cursor:cursor+1] = b'Q'
+        self.assertEqual([e.kind for e in c._zxux_capture.events],
+                         ['data-source'])
+
     def test_preexisting_data_mode_is_restored(self):
         c = Compiler()
         c._zxux_in_data = True

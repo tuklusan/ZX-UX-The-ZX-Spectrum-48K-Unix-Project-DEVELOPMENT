@@ -189,13 +189,18 @@ class TracedRAM(bytearray):
             indices = [key if key >= 0 else len(self) + key]
         if not indices:
             return
-        # Only DATA storage has its own typed source event; other writes stay visible.
+        # The DATA emitter owns only its current, forward-growing field.
+        # A later DATA statement (or a nested patch) changing an earlier
+        # field must be recorded independently, even while st_data is active.
+        # The final DATA-source event cannot account for such a mutation.
         if getattr(owner, '_zxux_in_data', False):
             lo = getattr(owner, 'data_start', None)
             hi = getattr(owner, 'vars_start', None)
+            cursor = getattr(owner, 'data_size', None)
             if (getattr(owner, 'storing_data', False) and
-                    isinstance(lo, int) and isinstance(hi, int) and
-                    all(lo <= index < hi for index in indices)):
+                    type(lo) is int and type(hi) is int and
+                    type(cursor) is int and 0 <= cursor <= hi - lo and
+                    all(lo + cursor <= index < hi for index in indices)):
                 return
         method = sys._getframe(1).f_code.co_name
         if indices != list(range(indices[0], indices[0] + len(indices))):
