@@ -122,7 +122,19 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
                 raise RuntimeSourceError('runtime address has no relocation type')
             encoded_source = source
         try:
-            encoded = bytes(assembler(encoded_source))
+            raw = assembler(encoded_source)
+            # bytes(integer) silently creates that many zero bytes; booleans
+            # and coerced elements are not independent assembled instructions.
+            if type(raw) in (int, bool):
+                raise TypeError('assembler returned a byte count, not bytes')
+            if isinstance(raw, (bytes, bytearray)):
+                encoded = bytes(raw)
+            else:
+                parts = tuple(raw)
+                if any(type(part) is not int or not 0 <= part <= 255
+                       for part in parts):
+                    raise TypeError('assembler returned non-byte elements')
+                encoded = bytes(parts)
         except (ValueError, KeyError, IndexError, TypeError, OverflowError) as exc:
             raise RuntimeSourceError('runtime source cannot be assembled') from exc
         if not encoded or cursor + len(encoded) > end:

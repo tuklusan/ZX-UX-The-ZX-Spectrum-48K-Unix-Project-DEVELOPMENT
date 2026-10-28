@@ -169,6 +169,23 @@ class RuntimeTypedSources(unittest.TestCase):
             lambda text: image if text == 'JP 24583' else b'')
         self.assertEqual(events[1].symbol_offset, 7)
 
+    def test_assembler_must_return_real_byte_values_not_length_or_bools(self):
+        # bytes(1) produces a zero byte, even though no assembler emitted it.
+        # A false typed-source witness must not acquire a code/data owner.
+        writes = (Write(0, 0, 0x7011),)
+        source = (RuntimeStatement(0, 0x7011, 'literal', 'defb 0'),)
+        for bad in (1, True, False, [True], [False], [0.0], [256], [-1]):
+            with self.subTest(raw=bad), self.assertRaisesRegex(
+                    RuntimeSourceError, 'cannot be assembled'):
+                typed_runtime_events(writes, source, b'\0', 0, 1, 0x6000,
+                                     lambda text, raw=bad: raw)
+        for good in (b'\0', bytearray(b'\0'), [0], iter((0,))):
+            with self.subTest(raw=good):
+                events = typed_runtime_events(
+                    writes, source, b'\0', 0, 1, 0x6000,
+                    lambda text, raw=good: raw)
+                self.assertEqual(events[0].kind, 'inline-data')
+
     def test_missing_duplicate_changed_and_unknown_writer_rejected(self):
         image, source, writes = fixture()
         bad = (writes[:2] + writes[3:], writes + writes[:1],
