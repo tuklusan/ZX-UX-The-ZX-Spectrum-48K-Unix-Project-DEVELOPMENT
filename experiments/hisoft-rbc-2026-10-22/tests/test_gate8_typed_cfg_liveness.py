@@ -102,6 +102,89 @@ class TypedWholeCFGTests(unittest.TestCase):
                 with self.assertRaises(TypedCFGError):
                     inspect_typed_cfg_liveness(source)
 
+    def test_source_section_rewind_and_repetition_are_not_typed(self):
+        # Native assembly may allow a fresh text section after DATA, but the
+        # typed whole-source model promises one ordered code/data/BSS layout.
+        # A second pass could otherwise assign code labels to data addresses.
+        for sections in (
+                'section text\nstart:\n ret\nsection data\n db 3\n'
+                'section text\nagain:\n ret\n',
+                'section text\nstart:\n ret\nsection text\n',
+                'section text\nstart:\n ret\nsection bss\n ds 3\n'
+                'section data\n db 4\n'):
+            with self.subTest(source=sections):
+                with self.assertRaisesRegex(TypedCFGError,
+                                            'section repeats or rewinds'):
+                    inspect_typed_cfg_liveness(sections)
+        report = inspect_typed_cfg_liveness(
+            'section text\nstart:\n ret\nsection data\n db 3\n'
+            'section bss\n ds 3\n')
+        self.assertEqual(report['instruction_count'], 1)
+
+    def test_rom_transfer_ownership_does_not_imply_callback_coverage(self):
+        for operation in ('rst $20', 'call $20', 'jp $20', 'jp 00032'):
+            source = ('section text\nglobal start\nstart:\n    '
+                      + operation + '\n'
+                      + ('    ret\n' if operation.startswith(('rst', 'call'))
+                         else '')
+                      + 'private:\n    ld a,42\n    ret\n')
+            with self.subTest(operation=operation):
+                report = inspect_typed_cfg_liveness(source)
+                self.assertEqual(report['rom_transfer_edges'], 1)
+                self.assertTrue(report['rom_callback_entries_unresolved'])
+                self.assertTrue(report['unknown_entry_reachability'])
+                self.assertEqual(report['reachable_instructions'],
+                                 report['instruction_count'])
+                self.assertLess(report['direct_cfg_reachable_instructions'],
+                                report['instruction_count'])
+                # An external ROM edge is different from a malformed local
+                # target: the latter is still recorded in unresolved edges.
+                self.assertEqual(report['unresolved_control_edges'], 0)
+                self.assertFalse(report['rewrite_safe_to_admit'])
+        closed = inspect_typed_cfg_liveness(
+            'section text\nglobal start\nstart:\n    ret\n'
+            'private:\n    nop\n    ret\n')
+        self.assertFalse(closed['rom_callback_entries_unresolved'])
+        self.assertEqual(closed['unreached_instructions'], 2)
+
+    def test_native_rst_callback_can_reenter_an_unreferenced_label(self):
+        import ras
+        import rld
+        from z80_python.cpu import Z80CPU
+        # This is a synthetic external callback, NOT the ZX 48K ROM. It
+        # proves why a source-only graph cannot assume that a RST exits or
+        # returns without entering an otherwise private instruction.
+        source = ('    section text\n    global start\nstart:\n'
+                  '    rst $20\n    ret\n'
+                  'private:\n    ld a,42\n    ret\n')
+        info_source = inspect_typed_cfg_liveness(source)
+        self.assertTrue(info_source['rom_callback_entries_unresolved'])
+        native, *_ = rld.link([rld.Obj(ras.assemble_text(source, 'rom-entry.s'),
+                                      'rom-entry.sso')], [], entry='start',
+                              stack=384)
+        parsed = rld.parse_ssx(native)
+        self.assertEqual(parsed['image'], b'\xe7\xc9\x3e\x2a\xc9')
+        for base in (0x6000, 0x7000, 0x8000):
+            with self.subTest(base=base):
+                memory = bytearray(65536)
+                memory[base:base+len(parsed['image'])] = rld.relocate(
+                    parsed['image'], parsed['relocs'], base)
+                # RST $20 enters this outside-the-program routine. The
+                # routine computes an otherwise invisible code address.
+                memory[0x20:0x24] = bytes((0x21, (base+2) & 255,
+                                          (base+2) >> 8, 0xe9))
+                memory[0xd000:0xd002] = (0xb000).to_bytes(2, 'little')
+                cpu = Z80CPU(memory.__getitem__, memory.__setitem__)
+                cpu.pc, cpu.sp = base + parsed['entry'], 0xd000
+                for _ in range(12):
+                    if cpu.pc == 0xb000:
+                        break
+                    cpu.step()
+                else:
+                    self.fail('external callback did not return')
+                self.assertEqual(cpu.a, 42)
+                self.assertEqual(cpu.sp, 0xd002)
+
     def test_jump_to_section_boundary_label_remains_unresolved(self):
         source = ('section text\nstart:\n jp boundary\n'
                   'boundary:\nsection data\nresource:\n db 7\n')
@@ -303,7 +386,10 @@ class TypedWholeCFGTests(unittest.TestCase):
             with self.subTest(transfer=transfer):
                 report = inspect_typed_cfg_liveness(source)
                 self.assertEqual(report['conditional_external_exit_sites'], 1)
-                self.assertFalse(report['unknown_entry_reachability'])
+                # RET exposes an external exit; a ROM jump also makes
+                # unlisted callback entries possible. Neither is admitted.
+                self.assertEqual(report['unknown_entry_reachability'],
+                                 transfer.startswith('jp'))
                 self.assertFalse(report['rewrite_safe_to_admit'])
         # Unconditional RET already has no source successor and all-live exit.
         report = inspect_typed_cfg_liveness(

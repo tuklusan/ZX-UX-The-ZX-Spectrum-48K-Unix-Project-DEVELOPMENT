@@ -65,6 +65,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
     if not isinstance(assembly, str) or not assembly:
         raise TypedCFGError('complete typed assembly text required')
     section = 'text'
+    last_section_rank = -1
     pending = []
     symbols = {}
     exported_symbols = set()
@@ -82,9 +83,14 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
             # defined so duplicate labels and direct branches are caught.
             for label in pending:
                 symbols[label] = None
-            section = line.split(None, 1)[1]
-            if section not in ('text', 'data', 'bss'):
+            next_section = line.split(None, 1)[1]
+            if next_section not in ('text', 'data', 'bss'):
                 raise TypedCFGError('unknown source section')
+            rank = ('text', 'data', 'bss').index(next_section)
+            if rank <= last_section_rank:
+                raise TypedCFGError('typed source section repeats or rewinds')
+            last_section_rank = rank
+            section = next_section
             pending.clear()
             barrier = True
             continue
@@ -252,7 +258,13 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
     # count is only a conservative upper bound, never an optimization permit.
     table_entries = {symbols[name] for name in symbolic_table_targets
                      if symbols.get(name) is not None}
-    indirect_or_unknown = bool(unresolved or unknown_pointer_expressions)
+    # A ROM call, RST or jump can return through an externally supplied
+    # callback. Without a complete ROM/caller entry manifest, no source-only
+    # CFG can exclude a private instruction as an entry. Keep this distinct
+    # from unresolved *local* branches for precise diagnostics.
+    rom_callback_uncertain = rom_edges != 0
+    indirect_or_unknown = bool(unresolved or unknown_pointer_expressions
+                               or rom_callback_uncertain)
     possible = (set(range(len(instructions))) if indirect_or_unknown else
                 reachable(entries | table_entries | address_taken))
     uses = []
@@ -303,6 +315,7 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
         'first_unresolved_edges': unresolved[:5],
         'direct_calls': calls,
         'rom_transfer_edges': rom_edges,
+        'rom_callback_entries_unresolved': rom_callback_uncertain,
         'register_effects_modelled': modelled,
         'register_effects_unknown': len(instructions)-modelled,
         'source_liveness_converged': True,
