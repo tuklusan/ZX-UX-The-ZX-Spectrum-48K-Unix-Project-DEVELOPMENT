@@ -1,13 +1,26 @@
-"""Compile constant numeric DATA arithmetic using the actual 48K ROM calculator.
+"""Compile numeric DATA with the 48K ROM and safe scalar READ-time references.
 
-The BASIC program and its Sinclair numeric metadata are not rewritten. This
-extension is deliberately restricted to literal arithmetic: names, functions,
-comparisons and any value determined at READ time remain unsupported.
+The original BASIC bytes and cached Sinclair numeric metadata are unchanged.
+Literal expressions use the actual 48K ROM; bare numeric scalar variables are
+represented by five-byte typed absolute references, relocated by the
+normal three-base native linker, and resolved only at READ time. Other
+variable-dependent expressions remain unsupported.
 """
 from __future__ import annotations
 
 # Spectrum 48K ROM calculator instructions (RST 28).
 C_ADDITION, C_SUBTRACT, C_MULTIPLY, C_DIVISION, C_POWER = 0x0f, 0x03, 0x04, 0x05, 0x06
+
+# The second byte 0x7E is impossible in a valid Spectrum integer-form
+# floating-point value (whose sign byte must be 0 or 0xFF). The descriptor
+# stores a 16-bit REAL scalar address, which changes across all three HiSoft
+# compiler bases. The normal native relocation resolver sends it into BSS.
+_DYNAMIC_MARKER = 0x7E
+_READ_DYNAMIC_BODY = (
+    'inc hl; ld e,(hl); inc hl; ld d,(hl); ex de,hl; '
+    'push hl; ld hl,($5C6C); ld de,5; add hl,de; '
+    'ld ($5C6C),hl; pop hl; call {} ; jr +3'
+)
 
 _BINARY = {ord('+'): (1, C_ADDITION), ord('-'): (1, C_SUBTRACT),
            ord('*'): (2, C_MULTIPLY), ord('/'): (2, C_DIVISION),
@@ -16,6 +29,43 @@ _BINARY = {ord('+'): (1, C_ADDITION), ord('-'): (1, C_SUBTRACT),
 
 def with_literal_data_expressions(base):
     class LiteralData(base):
+        def reset(self, program):
+            super().reset(program)
+            self._zxux_dynamic_data = False
+
+        def let_value(self):
+            # Pass 0 records every DATA field before the sizing/storage passes.
+            # A dynamic numeric source therefore reaches *each* READ regardless
+            # of its source-line order. Ordinary programs keep byte-identical
+            # HiSoft READ instructions and runtime calls.
+            if not self._zxux_dynamic_data or self.stmt != 0xE3:
+                return super().let_value()
+            from compiler import REAL, ROM, RT
+            if self.target != REAL:
+                self.not_supported('dynamic DATA requires real numeric READ targets')
+            from z80asm import asm
+            body = asm(_READ_DYNAMIC_BODY.format(ROM['STACK_NUM']))
+            # Branch 1 skips the six-byte marker check plus the dynamic body;
+            # branch 2 skips just the body. The body jumps past the three-byte
+            # ordinary READ_REAL call after a successful variable dereference.
+            if len(body) + 6 > 127:
+                raise ValueError('dynamic READ body is not a short branch')
+            self.emit('ld hl,($5C6C); ld a,(hl); or a; '
+                      'jr nz,+{}; inc hl; ld a,(hl); cp {}; jr nz,+{}',
+                      len(body) + 6, _DYNAMIC_MARKER, len(body))
+            self.emit_bytes(body)
+            self.call_rt(RT.READ_REAL)
+
+        def let_string_value(self):
+            if self._zxux_dynamic_data and self.stmt == 0xE3:
+                # READ a$ is still valid for an ordinary string DATA field.
+                # A numeric reference has marker 00 7E, and must never be
+                # misread as a 32256-byte string length by HiSoft READ_STR.
+                self.emit('ld hl,($5C6C); ld a,(hl); or a; jr nz,+8; '
+                          'inc hl; ld a,(hl); cp {}; jr nz,+2; '
+                          'rst 8; defb $0B', _DYNAMIC_MARKER)
+            return super().let_string_value()
+
         def st_data(self):
             was_data = getattr(self, '_zxux_in_data', False)
             self._zxux_in_data = True
@@ -33,6 +83,20 @@ def with_literal_data_expressions(base):
 
         def _zxux_data_atom(self):
             token = self.get_char()
+            if 65 <= token <= 90 or 97 <= token <= 122:
+                # Only bare, numeric scalar names. Numeric function arguments,
+                # array subscripts, and expressions require a separate typed
+                # runtime expression implementation and stay fail-closed.
+                addr = self.var_ref()
+                if not self.at_end() and self.get_char() != ord(','):
+                    self.not_supported('dynamic DATA expression requires bare scalar')
+                from compiler import REAL
+                if self.t != REAL:
+                    self.not_supported('dynamic DATA requires real numeric scalar')
+                self._zxux_dynamic_data = True
+                absolute = (addr + self.code_base) & 0xFFFF
+                return bytes((0, _DYNAMIC_MARKER,
+                              absolute & 255, absolute >> 8, 0))
             if token == 0xA7:  # Sinclair PI is a fixed 48K ROM calculator value.
                 self.next_char()
                 return self.fp.calc([], [0xA3, 0xA1, C_MULTIPLY])[-1]
