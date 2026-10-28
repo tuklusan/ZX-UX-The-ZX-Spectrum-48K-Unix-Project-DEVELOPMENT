@@ -50,3 +50,25 @@ relocations remain refused, not silently admitted.
 The complete ROM-backed LLIST parity test passed all 6,581 original TZX BASIC
 lines, with 28 passing tests in the `test_zx_tzx2bas.py` suite. This is a
 ROM text-fidelity check, not a guarantee that every game has been played.
+
+## Subsequent zero-BSS STOP and bounded 34-game interaction checks
+
+The original HiSoft `LD HL,end` followed by `LD (STKEND),HL` uses an
+end-of-image pointer when its BSS is empty. A new strict source-emission
+witness admits only that exact case. The resulting zero-BSS native SSX linked
+with `ras/rld`, matched the original HiSoft wrapper byte-for-byte at three
+independent bases, and ran under the real ZX-UX kernel. STOP returned status
+zero, restored screen ownership and shell controls, and allowed a second
+native process and subsequent shell input. `test_native_stop_shell.py` checks
+this directly; out-of-bounds pointer operations remain prohibited.
+
+The standalone `tests/native_gameplay_34.py` compares genuine framebuffer
+snapshots at equal frame counts, with and without source-guided keyboard
+scripts, in fresh ZX-UX emulator runs. The observed 34-game trial found 27
+changed displays. Seven games had identical final displays in those bounded
+checks: Minelay, Critical Path Analysis, Scuba, Biorhythms, Space Traffic,
+Swordsman, and Roots. This does not prove these games are faulty. It does mean
+that the tested input path has not demonstrated a change at that frame limit.
+The runner reports these as unverified and exits with a failing status. Neither
+unchanged screens nor changed screens establish complete game progression,
+wins, losses, or every keyboard path. Full gameplay validation remains open.
