@@ -143,6 +143,18 @@ class RuntimeEmitterTrace:
             sites.update(write.position.to_bytes(2, 'little'))
             sites.update(((write.emitter_pc if write.emitter_pc is not None else 65536)
                           & 0x1ffff).to_bytes(3, 'little'))
+        # A changed-after-write count alone is insufficient: two compiler
+        # bases can disagree about WHICH output word was mutated while the
+        # original writer-PC sequence remains identical. Commit the complete
+        # anomaly offsets, not merely the first sixteen diagnostics.
+        anomalies = hashlib.sha256()
+        for tag, offsets in ((b'M', missing), (b'C', changed),
+                             (b'R', sorted(rewritten)), (b'O', escaped),
+                             (b'U', untraced)):
+            anomalies.update(tag)
+            anomalies.update(len(offsets).to_bytes(4, 'little'))
+            for offset in offsets:
+                anomalies.update(offset.to_bytes(4, 'little'))
         return {
             'output_bytes': end - start,
             'staging_write_count': len(self.writes),
@@ -152,6 +164,7 @@ class RuntimeEmitterTrace:
             'source_pc_first': sorted({w.emitter_pc for w in self.writes
                                        if w.emitter_pc is not None})[:16],
             'source_write_sites_sha256': sites.hexdigest(),
+            'source_anomalies_sha256': anomalies.hexdigest(),
             'uncovered_bytes': len(missing), 'uncovered_first': missing[:16],
             'changed_after_write': len(changed), 'changed_first': changed[:16],
             'rewritten_bytes': len(rewritten),
@@ -178,9 +191,11 @@ def verify_three_runtime_traces(groups, bases) -> dict:
     signatures = []
     for group in groups:
         signature = tuple((r['routine'], r['output_bytes'], r['staging_write_count'],
-                           r['source_write_sites_sha256'], r['covered_bytes'],
+                           r['source_write_sites_sha256'],
+                           r['source_anomalies_sha256'], r['covered_bytes'],
                            r['uncovered_bytes'], r['changed_after_write'],
-                           r['outside_emitter_bytes'], r['untraced_pc_writes'],
+                           r['rewritten_bytes'], r['outside_emitter_bytes'],
+                           r['untraced_pc_writes'], r['fully_observed'],
                            r.get('source_roles_verified', False),
                            r.get('typed_calculated_bytes', 0),
                            r.get('untyped_calculated_bytes', 0),
@@ -190,7 +205,16 @@ def verify_three_runtime_traces(groups, bases) -> dict:
     if any(s != signatures[0] for s in signatures[1:]):
         raise RuntimeTraceError('runtime emitter execution sites changed across bases')
     first = groups[0]
+    incomplete = tuple({'routine': r['routine'],
+                        'output_bytes': r['output_bytes'],
+                        'uncovered_bytes': r['uncovered_bytes'],
+                        'rewritten_bytes': r['rewritten_bytes'],
+                        'changed_after_write': r['changed_after_write'],
+                        'outside_emitter_bytes': r['outside_emitter_bytes'],
+                        'untraced_pc_writes': r['untraced_pc_writes']}
+                       for r in first if not r['fully_observed'])
     return {'runtime_emitter_count': len(first),
+            'runtime_source_gaps': incomplete,
             'runtime_write_count': sum(r['staging_write_count'] for r in first),
             'runtime_write_uncovered_bytes': sum(r['uncovered_bytes'] for r in first),
             'runtime_write_changed_bytes': sum(r['changed_after_write'] for r in first),

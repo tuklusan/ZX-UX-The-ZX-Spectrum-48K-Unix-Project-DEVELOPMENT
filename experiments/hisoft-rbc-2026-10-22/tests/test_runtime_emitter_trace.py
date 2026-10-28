@@ -123,6 +123,54 @@ class NativeTrace(unittest.TestCase):
             verify_three_runtime_traces([[report], [report], [modified]],
                                         [0x6000, 0x6100, 0x6200])
 
+    def test_same_anomaly_count_at_different_output_offsets_is_rejected(self):
+        m = self.make_machine()
+        with RuntimeEmitterTrace(m) as trace:
+            m.cpu.trace(0x7010)
+            for i, byte in enumerate((0x21, 0x34, 0x12)):
+                m.cpu.wb(0x9000 + i, byte)
+        original = bytes((0x21, 0x34, 0x12))
+        first = trace.inspect(0, 3, bytes((0x22, 0x34, 0x12)))
+        second = trace.inspect(0, 3, bytes((0x21, 0x35, 0x12)))
+        for report in (first, second):
+            report['routine'] = 7
+        self.assertEqual(first['source_write_sites_sha256'],
+                         second['source_write_sites_sha256'])
+        self.assertEqual(first['changed_after_write'], 1)
+        self.assertEqual(second['changed_after_write'], 1)
+        self.assertNotEqual(first['source_anomalies_sha256'],
+                            second['source_anomalies_sha256'])
+        with self.assertRaisesRegex(RuntimeTraceError, 'sites changed'):
+            verify_three_runtime_traces([[first], [second], [first]],
+                                        [0x6000, 0x6100, 0x6200])
+        original_report = trace.inspect(0, 3, original)
+        original_report['routine'] = 7
+        self.assertEqual(verify_three_runtime_traces(
+            [[original_report]] * 3, [0x6000, 0x6100, 0x6200])
+                         ['runtime_source_gaps'], ())
+
+    def test_unobserved_native_source_gaps_and_rewrites_stay_explicit(self):
+        m = self.make_machine()
+        with RuntimeEmitterTrace(m) as trace:
+            m.cpu.trace(0x7010)
+            m.cpu.wb(0x9000, 0xc9)
+            m.cpu.wb(0x9000, 0xc9)
+        report = trace.inspect(0, 3, b'\xc9\x11\x22')
+        report['routine'] = 11
+        stable = verify_three_runtime_traces(
+            [[report]] * 3, [0x6000, 0x6100, 0x6200])
+        self.assertEqual(stable['runtime_source_gaps'], ({
+            'routine': 11, 'output_bytes': 3, 'uncovered_bytes': 2,
+            'rewritten_bytes': 1, 'changed_after_write': 0,
+            'outside_emitter_bytes': 0, 'untraced_pc_writes': 0},))
+        self.assertFalse(report['fully_observed'])
+        for key, value in (('rewritten_bytes', 0), ('fully_observed', True)):
+            with self.subTest(key=key):
+                changed = dict(report, **{key: value})
+                with self.assertRaisesRegex(RuntimeTraceError, 'sites changed'):
+                    verify_three_runtime_traces([[report], [changed], [report]],
+                                                [0x6000, 0x6100, 0x6200])
+
     def test_only_staging_writes_are_captured(self):
         m = self.make_machine()
         with RuntimeEmitterTrace(m) as t:
