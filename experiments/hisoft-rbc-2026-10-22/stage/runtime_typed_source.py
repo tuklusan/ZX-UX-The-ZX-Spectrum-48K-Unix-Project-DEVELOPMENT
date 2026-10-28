@@ -38,8 +38,8 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
     from symbolic_capture import Emission
     from symbolic_z80 import _canonical_source_line, _INSTRUCTIONS
 
-    if (not isinstance(image, bytes) or not isinstance(start, int) or
-            not isinstance(end, int) or not isinstance(base, int) or
+    if (not isinstance(image, bytes) or type(start) is not int or
+            type(end) is not int or type(base) is not int or
             not 0 <= start <= end or len(image) != end - start or
             not 0 <= base <= 0xffff or base + end > 0x10000):
         raise RuntimeSourceError('invalid runtime output or link address')
@@ -53,9 +53,9 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
         position = getattr(write, 'position', None)
         pc = getattr(write, 'emitter_pc', None)
         value = getattr(write, 'value', None)
-        if (not isinstance(position, int) or not start <= position < end or
-                not isinstance(pc, int) or not 0 <= pc <= 0xffff or
-                not isinstance(value, int) or not 0 <= value <= 255):
+        if (type(position) is not int or not start <= position < end or
+                type(pc) is not int or not 0 <= pc <= 0xffff or
+                type(value) is not int or not 0 <= value <= 255):
             raise RuntimeSourceError('invalid or out-of-range runtime write')
         if position in seen:
             raise RuntimeSourceError('runtime rewrite lacks typed patch source')
@@ -71,9 +71,9 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
     for statement in sources:
         if not isinstance(statement, RuntimeStatement):
             raise RuntimeSourceError('invalid typed source statement')
-        if statement.position != cursor:
+        if type(statement.position) is not int or statement.position != cursor:
             raise RuntimeSourceError('runtime source has gap, overlap or wrong order')
-        if (not isinstance(statement.emitter_pc, int) or
+        if (type(statement.emitter_pc) is not int or
                 not 0 <= statement.emitter_pc <= 0xffff or
                 not isinstance(statement.source, str) or
                 not statement.source.strip() or not statement.source.isascii() or
@@ -133,7 +133,7 @@ def typed_runtime_events(writes: Iterable, statements: Iterable[RuntimeStatement
                  (statement.emitter_pc,) * len(encoded))
         if (not isinstance(sites, tuple) or len(sites) != len(encoded) or
                 not sites or sites[0] != statement.emitter_pc or
-                any(not isinstance(site, int) or not 0 <= site <= 0xffff
+                any(type(site) is not int or not 0 <= site <= 0xffff
                     for site in sites)):
             raise RuntimeSourceError('runtime source PC sequence invalid')
         if any(site_at[p] != sites[p - cursor]

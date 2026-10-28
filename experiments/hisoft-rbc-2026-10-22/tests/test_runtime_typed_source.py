@@ -178,6 +178,29 @@ class RuntimeTypedSources(unittest.TestCase):
             with self.subTest(case=case), self.assertRaises(RuntimeSourceError):
                 typed_runtime_events(case, source, image, 0, 4, 0x7000, assemble)
 
+    def test_boolean_values_never_masquerade_as_source_addresses(self):
+        # Python bool is an int subclass, but it cannot be an original
+        # Z80 emitter PC, byte, storage offset, or native loader address.
+        image, sources, writes = fixture()
+        from dataclasses import replace
+        for kwargs in ({'start': False}, {'end': True}, {'base': True}):
+            with self.subTest(kwargs=kwargs), self.assertRaises(RuntimeSourceError):
+                typed_runtime_events(writes, sources, image, **(
+                    dict(start=0, end=4, base=0x7000) | kwargs),
+                    assembler=assemble)
+        for name, value in (('position', False), ('value', True),
+                            ('emitter_pc', True)):
+            with self.subTest(field=name), self.assertRaises(RuntimeSourceError):
+                bad = [replace(writes[0], **{name: value}), *writes[1:]]
+                typed_runtime_events(bad, sources, image, 0, 4, 0x7000, assemble)
+        for name, value in (('position', False), ('emitter_pc', True)):
+            with self.subTest(field=name), self.assertRaises(RuntimeSourceError):
+                bad = (replace(sources[0], **{name: value}), *sources[1:])
+                typed_runtime_events(writes, bad, image, 0, 4, 0x7000, assemble)
+        bad = (replace(sources[0], write_pcs=(0x7001, True)), *sources[1:])
+        with self.assertRaises(RuntimeSourceError):
+            typed_runtime_events(writes, bad, image, 0, 4, 0x7000, assemble)
+
     def test_no_type_inferred_from_complete_byte_trace(self):
         image, source, writes = fixture()
         failures = ((), source[:-1], source[:1] +
