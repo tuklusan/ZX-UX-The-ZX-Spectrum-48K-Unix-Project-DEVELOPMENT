@@ -145,3 +145,23 @@ def link_source_pair(source: VerifiedSource, ras, rld, optimizer: Callable,
         'native_links_verified': True,
         'native_behavior_verified': False,
     }
+
+
+def verify_and_build_with_runtime_sources(events, images, bases, text_ends,
+                                          bss_sizes, assembler, witnesses,
+                                          *, entry_offsets=(0,)):
+    """Admit externally typed runtime spans to the normal full-source gate.
+
+    A runtime witness never bypasses unresolved boundaries elsewhere in the
+    compiler. The native baseline must still be independently linked and
+    checked using link_source_pair before considering an optimizer candidate.
+    """
+    from dataclasses import replace
+    from typed_runtime_bridge import splice_three_runtime_sources
+
+    typed, report = splice_three_runtime_sources(
+        events, images, bases, witnesses, assembler)
+    result = verify_and_build(typed, images, bases, text_ends, bss_sizes,
+                              assembler, entry_offsets=entry_offsets)
+    return replace(result, source_report={**result.source_report,
+                                          'runtime_source_bridge': report})
