@@ -134,6 +134,30 @@ def inspect_typed_cfg_liveness(assembly: str) -> dict:
             # A misspelled assembler directive or an unknown source operation
             # cannot stand in for a decoded Z80 instruction in the CFG.
             raise TypedCFGError('unrecognized typed Z80 instruction: ' + op)
+        operand = words[1].strip() if len(words) == 2 else ''
+        terms = [term.strip() for term in operand.split(',')] if operand else []
+        if op in ('ret', 'reti', 'retn'):
+            if ((op == 'ret' and terms not in ([], ['nz'], ['z'], ['nc'],
+                                             ['c'], ['p'], ['m'], ['pe'], ['po']))
+                    or (op != 'ret' and terms)):
+                raise TypedCFGError('invalid typed Z80 return operand')
+        elif op in ('jp', 'jr', 'call', 'djnz'):
+            if (not terms or any(not term for term in terms) or
+                    len(terms) > 2 or
+                    (len(terms) == 2 and (op == 'djnz' or
+                     terms[0] not in (_COND if op != 'jr' else
+                                      frozenset(('nz', 'z', 'nc', 'c'))) or
+                     terms[1] in ('(hl)', '(ix)', '(iy)')))):
+                raise TypedCFGError('invalid typed Z80 transfer operand')
+        elif op == 'rst':
+            if len(terms) != 1 or not _IMM.fullmatch(terms[0]):
+                raise TypedCFGError('invalid typed Z80 restart target')
+            target = terms[0]
+            value = (int(target[1:], 16) if target.startswith('$') else
+                     int(target, 16) if target.startswith('0x') else
+                     int(target, 10))
+            if value not in range(0, 64, 8):
+                raise TypedCFGError('invalid typed Z80 restart target')
         here = len(instructions)
         for label in pending:
             symbols[label] = here

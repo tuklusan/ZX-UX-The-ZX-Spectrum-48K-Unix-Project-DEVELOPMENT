@@ -436,6 +436,33 @@ class TypedWholeCFGTests(unittest.TestCase):
                 with self.assertRaises(TypedCFGError):
                     inspect_typed_cfg_liveness(source)
 
+    def test_malformed_control_operands_do_not_form_a_false_closed_cfg(self):
+        # An opcode from the valid mnemonic set can still carry an invalid
+        # return, conditional transfer or restart operand. The analyzer must
+        # not call the remaining source unreachable on that false premise.
+        for instruction in (
+                'ret unknown', 'ret z,nz', 'reti c', 'retn z',
+                'jp not_a_condition,target', 'jp z,start,other',
+                'jp z,(hl)', 'call nc,(ix)', 'jr z,(iy)',
+                'jr pe,start', 'jr m,start', 'jr z,start,other',
+                'call xx,start', 'call c,', 'djnz nz,start',
+                'rst', 'rst $07', 'rst 64', 'rst $40', 'rst label'):
+            with self.subTest(instruction=instruction):
+                source = ('section text\nstart:\n '
+                          + instruction + '\nret\n')
+                with self.assertRaisesRegex(TypedCFGError, 'invalid typed Z80'):
+                    inspect_typed_cfg_liveness(source)
+        for instruction in ('ret', 'ret c', 'reti', 'retn',
+                            'jp (hl)', 'jr z,target', 'jp pe,target',
+                            'call nc,target', 'djnz target',
+                            'rst 8', 'rst $20', 'rst 0x38'):
+            with self.subTest(valid=instruction):
+                source = ('section text\nstart:\n '
+                          + instruction + '\nret\ntarget:\nret\n')
+                report = inspect_typed_cfg_liveness(source)
+                self.assertTrue(report['source_liveness_converged'])
+                self.assertFalse(report['rewrite_safe_to_admit'])
+
     def test_unsupported_source_operation_cannot_be_a_cfg_instruction(self):
         # The CFG must use the very same Z80 opcode set as the typed source
         # owner; a directive must not create a fake reachable instruction.
