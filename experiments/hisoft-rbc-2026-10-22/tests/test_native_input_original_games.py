@@ -96,5 +96,45 @@ class NativeOriginalInputExperiments(unittest.TestCase):
                 self.assertEqual(published.read_bytes(), published_before)
 
 
+    def test_original_critical_path_all_three_input_stages_and_reprompt(self):
+        # Original lines 570, 840, 890 await ENTER; 130/140 take numeric
+        # start/finish nodes, and line 142 rejects finish node zero.
+        game = '07-critical-path-analysis'
+        basic = GAMES / game / 'BASIC' / (game + '.bas')
+        published = GAMES / game / 'bin' / (game + '.ssx')
+        original_bytes = basic.read_bytes()
+        published_bytes = published.read_bytes()
+        source, _, reference, proof = compile_native(
+            basic, CHECKPOINT, FRONTEND, TAPE, ROM)
+        self.assertEqual(reference, published_bytes)
+        self.assertTrue(proof['native_three_base_source_verified'])
+        self.assertTrue(proof['native_and_legacy_ssx_byte_identical'])
+        self.assertFalse(proof['optimizer_used'])
+        native = link_candidate(source)
+        self.assertNotEqual(native, reference)
+        linked = rld.parse_ssx(native)
+        self.assertLessEqual(max(len(native), len(linked['image']) +
+                                 linked['bss'] + linked['stack']), 14000)
+        import tempfile
+        with tempfile.TemporaryDirectory(prefix='rbc-path-input-') as temp:
+            trial = Path(temp) / (game + '.ssx')
+            trial.write_bytes(native)
+            intro = '{WAIT 200}{ENTER}{WAIT 200}{ENTER}{WAIT 200}{ENTER}'
+            first = intro + '{WAIT 100}1{ENTER}'
+            bad_finish = first + '{WAIT 100}0{ENTER}'
+            completed = bad_finish + '{WAIT 100}12{ENTER}'
+            a, state_a = run_screen(trial, intro, 1900)
+            b, state_b = run_screen(trial, first, 1900)
+            c, state_c = run_screen(trial, bad_finish, 1900)
+            d, state_d = run_screen(trial, completed, 1900)
+            self.assertEqual((state_a, state_b, state_c, state_d),
+                             ('input', 'input', 'input', 'frames'))
+            self.assertNotEqual(a, b, 'first numeric INPUT did not advance')
+            self.assertEqual(b, c, 'bad finish node was not rejected')
+            self.assertNotEqual(c, d, 'valid finish node did not advance')
+        self.assertEqual(basic.read_bytes(), original_bytes)
+        self.assertEqual(published.read_bytes(), published_bytes)
+
+
 if __name__ == '__main__':
     unittest.main()
