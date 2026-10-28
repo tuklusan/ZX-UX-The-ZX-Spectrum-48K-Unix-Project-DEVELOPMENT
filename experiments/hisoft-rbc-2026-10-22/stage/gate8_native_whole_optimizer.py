@@ -19,6 +19,8 @@ import ras
 import rld
 from symbolic_z80 import (_check_optimizer_output, _check_protected,
                           _resource_barriers, SymbolicError)
+from gate8_volatile_memory_fence import (protect_volatile_reads,
+    strip_volatile_fences)
 from upeepz80_codegen import UPSTREAM_REVISION
 from gate8_typed_cfg_liveness import inspect_typed_cfg_liveness, TypedCFGError
 
@@ -234,9 +236,22 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
                     not expected_runtime_bytes or
                     expected_runtime_bytes not in plain['image']):
                 raise WholeOptimizerError('verified runtime resource differs from baseline')
-        candidate_text = optimizer(assembly)
+        # Keep mutable Spectrum RAM reads as source entry points while the
+        # entire typed program is offered to the locked optimizer. Zero-byte
+        # labels must reproduce the same linked native baseline exactly.
+        fenced = protect_volatile_reads(assembly)
+        fenced_obj = ras.assemble_text(fenced, 'rbc-whole-volatile-fenced.s')
+        fenced_link, *_ = rld.link(
+            [rld.Obj(fenced_obj, 'rbc-whole-volatile-fenced.sso')], [],
+            entry='start', stack=plain['stack'])
+        if fenced_link != native_baseline:
+            raise WholeOptimizerError('volatile memory fences changed native baseline')
+        candidate_text = optimizer(fenced)
         if not isinstance(candidate_text, str):
             raise WholeOptimizerError('optimizer did not return assembly text')
+        # Synthetic entry labels are for the optimizer only. Recheck the
+        # actual native source and original resource labels without them.
+        candidate_text = strip_volatile_fences(candidate_text, fenced)
         _check_optimizer_output(candidate_text)
         try:
             _check_protected(assembly, candidate_text, {'start'})
