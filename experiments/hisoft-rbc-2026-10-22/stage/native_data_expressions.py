@@ -33,6 +33,9 @@ def with_literal_data_expressions(base):
 
         def _zxux_data_atom(self):
             token = self.get_char()
+            if token == 0xA7:  # Sinclair PI is a fixed 48K ROM calculator value.
+                self.next_char()
+                return self.fp.calc([], [0xA3, 0xA1, C_MULTIPLY])[-1]
             if token == ord('('):
                 self.next_char()
                 value = self._zxux_data_expression(0)

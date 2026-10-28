@@ -94,6 +94,20 @@ class OriginalRomNativeTests(unittest.TestCase):
         self.assertEqual(values[3],
                          c.fp.calc([int_form(2), int_form(-2)], [0x06])[-1])
 
+    def test_rom_pi_in_numeric_data_expressions(self):
+        from romfp import int_form
+        c, res = self.compile_listing(
+            '10 DATA PI,2*PI,PI/2\n20 READ A,B,C\n')
+        self.assertTrue(res.ok, (res.error, res.detail))
+        values = [bytes(c.far[c.data_start + 5*i:c.data_start + 5*(i+1)])
+                  for i in range(3)]
+        pi = c.fp.calc([], [0xA3, 0xA1, 0x04])[-1]
+        self.assertEqual(values, [
+            pi,
+            c.fp.calc([int_form(2), pi], [0x04])[-1],
+            c.fp.calc([pi, int_form(2)], [0x05])[-1],
+        ])
+
     def test_plain_literals_produce_identical_code(self):
         listing = '10 DATA 1,-2,.25,5\n20 READ A,B,C,D\n30 PRINT A,B,C,D\n'
         _, old = self.compile_listing(listing, compiler.Compiler)
