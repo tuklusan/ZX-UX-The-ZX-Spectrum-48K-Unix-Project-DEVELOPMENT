@@ -8,6 +8,7 @@ Never disassemble emitted bytes to fill a gap in the source trace.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 
 from symbolic_fragments import FragmentBoundaryError, inspect_fragments
 
@@ -35,6 +36,22 @@ class BoundaryMap:
     unresolved_bytes: int
     executable_instruction_count: int
     fully_typed: bool
+
+
+_OPERAND = re.compile(r'(?<![A-Za-z_0-9])nn(?![A-Za-z_0-9])', re.IGNORECASE)
+
+
+def replace_typed_address(source: str, address: str) -> str | None:
+    """Replace one unquoted symbolic word; never guess from opcode bytes."""
+    if not isinstance(source, str) or not isinstance(address, str):
+        return None
+    if "'" in source or '"' in source:
+        return None
+    matches = tuple(_OPERAND.finditer(source))
+    if len(matches) != 1:
+        return None
+    match = matches[0]
+    return source[:match.start()] + address + source[match.end():]
 
 
 def _encoded(assembler, source: str) -> bytes:
@@ -69,7 +86,7 @@ def inspect_source_boundaries(events, image: bytes, base: int, data_start: int,
             raise SourceBoundaryError('source emission has invalid position or payload')
         if kind == 'opcode':
             text = event.source.strip()
-            if text.count('nn') == 1 and i + 1 < len(events):
+            if replace_typed_address(text, '0') is not None and i + 1 < len(events):
                 operand = events[i + 1]
                 if (operand.kind == 'relocation' and
                         operand.position == pos + len(payload) and
@@ -81,7 +98,8 @@ def inspect_source_boundaries(events, image: bytes, base: int, data_start: int,
                     expected_operand = ((base + target) & 65535).to_bytes(2, 'little')
                     if operand.data != expected_operand:
                         raise SourceBoundaryError('source operand differs from link base')
-                    candidate = _encoded(assembler, text.replace('nn', str((base + target) & 65535)))
+                    resolved = replace_typed_address(text, str((base + target) & 65535))
+                    candidate = _encoded(assembler, resolved)
                     if candidate != payload + operand.data:
                         raise SourceBoundaryError('source opcode/operand encoding differs')
                     payload = candidate

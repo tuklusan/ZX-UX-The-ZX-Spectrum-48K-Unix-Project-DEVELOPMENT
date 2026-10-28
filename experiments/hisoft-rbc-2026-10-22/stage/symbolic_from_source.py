@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import re
 
-from symbolic_source_boundaries import SourceBoundaryError, inspect_source_boundaries
+from symbolic_source_boundaries import (SourceBoundaryError,
+                                        inspect_source_boundaries,
+                                        replace_typed_address)
 from symbolic_relative_branches import RelativeBranchError, inspect_relative_branches
 from symbolic_z80 import SymbolicProgram
 
@@ -121,8 +123,8 @@ def from_source(events, image: bytes, base: int, text_end: int, bss: int,
             program.label(name(span.start), entry=span.start in entry_offsets)
         if span.kind in ('instruction', 'instruction-relocated'):
             if span.kind == 'instruction-relocated':
-                source = span.source.replace('nn', name(span.target))
-                if source == span.source:
+                source = replace_typed_address(span.source, name(span.target))
+                if source is None:
                     raise UnresolvedSourceProgram('source relocation placeholder missing')
             else:
                 relative = relatives.get(span.start)

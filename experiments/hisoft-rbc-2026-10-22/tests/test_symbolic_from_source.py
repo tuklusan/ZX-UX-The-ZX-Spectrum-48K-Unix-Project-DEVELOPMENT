@@ -24,6 +24,7 @@ def asm(text):
     return {
         'nop': b'\x00', 'ret': b'\xc9',
         'jp 24576': b'\xc3\x00\x60',
+        'JP 24576': b'\xc3\x00\x60',
         'jp 24578': b'\xc3\x02\x60',
         'jp 24832': b'\xc3\x00\x61',
         'jp 24577': b'\xc3\x01\x60',
@@ -60,6 +61,30 @@ class NativeFromSource(unittest.TestCase):
         self.assertEqual(linked['image'][-2:], b'\xc3\x76')
         self.assertEqual(linked['bss'], 8)
         self.assertEqual(linked['stack'], 384)
+
+    def test_uppercase_typed_runtime_relocation_reaches_native_link(self):
+        # The original writer may use uppercase ZX mnemonics. Source
+        # ownership and native relocation must agree on the same operand.
+        sources = program()
+        sources[1] = e('opcode', 1, b'\xc3', 'JP NN')
+        image = b'\x00\xc3\x00\x60\xc3\x76'
+        ir = from_source(sources, image, 0x6000, 4, 8, asm)
+        self.assertIn('jp start', ir.assembly())
+        binary = ras.assemble_text(ir.assembly(), 'uppercase-runtime.s')
+        ssx, *_ = rld.link([rld.Obj(binary, 'uppercase-runtime.sso')], [],
+                           entry='start', stack=384)
+        linked = rld.parse_ssx(ssx)
+        self.assertEqual(linked['image'][1:4], b'\xc3\x00\x00')
+        self.assertEqual(linked['image'][4:], image[4:])
+
+    def test_runtime_relocation_rejects_implied_or_quoted_addresses(self):
+        for address_source in ('JP NN,NN', 'JP NN_suffix', 'JP "NN"'):
+            with self.subTest(source=address_source):
+                sources = program()
+                sources[1] = e('opcode', 1, b'\xc3', address_source)
+                with self.assertRaises(UnresolvedSourceProgram):
+                    from_source(sources, b'\x00\xc3\x00\x60\xc3\x76',
+                                0x6000, 4, 8, asm)
 
     def test_refuse_unpaired_opcode(self):
         src = [e('opcode', 0, b'\xc3', 'jp nn'),
