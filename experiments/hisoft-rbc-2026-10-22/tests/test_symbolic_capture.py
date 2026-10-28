@@ -114,6 +114,20 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(far), len(initial))
         self.assertEqual(owner._zxux_capture.events[0].data, b'\xaa\xbb')
 
+    def test_reverse_empty_slice_is_not_a_resizing_write(self):
+        from symbolic_capture import TracedRAM
+        owner = types.SimpleNamespace(counting=False, de_flags=0,
+                                      _zxux_capture=Capture())
+        far = TracedRAM(b'12345', owner)
+        far[4:2] = b''
+        far[2:2] = b''
+        self.assertEqual(bytes(far), b'12345')
+        self.assertEqual(owner._zxux_capture.events, [])
+        with self.assertRaisesRegex(ValueError, 'resizing'):
+            far[4:2] = b'X'
+        self.assertEqual(bytes(far), b'12345')
+        self.assertEqual(owner._zxux_capture.events, [])
+
     def test_traced_ram_rejects_untraced_bytearray_mutators_atomically(self):
         from symbolic_capture import TracedRAM
         owner = types.SimpleNamespace(counting=False, de_flags=0,

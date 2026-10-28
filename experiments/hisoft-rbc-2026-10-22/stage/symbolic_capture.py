@@ -164,9 +164,12 @@ class TracedRAM(bytearray):
                    getattr(owner, '_zxux_capture', None) is not None)
         if tracing and isinstance(key, slice):
             start, stop, step = key.indices(len(self))
-            if step != 1 or stop - start > 4096:
+            # A reversed, unit-step slice denotes an empty insertion point.
+            # Replacing it with empty bytes is not a resize or a write.
+            width = max(0, stop - start)
+            if step != 1 or width > 4096:
                 raise ValueError('unresolved direct Z80 write slice')
-            if not hasattr(value, '__len__') or len(value) != stop - start:
+            if not hasattr(value, '__len__') or len(value) != width:
                 raise ValueError('unresolved resizing Z80 direct write')
         super().__setitem__(key, value)
         if (getattr(owner, 'counting', True) or
