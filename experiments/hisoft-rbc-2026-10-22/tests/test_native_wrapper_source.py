@@ -45,6 +45,14 @@ class NativeWrapperSource(unittest.TestCase):
                     self.assertIn(bytes(range(256)), info['image'])
                 self.assertGreaterEqual(len(info['relocs']), 20)
 
+    def test_no_original_data_section_still_links_native_wrapper(self):
+        # A STOP/GOSUB fixture can have HiSoft text and BSS but no DATA.
+        source = SOURCE.replace('    section data\n', '')
+        text, obj, ssx = assemble_link(source, bytes(768))
+        self.assertIn('    section data\n', text)
+        self.assertTrue(obj.startswith(b'SSO1'))
+        self.assertEqual(rld.parse_ssx(ssx)['bss'], 8)
+
     def test_restart_slot_is_symbolic_bss_reference(self):
         source, _, ssx = assemble_link(SOURCE, bytes(768), restart_slot=True)
         self.assertIn('ld (rbc_wrapper_bss_end-2),sp', source)
@@ -53,7 +61,7 @@ class NativeWrapperSource(unittest.TestCase):
 
     def test_fails_closed_on_unverified_source_layout(self):
         for bad in ('', '    section text\n',
-                    SOURCE.replace('    section data\n', ''),
+                    SOURCE.replace('    section data\n', '    section data\n    section data\n'),
                     SOURCE.replace('start:', 'rbc_wrapper_exit:')):
             with self.subTest(bad=bad[:20]):
                 with self.assertRaises(NativeWrapperError):

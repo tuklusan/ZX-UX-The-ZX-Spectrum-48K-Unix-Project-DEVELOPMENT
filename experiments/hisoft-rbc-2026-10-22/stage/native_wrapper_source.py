@@ -42,16 +42,22 @@ def wrapper_source(original_source: str, font: bytes, *,
     lines = original_source.splitlines()
     if (len(lines) < 5 or lines[:3] !=
             ['    section text', '    global start', 'start:'] or
-            lines.count('    section data') != 1 or
+            lines.count('    section data') not in (0, 1) or
             lines.count('    section bss') != 1 or
             any(PREFIX in line for line in lines) or
-            lines.index('    section data') >= lines.index('    section bss')):
+            (lines.count('    section data') == 1 and
+             lines.index('    section data') >= lines.index('    section bss'))):
         raise NativeWrapperError('unsupported original pre-link source layout')
     if not original_source.isascii():
         raise NativeWrapperError('non-ASCII native source')
     body = re.sub(r'(?<![A-Za-z0-9_])start(?![A-Za-z0-9_])',
                   PREFIX + 'hisoft_entry', original_source)
     text_and_data, bss = body.split('    section bss\n', 1)
+    # HiSoft programs with no emitted DATA section have a text->BSS source.
+    # The wrapper still needs an explicit, distinct data section for its
+    # restored process state. Never move original source bytes.
+    if '    section data\n' not in text_and_data:
+        text_and_data += '    section data\n'
     # Ordinary emitted source (rather than fixed byte sequences) owns all
     # wrapper instructions and the loader entry point.
     pro = ['    section text', '    global start', 'start:',
