@@ -359,6 +359,8 @@ def install(compiler_module):
                         report['routine'] = n
                         provider = getattr(self, '_zxux_typed_runtime_source', None)
                         if provider is not None:
+                            if not report['fully_observed']:
+                                raise ValueError('typed runtime needs complete original writer trace')
                             if not callable(provider):
                                 raise ValueError('runtime source provider must be callable')
                             # The provider supplies independently reviewed original
