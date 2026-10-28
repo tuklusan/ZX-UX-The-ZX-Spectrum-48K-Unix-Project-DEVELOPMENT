@@ -36,8 +36,11 @@ class FinishRbcSetup(unittest.TestCase):
                    if len(node.args) == 2
                    and isinstance(node.args[0], ast.Constant)
                    and node.args[0].value == '    install_native_run(compiler)']
-        self.assertEqual(entries, ['    install_native_run(compiler)\n'
-                                   '    install_safe_usr(compiler)'])
+        self.assertEqual(len(entries), 1)
+        self.assertTrue(entries[0].startswith(
+            '    install_native_run(compiler)\n'
+            '    install_safe_usr(compiler)\n'))
+        self.assertNotIn('    install_codegen_optimizer(compiler)\n', entries[0])
 
 
 if __name__ == '__main__':

@@ -14,7 +14,8 @@ class ThinWrapper(unittest.TestCase):
 
     def test_direct_hisoft_codegen(self):
         text = self.prepared()
-        self.assertIn('compiler.Compiler(img,rom,ramtop=top)', text)
+        self.assertIn('base_class = with_static_strings(compiler.Compiler,', text)
+        self.assertIn('c=build_class(img,rom,ramtop=top)', text)
         self.assertIn('res=c.compile_whole(program)', text)
         self.assertNotIn('compiler_with_computed_lines', text)
 
@@ -23,7 +24,8 @@ class ThinWrapper(unittest.TestCase):
         start = text.index('program = source.tokenize_directives(program,kw)')
         end = text.index('checks = analyze_lines(', start)
         statements = text[start:end]
-        self.assertNotIn('program, ', statements)
+        self.assertIn('program, restore_remaps = resolve_restores(', statements)
+        self.assertNotIn('remove_duplicate_for(', statements)
         self.assertNotIn('resolve_missing_targets', text)
         self.assertNotIn('remove_duplicate_for', text)
 
