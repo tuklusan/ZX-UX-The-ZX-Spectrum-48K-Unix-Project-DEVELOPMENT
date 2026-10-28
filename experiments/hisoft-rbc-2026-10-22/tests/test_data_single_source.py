@@ -27,6 +27,10 @@ class Compiler:
     def reset(self):
         self.pc = 0
 
+    def data_string(self, data):
+        position = self.data_start + self.data_size
+        self.far[position:position + len(data)] = data
+
     def st_data(self, fail=False):
         where = self.data_start + self.data_size
         self.far[where:where + 3] = b'ABC'
@@ -82,8 +86,8 @@ class DataSourceTests(unittest.TestCase):
         c.far[0] = 0xc3
         c.far[2:5] = b'ABC'
         self.assertEqual([e.kind for e in c._zxux_capture.events],
-                         ['direct-write'])
-        self.assertEqual(c._zxux_capture.events[0].position, 0)
+                         ['direct-write', 'direct-write'])
+        self.assertEqual([e.position for e in c._zxux_capture.events], [0, 2])
 
     def test_previous_data_field_rewrite_does_not_hide_in_active_data_mode(self):
         c = Compiler()
@@ -106,9 +110,20 @@ class DataSourceTests(unittest.TestCase):
         c._zxux_in_data = True
         c.vars_start = c.data_start + c.data_size + 3
         cursor = c.data_start + c.data_size
-        c.far[cursor:cursor+1] = b'Q'
+        c.data_string(b'Q')
         self.assertEqual([e.kind for e in c._zxux_capture.events],
                          ['data-source'])
+
+    def test_non_data_writer_into_current_field_is_not_hidden(self):
+        c = Compiler()
+        c.st_data()
+        c._zxux_in_data = True
+        c.vars_start = c.data_start + c.data_size + 3
+        cursor = c.data_start + c.data_size
+        c.far[cursor] = ord('Q')
+        self.assertEqual([e.kind for e in c._zxux_capture.events],
+                         ['data-source', 'direct-write'])
+        self.assertEqual(c._zxux_capture.events[-1].position, cursor)
 
     def test_preexisting_data_mode_is_restored(self):
         c = Compiler()
