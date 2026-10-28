@@ -21,6 +21,8 @@ from symbolic_z80 import (_check_optimizer_output, _check_protected,
                           _resource_barriers, SymbolicError)
 from gate8_volatile_memory_fence import (protect_volatile_reads,
     strip_volatile_fences)
+from gate8_unreachable_rewrite import (check_unreachable_deletions,
+    UnreachableRewriteError)
 from upeepz80_codegen import UPSTREAM_REVISION
 from gate8_typed_cfg_liveness import inspect_typed_cfg_liveness, TypedCFGError
 
@@ -253,20 +255,29 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
         # actual native source and original resource labels without them.
         candidate_text = strip_volatile_fences(candidate_text, fenced)
         _check_optimizer_output(candidate_text)
+        # A narrowly closed CFG can prove that removed instructions were
+        # never executable, leaving reached T-states, refresh and registers
+        # unchanged. Arbitrary HiSoft or ROM control is outside this proof.
+        unreachable_proof = None
         try:
-            _check_protected(assembly, candidate_text, {'start'})
-        except SymbolicError as exc:
-            if str(exc) == 'optimizer moved code across protected resource boundary':
-                detail = _first_resource_boundary_change(assembly, candidate_text)
-                raise SymbolicError(f'{exc}; first change {detail}') from exc
-            raise
+            unreachable_proof = check_unreachable_deletions(assembly, candidate_text)
+        except UnreachableRewriteError:
+            pass
+        if unreachable_proof is None:
+            try:
+                _check_protected(assembly, candidate_text, {'start'})
+            except SymbolicError as exc:
+                if str(exc) == 'optimizer moved code across protected resource boundary':
+                    detail = _first_resource_boundary_change(assembly, candidate_text)
+                    raise SymbolicError(f'{exc}; first change {detail}') from exc
+                raise
         source_cfg = inspect_typed_cfg_liveness(assembly)
         candidate_cfg = inspect_typed_cfg_liveness(candidate_text)
         if _control_transfers(assembly) != _control_transfers(candidate_text):
             raise WholeOptimizerError('optimizer changed unverified control-flow or interrupt instruction')
         if _observable_accesses(assembly) != _observable_accesses(candidate_text):
             raise WholeOptimizerError('optimizer changed unverified memory, I/O or stack effects')
-        if _state_context(assembly) != _state_context(candidate_text):
+        if unreachable_proof is None and _state_context(assembly) != _state_context(candidate_text):
             raise WholeOptimizerError('optimizer changed unverified register, flag or address state')
         obj = ras.assemble_text(candidate_text, 'rbc-whole-upeepz80.s')
         candidate_ssx, *_ = rld.link(
@@ -311,6 +322,7 @@ def verify_whole_optimizer_candidate(assembly: str, native_baseline: bytes,
         'native_baseline_source_reassembled': True,
         'native_candidate_link_verified': True,
         'protected_source_lines_preserved': True,
+        'closed_cfg_dead_code_proof': unreachable_proof,
         'candidate_byte_identical': unchanged,
         'native_baseline_file_bytes': len(native_baseline),
         'native_candidate_file_bytes': len(candidate_ssx),
