@@ -24,3 +24,29 @@ A separate two-line BASIC `STOP` test source was attempted and blocked by an unr
 
 The independent 60 BAS and 60 TZX default-limit builds produced 34 equal runnable pairs and 26 documented failures. Each of the 34 published SSX files passed loader startup (150 emulated frames after launch); no broader game-play claim is made.
 
+
+## Bounded real-keyboard gameplay check
+
+The unchanged published `42-bricklayer.ssx` was started under the genuine
+ZX-UX 48K loader for 750 frames after launch. Input scripts used the emulator's
+real keyboard queue. The opening screen was dismissed, then the native program
+advanced into a visible score/lives and wall scene. At identical frame counts,
+`Z` (bomb) and `M` (humanoid) made different game-screen changes; an irrelevant
+`X` matched the no-action control. The check ran in
+`tests/test_native_bricklayer_gameplay.py`. These tests do not prove a complete
+level or final gameplay victory.
+
+| Genuine framebuffer | Input after opening | PNG SHA-256 |
+| --- | --- | --- |
+| `bricklayer-gameplay-z.png` | `a{WAIT 120}z{WAIT 200}z` | `f7356355368e1c103d2e7f42e29685f275e3ef7b72ad633d1b79cdbdfeabe41a` |
+| `bricklayer-gameplay-m.png` | `a{WAIT 120}z{WAIT 200}m` | `e17b504caa90ff955746a08b56e3dbe1aa756d123dc60a9360f801c0cb3c89b1` |
+
+The real native no-DATA-section `STOP` test additionally exercised three-base
+source relocation, `GO SUB`/`RETURN`, zero-status STOP, physical screen release,
+the working shell prompt, and a second successful native process in the same
+kernel session. Natural completion was tested separately. Zero-BSS, one-past-end
+relocations remain refused, not silently admitted.
+
+The complete ROM-backed LLIST parity test passed all 6,581 original TZX BASIC
+lines, with 28 passing tests in the `test_zx_tzx2bas.py` suite. This is a
+ROM text-fidelity check, not a guarantee that every game has been played.

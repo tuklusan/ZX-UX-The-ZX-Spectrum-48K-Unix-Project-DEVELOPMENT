@@ -39,3 +39,17 @@ if command -v xvfb-run >/dev/null && command -v xterm >/dev/null && command -v s
     pid=$!; sleep 9; scrot -o "$OUT/native-cli-live-terminal.png"; wait "$pid"
   '
 fi
+
+# Real game controls: compare native Bricklayer's Z/M results with X/no-action.
+python -B src/zx-ux-sdk/rvm.py --headless --system "$SYSTEM" --frames 750 \
+  --keys 'a{WAIT 120}z{WAIT 200}z' \
+  --png "$OUT/bricklayer-gameplay-z.png" "$SSX"
+python -B src/zx-ux-sdk/rvm.py --headless --system "$SYSTEM" --frames 750 \
+  --keys 'a{WAIT 120}z{WAIT 200}m' \
+  --png "$OUT/bricklayer-gameplay-m.png" "$SSX"
+python -B -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests \
+  -p test_native_bricklayer_gameplay.py -v
+python -B -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests \
+  -p test_native_stop_shell.py -v
+python -B -m unittest discover -s experiments/hisoft-rbc-2026-10-22/tests \
+  -p test_zx_tzx2bas.py -v
