@@ -87,6 +87,58 @@ class _Code:
                 raise ValueError('untyped native runtime statement')
         return '\n'.join(result) + '\n'
 
+    def whole_program_source(self, bss_offset, process_total, *,
+                             entry_label, bss_label, end_label,
+                             start_label='start'):
+        """Render recorded native operations using relocatable program labels.
+
+        This uses only the original Python-side Z80 source statements and
+        their typed address roles. It does not decode assembled output. The
+        linker, rather than a fixed source size, locates BSS and process end.
+        """
+        from re import fullmatch
+
+        symbols = (entry_label, bss_label, end_label, start_label)
+        if (any(not isinstance(x, str) or
+                not fullmatch(r'[A-Za-z_][A-Za-z_0-9]*', x) for x in symbols)
+                or len(set(symbols)) != len(symbols) or
+                type(bss_offset) is not int or bss_offset < 0 or
+                type(process_total) is not int or
+                process_total < bss_offset + BSS_BYTES):
+            raise ValueError('whole-program runtime symbols or bounds invalid')
+        lines = [entry_label + ':']
+        prefix = entry_label + '_local_'
+        for item in self.source:
+            kind = item[0]
+            if kind == 'label':
+                lines.append(prefix + item[1] + ':')
+            elif kind == 'op':
+                lines.append('  ' + item[1])
+            elif kind == 'address':
+                text, offset = item[1:]
+                if text.count('$0000') != 1:
+                    raise ValueError('native runtime source has an untyped address')
+                # Only the two explicitly source-owned process bounds are
+                # allowed to refer outside the private sysvar BSS region.
+                if text.strip().lower().replace(' ', '') == 'ldde,$0000' and offset == -bss_offset:
+                    target = start_label
+                elif (text.strip().lower().replace(' ', '') == 'ldde,$0000'
+                      and offset == process_total - 1 - bss_offset):
+                    target = end_label + '-1'
+                elif 0 <= offset < BSS_BYTES:
+                    target = bss_label + ('+' + str(offset) if offset else '')
+                else:
+                    raise ValueError('native runtime pointer lacks a whole-program anchor')
+                lines.append('  ' + text.replace('$0000', target))
+            elif kind in ('jr', 'jp'):
+                condition, target = item[1:]
+                lines.append('  ' + kind + ' ' +
+                             (condition + ',' if condition else '') +
+                             prefix + target)
+            else:
+                raise ValueError('untyped native runtime source statement')
+        return '\n'.join(lines) + '\n'
+
     def build(self, base, load, entry=0):
         data = bytearray(self.code)
         for pos, target in self.jumps:
@@ -236,7 +288,7 @@ def _font_address_alias(e, base, total, action, font_alias=None):
 
 
 def _native_peek(asm, base, load, total=0, font_alias=None, entry=0,
-                 *, with_source=False):
+                 *, with_source=False, whole_program_symbols=None):
     e = _Code(asm)
     e.op('ld a,h; cp $5c')
     e.jr('ordinary_trampoline','nz')
@@ -314,6 +366,12 @@ def _native_peek(asm, base, load, total=0, font_alias=None, entry=0,
     e.label('read_public')
     e.op('ld l,(hl); ld h,0; ret')
     raw = e.build(base, load, entry)
+    if whole_program_symbols is not None:
+        if with_source or not isinstance(whole_program_symbols, dict) or set(whole_program_symbols) != {
+                'entry_label', 'bss_label', 'end_label', 'start_label'}:
+            raise ValueError('native runtime source mode is ambiguous')
+        return raw, e.whole_program_source(
+            base, total, **whole_program_symbols)
     if with_source:
         return raw, e.assembly(base, entry), tuple(sorted(
             [position for position, _ in e.absrefs] +
@@ -322,7 +380,7 @@ def _native_peek(asm, base, load, total=0, font_alias=None, entry=0,
 
 
 def _native_poke(asm, base, load, total=0, font_alias=None, entry=0,
-                 *, with_source=False):
+                 *, with_source=False, whole_program_symbols=None):
     e = _Code(asm)
     e.op('ld a,h; cp $5c')
     e.jr('poke_trampoline','nz')
@@ -397,6 +455,12 @@ def _native_poke(asm, base, load, total=0, font_alias=None, entry=0,
     e.label('chars_sync')
     _select_print_font(e)
     raw = e.build(base, load, entry)
+    if whole_program_symbols is not None:
+        if with_source or not isinstance(whole_program_symbols, dict) or set(whole_program_symbols) != {
+                'entry_label', 'bss_label', 'end_label', 'start_label'}:
+            raise ValueError('native runtime source mode is ambiguous')
+        return raw, e.whole_program_source(
+            base, total, **whole_program_symbols)
     if with_source:
         return raw, e.assembly(base, entry), tuple(sorted(
             [position for position, _ in e.absrefs] +
