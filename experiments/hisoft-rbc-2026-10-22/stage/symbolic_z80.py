@@ -239,7 +239,7 @@ def _canonical_source_line(raw: str, *, strip_comment: bool = False) -> str:
 def _protected_lines(asm: str, entries: set[str]) -> list[str]:
     result = []
     for line in asm.splitlines():
-        normalized = _canonical_source_line(line)
+        normalized = _canonical_source_line(line, strip_comment=True)
         if normalized.startswith(("db ", "dw ", "ds ", "section ", "global ")):
             result.append(normalized)
         elif normalized.endswith(":"):
