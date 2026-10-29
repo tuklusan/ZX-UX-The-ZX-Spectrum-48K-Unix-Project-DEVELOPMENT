@@ -123,10 +123,49 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         legacy, _ = rbc.build_ssx(builds, font, rld, stack,
                                       use_rom_font=True)
     budget_capacity = 0
+    has_native_input = (input_backend == 'zxux' and _has_input_token(
+        encode_strict_listing(source.read_text(encoding='ascii'))))
     if meta.get('budgeted_numeric_units'):
-        # The one-element trial is never the final array allocation. Reserve
-        # only space that fits in the real native resident memory budget.
+        # Reserve array storage against the *complete* native resident image.
+        # For INPUT programs, measure the actual source-backed INPUT bridge on
+        # a one-element trial first; the unbridged HiSoft size is too small.
         trial = rld.parse_ssx(legacy)
+        if has_native_input:
+            trial_sources = []
+            trial_proof = audit_original_source(
+                source, checkpoint, frontend, tape, rom,
+                source_sink=trial_sources.append, max_bytes=maximum,
+                budget_capacity=1)
+            native_trial = trial_proof['native_whole_source_baseline']
+            if (len(trial_sources) != 1 or
+                    not native_trial.get('native_whole_source_baseline_linked') or
+                    not native_trial.get('native_image_byte_exact') or
+                    not native_trial.get('all_source_relocations_verified') or
+                    not trial_proof['native_runtime_region'].get('native_region_verified')):
+                raise ValueError('one-element native DIM source trial unresolved')
+            p_trial = builds[0]
+            saved_stack = p_trial.base + len(p_trial.code) + p_trial.bss - 2
+            restart_slot = p_trial.bss >= 2 and any(
+                offset >= 2 and p_trial.code[offset-2:offset] == b'\xed\x7b' and
+                int.from_bytes(p_trial.code[offset:offset+2], 'little') == saved_stack
+                for offset in rbc._reloc_sites(builds))
+            source_trial, _, plain_trial = assemble_link(
+                trial_sources[0], font, use_rom_font=fitted,
+                restart_slot=restart_slot, stack=stack)
+            _check_equal(plain_trial, legacy)
+            if rom_work_bytes:
+                source_trial, _, _ = assemble_link(
+                    trial_sources[0], font, use_rom_font=fitted,
+                    restart_slot=restart_slot, stack=stack,
+                    rom_work_bytes=rom_work_bytes)
+            if _signed_print_at(source_trial)[1]:
+                source_trial, _, _ = assemble_link(
+                    trial_sources[0], font, use_rom_font=fitted,
+                    restart_slot=restart_slot, stack=stack,
+                    rom_work_bytes=rom_work_bytes, signed_print_at=True)
+            _, _, complete_trial = assemble_input_source(
+                source_trial, stack=stack, maximum=maximum)
+            trial = rld.parse_ssx(complete_trial)
         budget_capacity = capacity_for_native_budget(
             maximum, len(trial['image']), trial['bss'], stack,
             meta['budgeted_numeric_units'])
@@ -185,8 +224,7 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
             rom_work_bytes=rom_work_bytes, signed_print_at=True)
         at_sites = int('rbc_wrapper_at_row_abs:' in source_text)
     bridge_used = False
-    if input_backend == 'zxux' and _has_input_token(
-            encode_strict_listing(source.read_text(encoding='ascii'))):
+    if has_native_input:
         source_text, obj, native_ssx = assemble_input_source(
             source_text, stack=stack, maximum=maximum)
         bridge_used = True
