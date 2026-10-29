@@ -68,7 +68,8 @@ def verify_full_source_native(events, results, text_ends, assembler, ras,
 
 def run(source: Path, checkpoint: Path, frontend: Path,
         tape: Path, rom: Path, *, original_runtime_statements=None,
-        source_sink=None, max_bytes=14000) -> dict:
+        source_sink=None, max_bytes=14000,
+        budget_capacity=0) -> dict:
     if not (checkpoint / 'rbc.py').is_file():
         raise ValueError('reconstructed RBC checkpoint required')
     if not (frontend / 'compiler.py').is_file():
@@ -77,7 +78,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     import rbc
     source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     baseline, _ = rbc._compile_three(source, frontend, tape, rom, 0xff00,
-                                      [], 'block', False, 0)
+                                      [], 'block', False, budget_capacity)
     records = []
     source_words = []
     relocations = []
@@ -137,7 +138,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
     try:
         rbc.install_codegen_optimizer = passive_capture
         observed, _ = rbc._compile_three(source, frontend, tape, rom,
-                                          0xff00, [], 'block', True, 0)
+                                          0xff00, [], 'block', True, budget_capacity)
     finally:
         rbc.install_codegen_optimizer = original_hook
     if len(baseline) != 3 or len(observed) != 3 or len(records) != 3:

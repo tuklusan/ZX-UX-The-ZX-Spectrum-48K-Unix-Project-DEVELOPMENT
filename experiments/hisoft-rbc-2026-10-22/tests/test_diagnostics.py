@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stage'))
-from diagnostics import MESSAGES, from_exception, format_failure, RbcArgumentParser
+from diagnostics import MESSAGES, from_exception, format_failure, format_warning, RbcArgumentParser
 
 
 class UnifiedDiagnostics(unittest.TestCase):
@@ -22,6 +22,22 @@ class UnifiedDiagnostics(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def test_nonblocking_warning_messages_and_fail_closed_native_proof(self):
+        codes = ('RBC_WARN_DYNAMIC_DIM', 'RBC_WARN_HISOFT_UNOWNED_BYTES',
+                 'RBC_WARN_HISOFT_SPLIT_IMAGE')
+        for code in codes:
+            with self.subTest(code=code):
+                result = format_warning(code)
+                self.assertTrue(result.startswith('%RBC-WARNING ' + code))
+                self.assertIn('Line: - Statement: -', result)
+        with self.assertRaises(ValueError):
+            format_warning('RBC_MEMORY_LIMIT')
+        gap = from_exception(ValueError('original typed three-base HiSoft source unresolved: '
+                    'unresolved compiler bytes extend beyond native runtime'), self.source)
+        split = from_exception(ValueError('the full compiled mode C image is required'), self.source)
+        self.assertEqual(gap.mnemonic, 'RBC_NATIVE_SOURCE_UNRESOLVED')
+        self.assertEqual(split.mnemonic, 'RBC_HISOFT_SPLIT_UNVERIFIED')
 
     def test_all_proposed_families_and_historical_rom_codes(self):
         for name in ('BAS_NO_LINE_NUMBER', 'BAS_BIN_RANGE', 'ROM_C_SYNTAX',

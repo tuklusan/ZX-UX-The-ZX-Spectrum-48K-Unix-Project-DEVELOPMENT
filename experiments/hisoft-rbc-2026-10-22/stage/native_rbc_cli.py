@@ -24,6 +24,8 @@ from native_wrapper_source import assemble_link, _signed_print_at
 from native_input_source import assemble_input_source
 from basic_listing import encode_strict_listing
 from native_long_string_proof import workspace_bytes
+from native_budgeted_dim import capacity_for_native_budget
+from diagnostics import format_warning
 
 
 def _sha(data: bytes) -> str:
@@ -94,6 +96,12 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         raise ValueError('invalid INPUT backend')
     if os.environ.get('RBC_G8_OPTIMIZER'):
         raise ValueError('optimizer injection is forbidden in native RBC')
+    warnings = []
+
+    def warn(code, detail=''):
+        warnings.append({'mnemonic': code, 'detail': detail})
+        print(format_warning(code, detail), file=sys.stderr)
+
     # Use the checked stage tokenizer even with an older recovered checkpoint.
     encode_strict_listing(source.read_text(encoding='ascii'))
     sys.path.insert(0, str(checkpoint.resolve()))
@@ -106,8 +114,6 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
     if rom_work_bytes not in (0, reserved_workspace):
         raise ValueError('RBC_ROM_WORKSPACE_UNSAFE: private ROM workspace lacks an operation witness')
     rom_work_bytes = reserved_workspace
-    if meta.get('budgeted_numeric_units'):
-        raise ValueError('dynamic DIM budget has no three-base source witness yet')
     legacy, _ = rbc.build_ssx(builds, font, rld, stack, use_rom_font=False)
     fitted = (use_fit and maximum and
               max(len(legacy),
@@ -116,18 +122,40 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
     if fitted:
         legacy, _ = rbc.build_ssx(builds, font, rld, stack,
                                       use_rom_font=True)
+    budget_capacity = 0
+    if meta.get('budgeted_numeric_units'):
+        # The one-element trial is never the final array allocation. Reserve
+        # only space that fits in the real native resident memory budget.
+        trial = rld.parse_ssx(legacy)
+        budget_capacity = capacity_for_native_budget(
+            maximum, len(trial['image']), trial['bss'], stack,
+            meta['budgeted_numeric_units'])
+        warn('RBC_WARN_DYNAMIC_DIM', f'Reserved capacity per dimension: {budget_capacity}.')
+        builds, meta = rbc._compile_three(source, frontend, tape, rom,
+                                          65367, [], 'strict', False,
+                                          budget_capacity)
+        legacy, _ = rbc.build_ssx(builds, font, rld, stack,
+                                  use_rom_font=fitted)
     source_candidates = []
-    proof = audit_original_source(source, checkpoint, frontend, tape, rom,
-                                  source_sink=source_candidates.append,
-                                  max_bytes=maximum)
+    try:
+        proof = audit_original_source(source, checkpoint, frontend, tape, rom,
+                                      source_sink=source_candidates.append,
+                                      max_bytes=maximum,
+                                      budget_capacity=budget_capacity)
+    except ValueError as exc:
+        if str(exc) == 'the full compiled mode C image is required':
+            warn('RBC_WARN_HISOFT_SPLIT_IMAGE')
+        raise
     native_proof = proof['native_whole_source_baseline']
     if (len(source_candidates) != 1 or
             not native_proof.get('native_whole_source_baseline_linked') or
             not native_proof.get('native_image_byte_exact') or
             not native_proof.get('all_source_relocations_verified') or
             not proof['native_runtime_region'].get('native_region_verified')):
-        raise ValueError('original typed three-base HiSoft source unresolved: ' +
-                         str(native_proof.get('blocker', 'missing native witness')))
+        blocker = str(native_proof.get('blocker', 'missing native witness'))
+        if 'unresolved compiler bytes extend beyond native runtime' in blocker:
+            warn('RBC_WARN_HISOFT_UNOWNED_BYTES')
+        raise ValueError('original typed three-base HiSoft source unresolved: ' + blocker)
     sites = rbc._reloc_sites(builds)
     p = builds[0]
     saved_stack = p.base + len(p.code) + p.bss - 2
@@ -193,6 +221,7 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         'optimizer_used': False,
         'rom_work_bytes': rom_work_bytes,
         'rom_runtime_uses': list(meta.get('rom_runtime_uses', ())),
+        'warnings': warnings,
         'loader_execution_tested': False,
         'native_gameplay_tested': False,
     }
