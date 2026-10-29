@@ -30,9 +30,19 @@ def _split_original_control(event, word, image):
     source text and initial bytes must agree on the exact Z80 opcode.
     """
     from symbolic_capture import Emission
-    match = _DIRECT_CONTROL.fullmatch(event.source.strip())
-    if (match is None or event.kind != 'instruction' or
-            event.position + 1 != word.site or len(event.data) != 3 or
+    original = event.source.strip().lower()
+    # HiSoft sometimes emits the stack restore and its forward JP in one
+    # *original source emission*: POP HL; JP $FFFF. The patched word is
+    # still exactly the terminal JP operand, not an arbitrary subspan.
+    prefix = 'pop hl; '
+    has_pop = original.startswith(prefix)
+    control = original[len(prefix):] if has_pop else original
+    match = _DIRECT_CONTROL.fullmatch(control)
+    lead = 2 if has_pop else 1
+    if (match is None or (has_pop and match[1].lower() != 'jp') or
+            event.kind != 'instruction' or
+            event.position + lead != word.site or
+            len(event.data) != lead + 2 or
             word.kind != 'control-target' or not isinstance(word.target, int)):
         raise PatchBindingError('patch does not replace a whole source word')
     instruction, condition, marker = match.groups()
@@ -41,15 +51,20 @@ def _split_original_control(event, word, image):
     opcode = ((0xC3 if instruction == 'jp' else 0xCD) if condition is None
               else (0xC2 if instruction == 'jp' else 0xC4) +
                    8 * _CONDITIONS.index(condition))
-    if event.data != bytes((opcode,)) + (b'\xff\xff' if marker.lower() == '$ffff' else b'\0\0'):
+    header = (b'\xe1' if has_pop else b'') + bytes((opcode,))
+    if event.data != header + (b'\xff\xff' if marker.lower() == '$ffff' else b'\0\0'):
         raise PatchBindingError('original control opcode or placeholder differs')
-    source = event.source.strip()[:match.start(3)] + 'nn'
+    source = control[:match.start(3)] + 'nn'
     if image[word.site:word.site + 2] != word.value.to_bytes(2, 'little'):
         raise PatchBindingError('typed source word differs from final image')
-    return (replace(event, kind='opcode', source=source, data=event.data[:1]),
-            Emission(word.site, 'relocation', str(word.target),
-                     image[word.site:word.site + 2], word.target,
-                     source_site=event.source_site))
+    preceding = ((replace(event, kind='instruction', source='pop hl',
+                          data=b'\xe1'),) if has_pop else ())
+    return (preceding +
+            (replace(event, position=word.site - 1, kind='opcode',
+                     source=source, data=bytes((opcode,))),
+             Emission(word.site, 'relocation', str(word.target),
+                      image[word.site:word.site + 2], word.target,
+                      source_site=event.source_site)))
 
 
 def _final_source_events(events, image: bytes, words=None):
@@ -130,7 +145,8 @@ def _bind_one(events, image: bytes, words):
         index, event = writers[0]
         if index in replacements:
             raise PatchBindingError('patch does not replace a whole source word')
-        if event.kind == 'instruction' and event.position == site - 1:
+        if (event.kind == 'instruction' and
+                event.position in (site - 1, site - 2)):
             if any(other is not event and other.kind != 'direct-write' and
                    other.position < site + 2 and
                    other.position + len(other.data) > site - 1

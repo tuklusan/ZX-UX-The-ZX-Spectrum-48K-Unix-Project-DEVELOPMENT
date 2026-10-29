@@ -33,6 +33,8 @@ def assembler(s):
             return bytes((opcode,)) + value.to_bytes(2, 'little')
     if s.startswith('jp '):
         return b'\xc3' + int(s[3:]).to_bytes(2, 'little')
+    if s == 'pop hl':
+        return b'\xe1'
     if s == 'nop':
         return b'\x00'
     if s == 'ret':
@@ -242,6 +244,63 @@ class PatchedSources(unittest.TestCase):
                     self.assertEqual(native['relocs'], [1])
                     self.assertEqual(native['image'],
                                      bytes((opcode,)) + b'\x04\0\0\xc9')
+
+    def test_compound_pop_hl_forward_jump_has_exact_relocation(self):
+        # The real HiSoft source emitter produces this four-byte fragment.
+        for placeholder in ('$FFFF', '0'):
+            groups, images = [], []
+            for base in self.BASES:
+                patched = (base + 5).to_bytes(2, 'little')
+                groups.append([
+                    Emission(0, 'instruction', 'pop hl; jp ' + placeholder,
+                             b'\xe1\xc3' + (b'\xff\xff' if placeholder == '$FFFF' else b'\0\0')),
+                    Emission(4, 'instruction', 'nop', b'\0'),
+                    Emission(5, 'instruction', 'ret', b'\xc9'),
+                    Emission(2, 'direct-write', 'st_next', patched[:1]),
+                    Emission(3, 'direct-write', 'st_next', patched[1:]),
+                ])
+                images.append(b'\xe1\xc3' + patched + b'\0\xc9')
+            bound, report = bind_three_source_passes(groups, images,
+                                                      self.BASES, (6,) * 3)
+            self.assertEqual(report['verified_source_words'], 1)
+            for events, image, base in zip(bound, images, self.BASES):
+                self.assertEqual([e.kind for e in events],
+                                 ['instruction', 'opcode', 'relocation',
+                                  'instruction', 'instruction'])
+                source = inspect_source_boundaries(events, image, base, 6, 0,
+                                                   assembler)
+                self.assertTrue(source.fully_typed)
+                text = from_source(events, image, base, 6, 0, assembler).assembly()
+                self.assertIn('    pop hl', text)
+                self.assertIn('jp source_0005', text)
+                obj = ras.assemble_text(text, 'pop-jp.s')
+                linked, *_ = rld.link([rld.Obj(obj, 'pop-jp.sso')], [],
+                                      entry='start', stack=384)
+                parsed = rld.parse_ssx(linked)
+                self.assertEqual(parsed['relocs'], [2])
+                self.assertEqual(bytes(rld.relocate(parsed['image'], parsed['relocs'], base)),
+                                 image)
+
+    def test_compound_pop_hl_forward_jump_fails_closed(self):
+        variants = (('push hl; jp $FFFF', b'\xe5\xc3\xff\xff'),
+                    ('pop hl; call $FFFF', b'\xe1\xcd\xff\xff'),
+                    ('pop hl; jp $FFFF', b'\xe1\xc2\xff\xff'),
+                    ('pop hl; jp $FFFF; nop', b'\xe1\xc3\xff\xff'))
+        for source, original_bytes in variants:
+            groups, images = [], []
+            for base in self.BASES:
+                data = (base + 5).to_bytes(2, 'little')
+                groups.append([
+                    Emission(0, 'instruction', source, original_bytes),
+                    Emission(4, 'instruction', 'nop', b'\0'),
+                    Emission(5, 'instruction', 'ret', b'\xc9'),
+                    Emission(2, 'direct-write', 'st_next', data[:1]),
+                    Emission(3, 'direct-write', 'st_next', data[1:]),
+                ])
+                images.append(b'\xe1\xc3' + data + b'\0\xc9')
+            with self.subTest(source=source):
+                with self.assertRaisesRegex(PatchBindingError, 'whole source word|opcode or placeholder'):
+                    bind_three_source_passes(groups, images, self.BASES, (6,) * 3)
 
     def test_original_forward_jump_opcode_mismatch_is_rejected(self):
         for original in (b'\xc3\0\0', b'\xca\x01\0'):
