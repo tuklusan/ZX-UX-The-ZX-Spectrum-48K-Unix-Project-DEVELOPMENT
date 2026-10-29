@@ -51,8 +51,8 @@ rbc_raw_poll:
     jp z,rbc_raw_delete
     cp 7
     jp z,rbc_raw_restore_abort
-    cp 8
-    jp c,rbc_raw_poll
+    cp 12
+    jp c,rbc_raw_restore_abort
     cp 128
     jp nc,rbc_raw_restore_abort
     push af
