@@ -21,6 +21,8 @@ sys.path[:0] = [str(STAGE), str(SDK)]
 import rld
 from gate8_full_source_audit import run as audit_original_source
 from native_wrapper_source import assemble_link
+from native_input_source import assemble_input_source
+from basic_listing import encode_strict_listing
 
 
 def _sha(data: bytes) -> str:
@@ -37,10 +39,46 @@ def _check_equal(native: bytes, reference: bytes) -> None:
                      f'{first} (native={len(native)}, reference={len(reference)})')
 
 
+
+def _has_input_token(listing: bytes) -> bool:
+    """Read real 48K BASIC tokens, ignoring quoted/REM/DATA text and caches."""
+    offset = 0
+    while offset < len(listing):
+        if offset + 4 > len(listing):
+            raise ValueError('truncated BASIC line header')
+        size = int.from_bytes(listing[offset+2:offset+4], 'little')
+        if not size or offset + 4 + size > len(listing):
+            raise ValueError('truncated BASIC token line')
+        line = listing[offset+4:offset+4+size]
+        quoted = data = False
+        i = 0
+        while i < len(line):
+            ch = line[i]
+            if ch == 34:
+                quoted = not quoted
+            elif not quoted:
+                if ch == 0xea:  # REM
+                    break
+                if ch == 14:  # numeric cache; opaque 5 bytes
+                    if i + 6 > len(line):
+                        raise ValueError('truncated BASIC numeric cache')
+                    i += 6
+                    continue
+                if ch == 0xe4:  # DATA until next active colon
+                    data = True
+                if ch == 58:
+                    data = False
+                if ch == 0xee and not data:  # INPUT statement
+                    return True
+            i += 1
+        offset += size + 4
+    return False
+
+
 def compile_native(source: Path, checkpoint: Path, frontend: Path,
                    tape: Path, rom: Path, *,
                    stack: int = 384, maximum: int = 14000,
-                   use_fit: bool = True) -> tuple[str, bytes, bytes, dict]:
+                   use_fit: bool = True, input_backend: str = "rom") -> tuple[str, bytes, bytes, dict]:
     """Compile from independent source events; never re-encode a linked SSX."""
     if not (source.is_file() and source.suffix.lower() == '.bas'):
         raise ValueError('requires original numbered ASCII .bas source')
@@ -50,6 +88,8 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         raise ValueError('verified HiSoft compiler, frontend, tape and ROM required')
     if type(maximum) is not int or maximum < 0 or type(stack) is not int or stack < 1:
         raise ValueError('invalid --max or --stack')
+    if input_backend not in ('rom', 'zxux'):
+        raise ValueError('invalid INPUT backend')
     if os.environ.get('RBC_G8_OPTIMIZER'):
         raise ValueError('optimizer injection is forbidden in native RBC')
     sys.path.insert(0, str(checkpoint.resolve()))
@@ -92,6 +132,13 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
     # The original wrapper is a *comparison input only*. Its emitted bytes
     # never feed the assembler, linker, returned output, or source generator.
     _check_equal(native_ssx, legacy)
+    baseline_sha = _sha(native_ssx)
+    bridge_used = False
+    if input_backend == 'zxux' and _has_input_token(
+            encode_strict_listing(source.read_text(encoding='ascii'))):
+        source_text, obj, native_ssx = assemble_input_source(
+            source_text, stack=stack, maximum=maximum)
+        bridge_used = True
     image = rld.parse_ssx(native_ssx)
     total = len(image['image']) + image['bss'] + image['stack']
     if maximum and max(total, len(native_ssx)) > maximum:
@@ -108,7 +155,10 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         'bss': image['bss'], 'stack': stack, 'total': total,
         'memory_limit': maximum, 'relocations': len(image['relocs']),
         'native_three_base_source_verified': True,
-        'native_and_legacy_ssx_byte_identical': True,
+        'native_and_legacy_ssx_byte_identical': not bridge_used,
+        'original_hisoft_baseline_sha256': baseline_sha,
+        'input_backend': 'zxux' if bridge_used else 'rom',
+        'input_source_bridge_three_base_verified': bridge_used,
         'native_linker': 'ras/rld',
         'rom_font_used': fitted,
         'optimizer_used': False,
@@ -133,13 +183,16 @@ def main(argv=None) -> int:
     p.add_argument('--max', type=int, default=14000)
     p.add_argument('--stack', type=int, default=384)
     p.add_argument('--no-fit', action='store_true')
+    p.add_argument('--input-backend', choices=('rom', 'zxux'), default='rom',
+                   help='experimental bounded ZX-UX INPUT source; ROM is the checked baseline')
     p.add_argument('--report', type=Path)
     a = p.parse_args(argv)
     try:
         text, obj, ssx, report = compile_native(
             a.source.resolve(), a.compiler.resolve(), a.frontend.resolve(),
             a.tape.resolve(), a.rom.resolve(),
-            stack=a.stack, maximum=a.max, use_fit=not a.no_fit)
+            stack=a.stack, maximum=a.max, use_fit=not a.no_fit,
+            input_backend=a.input_backend)
         output = text.encode('ascii') if a.S else obj if a.c else ssx
         if a.output.resolve() == a.source.resolve():
             raise ValueError('refusing to overwrite original BASIC input')
