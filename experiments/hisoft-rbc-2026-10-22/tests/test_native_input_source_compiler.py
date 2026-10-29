@@ -72,7 +72,8 @@ class NativeInputSourceCompiler(unittest.TestCase):
             self.assertTrue(proof['input_source_bridge_three_base_verified'])
             self.assertFalse(proof['optimizer_used'])
             self.assertEqual(proof['input_backend'], 'zxux')
-            self.assertEqual(result, assemble_candidate(asm))
+            self.assertNotEqual(result, assemble_candidate(asm),
+                                'the echoed source must differ from raw proof')
             self.assertTrue(obj.startswith(b'SSO1'))
             linked = rld.parse_ssx(result)
             self.assertEqual(linked['entry'], 0)
@@ -91,6 +92,119 @@ class NativeInputSourceCompiler(unittest.TestCase):
                     run.session.wait_prompt(1500)
                     self.assertEqual(run.session.last_line(), '#')
                     self.assertFalse(run.session.owns_screen(run.fg.pid))
+
+    def test_rom_echo_and_delete_match_screen_at_same_frame(self):
+        self.assertEqual(SYSTEM.read_bytes(), FROZEN.read_bytes())
+        with tempfile.TemporaryDirectory(prefix='rbc-input-echo-') as tmp:
+            bas, ssx = Path(tmp) / 'echo.bas', Path(tmp) / 'echo.ssx'
+            bas.write_text('10 REM : OPEN #\n20 PRINT AT 0,0;"TYPE SOMETHING"\n'
+                           '30 INPUT A$\n40 PRINT A$\n50 STOP\n', encoding='ascii')
+            _, _, output, proof = compile_native(
+                bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='zxux')
+            self.assertTrue(proof['input_source_bridge_three_base_verified'])
+            ssx.write_bytes(output)
+            def screen(keys):
+                run = rvm.run_kernel(ssx, keys=keys, frames=1000,
+                                     system=SYSTEM)
+                self.assertEqual(run.why, 'input', run.summary())
+                return run.picture()[0]
+            idle = screen('')
+            entered = screen('{WAIT 200}ab')
+            deleted = screen('{WAIT 200}abc{DELETE}')
+            changed = screen('{WAIT 200}abc{DELETE}d')
+            self.assertNotEqual(idle, entered, 'typed text was not echoed')
+            self.assertEqual(entered, deleted, 'DELETE must clear the last cell')
+            self.assertNotEqual(entered, changed,
+                                'new character must appear after DELETE')
+
+
+    def test_numeric_invalid_delete_and_reprompt(self):
+        with tempfile.TemporaryDirectory(prefix='rbc-input-numeric-') as tmp:
+            bas, ssx = Path(tmp) / 'numbers.bas', Path(tmp) / 'numbers.ssx'
+            bas.write_text('10 REM : OPEN #\n20 INPUT A\n'
+                           '30 IF A=1234 THEN POKE 22528,55\n40 STOP\n',
+                           encoding='ascii')
+            _, _, executable, proof = compile_native(
+                bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='zxux')
+            self.assertEqual(proof['input_backend'], 'zxux')
+            ssx.write_bytes(executable)
+            for keys in ('1234', '123x{DELETE}4',
+                         'abc{ENTER}{WAIT 100}1234'):
+                with self.subTest(keys=keys):
+                    run = rvm.run_kernel(ssx,
+                        keys='{WAIT 200}' + keys + '{ENTER}',
+                        frames=2000, system=SYSTEM)
+                    self.assertEqual(run.why, 'exit', run.summary())
+                    self.assertEqual(run.fg.status, 0)
+                    self.assertEqual(run.fg.exit_picture[0][6144], 55)
+                    run.session.wait_prompt(1500)
+                    self.assertEqual(run.session.last_line(), '#')
+
+    def test_long_echo_input_never_overwrites_low_kernel(self):
+        with tempfile.TemporaryDirectory(prefix='rbc-input-bounds-') as tmp:
+            bas, ssx = Path(tmp) / 'bounds.bas', Path(tmp) / 'bounds.ssx'
+            bas.write_text('10 REM : OPEN #\n20 INPUT A$\n'
+                           '30 POKE 22528,LEN A$+20\n40 STOP\n',
+                           encoding='ascii')
+            _, _, executable, proof = compile_native(
+                bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='zxux')
+            ssx.write_bytes(executable)
+            opts = rvm.Options()
+            opts.prog = str(ssx)
+            opts.system = SYSTEM
+            opts.keys = '{WAIT 200}' + 'z'*120 + '{ENTER}'
+            opts.frames = 2400
+            run = rvm.Runner(opts)
+            run.start()
+            observed = []
+            run.session.frame_hooks.append(lambda _: observed.append(
+                run.session.word(0x5c65)) if run.fg.started is not None
+                and run.fg.ended is None else None)
+            for _ in range(5000):
+                run.frame()
+                why = run.check(2400)
+                if why:
+                    run.why = why
+                    break
+            self.assertEqual(run.why, 'exit', run.summary())
+            self.assertEqual(run.fg.status, 0)
+            self.assertTrue(observed)
+            self.assertGreater(min(observed), 0x5d00)
+            self.assertLess(max(observed), 0x5d98)
+            run.session.wait_prompt(1500)
+            self.assertEqual(run.session.last_line(), '#')
+
+    def test_original_flying_geese_enter_starts_second_round(self):
+        from test_native_oxo_complete_round import text_row
+        game = ROOT / 'src/bonus/60-programs/39-flying-geese'
+        bas = game / 'BASIC/39-flying-geese.bas'
+        tzx = game / 'BASIC/39-flying-geese.tzx'
+        published = game / 'bin/39-flying-geese.ssx'
+        originals = tuple(p.read_bytes() for p in (bas, tzx, published))
+        with tempfile.TemporaryDirectory(prefix='rbc-input-geese-') as tmp:
+            _, _, trial, report = compile_native(
+                bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='zxux')
+            self.assertNotEqual(trial, originals[2])
+            self.assertTrue(report['input_source_bridge_three_base_verified'])
+            ssx = Path(tmp) / 'geese-input.ssx'
+            ssx.write_bytes(trial)
+            font = (CHECKPOINT / 'font32.bin').read_bytes()
+            shots = '{WAIT 100}' + 'a'*130
+            over = rvm.run_kernel(ssx, keys=shots,
+                                  frames=4400, system=SYSTEM)
+            self.assertEqual(over.why, 'input', over.summary())
+            pic, _ = over.picture()
+            self.assertEqual(text_row(pic, 9, font).strip(), 'GAME OVER')
+            self.assertIn('IN 100 SHOTS', text_row(pic, 11, font))
+            after = rvm.run_kernel(ssx, keys=shots+'{WAIT 150}{ENTER}',
+                                   frames=5200, system=SYSTEM)
+            self.assertEqual(after.why, 'frames', after.summary())
+            final, _ = after.picture()
+            self.assertNotEqual(pic, final)
+            self.assertTrue(text_row(final, 0, font).strip().startswith('SHOTS:'))
+            self.assertNotIn('GAME OVER', text_row(final, 9, font))
+        self.assertEqual(tuple(p.read_bytes() for p in (bas, tzx, published)),
+                         originals)
 
 
 if __name__ == '__main__':

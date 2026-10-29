@@ -13,6 +13,7 @@ ROM_EDIT_SPACE_END = 0x5d98
 # Protect ROM editor workspace below LOWK=0x5d98, leaving two bytes spare.
 # Overflow drops excess printable keys and *continues* until ENTER.
 # Original ROM $1652 inserts one character into its own workspace.
+# ROM RST $10 echoes accepted characters; DELETE restores the printed cell.
 EDITOR = '''rbc_raw_test_input:
     ld hl,($5c61)
     push hl
@@ -67,6 +68,9 @@ rbc_raw_poll:
     ld (de),a
     inc de
     ld ($5c5b),de
+    push de
+    rst $10
+    pop de
     jp rbc_raw_poll
 rbc_raw_full:
     pop af
@@ -79,6 +83,16 @@ rbc_raw_delete:
     jp z,rbc_raw_poll
     add hl,de
     dec hl
+    push hl
+    push de
+    ld a,8
+    rst $10
+    ld a,32
+    rst $10
+    ld a,8
+    rst $10
+    pop de
+    pop hl
     ld (hl),13
     ld ($5c5b),hl
     jp rbc_raw_poll
