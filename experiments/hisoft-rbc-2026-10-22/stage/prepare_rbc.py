@@ -10,7 +10,7 @@ import shutil
 
 BOUNDARY = (
     'bas2tap.py', 'bas2tap_syntax.py', 'basic_listing.py', 'rom_syntax.py',
-    'tape_policy.py', 'external_io_policy.py', 'bss_layout.py', 'startup_colors.py',
+    'tape_policy.py', 'native_tape_trap.py', 'external_io_policy.py', 'bss_layout.py', 'startup_colors.py',
     'native_pause_rt.py', 'native_keyread_rt.py', 'native_sysvars_rt.py', 'native_run_rt.py',
     'native_error_exit.py',
     'native_sysvar_policy.py', 'spectrum_sysvars.py', 'spectrum_fonts.py',
@@ -34,7 +34,8 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            'from basic_listing import encode_strict_listing\n'
            'from rom_syntax import validate_rom_lines\n'
            'from spectrum_fonts import detect_font_bank\n'
-           'from tape_policy import reject_tape_operations\n'
+           'from tape_policy import find_tape_operations, allow_deferred_tape_traps\n'
+           'from native_tape_trap import install as install_native_tape_trap\n'
            'from external_io_policy import reject_external_commands\n'
            'from native_pause_rt import install as install_native_pause\n'
            'from spectrum_runtime import install as install_spectrum_runtime\n'
@@ -76,10 +77,11 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            '    install_spectrum_runtime(compiler)\n'
            '    install_native_keyread(compiler)\n'
            '    install_native_sysvars(compiler)\n'
-           '    install_native_run(compiler)')
+           '    install_native_run(compiler)\n'
+           '    install_native_tape_trap(compiler)')
     change('        if not source.open_lines(program):',
            '        validate_rom_lines(program, rom)\n'
-           '        reject_tape_operations(source.tap.split_lines(program), kw.TOKEN)\n'
+           '        find_tape_operations(source.tap.split_lines(program), kw.TOKEN)\n'
            '        reject_external_commands(source.tap.split_lines(program), kw.TOKEN)\n'
            '        if not source.open_lines(program):')
     change('            program = source.add_directives(program, directives, True, [], kw, initial.fp)',
@@ -92,6 +94,7 @@ def prepare(checkpoint: Path, extensions: Path) -> None:
            "                                                ['0 REM : OPEN #'], kw, initial.fp)")
     change('checks = analyze_lines(spectrum_tap.split_lines(program), kw.TOKEN)',
            'checks = analyze_lines(spectrum_tap.split_lines(program), kw.TOKEN)\n'
+           '        allow_deferred_tape_traps(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n'
            '        allow_bounded_udg_loops(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n'
            '        allow_nested_glyph_writes(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n'
            '        allow_bounded_chr_glyphs(spectrum_tap.split_lines(program), kw.TOKEN, checks)\n'
