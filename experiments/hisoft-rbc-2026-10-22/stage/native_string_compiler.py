@@ -11,7 +11,9 @@ def with_static_strings(base, proofs, letter):
         limit = entry['max_chars']
         if (not isinstance(name, str) or len(name) != 2 or name[1] != '$'
                 or not name[0].isalpha() or not name[0].isascii()
-                or not isinstance(limit, int) or not 1 <= limit <= 255):
+                or not isinstance(limit, int) or not 1 <= limit <= 13000
+                or (limit > 255 and (limit != 664 or entry.get("bound_proof") !=
+                    "original-exocet-bounded-concatenation"))):
             raise ValueError('invalid static text capacity')
         capacities.append((name[0].lower(), limit))
     if len({n for n, _ in capacities}) != len(capacities):

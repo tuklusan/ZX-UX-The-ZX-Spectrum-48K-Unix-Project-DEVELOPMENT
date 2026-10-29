@@ -25,7 +25,8 @@ class NativeWrapperError(ValueError):
 
 
 def wrapper_source(original_source: str, font: bytes, *,
-                   use_rom_font: bool = False, restart_slot: bool = False) -> str:
+                   use_rom_font: bool = False, restart_slot: bool = False,
+                   rom_work_bytes: int = 0) -> str:
     """Return typed native text/data/BSS for the entire wrapped program.
 
     `original_source` must be a complete, independently three-base-verified
@@ -39,6 +40,8 @@ def wrapper_source(original_source: str, font: bytes, *,
         raise NativeWrapperError('font32 must contain exactly 768 original bytes')
     if type(use_rom_font) is not bool or type(restart_slot) is not bool:
         raise NativeWrapperError('wrapper flags must be boolean')
+    if type(rom_work_bytes) is not int or (rom_work_bytes != 0 and not 512 <= rom_work_bytes <= 2048):
+        raise NativeWrapperError('private ROM workspace out of range')
     lines = original_source.splitlines()
     if (len(lines) < 5 or lines[:3] !=
             ['    section text', '    global start', 'start:'] or
@@ -67,6 +70,11 @@ def wrapper_source(original_source: str, font: bytes, *,
            '    ld hl,$3c00' if use_rom_font else f'    ld hl,{PREFIX}font',
            '    ld ($5c36),hl', f'    ld hl,{PREFIX}udg',
            '    ld ($5c7b),hl']
+    if rom_work_bytes:
+        for ptr in (0x5c61,0x5c63,0x5c65):
+            pro.extend((f'    ld hl,(${ptr:04x})',
+                        f'    ld ({PREFIX}saved_work_{ptr:04x}),hl',
+                        f'    ld hl,{PREFIX}rom_work', f'    ld (${ptr:04x}),hl'))
     for i, (address, value) in enumerate(ROM_COLORS):
         pro.extend((f'    ld a,(${address:04x})',
                     f'    ld ({PREFIX}color_{i}),a',
@@ -79,6 +87,10 @@ def wrapper_source(original_source: str, font: bytes, *,
                 '    ld de,0', f'{PREFIX}exit:', '    push de',
                 f'    ld hl,({PREFIX}saved_udg)', '    ld ($5c7b),hl',
                 f'    ld hl,({PREFIX}saved_chars)', '    ld ($5c36),hl'))
+    if rom_work_bytes:
+        for ptr in (0x5c61,0x5c63,0x5c65):
+            pro.extend((f'    ld hl,({PREFIX}saved_work_{ptr:04x})',
+                        f'    ld (${ptr:04x}),hl'))
     for i, (address, _) in enumerate(ROM_COLORS):
         pro.extend((f'    ld a,({PREFIX}color_{i})',
                     f'    ld (${address:04x}),a'))
@@ -93,6 +105,9 @@ def wrapper_source(original_source: str, font: bytes, *,
                     f'    jp {PREFIX}hisoft_entry'))
     data = [f'{PREFIX}saved_chars:', '    dw 0',
             f'{PREFIX}saved_udg:', '    dw 0']
+    if rom_work_bytes:
+        for ptr in (0x5c61,0x5c63,0x5c65):
+            data.extend((f'{PREFIX}saved_work_{ptr:04x}:','    dw 0'))
     for i in range(len(ROM_COLORS)):
         data.extend((f'{PREFIX}color_{i}:', '    db 0'))
     for i in range(len(ROM_CONTROLS)):
@@ -103,6 +118,8 @@ def wrapper_source(original_source: str, font: bytes, *,
             data.append('    db ' + ','.join(map(str, font[i:i + 32])))
     data.extend((f'{PREFIX}udg:', f'    ds {UDG_BYTES}',
                  f'{PREFIX}error_pointer:', f'    dw {PREFIX}exit'))
+    if rom_work_bytes:
+        bss += f'{PREFIX}rom_work:\n    ds {rom_work_bytes}\n'
     return ('\n'.join(pro) + '\n' + text_and_data +
             '\n'.join(data) + '\n    section bss\n' + bss +
             f'{PREFIX}bss_end:\n')
@@ -110,13 +127,13 @@ def wrapper_source(original_source: str, font: bytes, *,
 
 def assemble_link(original_source: str, font: bytes, *,
                   use_rom_font: bool = False, restart_slot: bool = False,
-                  stack: int = 384) -> tuple[str, bytes, bytes]:
+                  stack: int = 384, rom_work_bytes: int = 0) -> tuple[str, bytes, bytes]:
     """Emit typed assembly, real ras object, and actual rld-linked SSX."""
     if type(stack) is not int or not 1 <= stack <= 65535:
         raise NativeWrapperError('invalid native stack size')
     source = wrapper_source(original_source, font,
                             use_rom_font=use_rom_font,
-                            restart_slot=restart_slot)
+                            restart_slot=restart_slot, rom_work_bytes=rom_work_bytes)
     try:
         obj = ras.assemble_text(source, 'rbc-native-whole.s')
         ssx, *_ = rld.link([rld.Obj(obj, 'rbc-native-whole.sso')], [],

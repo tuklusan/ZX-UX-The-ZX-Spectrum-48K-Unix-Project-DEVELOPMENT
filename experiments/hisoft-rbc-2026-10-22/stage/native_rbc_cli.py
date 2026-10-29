@@ -23,6 +23,7 @@ from gate8_full_source_audit import run as audit_original_source
 from native_wrapper_source import assemble_link
 from native_input_source import assemble_input_source
 from basic_listing import encode_strict_listing
+from native_long_string_proof import workspace_bytes
 
 
 def _sha(data: bytes) -> str:
@@ -78,7 +79,8 @@ def _has_input_token(listing: bytes) -> bool:
 def compile_native(source: Path, checkpoint: Path, frontend: Path,
                    tape: Path, rom: Path, *,
                    stack: int = 384, maximum: int = 14000,
-                   use_fit: bool = True, input_backend: str = "zxux") -> tuple[str, bytes, bytes, dict]:
+                   use_fit: bool = True, input_backend: str = "zxux",
+                   rom_work_bytes: int = 0) -> tuple[str, bytes, bytes, dict]:
     """Compile from independent source events; never re-encode a linked SSX."""
     if not (source.is_file() and source.suffix.lower() == '.bas'):
         raise ValueError('requires original numbered ASCII .bas source')
@@ -99,6 +101,10 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
     font = (checkpoint / 'font32.bin').read_bytes()
     builds, meta = rbc._compile_three(source, frontend, tape, rom,
                                       65367, [], 'strict', False, 1)
+    proved_workspace = workspace_bytes(meta.get('optimized_strings', []))
+    if rom_work_bytes not in (0, proved_workspace):
+        raise ValueError('unproved native ROM workspace requested')
+    rom_work_bytes = proved_workspace
     if meta.get('budgeted_numeric_units'):
         raise ValueError('dynamic DIM budget has no three-base source witness yet')
     legacy, _ = rbc.build_ssx(builds, font, rld, stack, use_rom_font=False)
@@ -135,6 +141,11 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
     # never feed the assembler, linker, returned output, or source generator.
     _check_equal(native_ssx, legacy)
     baseline_sha = _sha(native_ssx)
+    if rom_work_bytes:
+        source_text, obj, native_ssx = assemble_link(
+            source_candidates[0], font, use_rom_font=fitted,
+            restart_slot=restart_slot, stack=stack,
+            rom_work_bytes=rom_work_bytes)
     bridge_used = False
     if input_backend == 'zxux' and _has_input_token(
             encode_strict_listing(source.read_text(encoding='ascii'))):
@@ -157,13 +168,16 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         'bss': image['bss'], 'stack': stack, 'total': total,
         'memory_limit': maximum, 'relocations': len(image['relocs']),
         'native_three_base_source_verified': True,
-        'native_and_legacy_ssx_byte_identical': not bridge_used,
+        'native_and_legacy_ssx_byte_identical': not bridge_used and not rom_work_bytes,
         'original_hisoft_baseline_sha256': baseline_sha,
+        'source_proven_string_growth': [p for p in meta.get('optimized_strings', [])
+                                       if p.get('bound_proof')],
         'input_backend': 'zxux' if bridge_used else 'rom',
         'input_source_bridge_three_base_verified': bridge_used,
         'native_linker': 'ras/rld',
         'rom_font_used': fitted,
         'optimizer_used': False,
+        'rom_work_bytes': rom_work_bytes,
         'loader_execution_tested': False,
         'native_gameplay_tested': False,
     }
