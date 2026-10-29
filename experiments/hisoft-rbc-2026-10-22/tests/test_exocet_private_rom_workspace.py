@@ -158,7 +158,8 @@ class RealExocet(unittest.TestCase):
             run = rvm.run_kernel(path, keys='', frames=400, system=SYSTEM)
             self.assertIsNotNone(run.fg.started)
             m=run.session.m
-            fault=[];invalid=[]
+            fault=[];invalid=[];panics=[]
+            m.hooks[0x6048] = lambda z: panics.append(z.frame) or False
             def trap(z):
                 fault.append((z.frame,z.mem[0x5c3a]));return False
             def print_at(z):
@@ -173,6 +174,7 @@ class RealExocet(unittest.TestCase):
                 if fault or run.fg.ended is not None:
                     break
             self.assertFalse(fault)
+            self.assertFalse(panics, 'Exocet must never enter the kernel panic handler')
             self.assertFalse(invalid)
             self.assertTrue(run.session.owns_screen(run.fg.pid))
             self.assertIsNone(run.fg.ended)
