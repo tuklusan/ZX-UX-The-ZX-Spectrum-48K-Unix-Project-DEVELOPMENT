@@ -38,6 +38,59 @@ class Capture:
     events: list[Emission] = field(default_factory=list)
     runtime_traces: list[dict] = field(default_factory=list)
     runtime_sources: list[CapturedRuntime] = field(default_factory=list)
+    rewinds: list[tuple[int, int, int]] = field(default_factory=list)
+    discarded_replays: list[tuple[Emission, ...]] = field(default_factory=list)
+
+    def canonicalize_replays(self, image: bytes) -> None:
+        """Discard only byte-for-byte identical, source-identical replayed trials.
+
+        HiSoft sometimes probes an expression, restores its instruction PC,
+        and compiles the same expression again. Keep all differing/partial
+        historical writes for the ordinary strict source-ownership audit.
+        """
+        discard = set()
+        for begin, end, horizon in self.rewinds:
+            old = [(i, event) for i, event in enumerate(self.events[:horizon])
+                   if begin <= event.position and
+                   event.position + len(event.data) <= end and
+                   event.data]
+            if not old or any(event.kind in ('direct-write', 'runtime-opaque',
+                                             'data-source') for _, event in old):
+                continue
+            # Replaying must replace the entire trial interval with the same
+            # original typed emission records, not merely equal final bytes.
+            replay = [(i, event) for i, event in enumerate(self.events[horizon:], horizon)
+                      if begin <= event.position and
+                      event.position + len(event.data) <= end]
+            original = tuple((e.position, e.kind, e.source, e.data,
+                              e.symbol_offset, e.source_site) for _, e in old)
+            replacement = tuple((e.position, e.kind, e.source, e.data,
+                                 e.symbol_offset, e.source_site) for _, e in replay)
+            # No partial record may cross either end of the rewind. Every
+            # byte in the abandoned region must have exactly one old writer
+            # and one new writer, both originating in the same Z80 source.
+            def covers(records):
+                cursor = begin
+                for _, event in sorted(records, key=lambda pair: pair[1].position):
+                    if event.position != cursor:
+                        return False
+                    cursor += len(event.data)
+                return cursor == end
+            if (original != replacement or
+                    not covers(old) or not covers(replay) or
+                    any(event.position < end and event.position + len(event.data) > begin
+                        and not (begin <= event.position and
+                                 event.position + len(event.data) <= end)
+                        for event in self.events) or
+                    any(image[e.position:e.position + len(e.data)] != e.data
+                        for _, e in replay)):
+                continue
+            discard.update(i for i, _ in old)
+        if discard:
+            self.discarded_replays.append(tuple(self.events[i] for i in sorted(discard)))
+            self.events[:] = [event for i, event in enumerate(self.events)
+                              if i not in discard]
+        self.rewinds.clear()
 
     def record(self, compiler, position, kind, source, symbol_offset=None, source_site=None):
         if not compiler.storing:
@@ -239,6 +292,25 @@ def install(compiler_module):
             machine.far = self.far = traced
     cls.__init__ = __init__
 
+    # Observe genuine original compiler code-PC rewinds. Do not change HiSoft
+    # execution: the source journal is normalized only after full replay proof.
+    for method_name in ('restore_state', 'rewind_code'):
+        original_rewind = getattr(cls, method_name, None)
+        if original_rewind is None:
+            continue
+        def wrap_rewind(fn):
+            @wraps(fn)
+            def call(self, state, *args, **kwargs):
+                prior = self.pc
+                horizon = len(getattr(getattr(self, '_zxux_capture', None),
+                                      'events', ()))
+                result = fn(self, state, *args, **kwargs)
+                if self.storing and self.pc < prior:
+                    self._zxux_capture.rewinds.append((self.pc, prior, horizon))
+                return result
+            return call
+        setattr(cls, method_name, wrap_rewind(original_rewind))
+
     original_reset = cls.reset
     @wraps(original_reset)
     def reset(self, *args, **kwargs):
@@ -405,4 +477,5 @@ def audit_result(compiler, result):
         raise ValueError('capture missing or compilation failed')
     if result.mode != 'C':
         raise ValueError('the full compiled mode C image is required')
+    capture.canonicalize_replays(result.code)
     return capture.audit(result.code)
