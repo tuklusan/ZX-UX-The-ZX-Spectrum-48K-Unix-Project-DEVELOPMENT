@@ -46,6 +46,38 @@ class Selection(unittest.TestCase):
         self.assertEqual(c.var_size(sv,0x80),14)
         self.assertEqual(sv['zxux_live_rows'],1014)
 
+    def test_dim_loads_shape_as_immediate_not_relocated_address(self):
+        # HiSoft ld_hl() is explicitly relocatable, even for small numbers.
+        # Row widths/counts must use immediate Z80 instructions instead.
+        class Base:
+            def __init__(self):
+                self.strvars=[{'addr':0x8010,'first':2,'last':6,
+                               'zxux_live_rows':0x801e} for _ in range(26)]
+                self._zxux_string_redims={1:((2,6),(2,4),(2,2))}
+                self.events=[]
+            def get_char(self):return ord('b')
+            def peek_after(self):return ord('$')
+            def next_char(self):return ord('$')
+            def dim_sizes(self,ent):pass
+            def emit(self,code,*args):self.events.append(('emit',code.format(*args)))
+            def st_hl(self,addr):self.events.append(('store',addr))
+            def ld_hl(self,addr):self.events.append(('reloc',addr))
+            def ld_bc_abs(self,value):self.events.append(('count',value))
+            def call_rt(self,rt):self.events.append(('runtime',rt))
+        cls=with_string_redims(Base,string_type=0x80,memory_fill=3,element_rt=4)
+        for rows,width in ((2,6),(2,4),(2,2),(4,3)):
+            with self.subTest(rows=rows,width=width):
+                instance=cls()
+                instance._zxux_current_string_shape=(rows,width)
+                instance.st_dim()
+                self.assertEqual(instance.events[:4], [
+                    ('emit',f'ld hl,{width}'),('store',0x8010),
+                    ('emit',f'ld hl,{rows}'),('store',0x801e)])
+                self.assertEqual([e for e in instance.events if e[0]=='reloc'],
+                                 [('reloc',0x8012)])
+                self.assertEqual(instance.events[-2:],
+                                 [('emit','ld a,32'),('runtime',3)])
+
     def test_each_subscript_reads_current_rows_at_runtime(self):
         class Emitter:
             def __init__(self):self.assembly=[]

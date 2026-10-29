@@ -70,9 +70,11 @@ def with_string_redims(base, *, string_type, memory_fill, element_rt):
             self.dim_sizes(sv)
             rows,width=self._zxux_current_string_shape
             self.t=string_type
-            self.ld_hl(width)
+            # Width and row count are scalar constants, never addresses.
+            # ld_hl() emits a RELOCATABLE address operand in HiSoft.
+            self.emit('ld hl,{}', width)
             self.st_hl(sv['addr'])
-            self.ld_hl(rows)
+            self.emit('ld hl,{}', rows)
             self.st_hl(sv['zxux_live_rows'])
             self.ld_hl(sv['addr']+2)
             self.ld_bc_abs(sv['first']*sv['last']-1)
