@@ -92,6 +92,8 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         raise ValueError('invalid INPUT backend')
     if os.environ.get('RBC_G8_OPTIMIZER'):
         raise ValueError('optimizer injection is forbidden in native RBC')
+    # Use the checked stage tokenizer even with an older recovered checkpoint.
+    encode_strict_listing(source.read_text(encoding='ascii'))
     sys.path.insert(0, str(checkpoint.resolve()))
     import rbc
     font = (checkpoint / 'font32.bin').read_bytes()

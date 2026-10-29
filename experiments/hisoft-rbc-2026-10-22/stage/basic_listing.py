@@ -4,6 +4,8 @@ Only upstream BAS2TAP emits Sinclair bytes. No pyhsb tokenizer or numerical
 metadata writer is permitted on the external BASIC source path.
 """
 from __future__ import annotations
+import ast
+from fractions import Fraction
 import re
 from bas2tap import BAS2TAPError, _prepare_line, tokenize_line
 
@@ -87,6 +89,115 @@ def _fix_bin_cache(data: bytes, number: int) -> bytes:
     return bytes(out)
 
 
+
+def _print_at_integer(expr: bytes) -> int | None:
+    """Prove only small, pure numeric constants; never guess variable values."""
+    try:
+        text = expr.strip().decode('ascii')
+        if len(text) > 64 or not text:
+            return None
+        tree = ast.parse(text, mode='eval')
+
+        def number(node):
+            if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+                # str(float) is sufficient for recognizing integer results;
+                # it cannot manufacture a value from a BASIC variable.
+                return Fraction(str(node.value))
+            if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+                value = number(node.operand)
+                return value if isinstance(node.op, ast.UAdd) else -value
+            if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div)):
+                left, right = number(node.left), number(node.right)
+                if isinstance(node.op, ast.Add):
+                    value = left + right
+                elif isinstance(node.op, ast.Sub):
+                    value = left - right
+                elif isinstance(node.op, ast.Mult):
+                    value = left * right
+                else:
+                    value = left / right
+                if abs(value.numerator) > 100000000 or value.denominator > 100000000:
+                    raise ValueError('constant too large to prove')
+                return value
+            raise ValueError('not a static numeric expression')
+
+        value = number(tree.body)
+        return int(value) if value.denominator == 1 else None
+    except (ValueError, SyntaxError, ZeroDivisionError, OverflowError,
+            UnicodeError, RecursionError):
+        return None
+
+
+def _check_print_at_bounds(number: int, tokenized: bytes) -> None:
+    """Reject provably invalid PRINT AT coordinates, leaving dynamic ones alone.
+
+    Uses original Sinclair keyword bytes (PRINT=F5, AT=AC). Quoted, REM,
+    DATA and five-byte Sinclair numeric caches are not executable tokens.
+    The 48K ROM's PRINT-AT limits are rows 0..21 and columns 0..31.
+    """
+    active_print = in_string = in_data = False
+    p = 0
+    while p < len(tokenized):
+        byte = tokenized[p]
+        if byte == 34:
+            in_string = not in_string
+        elif not in_string:
+            if byte == 14:
+                if p + 6 > len(tokenized):
+                    raise ValueError(f'Line {number}: truncated Sinclair numeric cache')
+                p += 6
+                continue
+            if byte == 0xea and not in_data:  # REM
+                break
+            if byte == 58:  # statement separator
+                active_print = in_data = False
+            elif byte == 0xe4:  # DATA
+                in_data = True
+                active_print = False
+            elif not in_data:
+                if byte == 0xf5:  # PRINT, including IF ... THEN PRINT
+                    active_print = True
+                elif byte == 0xac and active_print:  # actual PRINT AT token
+                    # Strip Sinclair's hidden number encoding before parsing
+                    # any visible constant. Do not interpret string data.
+                    start = p + 1
+                    parts = [bytearray(), bytearray()]
+                    part = 0
+                    depth = 0
+                    i = start
+                    while i < len(tokenized):
+                        ch = tokenized[i]
+                        if ch == 14:
+                            if i + 6 > len(tokenized):
+                                raise ValueError(f'Line {number}: truncated Sinclair numeric cache')
+                            i += 6
+                            continue
+                        if ch == 40:
+                            depth += 1
+                        elif ch == 41:
+                            depth -= 1
+                        if depth == 0 and ch == 44 and part == 0:
+                            part = 1
+                            i += 1
+                            continue
+                        if (part and depth == 0 and ch in (13, 34, 58, 59, 0xac)
+                                or ch >= 0xA3):
+                            break
+                        if ch == 13 or ch == 58:
+                            break
+                        parts[part].append(ch)
+                        i += 1
+                    if part:
+                        for axis, (raw, maximum) in enumerate(zip(parts, (21, 31))):
+                            value = _print_at_integer(bytes(raw))
+                            if value is not None and not 0 <= value <= maximum:
+                                name = 'row' if axis == 0 else 'column'
+                                raise ValueError(
+                                    f'RBC E_PRINT_AT_RANGE: Line {number}: '
+                                    f'PRINT AT {name} {value} outside 0..{maximum} '
+                                    '(Spectrum 48K ROM screen)')
+        p += 1
+
 def encode_strict_listing(listing: str) -> bytes:
     """Do not re-tokenize, clean, rewrite, or insert Spectrum line text."""
     if not listing.isascii():
@@ -130,6 +241,7 @@ def encode_strict_listing(listing: str) -> bytes:
             if n <= seen:
                 raise BAS2TAPError(f'Line {n}: duplicate or unordered BASIC line')
             data = _fix_bin_cache(tokenize_line(body, line_number=n, _mode=mode), n)
+            _check_print_at_bounds(n, data)
             output.extend(n.to_bytes(2, 'big'))
             output.extend(len(data).to_bytes(2, 'little'))
             output.extend(data)
