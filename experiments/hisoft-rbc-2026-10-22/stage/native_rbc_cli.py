@@ -101,7 +101,8 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
     font = (checkpoint / 'font32.bin').read_bytes()
     builds, meta = rbc._compile_three(source, frontend, tape, rom,
                                       65367, [], 'strict', False, 1)
-    reserved_workspace = workspace_bytes(meta.get('optimized_strings', []))
+    reserved_workspace = workspace_bytes(meta.get('optimized_strings', []),
+                                         meta.get('rom_runtime_uses', ()))
     if rom_work_bytes not in (0, reserved_workspace):
         raise ValueError('RBC_ROM_WORKSPACE_UNSAFE: private ROM workspace lacks an operation witness')
     rom_work_bytes = reserved_workspace
@@ -191,6 +192,7 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         'rom_font_used': fitted,
         'optimizer_used': False,
         'rom_work_bytes': rom_work_bytes,
+        'rom_runtime_uses': list(meta.get('rom_runtime_uses', ())),
         'loader_execution_tested': False,
         'native_gameplay_tested': False,
     }

@@ -63,9 +63,14 @@ def growing_scalar_strings(program: bytes, keywords, split_lines) -> list[dict]:
             for name in sorted(found - arrays)]
 
 
-def workspace_bytes(proofs: list[dict]) -> int:
-    """Detect native ROM string-work demand from operation proofs, not identity."""
-    return (ROM_WORKSPACE_BYTES if any(
-        p.get('storage_is_reservation') is True and
-        p.get('bound_proof') == 'native-runtime-checked-scalar-concatenation'
-        for p in proofs) else 0)
+def workspace_bytes(proofs: list[dict], runtime_routes=()) -> int:
+    """Select private ROM memory using HiSoft's actually emitted string RTs.
+
+    1K covers ordinary string work; 2K is reserved for the checked growth
+    path. This is a runtime capacity, not an inferred BASIC string maximum.
+    """
+    if any(p.get('storage_is_reservation') is True and
+           p.get('bound_proof') == 'native-runtime-checked-scalar-concatenation'
+           for p in proofs):
+        return ROM_WORKSPACE_BYTES
+    return 1024 if runtime_routes else 0

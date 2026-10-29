@@ -28,7 +28,7 @@ SSX = GAME / 'bin/47-exocet.ssx'
 ROM = ROOT / 'src/zx-ux-sdk/rom/48.rom'
 SYSTEM = ROOT / 'build/out/ZX-UX.tzx'
 FROZEN = ROOT / 'dist/zx-ux/tzx/ZX-UX.tzx'
-CK = ROOT / 'build/tmp/rbc-generic-candidate-2/rbc'
+CK = ROOT / 'build/tmp/rbc-generic-candidate-3/rbc'
 FE = ROOT / 'build/tmp/tug-fault-investigation/frontend/upstream-pyhsb'
 TAPE = ROOT / 'build/tmp/hisoft-test-original.tap'
 READY = all(x.is_file() for x in (SOURCE, TZX, SSX, ROM, SYSTEM, FROZEN, CK/'rbc.py', FE/'compiler.py', TAPE))
@@ -143,6 +143,7 @@ class RealExocet(unittest.TestCase):
         asm, obj, ssx, report = compile_native(SOURCE, CK, FE, TAPE, ROM)
         self.assertTrue(report['native_three_base_source_verified'])
         self.assertEqual(report['rom_work_bytes'], 2048)
+        self.assertIn(69, report['rom_runtime_uses'])
         self.assertEqual(report['source_proven_string_growth'][0]['max_chars'], 1024)
         self.assertTrue(report['source_proven_string_growth'][0]['storage_is_reservation'])
         self.assertEqual(report['original_hisoft_baseline_sha256'] != report['native_ssx_sha256'], True)
