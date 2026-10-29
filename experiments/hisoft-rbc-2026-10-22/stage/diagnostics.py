@@ -108,7 +108,13 @@ NATIVE_VALIDATION|Generated SSX failed format or relocation validation.
 COMPILER_INTERNAL|Compiler encountered an unexpected internal failure.
 TZX_CONVERSION|Tokenized TZX BASIC could not be recovered faithfully.
 TZX_FIDELITY|Recovered TZX BASIC differs semantically from the authoritative BAS.
-SSX_DIFFERENCE|BAS and TZX produced different linked SSX bytes."""
+SSX_DIFFERENCE|BAS and TZX produced different linked SSX bytes.
+PRINT_AT_RANGE|PRINT AT coordinate is outside the Spectrum 48K screen limits.
+STRING_BOUND_UNPROVEN|String storage requirements cannot be safely bounded or checked.
+ROM_WORKSPACE_UNSAFE|Required ROM workspace cannot be safely isolated from ZX-UX memory.
+ROM_STATE_UNSAFE|ROM system state cannot be guaranteed to be restored on every supported exit path.
+STRING_CAPACITY|String operation exceeds reserved memory capacity.
+ROM_WORKSPACE_OVERFLOW|ROM workspace operation exceeds reserved memory capacity."""
 ROM_EXTRA = """INVALID_IMAGE|Supplied ROM is not a 16,384-byte Spectrum 48K image.
 INITIALIZATION|Spectrum ROM could not initialize its BASIC editor.
 NUMERIC_ENCODING|Stored Sinclair numeric representation is incomplete or corrupt.
@@ -261,6 +267,18 @@ def from_exception(exc: Exception, source: Path | None = None) -> Diagnostic:
                 name = 'INTERNAL'
         mnemonic = 'HIS_' + name
         keyword = 'GO TO' if 'go to' in low else 'DIM' if 'dim' in low else None
+    elif 'e_print_at_range' in low or 'rbc_print_at_range' in low:
+        mnemonic, keyword = 'RBC_PRINT_AT_RANGE', 'AT'
+    elif 'rbc_string_bound_unproven' in low:
+        mnemonic = 'RBC_STRING_BOUND_UNPROVEN'
+    elif 'rbc_rom_workspace_unsafe' in low:
+        mnemonic = 'RBC_ROM_WORKSPACE_UNSAFE'
+    elif 'rbc_rom_state_unsafe' in low:
+        mnemonic = 'RBC_ROM_STATE_UNSAFE'
+    elif 'rbc_string_capacity' in low:
+        mnemonic = 'RBC_STRING_CAPACITY'
+    elif 'rbc_rom_workspace_overflow' in low:
+        mnemonic = 'RBC_ROM_WORKSPACE_OVERFLOW'
     elif 'unexpected keyword' in low:
         mnemonic = 'BAS_UNEXPECTED_KEYWORD'
         match = re.search(r'unexpected keyword\s+([^:\n]+)', detail, re.I)

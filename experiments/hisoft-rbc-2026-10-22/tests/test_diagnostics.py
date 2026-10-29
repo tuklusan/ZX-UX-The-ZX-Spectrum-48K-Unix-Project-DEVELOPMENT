@@ -30,6 +30,18 @@ class UnifiedDiagnostics(unittest.TestCase):
                      'RBC_SSX_DIFFERENCE'):
             self.assertIn(name, MESSAGES)
 
+    def test_generic_native_string_and_workspace_diagnostic_codes(self):
+        for code in ('RBC_PRINT_AT_RANGE', 'RBC_STRING_BOUND_UNPROVEN',
+                     'RBC_ROM_WORKSPACE_UNSAFE', 'RBC_ROM_STATE_UNSAFE',
+                     'RBC_STRING_CAPACITY', 'RBC_ROM_WORKSPACE_OVERFLOW'):
+            self.assertIn(code, MESSAGES)
+            with self.subTest(code=code):
+                result = from_exception(ValueError(f'{code}: Line 40: tested failure'), self.source)
+                self.assertEqual(result.mnemonic, code)
+                self.assertEqual(result.basic_line, 40)
+        old = from_exception(ValueError('RBC E_PRINT_AT_RANGE: Line 40: row 22'), self.source)
+        self.assertEqual(old.mnemonic, 'RBC_PRINT_AT_RANGE')
+
     def test_rom_syntax_uses_original_text_and_report_code(self):
         raw = 'Line 10: Spectrum 48K ROM syntax error 0B near character 15'
         result = from_exception(ValueError(raw), self.source)
