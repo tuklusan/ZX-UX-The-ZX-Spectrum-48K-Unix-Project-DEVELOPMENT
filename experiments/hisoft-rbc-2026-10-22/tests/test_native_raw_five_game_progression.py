@@ -45,8 +45,10 @@ class OriginalFiveInputCandidates(unittest.TestCase):
                   folder / 'bin' / (name+'.ssx'))
         before = tuple(p.read_bytes() for p in inputs)
         asm, obj, old, proof = compile_native(
-            inputs[0], CHECKPOINT, FRONTEND, TAPE, ROM)
-        self.assertEqual(old, before[2])
+            inputs[0], CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='rom')
+        self.assertNotEqual(old, before[2])
+        self.assertEqual(compile_native(
+            inputs[0], CHECKPOINT, FRONTEND, TAPE, ROM)[2], before[2])
         self.assertTrue(proof['native_three_base_source_verified'])
         self.assertTrue(proof['native_and_legacy_ssx_byte_identical'])
         self.assertFalse(proof['optimizer_used'])

@@ -72,8 +72,11 @@ class NativeOriginalInputExperiments(unittest.TestCase):
                 before = original_bas.read_bytes()
                 published_before = published.read_bytes()
                 source, _, reference, proof = compile_native(
-                    original_bas, CHECKPOINT, FRONTEND, TAPE, ROM)
-                self.assertEqual(reference, published_before)
+                    original_bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='rom')
+                self.assertNotEqual(reference, published_before)
+                self.assertEqual(compile_native(
+                    original_bas, CHECKPOINT, FRONTEND, TAPE, ROM)[2],
+                    published_before)
                 self.assertTrue(proof['native_three_base_source_verified'])
                 self.assertTrue(proof['native_and_legacy_ssx_byte_identical'])
                 self.assertFalse(proof['optimizer_used'])
@@ -105,8 +108,10 @@ class NativeOriginalInputExperiments(unittest.TestCase):
         original_bytes = basic.read_bytes()
         published_bytes = published.read_bytes()
         source, _, reference, proof = compile_native(
-            basic, CHECKPOINT, FRONTEND, TAPE, ROM)
-        self.assertEqual(reference, published_bytes)
+            basic, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='rom')
+        self.assertNotEqual(reference, published_bytes)
+        self.assertEqual(compile_native(
+            basic, CHECKPOINT, FRONTEND, TAPE, ROM)[2], published_bytes)
         self.assertTrue(proof['native_three_base_source_verified'])
         self.assertTrue(proof['native_and_legacy_ssx_byte_identical'])
         self.assertFalse(proof['optimizer_used'])

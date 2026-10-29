@@ -2,7 +2,8 @@
 """Run all 34 unchanged SSX games in bounded real-ZX-UX emulator batches.
 
 Each game runs the original two-boot native_gameplay_34.py comparison.
-At most five games execute at once; each has a 40-minute default timeout.
+At most twelve games execute at once; each has a five-minute default timeout.
+Each independent runner invocation is limited to 120 minutes.
 Raw subprocess results are saved under untracked build/tmp for every game,
 including failures and timeouts. A changed screen is not gameplay proof.
 No game executable, BASIC original, system tape or ROM is changed.
@@ -10,6 +11,8 @@ No game executable, BASIC original, system tape or ROM is changed.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import os
@@ -17,6 +20,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 
 from native_gameplay_34 import FROZEN, GAMES, SCRIPTS, SYSTEM
 
@@ -24,6 +28,9 @@ GATE = Path(__file__).resolve().with_name('native_gameplay_34.py')
 ROOT = GATE.parents[3]
 MARKER = re.compile(r'^([a-z0-9-]+): (DISPLAY CHANGED|INPUT EFFECT UNVERIFIED) '
                     r'\[(frames|exit|input)/(frames|exit|input)\]$', re.M)
+RUNNER_LIMIT = 7200
+GAME_LIMIT = 300
+PARALLEL_LIMIT = 12
 INPUT_GAMES = frozenset(('01-minelay', '07-critical-path-analysis',
                         '23-biorhythms', '30-space-traffic', '56-roots'))
 
@@ -64,13 +71,22 @@ def run_one(game: str, deadline: int) -> tuple[str, str, int | None, str, str]:
 
 
 def save_result(directory: Path, game: str, status: str, code: int | None,
-                stdout: str, stderr: str) -> None:
+                stdout: str, stderr: str, elapsed: float | None = None) -> None:
     """Save exact stdout/stderr and exit status, including unverified cases."""
     path = directory / (game + '.log')
     if path.exists():
         raise FileExistsError(path)
     with path.open('x', encoding='utf-8') as output:
-        output.write('GAME: ' + game + '\nSTATUS: ' + status + '\nEXIT: ' +
+        category = ('EMULATOR ERROR' if status.startswith('ERROR') else
+                    'TIMEOUT' if status.startswith('TIMEOUT') else
+                    'BEHAVIOR UNVERIFIED' if status.startswith('SCREEN UNCHANGED') else
+                    'SCREEN RESPONSE VERIFIED; GAMEPLAY UNVERIFIED')
+        output.write('GAME: ' + game + '\nCLASSIFICATION: ' + category +
+                     '\nREASON: ' + status + '\nELAPSED_SECONDS: ' +
+                     ('UNKNOWN' if elapsed is None else f'{elapsed:.3f}') +
+                     '\nSTDOUT_SHA256: ' + hashlib.sha256(stdout.encode()).hexdigest() +
+                     '\nSTDERR_SHA256: ' + hashlib.sha256(stderr.encode()).hexdigest() +
+                     '\nSTATUS: ' + status + '\nEXIT: ' +
                      (str(code) if code is not None else 'UNKNOWN') +
                      '\n--- STDOUT ---\n' + stdout + '\n--- STDERR ---\n' + stderr)
         output.flush()
@@ -79,20 +95,26 @@ def save_result(directory: Path, game: str, status: str, code: int | None,
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--jobs', type=int, default=5)
-    parser.add_argument('--batch-size', type=int, default=5,
-                        help='sequential groups of at most five game subprocesses')
-    parser.add_argument('--timeout', type=int, default=2400,
-                        help='per-game wall-clock limit in seconds (default: 40 minutes)')
+    parser.add_argument('--jobs', type=int, default=PARALLEL_LIMIT)
+    parser.add_argument('--batch-size', type=int, default=PARALLEL_LIMIT,
+                        help='sequential groups of at most twelve game subprocesses')
+    parser.add_argument('--timeout', type=int, default=GAME_LIMIT,
+                        help='per-game wall-clock limit in seconds (default: 5 minutes)')
+    parser.add_argument('--runner-timeout', type=int, default=RUNNER_LIMIT,
+                        help='total runner limit in seconds (default: 120 minutes)')
     parser.add_argument('--results-dir', type=Path,
                         default=ROOT / 'build/tmp/rbc-gameplay-34',
                         help='untracked directory for raw per-game test logs')
     parser.add_argument('games', nargs='*', help='optional exact published game names')
     args = parser.parse_args(argv)
-    if not 1 <= args.jobs <= 5 or not 1 <= args.batch_size <= 5:
-        parser.error('jobs and batch-size must each be 1..5')
-    if not 30 <= args.timeout <= 2400:
-        parser.error('timeout must be 30..2400 seconds')
+    if not 1 <= args.jobs <= PARALLEL_LIMIT or not 1 <= args.batch_size <= PARALLEL_LIMIT:
+        parser.error('jobs and batch-size must each be 1..12')
+    if not 30 <= args.timeout <= GAME_LIMIT:
+        parser.error('per-game timeout must be 30..300 seconds')
+    if not GAME_LIMIT <= args.runner_timeout <= RUNNER_LIMIT:
+        parser.error('runner timeout must be 300..7200 seconds')
+    if args.timeout * ((args.batch_size + args.jobs - 1) // args.jobs) > args.runner_timeout:
+        parser.error('selected batch could outlast runner timeout')
     if not args.results_dir.resolve().is_relative_to((ROOT / 'build/tmp').resolve()):
         parser.error('results-dir must stay under untracked build/tmp')
     return args
@@ -114,22 +136,28 @@ def main(argv=None) -> int:
     session.mkdir(parents=True, exist_ok=False)
     print('RAW GAME LOGS: ' + str(session), flush=True)
     results = {}
+    started = time.monotonic()
     for first in range(0, len(selected), args.batch_size):
         group = selected[first:first + args.batch_size]
         print(f'BATCH {first // args.batch_size + 1}: {", ".join(group)}', flush=True)
+        if time.monotonic() - started + args.timeout * ((len(group) + args.jobs - 1) // args.jobs) > args.runner_timeout:
+            raise TimeoutError('runner 120-minute budget cannot admit next batch')
         with ThreadPoolExecutor(max_workers=min(args.jobs, len(group))) as pool:
-            tasks = {pool.submit(run_one, game, args.timeout): game for game in group}
+            def timed(game):
+                t0 = time.monotonic()
+                return run_one(game, args.timeout), time.monotonic() - t0
+            tasks = {pool.submit(timed, game): game for game in group}
             for task in as_completed(tasks):
                 game = tasks[task]
                 try:
-                    name, status, code, stdout, stderr = task.result()
+                    (name, status, code, stdout, stderr), elapsed = task.result()
                     if name != game:
                         raise ValueError('game identity mismatch')
                 except Exception as exc:
-                    status, code, stdout, stderr = 'ERROR: ' + type(exc).__name__, None, '', str(exc)
-                save_result(session, game, status, code, stdout, stderr)
+                    status, code, stdout, stderr, elapsed = 'ERROR: ' + type(exc).__name__, None, '', str(exc), None
+                save_result(session, game, status, code, stdout, stderr, elapsed)
                 results[game] = status
-                print(f'{game}: {status}', flush=True)
+                print(f'{game}: {status}; elapsed={elapsed}', flush=True)
     changed = [g for g in selected if results[g].startswith('DISPLAY CHANGED')]
     unchanged = [g for g in selected if results[g].startswith('SCREEN UNCHANGED')]
     blocked = [g for g in selected if g not in changed and g not in unchanged]
@@ -146,6 +174,7 @@ def main(argv=None) -> int:
     if blocked:
         print('ERROR/TIMEOUT: ' + ', '.join(blocked), flush=True)
     print('SCREEN DIFFERENCES DO NOT PROVE COMPLETE GAMEPLAY', flush=True)
+    print(f'RUNNER ELAPSED: {time.monotonic()-started:.3f}s / {args.runner_timeout}s', flush=True)
     # Subset success means only those checked games showed a screen difference.
     return 0 if not unchanged and not blocked else 1
 

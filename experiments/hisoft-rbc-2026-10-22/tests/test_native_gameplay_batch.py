@@ -34,23 +34,26 @@ class NativeGameplayBatchClassification(unittest.TestCase):
         self.assertEqual(SCRIPTS['14-scuba'], '{WAIT 1600}{ENTER}{WAIT 120}x')
         self.assertEqual(SCRIPTS['54-swordsman'], '{WAIT 250}Y')
 
-    def test_forty_minute_defaults_and_bounds(self):
+    def test_two_hour_runner_five_minute_game_twelve_parallel(self):
         args = parse_args([])
-        self.assertEqual(args.timeout, 2400)
-        self.assertEqual(args.jobs, 5)
-        self.assertEqual(args.batch_size, 5)
+        self.assertEqual(args.timeout, 300)
+        self.assertEqual(args.runner_timeout, 7200)
+        self.assertEqual(args.jobs, 12)
+        self.assertEqual(args.batch_size, 12)
         with self.assertRaises(SystemExit):
-            parse_args(['--timeout', '2401'])
+            parse_args(['--timeout', '301'])
         with self.assertRaises(SystemExit):
-            parse_args(['--batch-size', '6'])
+            parse_args(['--batch-size', '13'])
+        with self.assertRaises(SystemExit):
+            parse_args(['--runner-timeout', '7201'])
         with self.assertRaises(SystemExit):
             parse_args(['--results-dir', '/tmp/invalid-gameplay-reports'])
 
     def test_preserve_timeout_output_and_refuse_overwrite(self):
         with patch('native_gameplay_batch.subprocess.run',
-                   side_effect=subprocess.TimeoutExpired(['python'], 2400,
+                   side_effect=subprocess.TimeoutExpired(['python'], 300,
                                                         output=b'partial\n', stderr=b'why\n')):
-            game, status, code, stdout, stderr = run_one('42-bricklayer', 2400)
+            game, status, code, stdout, stderr = run_one('42-bricklayer', 300)
         self.assertEqual(game, '42-bricklayer')
         self.assertEqual(status, 'TIMEOUT (unverified)')
         self.assertIsNone(code)

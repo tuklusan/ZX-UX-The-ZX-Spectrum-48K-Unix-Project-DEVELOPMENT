@@ -52,9 +52,11 @@ class NativeFlyingGeeseInputReplay(unittest.TestCase):
         font = (CHECKPOINT / 'font32.bin').read_bytes()
         self.assertEqual(len(font), 768)
         asm, obj, linked, proof = compile_native(
-            BAS, CHECKPOINT, FRONTEND, TAPE, ROM)
+            BAS, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='rom')
         self.assertTrue(obj.startswith(b'SSO1'))
-        self.assertEqual(linked, originals[2])
+        self.assertNotEqual(linked, originals[2])
+        self.assertEqual(compile_native(
+            BAS, CHECKPOINT, FRONTEND, TAPE, ROM)[2], originals[2])
         self.assertTrue(proof['native_three_base_source_verified'])
         self.assertTrue(proof['native_and_legacy_ssx_byte_identical'])
         self.assertFalse(proof['optimizer_used'])

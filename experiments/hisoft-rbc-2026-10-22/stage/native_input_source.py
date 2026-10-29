@@ -1,7 +1,8 @@
 """Bounded ZX-UX tty INPUT source emission from a witnessed ROM EDITOR call.
 
-This bridge is limited to line input and deliberately refuses unsupported
-source layouts. It does not claim the full 48K ROM editor control-key behavior.
+This bounded INPUT line reader uses witnessed 48K ROM routines for redraw,
+cursor movement, DELETE and EDIT-clear. UP is inert in INPUT mode; DOWN
+reports a guarded STOP. Full non-INPUT editor parity is not claimed.
 All relocation witnesses are made on the real, pre-link Z80 object.
 """
 from __future__ import annotations
@@ -13,12 +14,13 @@ ROM_EDIT_SPACE_END = 0x5d98
 # Protect ROM editor workspace below LOWK=0x5d98, leaving two bytes spare.
 # Overflow drops excess printable keys and *continues* until ENTER.
 # Original ROM $1652 inserts one character into its own workspace.
-# ROM RST $10 echoes accepted characters; DELETE restores the printed cell.
+# Original ROM ED_COPY ($111D) redraws line/cursor after every edit.
 EDITOR = '''rbc_raw_test_input:
     ld hl,($5c61)
     push hl
     ld hl,($5c5b)
     ld (rbc_raw_start),hl
+    ld (rbc_raw_end),hl
     ld hl,0
     ld de,rbc_raw_tty
     ld a,32
@@ -35,7 +37,7 @@ EDITOR = '''rbc_raw_test_input:
     jp c,rbc_raw_abort
 rbc_raw_poll:
     ld hl,0
-    ld de,($5c5b)
+    ld de,rbc_raw_ch
     ld bc,1
     ld a,3
     call $6003
@@ -44,13 +46,19 @@ rbc_raw_poll:
     or l
     jp z,rbc_raw_restore_abort
     ld hl,($5c5b)
-    ld a,(hl)
+    ld a,(rbc_raw_ch)
     cp 13
     jp z,rbc_raw_done
     cp 12
     jp z,rbc_raw_delete
     cp 7
-    jp z,rbc_raw_restore_abort
+    jp z,rbc_raw_edit
+    cp 8
+    jp z,rbc_raw_left
+    cp 9
+    jp z,rbc_raw_right
+    cp 11
+    jp z,rbc_raw_poll
     cp 12
     jp c,rbc_raw_restore_abort
     cp 128
@@ -62,18 +70,47 @@ rbc_raw_poll:
     sbc hl,bc
     jp nc,rbc_raw_full
     ld hl,($5c5b)
-    ld (hl),13
     call $1652
     pop af
     ld (de),a
     inc de
     ld ($5c5b),de
-    push de
-    rst $10
-    pop de
+    ld hl,(rbc_raw_end)
+    inc hl
+    ld (rbc_raw_end),hl
+    call $111d
     jp rbc_raw_poll
 rbc_raw_full:
     pop af
+    jp rbc_raw_poll
+rbc_raw_edit:
+    call $1097
+    ld hl,($5c5b)
+    ld (rbc_raw_start),hl
+    ld (rbc_raw_end),hl
+    call $111d
+    jp rbc_raw_poll
+rbc_raw_left:
+    ld hl,($5c5b)
+    ld de,(rbc_raw_start)
+    or a
+    sbc hl,de
+    jp z,rbc_raw_poll
+    add hl,de
+    dec hl
+    ld ($5c5b),hl
+    call $111d
+    jp rbc_raw_poll
+rbc_raw_right:
+    ld hl,($5c5b)
+    ld de,(rbc_raw_end)
+    or a
+    sbc hl,de
+    jp z,rbc_raw_poll
+    add hl,de
+    inc hl
+    ld ($5c5b),hl
+    call $111d
     jp rbc_raw_poll
 rbc_raw_delete:
     ld hl,($5c5b)
@@ -83,22 +120,17 @@ rbc_raw_delete:
     jp z,rbc_raw_poll
     add hl,de
     dec hl
-    push hl
-    push de
-    ld a,8
-    rst $10
-    ld a,32
-    rst $10
-    ld a,8
-    rst $10
-    pop de
-    pop hl
-    ld (hl),13
-    ld ($5c5b),hl
+    ld bc,1
+    call $19e8
+    ld hl,(rbc_raw_end)
+    dec hl
+    ld (rbc_raw_end),hl
+    call $111d
     jp rbc_raw_poll
 rbc_raw_done:
-    ld hl,($5c5b)
+    ld hl,(rbc_raw_end)
     ld (hl),13
+    ld ($5c5b),hl
     ld a,(rbc_raw_oldmode)
     ld (rbc_raw_tty+4),a
     ld hl,0
@@ -125,6 +157,10 @@ DATA = '''rbc_raw_tty:
 rbc_raw_oldmode:
     db 0
 rbc_raw_start:
+    dw 0
+rbc_raw_ch:
+    db 0
+rbc_raw_end:
     dw 0
 '''
 

@@ -44,7 +44,7 @@ class NativeInputSessionIsolation(unittest.TestCase):
             ssx = Path(folder) / 'input-session.ssx'
             bas.write_text(PROGRAM, encoding='ascii')
             asm, obj, untouched, report = compile_native(
-                bas, CHECKPOINT, FRONTEND, TAPE, ROM)
+                bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='rom')
             self.assertTrue(obj.startswith(b'SSO1'))
             self.assertTrue(report['native_and_legacy_ssx_byte_identical'])
             self.assertTrue(report['native_three_base_source_verified'])

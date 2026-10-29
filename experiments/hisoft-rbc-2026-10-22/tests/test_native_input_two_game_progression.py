@@ -58,9 +58,11 @@ class NativeOriginalInputTwoGameProgression(unittest.TestCase):
                     published = folder / 'bin' / (game + '.ssx')
                     originals = tuple(p.read_bytes() for p in (bas, tzx, published))
                     asm, obj, reference, proof = compile_native(
-                        bas, CHECKPOINT, FRONTEND, TAPE, ROM)
+                        bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='rom')
                     self.assertTrue(obj.startswith(b'SSO1'))
-                    self.assertEqual(reference, originals[2])
+                    self.assertNotEqual(reference, originals[2])
+                    self.assertEqual(compile_native(
+                        bas, CHECKPOINT, FRONTEND, TAPE, ROM)[2], originals[2])
                     self.assertTrue(proof['native_three_base_source_verified'])
                     self.assertTrue(proof['native_and_legacy_ssx_byte_identical'])
                     self.assertFalse(proof['optimizer_used'])

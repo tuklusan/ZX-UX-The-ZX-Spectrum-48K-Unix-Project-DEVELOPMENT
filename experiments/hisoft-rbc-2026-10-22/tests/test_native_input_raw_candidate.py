@@ -38,7 +38,7 @@ class NativeRawSourceInput(unittest.TestCase):
 
     def make(self, bas: Path, out: Path):
         asm, obj, legacy, proof = compile_native(
-            bas, CHECKPOINT, FRONTEND, TAPE, ROM)
+            bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='rom')
         self.assertTrue(obj.startswith(b'SSO1'))
         self.assertTrue(proof['native_three_base_source_verified'])
         self.assertTrue(proof['native_and_legacy_ssx_byte_identical'])

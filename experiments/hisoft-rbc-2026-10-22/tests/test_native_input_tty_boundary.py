@@ -50,7 +50,7 @@ class NativeInputTtyBoundary(unittest.TestCase):
                                 '30 POKE 22528,LEN A$+20\n40 STOP\n',
                                 encoding='ascii')
             source, obj, reference, proof = compile_native(
-                original, CHECKPOINT, FRONTEND, TAPE, ROM)
+                original, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='rom')
             self.assertTrue(obj.startswith(b'SSO1'))
             self.assertTrue(proof['native_three_base_source_verified'])
             self.assertTrue(proof['native_and_legacy_ssx_byte_identical'])

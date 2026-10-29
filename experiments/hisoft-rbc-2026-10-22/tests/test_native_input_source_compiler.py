@@ -1,7 +1,7 @@
 """Source-only ZX-UX INPUT integration: strict token gate and real Z80 proof.
 
-Deliberately opt-in: full Sinclair ROM editing has not passed. Never alter
-published BAS/TZX/SSX or hide a difference from the verified HiSoft baseline.
+The default compiler uses bounded ZX-UX INPUT source. Explicit HiSoft ROM
+comparison remains byte exact. Full non-INPUT ROM editor parity is not claimed.
 """
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ class NativeInputSourceCompiler(unittest.TestCase):
             output = Path(tmp) / 'input.ssx'
             bas.write_text(program, encoding='ascii')
             asm, _, legacy, original = compile_native(
-                bas, CHECKPOINT, FRONTEND, TAPE, ROM)
+                bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='rom')
             new_source, obj, result, proof = compile_native(
                 bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='zxux')
             self.assertNotEqual(result, legacy)
@@ -184,7 +184,7 @@ class NativeInputSourceCompiler(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='rbc-input-geese-') as tmp:
             _, _, trial, report = compile_native(
                 bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='zxux')
-            self.assertNotEqual(trial, originals[2])
+            self.assertEqual(trial, originals[2])
             self.assertTrue(report['input_source_bridge_three_base_verified'])
             ssx = Path(tmp) / 'geese-input.ssx'
             ssx.write_bytes(trial)

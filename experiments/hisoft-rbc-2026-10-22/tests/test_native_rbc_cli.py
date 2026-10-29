@@ -48,7 +48,7 @@ class NativeRbcCLI(unittest.TestCase):
             report_file = Path(workspace) / 'original-native.json'
             process = subprocess.run([
                 sys.executable, str(STAGE / 'native_rbc_cli.py'),
-                str(BRICKLAYER), '--compiler', str(CHECKPOINT),
+                str(BRICKLAYER), '--input-backend', 'rom', '--compiler', str(CHECKPOINT),
                 '--frontend', str(FRONTEND), '--tape', str(TAPE),
                 '--rom', str(ROM), '-o', str(output),
                 '--report', str(report_file)],

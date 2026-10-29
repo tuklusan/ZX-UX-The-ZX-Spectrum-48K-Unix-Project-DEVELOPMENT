@@ -112,7 +112,7 @@ class NativeInputSourceCandidate(unittest.TestCase):
                     ssx = Path(tmp) / ('input-%d.ssx' % i)
                     bas.write_text(basic, encoding='ascii')
                     asm, _, legacy, proof = compile_native(
-                        bas, CHECKPOINT, FRONTEND, TAPE, ROM)
+                        bas, CHECKPOINT, FRONTEND, TAPE, ROM, input_backend='rom')
                     self.assertTrue(proof['native_three_base_source_verified'])
                     self.assertTrue(proof['native_and_legacy_ssx_byte_identical'])
                     self.assertFalse(proof['optimizer_used'])

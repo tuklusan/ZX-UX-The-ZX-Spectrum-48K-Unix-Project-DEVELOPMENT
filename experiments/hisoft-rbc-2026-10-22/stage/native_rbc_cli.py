@@ -78,7 +78,7 @@ def _has_input_token(listing: bytes) -> bool:
 def compile_native(source: Path, checkpoint: Path, frontend: Path,
                    tape: Path, rom: Path, *,
                    stack: int = 384, maximum: int = 14000,
-                   use_fit: bool = True, input_backend: str = "rom") -> tuple[str, bytes, bytes, dict]:
+                   use_fit: bool = True, input_backend: str = "zxux") -> tuple[str, bytes, bytes, dict]:
     """Compile from independent source events; never re-encode a linked SSX."""
     if not (source.is_file() and source.suffix.lower() == '.bas'):
         raise ValueError('requires original numbered ASCII .bas source')
@@ -183,8 +183,8 @@ def main(argv=None) -> int:
     p.add_argument('--max', type=int, default=14000)
     p.add_argument('--stack', type=int, default=384)
     p.add_argument('--no-fit', action='store_true')
-    p.add_argument('--input-backend', choices=('rom', 'zxux'), default='rom',
-                   help='experimental bounded ZX-UX INPUT source; ROM is the checked baseline')
+    p.add_argument('--input-backend', choices=('rom', 'zxux'), default='zxux',
+                   help='bounded production ZX-UX INPUT source; rom reproduces the original HiSoft baseline')
     p.add_argument('--report', type=Path)
     a = p.parse_args(argv)
     try:

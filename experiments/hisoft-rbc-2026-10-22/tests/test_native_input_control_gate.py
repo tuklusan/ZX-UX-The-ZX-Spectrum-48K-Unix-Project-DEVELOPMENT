@@ -1,9 +1,8 @@
-"""Prevent unsupported ROM INPUT cursor/edit operations from corrupting text.
+"""Verify ROM INPUT edit/cursor keys and fail-closed STOP-in-INPUT.
 
-ZX-UX tty sends LEFT/DOWN/UP/RIGHT as bytes 8..11 and EDIT as 7. The
-current bounded source reader cannot implement the original ROM cursor
-editor; fail closed rather than inserting those bytes as printable text.
-This test explicitly does NOT grant production ROM compatibility.
+ZX-UX tty sends LEFT/RIGHT as 8/9, DOWN/UP as 10/11, and EDIT as 7.
+Supported edits must preserve the entire input string, not only its length.
+DOWN must guard STOP-in-INPUT; non-INPUT BASIC editor parity is not claimed.
 """
 from __future__ import annotations
 
@@ -32,10 +31,17 @@ READY = all(p.is_file() for p in (
 
 
 class UnsupportedEditGate(unittest.TestCase):
-    def test_control_keys_must_refuse_in_source(self):
-        self.assertIn('    cp 7\n    jp z,rbc_raw_restore_abort\n'
-                      '    cp 12\n    jp c,rbc_raw_restore_abort\n', EDITOR)
-        self.assertNotIn('    cp 8\n    jp c,rbc_raw_poll\n', EDITOR)
+    def test_supported_cursor_and_unsupported_controls(self):
+        self.assertIn('    cp 7\n    jp z,rbc_raw_edit\n', EDITOR)
+        self.assertIn('    cp 8\n    jp z,rbc_raw_left\n', EDITOR)
+        self.assertIn('    cp 9\n    jp z,rbc_raw_right\n', EDITOR)
+        self.assertIn('    cp 11\n    jp z,rbc_raw_poll\n', EDITOR)
+        self.assertIn('    cp 12\n    jp c,rbc_raw_restore_abort\n', EDITOR)
+        self.assertIn('    call $1097\n', EDITOR)
+        self.assertIn('    call $111d\n', EDITOR)
+        self.assertIn('    ld de,rbc_raw_ch\n', EDITOR)
+        self.assertIn('    call $19e8\n', EDITOR)
+        self.assertIn('    ld hl,(rbc_raw_end)\n    ld (hl),13\n', EDITOR)
 
 
 @unittest.skipUnless(READY, 'checked native inputs required')
@@ -46,7 +52,9 @@ class NativeUnsupportedEditGate(unittest.TestCase):
             source = Path(tmp) / 'control.bas'
             executable = Path(tmp) / 'control.ssx'
             source.write_text('10 REM : OPEN #\n20 INPUT A$\n'
-                              '30 POKE 22528,LEN A$+20\n40 STOP\n',
+                              '30 POKE 22528,LEN A$+20\n'
+                              '40 IF A$="abcd" THEN POKE 22529,55\n'
+                              '50 STOP\n',
                               encoding='ascii')
             _, _, linked, report = compile_native(
                 source, CHECKPOINT, FRONTEND, TAPE, ROM,
@@ -54,7 +62,7 @@ class NativeUnsupportedEditGate(unittest.TestCase):
             self.assertTrue(report['input_source_bridge_three_base_verified'])
             self.assertFalse(report['native_and_legacy_ssx_byte_identical'])
             executable.write_bytes(linked)
-            for key in ('{LEFT}', '{RIGHT}', '{UP}', '{DOWN}', '{EDIT}'):
+            for key in ('{DOWN}',):
                 with self.subTest(key=key):
                     run = rvm.run_kernel(
                         executable, keys='{WAIT 200}a'+key,
@@ -64,14 +72,27 @@ class NativeUnsupportedEditGate(unittest.TestCase):
                     self.assertFalse(run.session.owns_screen(run.fg.pid))
                     run.session.wait_prompt(1500)
                     self.assertEqual(run.session.last_line(), '#')
-            normal = rvm.run_kernel(executable,
-                                    keys='{WAIT 200}abc{DELETE}d{ENTER}',
-                                    frames=1100, system=SYSTEM)
-            self.assertEqual(normal.why, 'exit', normal.summary())
-            self.assertEqual(normal.fg.status, 0)
-            self.assertEqual(normal.fg.exit_picture[0][6144], 23)
-            normal.session.wait_prompt(1500)
-            self.assertEqual(normal.session.last_line(), '#')
+            for keys, expected_length in ((
+                    'abc{DELETE}d', 3),
+                    ('ac{LEFT}b{RIGHT}d', 4),
+                    ('abcd{LEFT}{LEFT}{DELETE}b', 4),
+                    ('abc{LEFT}{LEFT}{RIGHT}d', 4),
+                    ('ab{UP}cd', 4),
+                    ('abc{EDIT}xyz', 3)):
+                with self.subTest(keys=keys):
+                    normal = rvm.run_kernel(executable,
+                                            keys='{WAIT 200}'+keys+'{ENTER}',
+                                            frames=1400, system=SYSTEM)
+                    self.assertEqual(normal.why, 'exit', normal.summary())
+                    self.assertEqual(normal.fg.status, 0)
+                    self.assertEqual(normal.fg.exit_picture[0][6144], 20 + expected_length)
+                    self.assertEqual(normal.fg.exit_picture[0][6145],
+                                     55 if keys in (
+                                         'ac{LEFT}b{RIGHT}d',
+                                         'abcd{LEFT}{LEFT}{DELETE}b',
+                                         'ab{UP}cd') else 7)
+                    normal.session.wait_prompt(1500)
+                    self.assertEqual(normal.session.last_line(), '#')
 
 
 if __name__ == '__main__':

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Bounded 34-game emulator screen gate with six independent opt-in INPUT pairs.
+"""Bounded 34-game emulator screen gate with six independent default INPUT pairs.
 
-The unchanged published 34 native games remain in place. Six prospective
-INPUT revisions are built from BAS and TZX separately into untracked build/tmp.
-Each game is booted twice in the real ZX-UX Z80 loader. 40 minutes per game
-is the default ceiling. A changed screen is NOT complete gameplay proof.
-No game, ZX-UX system tape, ROM, or published executable is overwritten.
+The published SSX remains untouched by the runner; six independently built
+BAS/TZX candidates are linked into an isolated untracked test shadow.
+Each game boots twice in the real ZX-UX Z80 loader. Five minutes per game
+and 120 minutes per runner are ceilings. A screen change is not gameplay proof.
+No original BAS/TZX, system tape, ROM or published executable is overwritten.
 """
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import os
 import subprocess
+import time
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -135,16 +136,19 @@ def main(argv=None):
     p.add_argument('--one', help=argparse.SUPPRESS)
     p.add_argument('--prepared', action='store_true',
                    help='reuse independently validated six BAS/TZX pair builds')
-    p.add_argument('--jobs', type=int, default=5)
-    p.add_argument('--batch-size', type=int, default=5)
-    p.add_argument('--timeout', type=int, default=2400)
+    p.add_argument('--jobs', type=int, default=12)
+    p.add_argument('--batch-size', type=int, default=12)
+    p.add_argument('--timeout', type=int, default=300)
+    p.add_argument('--runner-timeout', type=int, default=7200)
     args = p.parse_args(argv)
     if args.one:
         return real_one(args.one)
-    if not 1 <= args.jobs <= 5 or not 1 <= args.batch_size <= 5:
-        p.error('jobs and batch-size must be 1..5')
-    if not 30 <= args.timeout <= 2400:
-        p.error('timeout must be 30..2400 seconds')
+    if not 1 <= args.jobs <= 12 or not 1 <= args.batch_size <= 12:
+        p.error('jobs and batch-size must be 1..12')
+    if not 30 <= args.timeout <= 300:
+        p.error('per-game timeout must be 30..300 seconds')
+    if not 300 <= args.runner_timeout <= 7200:
+        p.error('runner timeout must be 300..7200 seconds')
     if not args.prepared:
         process = subprocess.run([
             sys.executable, '-B', str(TESTS / 'native_input_six_pairs.py')],
@@ -162,9 +166,12 @@ def main(argv=None):
     results.mkdir(parents=True, exist_ok=False)
     print('EMULATOR LOGS: ' + str(results), flush=True)
     statuses = {}
+    started = time.monotonic()
     for index in range(0, len(selected), args.batch_size):
         group = selected[index:index+args.batch_size]
         print('BATCH ' + str(index//args.batch_size+1) + ': ' + ', '.join(group), flush=True)
+        if time.monotonic()-started + args.timeout * ((len(group)+args.jobs-1)//args.jobs) > args.runner_timeout:
+            raise TimeoutError('shadow runner cannot admit group within 120-minute budget')
         with ThreadPoolExecutor(max_workers=min(args.jobs, len(group))) as pool:
             tasks = {pool.submit(one_child, name, args.timeout, results): name
                      for name in group}
@@ -178,6 +185,7 @@ def main(argv=None):
                 statuses[name] = status
                 print(f'{name}: {status}', flush=True)
     complete = sum(v == 'DISPLAY CHANGED' for v in statuses.values())
+    print(f'RUNNER ELAPSED: {time.monotonic()-started:.3f}s / {args.runner_timeout}s', flush=True)
     print(f'REAL ZX-UX INPUT SHADOW: {complete}/{len(selected)} '
           'display responses; gameplay outcomes remain separate', flush=True)
     return 0 if complete == len(selected) else 1

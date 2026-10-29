@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independently build six original INPUT BAS/TZX pairs via opt-in native RBC.
+"""Independently build six original INPUT BAS/TZX pairs via default native RBC.
 
 The generated images and per-side diagnostics remain untracked under build/tmp.
 No original BASIC, published SSX, ROM, or ZX-UX system tape is modified.
@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import time
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -50,7 +51,7 @@ def one(name: str, side: str, source: Path, deadline: int):
     info.unlink(missing_ok=True)
     cmd = [sys.executable, '-B', str(CLI), str(source), '--compiler',
            str(CHECKPOINT), '--frontend', str(FRONTEND), '--tape', str(TAPE),
-           '--rom', str(ROM), '--max', '14000', '--input-backend', 'zxux',
+           '--rom', str(ROM), '--max', '14000',
            '-o', str(dest), '--report', str(info)]
     try:
         run = subprocess.run(cmd, cwd=ROOT, capture_output=True,
@@ -86,11 +87,14 @@ def one(name: str, side: str, source: Path, deadline: int):
 def main(argv=None):
     a = argparse.ArgumentParser(description=__doc__)
     a.add_argument('games', nargs='*', default=[])
-    a.add_argument('--jobs', type=int, default=3)
-    a.add_argument('--timeout', type=int, default=2400)
+    a.add_argument('--jobs', type=int, default=12)
+    a.add_argument('--timeout', type=int, default=300)
+    a.add_argument('--runner-timeout', type=int, default=7200)
     args = a.parse_args(argv)
-    if not 1 <= args.jobs <= 5 or not 30 <= args.timeout <= 2400:
-        a.error('jobs must be 1..5, timeout 30..2400 seconds')
+    if not 1 <= args.jobs <= 12 or not 30 <= args.timeout <= 300:
+        a.error('jobs must be 1..12, per-side timeout 30..300 seconds')
+    if not 300 <= args.runner_timeout <= 7200:
+        a.error('runner timeout must be 300..7200 seconds')
     if len(args.games) != len(set(args.games)) or set(args.games) - set(GAMES):
         a.error('unknown or duplicate game')
     selected = sorted(args.games or GAMES)
@@ -130,6 +134,9 @@ def main(argv=None):
             failed.append(name + ': TZX ' + type(exc).__name__ + ': ' + str(exc))
             print(f'{name}: TZX CONVERSION FAILED: {exc}', flush=True)
     outcomes = {}
+    started = time.monotonic()
+    if args.timeout * ((len(prepared)+args.jobs-1)//args.jobs) > args.runner_timeout:
+        raise TimeoutError('six-pair build cannot fit 120-minute runner budget')
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
         jobs = {pool.submit(one, name, side, path, args.timeout): (name, side)
                 for name, side, path in prepared}
@@ -156,6 +163,9 @@ def main(argv=None):
             print(f'{name}: BAS/TZX byte-identical native SSX', flush=True)
     if {str(p): digest(p.read_bytes()) for p in originals} != before:
         failed.append('original BAS/TZX hashes changed')
+    if time.monotonic() - started > args.runner_timeout:
+        failed.append('six-pair runner wall-clock limit exceeded')
+    print(f'RUNNER ELAPSED: {time.monotonic()-started:.3f}s / {args.runner_timeout}s', flush=True)
     print(f'SIX PAIRS: {len(verified)}/{len(selected)} passed; '
           f'{len(failed)} failure messages', flush=True)
     for entry in failed:
