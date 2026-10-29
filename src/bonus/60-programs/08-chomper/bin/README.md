@@ -1,13 +1,20 @@
-Native program is too large for the 14,000-byte loader limit.
+# 08-chomper — Native RBC result
 
-Original BASIC: `08-chomper.bas`; SHA-256: `8a66d4ea87462481193e639d350fdf87d82fa832f902e71ee2b5ebfe32fa51cb`.
+Original BASIC and tokenized tape were kept unchanged.
 
-Original tape: `08-chomper.tzx`; SHA-256: `d986a1d7bc5b45cbd29e9a3c0587008076facba430ca55ecae651aed06782a48`. Independent TZX extraction, strict ASCII conversion, token round-trip, and BAS/TZX line comparison succeeded.
+- BAS SHA-256: `8a66d4ea87462481193e639d350fdf87d82fa832f902e71ee2b5ebfe32fa51cb`
+- TZX SHA-256: `d986a1d7bc5b45cbd29e9a3c0587008076facba430ca55ecae651aed06782a48`
+- Independent TZX conversion: passed, 103 BASIC lines; decoded SHA-256 `8a66d4ea87462481193e639d350fdf87d82fa832f902e71ee2b5ebfe32fa51cb`.
+- Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
-- BAS compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: native memory limit exceeded: file=14211, image=12933, bss=132, stack=384, total=13449, max=14000`
+- BAS: exit 1
 
-- TZX compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: native memory limit exceeded: file=14211, image=12933, bss=132, stack=384, total=13449, max=14000`
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: native memory limit exceeded: file=14671, image=13374, bss=1156, stack=384, total=14914, max=14000`
 
-Measured link values from the failing baseline: file 14211, image 12933, BSS 132, stack 384, total 13449 bytes; permitted maximum 14000 bytes. These are diagnostics, not a published executable.
+- TZX: exit 1
 
-No runnable native SSX is included. The default limit is 14,000 bytes; a successful assembler/linker alone does not prove execution.
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: native memory limit exceeded: file=14671, image=13374, bss=1156, stack=384, total=14914, max=14000`
+
+- Comparison: unavailable. At least one compiler path refused a native build.
+
+No native SSX is published. A failed or oversized build is not executable gameplay proof.

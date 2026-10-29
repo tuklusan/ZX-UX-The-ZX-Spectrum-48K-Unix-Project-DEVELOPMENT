@@ -1,11 +1,20 @@
-The HiSoft compiler did not provide the complete required native image.
+# 13-radio-power — Native RBC result
 
-Original BASIC: `13-radio-power.bas`; SHA-256: `b1c0bb3fbcb3d2d3f57ec5ad6dc60a5dc29253ee47bb371dbc42bb3de96dadaa`.
+Original BASIC and tokenized tape were kept unchanged.
 
-Original tape: `13-radio-power.tzx`; SHA-256: `4550f11d0b8a7973ed4f05f80e7d147c1745a56a7dc2deeb30334d17983e9034`. Independent TZX extraction, strict ASCII conversion, token round-trip, and BAS/TZX line comparison succeeded.
+- BAS SHA-256: `b1c0bb3fbcb3d2d3f57ec5ad6dc60a5dc29253ee47bb371dbc42bb3de96dadaa`
+- TZX SHA-256: `4550f11d0b8a7973ed4f05f80e7d147c1745a56a7dc2deeb30334d17983e9034`
+- Independent TZX conversion: passed, 256 BASIC lines; decoded SHA-256 `b1c0bb3fbcb3d2d3f57ec5ad6dc60a5dc29253ee47bb371dbc42bb3de96dadaa`.
+- Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
-- BAS compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
+- BAS: exit 1
 
-- TZX compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
 
-No runnable native SSX is included. The default limit is 14,000 bytes; a successful assembler/linker alone does not prove execution.
+- TZX: exit 1
+
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
+
+- Comparison: unavailable. At least one compiler path refused a native build.
+
+No native SSX is published. A failed or oversized build is not executable gameplay proof.

@@ -1,11 +1,20 @@
-Dynamic DIM storage lacks a verified three-base native source build.
+# 36-postman — Native RBC result
 
-Original BASIC: `36-postman.bas`; SHA-256: `5754398693c6087dfdab78c65f6431caf66045e17e829482ff28988f499ed2cb`.
+Original BASIC and tokenized tape were kept unchanged.
 
-Original tape: `36-postman.tzx`; SHA-256: `af112fd1bbff766a07a8a2c4b3856e9dcc59af96bdd67f3f22db9a8bd68e1213`. Independent TZX extraction, strict ASCII conversion, token round-trip, and BAS/TZX line comparison succeeded.
+- BAS SHA-256: `5754398693c6087dfdab78c65f6431caf66045e17e829482ff28988f499ed2cb`
+- TZX SHA-256: `af112fd1bbff766a07a8a2c4b3856e9dcc59af96bdd67f3f22db9a8bd68e1213`
+- Independent TZX conversion: passed, 91 BASIC lines; decoded SHA-256 `5754398693c6087dfdab78c65f6431caf66045e17e829482ff28988f499ed2cb`.
+- Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
-- BAS compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: dynamic DIM budget has no three-base source witness yet`
+- BAS: exit 1
 
-- TZX compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: dynamic DIM budget has no three-base source witness yet`
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: dynamic DIM budget has no three-base source witness yet`
 
-No runnable native SSX is included. The default limit is 14,000 bytes; a successful assembler/linker alone does not prove execution.
+- TZX: exit 1
+
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: dynamic DIM budget has no three-base source witness yet`
+
+- Comparison: unavailable. At least one compiler path refused a native build.
+
+No native SSX is published. A failed or oversized build is not executable gameplay proof.

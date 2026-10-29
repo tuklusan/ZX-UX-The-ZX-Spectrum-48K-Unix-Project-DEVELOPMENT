@@ -1,13 +1,20 @@
-Native program is too large for the 14,000-byte loader limit.
+# 58-invaders — Native RBC result
 
-Original BASIC: `58-invaders.bas`; SHA-256: `ced3897dce16a21d555ad4bc6e26b63a36ae4028fe36ce44dabd4cb85349d6f5`.
+Original BASIC and tokenized tape were kept unchanged.
 
-Original tape: `58-invaders.tzx`; SHA-256: `2332416e06e6387faabe7cc587731e1eb003255e0bf933d12fdad8902f5157d7`. Independent TZX extraction, strict ASCII conversion, token round-trip, and BAS/TZX line comparison succeeded.
+- BAS SHA-256: `ced3897dce16a21d555ad4bc6e26b63a36ae4028fe36ce44dabd4cb85349d6f5`
+- TZX SHA-256: `2332416e06e6387faabe7cc587731e1eb003255e0bf933d12fdad8902f5157d7`
+- Independent TZX conversion: passed, 90 BASIC lines; decoded SHA-256 `ced3897dce16a21d555ad4bc6e26b63a36ae4028fe36ce44dabd4cb85349d6f5`.
+- Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
-- BAS compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: native memory limit exceeded: file=13319, image=11783, bss=1956, stack=384, total=14123, max=14000`
+- BAS: exit 1
 
-- TZX compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: native memory limit exceeded: file=13319, image=11783, bss=1956, stack=384, total=14123, max=14000`
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: ZX-UX INPUT memory limit exceeded: file=14340, image=12735, bss=2980, stack=384, total=16099, max=14000`
 
-Measured link values from the failing baseline: file 13319, image 11783, BSS 1956, stack 384, total 14123 bytes; permitted maximum 14000 bytes. These are diagnostics, not a published executable.
+- TZX: exit 1
 
-No runnable native SSX is included. The default limit is 14,000 bytes; a successful assembler/linker alone does not prove execution.
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: ZX-UX INPUT memory limit exceeded: file=14340, image=12735, bss=2980, stack=384, total=16099, max=14000`
+
+- Comparison: unavailable. At least one compiler path refused a native build.
+
+No native SSX is published. A failed or oversized build is not executable gameplay proof.

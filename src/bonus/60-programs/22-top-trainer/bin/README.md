@@ -1,11 +1,20 @@
-The HiSoft compiler did not provide the complete required native image.
+# 22-top-trainer — Native RBC result
 
-Original BASIC: `22-top-trainer.bas`; SHA-256: `af21d2028be31b57f6fb27d613be72588d9dc0aa7da56fa7010e81d29a18d353`.
+Original BASIC and tokenized tape were kept unchanged.
 
-Original tape: `22-top-trainer.tzx`; SHA-256: `9b2d55288d71aa03d1f2f111e5ccd17a6ce45379b0a930a886adb7c5af59ef18`. Independent TZX extraction, strict ASCII conversion, token round-trip, and BAS/TZX line comparison succeeded.
+- BAS SHA-256: `af21d2028be31b57f6fb27d613be72588d9dc0aa7da56fa7010e81d29a18d353`
+- TZX SHA-256: `9b2d55288d71aa03d1f2f111e5ccd17a6ce45379b0a930a886adb7c5af59ef18`
+- Independent TZX conversion: passed, 323 BASIC lines; decoded SHA-256 `af21d2028be31b57f6fb27d613be72588d9dc0aa7da56fa7010e81d29a18d353`.
+- Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
-- BAS compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
+- BAS: exit 1
 
-- TZX compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
 
-No runnable native SSX is included. The default limit is 14,000 bytes; a successful assembler/linker alone does not prove execution.
+- TZX: exit 1
+
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
+
+- Comparison: unavailable. At least one compiler path refused a native build.
+
+No native SSX is published. A failed or oversized build is not executable gameplay proof.

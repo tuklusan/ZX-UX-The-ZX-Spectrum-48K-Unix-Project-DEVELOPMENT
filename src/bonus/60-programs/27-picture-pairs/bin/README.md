@@ -1,13 +1,20 @@
-Native program is too large for the 14,000-byte loader limit.
+# 27-picture-pairs — Native RBC result
 
-Original BASIC: `27-picture-pairs.bas`; SHA-256: `4c5f9c2a211883f4f6cd05af4abb7f6b7d974c51f44a5ef81ce4fb135628d895`.
+Original BASIC and tokenized tape were kept unchanged.
 
-Original tape: `27-picture-pairs.tzx`; SHA-256: `0b20705fc318840e29056eb63df95a03a2b1ebc9b26f434398c3d2208f2ae494`. Independent TZX extraction, strict ASCII conversion, token round-trip, and BAS/TZX line comparison succeeded.
+- BAS SHA-256: `4c5f9c2a211883f4f6cd05af4abb7f6b7d974c51f44a5ef81ce4fb135628d895`
+- TZX SHA-256: `0b20705fc318840e29056eb63df95a03a2b1ebc9b26f434398c3d2208f2ae494`
+- Independent TZX conversion: passed, 111 BASIC lines; decoded SHA-256 `4c5f9c2a211883f4f6cd05af4abb7f6b7d974c51f44a5ef81ce4fb135628d895`.
+- Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
-- BAS compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: native source baseline exceeds default memory limit: file=15268, image=13621, bss=6426, stack=384, total=20431, limit=14000`
+- BAS: exit 1
 
-- TZX compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: native source baseline exceeds default memory limit: file=15268, image=13621, bss=6426, stack=384, total=20431, limit=14000`
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: native source baseline exceeds default memory limit: file=15508, image=13861, bss=6426, stack=384, total=20671, limit=14000`
 
-Measured link values from the failing baseline: file 15268, image 13621, BSS 6426, stack 384, total 20431 bytes; permitted maximum 14000 bytes. These are diagnostics, not a published executable.
+- TZX: exit 1
 
-No runnable native SSX is included. The default limit is 14,000 bytes; a successful assembler/linker alone does not prove execution.
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: native source baseline exceeds default memory limit: file=15508, image=13861, bss=6426, stack=384, total=20671, limit=14000`
+
+- Comparison: unavailable. At least one compiler path refused a native build.
+
+No native SSX is published. A failed or oversized build is not executable gameplay proof.

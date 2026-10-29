@@ -1,11 +1,20 @@
-The game requires tape LOAD, which this native compiler cannot safely support.
+# 44-evolution-1 — Native RBC result
 
-Original BASIC: `44-evolution-1.bas`; SHA-256: `51a25b292da65e4dfce032bfb0d778c0364a31f2d779e8c989de54aebabb2675`.
+Original BASIC and tokenized tape were kept unchanged.
 
-Original tape: `44-evolution-1.tzx`; SHA-256: `8e72b017a3cd647829f84fbecdb4b8e26a3bc08b20da66ffb8ebaecd91ed14fb`. Independent TZX extraction, strict ASCII conversion, token round-trip, and BAS/TZX line comparison succeeded.
+- BAS SHA-256: `51a25b292da65e4dfce032bfb0d778c0364a31f2d779e8c989de54aebabb2675`
+- TZX SHA-256: `8e72b017a3cd647829f84fbecdb4b8e26a3bc08b20da66ffb8ebaecd91ed14fb`
+- Independent TZX conversion: passed, 108 BASIC lines; decoded SHA-256 `51a25b292da65e4dfce032bfb0d778c0364a31f2d779e8c989de54aebabb2675`.
+- Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
-- BAS compilation: failed (exit 1); `RBC_NATIVE_BLOCKED UnsupportedTapeOperation: RBC E_TAPE_UNSUPPORTED: Line 8060: LOAD requires external tape I/O; RBC supports standalone BASIC programs only`
+- BAS: exit 1
 
-- TZX compilation: failed (exit 1); `RBC_NATIVE_BLOCKED UnsupportedTapeOperation: RBC E_TAPE_UNSUPPORTED: Line 8060: LOAD requires external tape I/O; RBC supports standalone BASIC programs only`
+  Diagnostic: `RBC_NATIVE_BLOCKED UnsupportedTapeOperation: RBC E_TAPE_UNSUPPORTED: Line 8060: LOAD requires external tape I/O; RBC supports standalone BASIC programs only`
 
-No runnable native SSX is included. The default limit is 14,000 bytes; a successful assembler/linker alone does not prove execution.
+- TZX: exit 1
+
+  Diagnostic: `RBC_NATIVE_BLOCKED UnsupportedTapeOperation: RBC E_TAPE_UNSUPPORTED: Line 8060: LOAD requires external tape I/O; RBC supports standalone BASIC programs only`
+
+- Comparison: unavailable. At least one compiler path refused a native build.
+
+No native SSX is published. A failed or oversized build is not executable gameplay proof.

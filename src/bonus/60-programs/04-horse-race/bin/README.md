@@ -1,11 +1,20 @@
-Dynamic DIM storage lacks a verified three-base native source build.
+# 04-horse-race — Native RBC result
 
-Original BASIC: `04-horse-race.bas`; SHA-256: `287bca8d30716200445d55dfc398a1b1bc9c166708c4ad721b884d7d877754f1`.
+Original BASIC and tokenized tape were kept unchanged.
 
-Original tape: `04-horse-race.tzx`; SHA-256: `17e0fb5f040ca152f31954ccd1d34060af5ceca4fd21d0084aba0889d1276b72`. Independent TZX extraction, strict ASCII conversion, token round-trip, and BAS/TZX line comparison succeeded.
+- BAS SHA-256: `287bca8d30716200445d55dfc398a1b1bc9c166708c4ad721b884d7d877754f1`
+- TZX SHA-256: `17e0fb5f040ca152f31954ccd1d34060af5ceca4fd21d0084aba0889d1276b72`
+- Independent TZX conversion: passed, 99 BASIC lines; decoded SHA-256 `287bca8d30716200445d55dfc398a1b1bc9c166708c4ad721b884d7d877754f1`.
+- Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
-- BAS compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: dynamic DIM budget has no three-base source witness yet`
+- BAS: exit 1
 
-- TZX compilation: failed (exit 1); `RBC_NATIVE_BLOCKED ValueError: dynamic DIM budget has no three-base source witness yet`
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: dynamic DIM budget has no three-base source witness yet`
 
-No runnable native SSX is included. The default limit is 14,000 bytes; a successful assembler/linker alone does not prove execution.
+- TZX: exit 1
+
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: dynamic DIM budget has no three-base source witness yet`
+
+- Comparison: unavailable. At least one compiler path refused a native build.
+
+No native SSX is published. A failed or oversized build is not executable gameplay proof.
