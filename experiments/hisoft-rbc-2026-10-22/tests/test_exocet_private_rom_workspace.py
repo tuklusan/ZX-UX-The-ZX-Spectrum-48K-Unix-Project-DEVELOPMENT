@@ -9,7 +9,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 STAGE = ROOT / 'experiments/hisoft-rbc-2026-10-22/stage'
-sys.path[:0] = [str(STAGE), str(ROOT / 'src/zx-ux-sdk')]
+sys.path[:0] = [str(ROOT / 'build/tmp/tug-fault-investigation/frontend/upstream-pyhsb'), str(STAGE), str(ROOT / 'src/zx-ux-sdk')]
 import rld
 import rvm
 from native_rbc_cli import compile_native

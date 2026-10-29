@@ -138,12 +138,21 @@ def wrapper_source(original_source: str, font: bytes, *,
     # Ordinary emitted source (rather than fixed byte sequences) owns all
     # wrapper instructions and the loader entry point.
     pro = ['    section text', '    global start', 'start:',
-           '    ld hl,1', '    ld a,39', '    call $6003',
-           '    ld hl,($5c36)', f'    ld ({PREFIX}saved_chars),hl',
+           '    ld hl,1', '    ld a,39', '    call $6003']
+    if rom_work_bytes:
+        # ZX-UX has global ROM WORKSP/STKBOT/STKEND/ERR_SP, not saved
+        # per-process state. Fail closed if another process owns the screen;
+        # its executable may be using those system variables concurrently.
+        # E is the previous screen-owner bitmask returned by syscall 39.
+        pro.extend(('    ld a,e', '    or a', f'    jr z,{PREFIX}screen_exclusive',
+                    '    ld hl,0', '    ld a,39', '    call $6003',
+                    '    ld hl,21', '    ld a,1', '    call $6003', '    halt',
+                    f'{PREFIX}screen_exclusive:'))
+    pro.extend(('    ld hl,($5c36)', f'    ld ({PREFIX}saved_chars),hl',
            '    ld hl,($5c7b)', f'    ld ({PREFIX}saved_udg),hl',
            '    ld hl,$3c00' if use_rom_font else f'    ld hl,{PREFIX}font',
            '    ld ($5c36),hl', f'    ld hl,{PREFIX}udg',
-           '    ld ($5c7b),hl']
+           '    ld ($5c7b),hl'))
     if rom_work_bytes:
         pro.extend((f'    ld ({PREFIX}saved_stack),sp',
                     '    ld hl,($5c3d)',
