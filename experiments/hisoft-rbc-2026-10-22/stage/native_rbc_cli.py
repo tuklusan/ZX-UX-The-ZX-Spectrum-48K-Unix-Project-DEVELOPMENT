@@ -20,7 +20,7 @@ SDK = ROOT / 'src/zx-ux-sdk'
 sys.path[:0] = [str(STAGE), str(SDK)]
 import rld
 from gate8_full_source_audit import run as audit_original_source
-from native_wrapper_source import assemble_link
+from native_wrapper_source import assemble_link, _signed_print_at
 from native_input_source import assemble_input_source
 from basic_listing import encode_strict_listing
 from native_long_string_proof import workspace_bytes
@@ -146,6 +146,15 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
             source_candidates[0], font, use_rom_font=fitted,
             restart_slot=restart_slot, stack=stack,
             rom_work_bytes=rom_work_bytes)
+    # Apply the original 48K ROM's signed-coordinate rule directly at the
+    # witnessed native PRINT AT entry; no inserted call sites or new bridge.
+    at_sites = 0
+    if _signed_print_at(source_text)[1]:
+        source_text, obj, native_ssx = assemble_link(
+            source_candidates[0], font, use_rom_font=fitted,
+            restart_slot=restart_slot, stack=stack,
+            rom_work_bytes=rom_work_bytes, signed_print_at=True)
+        at_sites = int('rbc_wrapper_at_row_abs:' in source_text)
     bridge_used = False
     if input_backend == 'zxux' and _has_input_token(
             encode_strict_listing(source.read_text(encoding='ascii'))):
@@ -168,7 +177,8 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         'bss': image['bss'], 'stack': stack, 'total': total,
         'memory_limit': maximum, 'relocations': len(image['relocs']),
         'native_three_base_source_verified': True,
-        'native_and_legacy_ssx_byte_identical': not bridge_used and not rom_work_bytes,
+        'native_and_legacy_ssx_byte_identical': not bridge_used and not rom_work_bytes and not at_sites,
+        'rom_signed_print_at_corrected': bool(at_sites),
         'original_hisoft_baseline_sha256': baseline_sha,
         'source_proven_string_growth': [p for p in meta.get('optimized_strings', [])
                                        if p.get('bound_proof')],

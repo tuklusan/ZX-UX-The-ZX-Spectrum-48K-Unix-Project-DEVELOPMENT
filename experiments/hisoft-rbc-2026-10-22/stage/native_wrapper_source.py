@@ -24,9 +24,79 @@ class NativeWrapperError(ValueError):
     """Fail closed when the source layout or assembler result cannot be proven."""
 
 
+def _signed_print_at(source: str) -> tuple[str, int]:
+    """Correct signed coordinates in the original PRINT AT entry, in place.
+
+    HiSoft writes the low bytes of DE (row) and HL (column). The original
+    Spectrum ROM takes the magnitude of negative values before testing the
+    screen bounds. Keep the original routine and all calls unchanged.
+    """
+    lines = source.splitlines(keepends=True)
+    matched = []
+    for i in range(len(lines) - 14):
+        match = re.fullmatch(r'source_([0-9a-f]{4}):\n', lines[i])
+        if match is None:
+            continue
+        offset = int(match[1], 16)
+        expected = [
+            f'original_rt_{offset:04x}:\n', '    ld a, 0x16\n',
+            f'original_rt_{offset+2:04x}:\n', '    rst 0x10\n',
+            f'original_rt_{offset+3:04x}:\n', '    ld a, e\n',
+            f'original_rt_{offset+4:04x}:\n', '    rst 0x10\n',
+            f'original_rt_{offset+5:04x}:\n', '    ld a, l\n',
+            f'original_rt_{offset+6:04x}:\n', '    rst 0x10\n',
+            f'original_rt_{offset+7:04x}:\n', '    ret\n',
+        ]
+        if lines[i+1:i+15] == expected:
+            matched.append(i)
+        elif lines[i+1:i+3] == expected[:2]:
+            raise NativeWrapperError('unverified native PRINT AT instruction layout')
+    if len(matched) > 1:
+        raise NativeWrapperError('PRINT AT has multiple unverified runtime entries')
+    if not matched:
+        return source, 0
+    for label in ('rbc_wrapper_at_row_abs:', 'rbc_wrapper_at_row_ready:',
+                  'rbc_wrapper_at_col_abs:', 'rbc_wrapper_at_col_ready:'):
+        if label in source:
+            raise NativeWrapperError('duplicate native PRINT AT label')
+    # Signed 16-bit negative -> unsigned magnitude. Any magnitude >255
+    # becomes 255 so the ROM still rejects invalid dynamic positions.
+    preamble = """    bit 7,d
+    jr z,rbc_wrapper_at_row_abs
+    xor a
+    sub e
+    ld e,a
+    ld a,0
+    sbc a,d
+    ld d,a
+rbc_wrapper_at_row_abs:
+    ld a,d
+    or a
+    jr z,rbc_wrapper_at_row_ready
+    ld e,255
+rbc_wrapper_at_row_ready:
+    bit 7,h
+    jr z,rbc_wrapper_at_col_abs
+    xor a
+    sub l
+    ld l,a
+    ld a,0
+    sbc a,h
+    ld h,a
+rbc_wrapper_at_col_abs:
+    ld a,h
+    or a
+    jr z,rbc_wrapper_at_col_ready
+    ld l,255
+rbc_wrapper_at_col_ready:
+"""
+    lines.insert(matched[0] + 1, preamble)
+    return ''.join(lines), 1
+
+
 def wrapper_source(original_source: str, font: bytes, *,
                    use_rom_font: bool = False, restart_slot: bool = False,
-                   rom_work_bytes: int = 0) -> str:
+                   rom_work_bytes: int = 0, signed_print_at: bool = False) -> str:
     """Return typed native text/data/BSS for the entire wrapped program.
 
     `original_source` must be a complete, independently three-base-verified
@@ -42,6 +112,8 @@ def wrapper_source(original_source: str, font: bytes, *,
         raise NativeWrapperError('wrapper flags must be boolean')
     if type(rom_work_bytes) is not int or (rom_work_bytes != 0 and not 512 <= rom_work_bytes <= 2048):
         raise NativeWrapperError('private ROM workspace out of range')
+    if type(signed_print_at) is not bool:
+        raise NativeWrapperError('invalid PRINT AT correction option')
     lines = original_source.splitlines()
     if (len(lines) < 5 or lines[:3] !=
             ['    section text', '    global start', 'start:'] or
@@ -55,6 +127,8 @@ def wrapper_source(original_source: str, font: bytes, *,
         raise NativeWrapperError('non-ASCII native source')
     body = re.sub(r'(?<![A-Za-z0-9_])start(?![A-Za-z0-9_])',
                   PREFIX + 'hisoft_entry', original_source)
+    if signed_print_at:
+        body, _ = _signed_print_at(body)
     text_and_data, bss = body.split('    section bss\n', 1)
     # HiSoft programs with no emitted DATA section have a text->BSS source.
     # The wrapper still needs an explicit, distinct data section for its
@@ -127,13 +201,15 @@ def wrapper_source(original_source: str, font: bytes, *,
 
 def assemble_link(original_source: str, font: bytes, *,
                   use_rom_font: bool = False, restart_slot: bool = False,
-                  stack: int = 384, rom_work_bytes: int = 0) -> tuple[str, bytes, bytes]:
+                  stack: int = 384, rom_work_bytes: int = 0,
+                  signed_print_at: bool = False) -> tuple[str, bytes, bytes]:
     """Emit typed assembly, real ras object, and actual rld-linked SSX."""
     if type(stack) is not int or not 1 <= stack <= 65535:
         raise NativeWrapperError('invalid native stack size')
     source = wrapper_source(original_source, font,
                             use_rom_font=use_rom_font,
-                            restart_slot=restart_slot, rom_work_bytes=rom_work_bytes)
+                            restart_slot=restart_slot, rom_work_bytes=rom_work_bytes,
+                            signed_print_at=signed_print_at)
     try:
         obj = ras.assemble_text(source, 'rbc-native-whole.s')
         ssx, *_ = rld.link([rld.Obj(obj, 'rbc-native-whole.sso')], [],
