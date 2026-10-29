@@ -101,10 +101,10 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
     font = (checkpoint / 'font32.bin').read_bytes()
     builds, meta = rbc._compile_three(source, frontend, tape, rom,
                                       65367, [], 'strict', False, 1)
-    proved_workspace = workspace_bytes(meta.get('optimized_strings', []))
-    if rom_work_bytes not in (0, proved_workspace):
-        raise ValueError('unproved native ROM workspace requested')
-    rom_work_bytes = proved_workspace
+    reserved_workspace = workspace_bytes(meta.get('optimized_strings', []))
+    if rom_work_bytes not in (0, reserved_workspace):
+        raise ValueError('RBC_ROM_WORKSPACE_UNSAFE: private ROM workspace lacks an operation witness')
+    rom_work_bytes = reserved_workspace
     if meta.get('budgeted_numeric_units'):
         raise ValueError('dynamic DIM budget has no three-base source witness yet')
     legacy, _ = rbc.build_ssx(builds, font, rld, stack, use_rom_font=False)
@@ -182,6 +182,9 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         'original_hisoft_baseline_sha256': baseline_sha,
         'source_proven_string_growth': [p for p in meta.get('optimized_strings', [])
                                        if p.get('bound_proof')],
+        'string_storage_reservations': [p for p in meta.get('optimized_strings', [])
+                                        if p.get('storage_is_reservation')],
+        'runtime_string_capacity_checks': True,
         'input_backend': 'zxux' if bridge_used else 'rom',
         'input_source_bridge_three_base_verified': bridge_used,
         'native_linker': 'ras/rld',

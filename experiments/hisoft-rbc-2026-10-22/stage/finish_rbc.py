@@ -40,7 +40,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            'from native_budgeted_string_dim import with_budgeted_string_dims\n'
            'from native_dynamic_string_dim import with_bounded_string_dims\n'
            'from native_string_compiler import with_static_strings\n'
-           'from native_long_string_proof import bounded_growth\n'
+           'from native_long_string_proof import growing_scalar_strings\n'
            'from native_auto_scroll import with_native_screen_scroll\n'
            'from whole_program_codegen import install as install_codegen_optimizer\n'
            'from bss_layout import target_offset')
@@ -49,7 +49,7 @@ def finish(checkpoint: Path, extensions: Path) -> None:
            '        if not directives and not source.open_lines(program):\n'
            '            size_directives, size_proofs = prove_literal_string_bounds(\n'
            '                program, kw, source.tap.split_lines)\n'
-           '        size_proofs.extend(bounded_growth(src))\n'
+           '        size_proofs.extend(growing_scalar_strings(program, kw, source.tap.split_lines))\n'
            '        chosen_directives = directives + size_directives\n'
            '        if not source.open_lines(program):')
     change('                program = source.add_directives(program, directives, True, [], kw, initial.fp)',

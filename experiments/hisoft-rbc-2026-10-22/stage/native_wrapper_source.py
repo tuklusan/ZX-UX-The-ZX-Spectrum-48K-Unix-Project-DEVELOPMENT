@@ -145,6 +145,11 @@ def wrapper_source(original_source: str, font: bytes, *,
            '    ld ($5c36),hl', f'    ld hl,{PREFIX}udg',
            '    ld ($5c7b),hl']
     if rom_work_bytes:
+        pro.extend((f'    ld ({PREFIX}saved_stack),sp',
+                    '    ld hl,($5c3d)',
+                    f'    ld ({PREFIX}saved_err_sp),hl',
+                    f'    ld hl,{PREFIX}rom_error_sp',
+                    '    ld ($5c3d),hl'))
         for ptr in (0x5c61,0x5c63,0x5c65):
             pro.extend((f'    ld hl,(${ptr:04x})',
                         f'    ld ({PREFIX}saved_work_{ptr:04x}),hl',
@@ -162,6 +167,8 @@ def wrapper_source(original_source: str, font: bytes, *,
                 f'    ld hl,({PREFIX}saved_udg)', '    ld ($5c7b),hl',
                 f'    ld hl,({PREFIX}saved_chars)', '    ld ($5c36),hl'))
     if rom_work_bytes:
+        pro.extend((f'    ld hl,({PREFIX}saved_err_sp)',
+                    '    ld ($5c3d),hl'))
         for ptr in (0x5c61,0x5c63,0x5c65):
             pro.extend((f'    ld hl,({PREFIX}saved_work_{ptr:04x})',
                         f'    ld (${ptr:04x}),hl'))
@@ -171,8 +178,18 @@ def wrapper_source(original_source: str, font: bytes, *,
     for i, address in enumerate(ROM_CONTROLS):
         pro.extend((f'    ld a,({PREFIX}control_{i})',
                     f'    ld (${address:04x}),a'))
-    pro.extend(('    ld hl,0', '    ld a,39', '    call $6003',
-                '    pop hl', '    ld a,1', '    call $6003', '    halt'))
+    pro.extend(('    ld hl,0', '    ld a,39', '    call $6003'))
+    if rom_work_bytes:
+        pro.extend((f'    ld hl,({PREFIX}saved_err_sp)', '    ld ($5c3d),hl'))
+    pro.extend(('    pop hl', '    ld a,1', '    call $6003', '    halt'))
+    if rom_work_bytes:
+        pro.extend((f'{PREFIX}rom_error:',
+                    f'    ld sp,({PREFIX}saved_stack)',
+                    '    ld a,($5c3a)',
+                    '    inc a',
+                    '    ld e,a',
+                    '    ld d,0',
+                    f'    jp {PREFIX}exit'))
     if restart_slot:
         pro.extend((f'{PREFIX}restart:',
                     f'    ld ({PREFIX}bss_end-2),sp',
@@ -180,6 +197,10 @@ def wrapper_source(original_source: str, font: bytes, *,
     data = [f'{PREFIX}saved_chars:', '    dw 0',
             f'{PREFIX}saved_udg:', '    dw 0']
     if rom_work_bytes:
+        data.extend((f'{PREFIX}saved_stack:', '    dw 0',
+                     f'{PREFIX}saved_err_sp:', '    dw 0',
+                     f'{PREFIX}rom_error_guard:', '    ds 128',
+                     f'{PREFIX}rom_error_sp:', f'    dw {PREFIX}rom_error'))
         for ptr in (0x5c61,0x5c63,0x5c65):
             data.extend((f'{PREFIX}saved_work_{ptr:04x}:','    dw 0'))
     for i in range(len(ROM_COLORS)):
