@@ -1,46 +1,8 @@
-SantaNightmare: source-observed keys and timing
+SantaNightmare — controls checked against original numbered BASIC lines
 
-No fixed `INKEY$` comparison with a literal key was found. The program may ask for numeric/text `INPUT`, redefine keys, use `PEEK`, or run without keyboard input.
+Three instruction pages explain five stages (BASIC 9210-9270). The game asks for four separate keys (60-100). Replay defines A = left, D = right, W = up, S = down, advances the first-stage reminder, waits for the traffic-light countdown, and uses A and D to steer Santa during the tree-avoidance stage (1900-1960).
 
-On-screen prompts from supplied archive:
-- BASIC line 60: "WHICH KEYS WOULD YOU LIKE?"
-- BASIC line 60: "LEFT:"
-- BASIC line 60: "RIGHT:"
-- BASIC line 60: "DOWN:"
-- BASIC line 9010: "LIVES LEFT"
-- BASIC line 9100: "(STAGE"
-- BASIC line 9100: "YOU SCORED"
-- BASIC line 9110: "YOU BEAT THE HIGH SCORE         THE HIGH SCORE IS NOW"
-- BASIC line 9110: "PLEASE ENTER YOUR NAME"
-- BASIC line 9120: "THE HIGH SCORE REMAINS"
-- BASIC line 9130: "PRESS ANY KEY TO PLAY AGAIN"
-- BASIC line 9210: "You play the part of Santa ("
-- BASIC line 9220: "STAGE 1: Use the left and right keys to guide Santa through the snow avoinding the trees ("
-- BASIC line 9230: "STAGE 2: Press the down key to  parachute from your sleigh ("
-- BASIC line 9230: ") down onto the roof. Land on the chimney ("
-- BASIC line 9240: "STAGE 3: Now you are inside the chimney and must get to the     bottom using the lift ({0x83}{0x83}{0x83}).    Press the right key to step ontothe lift and, when the brick ("
-- BASIC line 9240: ")at the bottom disappears, press the right key before your time limit runs out."
-- BASIC line 9250: "STAGE 4: Cross the floor to the Christmas tree using the left   key. When a snowball ("
-- BASIC line 9250: ") appearswait until it is near you and use the up key to jump over it. Wait until the snowball leaves the screen and then continue towards the Christmas tree."
-- BASIC line 9260: "STAGE 5: Press the up key as    many time as you can while the  clock ticks away. The more timesyou press it the more height thesleigh ("
-- BASIC line 9270: "At the beginning of each screen you will be given a brief       reminder of these instructions  and then traffic lights will    count you down to the start.    When the green light ("
-- BASIC line 9270: ") lights up ("
-- BASIC line 9270: ") the screen will start."
-- BASIC line 9350: "Use keys"
-- BASIC line 9400: "Press key"
-- BASIC line 9450: "Press key"
-- BASIC line 9450: "to step onto the    lift. When the brick disappears press key"
-- BASIC line 9500: "Press key"
-- BASIC line 9500: "to move towards the tree and key"
-- BASIC line 9500: "to jump the     snowballs."
-- BASIC line 9550: "Press key"
-- BASIC line 9550: "as fast as you can  to acheive height. Don't hold   key"
-- BASIC line 9550: "down, it won't work !"
-- BASIC line 9700: "PRESS ANY KEY TO CONTINUE"
-- BASIC line 9810: "STAGE"
-- BASIC line 9830: "WELL DONE ! - STAGE"
-- BASIC line 9830: "SCORE:"
-
-Replay inputs: none sent automatically. Snapshot begins in its saved state.
-Capture: Fuse SDL 1.6.0, after 2.5 seconds, 100% speed; original ZX Spectrum 48K ROM.
-Scene is an observed screen, not proof of full gameplay.
+Replay uses the untouched .z80 snapshot in Fuse SDL 1.6.0, 48K ROM,
+100% emulation speed; injects actual keyboard presses over XTest.
+Captures 01-STATE.png after the first move and 02-AFTER-MOVES.png after
+the second. Delays are real elapsed seconds, not exact game frames.
