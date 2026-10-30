@@ -274,6 +274,46 @@ class TracedRAM(bytearray):
                                      bytes(self[begin:begin + len(indices)])))
 
 
+
+def merge_split_capture(result, parts):
+    """Join *original* D DATA and E code emission journals, never output bytes.
+
+    HiSoft's C-mode fallback recompiles the same source as D (DATA only) and
+    E (code only).  The published image is E.code + D.code.  Each journal has
+    the coordinates of its original whole-program pass; no byte decoding or
+    new source producer is introduced by this merge.
+    """
+    if (not result.ok or result.mode != 'D+E' or len(result.parts) != 2 or
+            set(parts) != {'D', 'E'}):
+        raise ValueError('incomplete HiSoft split-source capture')
+    d, e = result.parts
+    if (not d.ok or not e.ok or d.mode != 'D' or e.mode != 'E' or
+            d.code_base != e.code_base or
+            d.load != e.load + len(e.code) or
+            result.load != e.load or
+            result.code != e.code + d.code or
+            result.var_bytes != e.var_bytes or
+            d.var_bytes != e.var_bytes or
+            d.mc_bytes != e.mc_bytes or
+            len(result.code) != e.mc_bytes):
+        raise ValueError('HiSoft D+E output does not join at verified boundaries')
+    data_start, end = len(e.code), len(result.code)
+    d_capture, e_capture = parts['D'], parts['E']
+    if (d_capture.runtime_traces or d_capture.runtime_sources or
+            any(x.kind not in ('data-source', 'table-relocated') or
+                x.position < data_start or x.position + len(x.data) > end
+                for x in d_capture.events) or
+            any(x.kind == 'data-source' or x.position < 0 or
+                x.position + len(x.data) > data_start
+                for x in e_capture.events) or
+            d_capture.rewinds):
+        raise ValueError('HiSoft split-source producer crossed a half boundary')
+    return Capture(events=[*e_capture.events, *d_capture.events],
+                   runtime_traces=list(e_capture.runtime_traces),
+                   runtime_sources=list(e_capture.runtime_sources),
+                   rewinds=list(e_capture.rewinds))
+
+
 def install(compiler_module):
     """Instrument the class without changing emission semantics or output."""
     cls = compiler_module.Compiler
@@ -319,6 +359,34 @@ def install(compiler_module):
             self.m._zxux_capture_owner = self
         return original_reset(self, *args, **kwargs)
     cls.reset = reset
+
+    # Preserve the two distinct original journals before HiSoft resets its
+    # compiler between D and E.  Only complete, successful halves may be
+    # assembled into the joined result; an unsuccessful C trial is discarded.
+    if hasattr(cls, 'compile') and hasattr(cls, 'compile_whole'):
+        original_compile = cls.compile
+        @wraps(original_compile)
+        def compile_part(self, *args, **kwargs):
+            result = original_compile(self, *args, **kwargs)
+            if (result.ok and result.mode in ('D', 'E') and
+                    hasattr(self, '_zxux_split_parts')):
+                self._zxux_split_parts[result.mode] = self._zxux_capture
+            return result
+        cls.compile = compile_part
+
+        original_whole = cls.compile_whole
+        @wraps(original_whole)
+        def compile_whole(self, *args, **kwargs):
+            self._zxux_split_parts = {}
+            try:
+                result = original_whole(self, *args, **kwargs)
+                if result.ok and result.mode == 'D+E':
+                    self._zxux_capture = merge_split_capture(
+                        result, self._zxux_split_parts)
+                return result
+            finally:
+                self._zxux_split_parts = {}
+        cls.compile_whole = compile_whole
 
     for method, kind in (
         ('emit', 'instruction'), ('emit_opcode', 'opcode'),
@@ -501,7 +569,22 @@ def audit_result(compiler, result):
     capture = getattr(compiler, '_zxux_capture', None)
     if capture is None or not result.ok:
         raise ValueError('capture missing or compilation failed')
-    if result.mode != 'C':
-        raise ValueError('the full compiled mode C image is required')
+    if result.mode not in ('C', 'D+E'):
+        raise ValueError('full source-backed C or joined D+E image required')
     capture.canonicalize_replays(result.code)
+    # C writes DATA while visiting each BASIC statement; D+E writes all DATA
+    # in D and the instructions in E.  Their journals can be compared at
+    # three bases only after putting *disjoint source-owned DATA* last in
+    # both.  Keep historical order within each half and never reorder a
+    # direct patch, executable instruction or unknown producer.
+    boundary = compiler.data_start
+    if not 0 <= boundary <= len(result.code):
+        raise ValueError('HiSoft DATA boundary outside whole result')
+    data = [event for event in capture.events if event.position >= boundary]
+    if any(event.kind not in ('data-source', 'table-relocated') or
+           event.position + len(event.data) > len(result.code)
+           for event in data):
+        raise ValueError('unverified source producer within HiSoft DATA')
+    capture.events[:] = ([event for event in capture.events
+                          if event.position < boundary] + data)
     return capture.audit(result.code)
