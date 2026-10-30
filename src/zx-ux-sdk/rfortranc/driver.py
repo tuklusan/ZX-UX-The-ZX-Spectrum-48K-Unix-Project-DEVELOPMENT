@@ -18,7 +18,7 @@ ABI_MANIFEST_NAME = 'rfortranc-abi.json'
 def sdk_path(explicit=None):
     choices = [explicit, os.environ.get('ZXUX_SDK')]
     here = Path(__file__).resolve()
-    choices.extend([str(here.parents[1]), str(here.parents[2] / 'zx-ux-sdk'),
+    choices.extend([str(here.parents[1]), str(here.parents[2]), str(here.parents[2] / 'zx-ux-sdk'),
                     str(here.parents[2] / 'src/zx-ux-sdk')])
     for candidate in choices:
         if not candidate:
@@ -222,7 +222,7 @@ def link_existing_objects(sdk, packaged, objects, target, args, rtap, tape_name)
     if manifest is not None:
         _validate_abi_manifest(manifest, objects)
     linker = sdk / ('rld' if packaged else 'bin/rld')
-    library = sdk / 'lib/libc48.ssa'
+    library = sdk / ('py/lib/libc48.ssa' if packaged else 'lib/libc48.ssa')
     if not linker.is_file() or not library.is_file():
         raise ValueError('ZX-UX SDK linker/library missing for object linkage')
     for obj in objects:
@@ -352,7 +352,7 @@ def main(argv=None):
             tmp = Path(scratch)
             if args.separate:
                 linker = sdk / ('rld' if packaged else 'bin/rld')
-                library = sdk / 'lib/libc48.ssa'
+                library = sdk / ('py/lib/libc48.ssa' if packaged else 'lib/libc48.ssa')
                 if not linker.is_file() or not library.is_file():
                     raise ValueError('ZX-UX SDK linker/library missing for --separate')
                 objects = []

@@ -11,7 +11,7 @@ sys.dont_write_bytecode = True
 R = pathlib.Path(__file__).resolve().parents[1]
 B, S, D = R / 'build', R / 'src', R / 'dist'
 sys.path.insert(0, str(S / 'zx-ux-sdk/tools'))
-import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, forthbuild, pascalpack
+import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, forthbuild, pascalpack, fortranpack
 
 
 def checked_dir(root):
@@ -136,6 +136,7 @@ def main():
     c48build.build(B / 'sdk', stage / 'assets/c48-src', stage / 'assets/c48-bin')
     forthbuild.build(B / 'sdk', stage / 'assets/forth-src', stage / 'assets/forth-bin')
     sdkpack.pack(S / 'zx-ux-sdk', S / 'zx-ux', B, stage / 'sdk/bin')
+    fortranpack.package(S, stage, B / 'sdk')
     (stage / 'sdk/bin/LICENSE').replace(stage / 'LICENSE')
     shutil.copytree(S / 'zx-ux', stage / 'zx-ux/src', ignore=no_cache)
     # Final payload step: include documentation only after all builders succeed.
