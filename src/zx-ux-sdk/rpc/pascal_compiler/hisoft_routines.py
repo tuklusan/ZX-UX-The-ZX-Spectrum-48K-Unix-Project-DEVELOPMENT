@@ -164,7 +164,7 @@ class _RoutineEmitter:
             return b"".join(self.emit_body_statement(child) for child in statement.statements)
         if isinstance(statement, Assignment):
             return self.store_value(statement.name, statement.value)
-        raise PascalError("unsupported statement in recovered routine ABI")
+        raise PascalError("unsupported statement in recovered routine calling convention")
 
     def prologue(self) -> bytes:
         local_bytes = -2 * len(self.locals)
