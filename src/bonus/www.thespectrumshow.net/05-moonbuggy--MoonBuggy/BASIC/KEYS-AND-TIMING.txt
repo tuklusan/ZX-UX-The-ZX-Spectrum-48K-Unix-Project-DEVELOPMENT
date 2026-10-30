@@ -1,27 +1,8 @@
-MoonBuggy: source-observed keys and timing
+MoonBuggy — controls checked against original numbered BASIC lines
 
-These are keys tested by `INKEY$` comparisons in BASIC. Some comparisons mean a key is pressed, while others mean it is *not* pressed. They are detected keys, not automatically assigned directions; read the on-screen instructions for their roles.
+Main menu 1 = PLAY GAME (BASIC 20,45). Initial keys are Q = left, U = right, M = jump (BASIC 2 and 63-65); may be redefined using menu 3. Replay waits for the setup graphics and menu, chooses 1, drives right and jumps a crater.
 
-- **1** — checked at BASIC line 20
-- **2** — checked at BASIC line 21
-- **3** — checked at BASIC line 22
-
-On-screen prompts from supplied archive:
-- BASIC line 11: "1....PLAY GAME"
-- BASIC line 11: "2....LOOK AT HIGH SCORE"
-- BASIC line 11: "3....REDIFINE THE GAMES KEYS"
-- BASIC line 27: "PRESS THE KEYS THAT YOU WANT"
-- BASIC line 43: "PRESS ANY KEY TO CONTINUE"
-- BASIC line 76: "SCORE:"
-- BASIC line 110: "PLEASE WAIT SETTING UP GRAPHICS"
-- BASIC line 153: "GAME OVER"
-- BASIC line 158: "Congratulations you have reachedone of todays high scores.      Please enter you name (max 10   letters):"
-- BASIC line 163: "SCORE      NAME"
-- BASIC line 165: "PRESS ANY KEY TO CONTINUE"
-- BASIC line 169: "We will take away one of your   lives for that."
-- BASIC line 172: "PRESS ANY KEY TO CONTINUE"
-- BASIC line 178: "WELL DONE YOU HAVE COMPLETED    THIS LEVEL WE WILL GIVE YOU A   BONUS SCORE FOR YOUR TIME IN    WHICH YOU COMPLETED IT FIRST."
-
-Replay inputs: none sent automatically. Snapshot begins in its saved state.
-Capture: Fuse SDL 1.6.0, after 2.5 seconds, 100% speed; original ZX Spectrum 48K ROM.
-Scene is an observed screen, not proof of full gameplay.
+Replay uses the untouched .z80 snapshot in Fuse SDL 1.6.0, 48K ROM,
+100% emulation speed; injects actual keyboard presses over XTest.
+Captures 01-STATE.png after the first move and 02-AFTER-MOVES.png after
+the second. Delays are real elapsed seconds, not exact game frames.
