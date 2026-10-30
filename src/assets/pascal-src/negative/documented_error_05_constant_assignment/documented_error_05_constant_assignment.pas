@@ -1,0 +1,4 @@
+PROGRAM E05;
+CONST X := 1;
+BEGIN
+END.

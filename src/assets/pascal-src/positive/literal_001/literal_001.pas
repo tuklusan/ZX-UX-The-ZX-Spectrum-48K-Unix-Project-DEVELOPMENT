@@ -1,0 +1,5 @@
+PROGRAM L001;
+BEGIN
+ WRITELN('A');
+END.
+
