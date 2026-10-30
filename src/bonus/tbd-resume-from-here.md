@@ -45,34 +45,34 @@ The last successful remote readback is the only completed checkpoint. Before a n
 
 The private checker is enabled by owner request on 2026-10-30. Run its self-test when starting a new session. Before **every** GitHub write, check the complete proposed text, paths, full commit message, and exact push command with the private four-attempt workflow. Keep private checker files outside Git. If the checker rejects a change, stop that write after the allowed checks; do not weaken rules or publish the blocked content. Keep the writing rules in force for all new English prose. Run the other tests that apply to the game. Do not claim a passing run without running it.
 
-**Latest completed program:** Granada Publishing — Morse Code, `12-morse-code`. We checked identical tokenized BASIC bytes in the original TAP and the supplied recreated TZX and regenerated 98 numbered lines. On the original Fuse 48K tape, we selected the message mode, entered speed 100, and sent HI. Two real Fuse screenshots show H followed by HI. This is a teaching program; we did not test audible output. The replay and private checker passed. We kept original tape bytes unchanged.
+**Latest completed program:** Granada Publishing — Nine Hole Golf, `13-nine-hole-golf`. We checked identical tokenized BASIC bytes in the original TAP and the supplied recreated TZX and regenerated 157 numbered lines. On the original Fuse 48K tape, we entered clubs 1 and 8. An overshot message appeared and the next course view changed. The short replay passed twice, with genuine screen captures. The private checker passed. The randomized game was not played through all nine holes. Original tape bytes remain unchanged.
 
-**Previous verified main parent:** `219c6030cd1adcc1cced2add90dabe294d9e2ecb`. Read live `main` for the new commit containing this checkpoint. **Next program:** Granada Publishing — Nine Hole Golf. The two Guideline source versions still need comparison. Do not count local-only work.
+**Previous verified main parent:** `4dbfeb560985da846845693ff8f89913dc030119`. Read live `main` for the new commit containing this checkpoint. **Next program:** Granada Publishing — Rainbow Squash. The two Guideline source versions still need comparison. Do not count local-only work.
 
 ## Progress at pause — committed program directories
 
-**62 / 117 (53.0%) complete; 55 remaining (47.0%).** Counts reflect committed program directories against the preliminary archive inventory.
+**63 / 117 (53.8%) complete; 54 remaining (46.2%).** Counts reflect committed program directories against the preliminary archive inventory.
 
 | Collection | Done | Remaining | Total |
 |---|---:|---:|---:|
 | F77S | 20 | 0 | 20 |
-| Granada Publishing | 12 | 12 | 24 |
+| Granada Publishing | 13 | 11 | 24 |
 | Spectrum Show | 30 | 43 | 73 |
-| **Total** | **62** | **55** | **117** |
+| **Total** | **63** | **54** | **117** |
 
-The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, Mighty Missile, Noughts and Crosses, Masterbrain, Mirror Tile, and Morse Code now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
+The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, Mighty Missile, Noughts and Crosses, Masterbrain, Mirror Tile, Morse Code, and Nine Hole Golf now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
 
 ## Exact pause point — verified GitHub state
 
 The latest checked `main` before this guide update is:
 
-`219c6030cd1adcc1cced2add90dabe294d9e2ecb` — Granada Mirror Tile completed with preserved source, two moves, and a live Fuse win. Read latest `main` for the commit with Morse Code and this progress update. Never overwrite other work.
+`4dbfeb560985da846845693ff8f89913dc030119` — Granada Morse Code completed with preserved source and visible two-letter transmission in Fuse. Read latest `main` for the commit with Nine Hole Golf and this progress update. Never overwrite other work.
 
 Previously completed on remote:
 
 - **F77S: 20 of 20 programs.** Original TZX, independently decoded LLIST `.bas`, notes and Fuse captures/replays are committed. Some are numerical demonstrations rather than games; do not relabel execution as human gameplay. No native SSX.
 - **Spectrum Show: 30 program directories committed** at pause (not all 73 source entries). The initial 7 were replayed again from actual game starts after the user rejected title-screen-only captures. Programs 08–18 were added with hands-on replay and moves. Subsequent committed indices: **20, 21, 23, 24, 25, 27, 28, 34, 35, 36, 46, 48**. Missing index numbers are **not proof of missing programs**: inspect the archive and compare unique program identities and committed paths. Some entries may be duplicates, non-BASIC or not playable; record such findings truthfully. In particular, Outlander was flagged for LLIST rejection while media and actual Fuse gameplay were preserved. Never fabricate an LLIST listing.
-- **Granada: 12 of 24 initially inventoried program directories:** `01-across-the-ravine`, `02-capture-the-quark`, `03-bobsleigh`, `04-fruit-machine`, `05-commando-jump`, `06-spectrum-invaders`, `07-laser-attack`, `08-mighty-missile`, `09-noughts-and-crosses`, `10-mastermind`, `11-mirror-tile`, and `12-morse-code`. We kept original media and added checked BASIC, notes, real Fuse input, replay scripts, and screen captures. The early archive totals remain subject to checking for repeated or non-BASIC items.
+- **Granada: 13 of 24 initially inventoried program directories:** `01-across-the-ravine`, `02-capture-the-quark`, `03-bobsleigh`, `04-fruit-machine`, `05-commando-jump`, `06-spectrum-invaders`, `07-laser-attack`, `08-mighty-missile`, `09-noughts-and-crosses`, `10-mastermind`, `11-mirror-tile`, `12-morse-code`, and `13-nine-hole-golf`. We kept original media and added checked BASIC, notes, real Fuse input, replay scripts, and screen captures. The early archive totals remain subject to checking for repeated or non-BASIC items.
 
 **No uncommitted local work should be assumed to survive.** The old container had temporary probes, transfer JSON files and images; those are not proof of remote publication and may be gone. Look at live GitHub first. Re-run unfinished work from the original archive, not an unverified old screenshot.
 
@@ -91,7 +91,7 @@ Previously completed on remote:
 
 ## Where to resume concretely
 
-**First:** check inputs and live `main`. **Next:** Granada Publishing — Nine Hole Golf. Morse Code has a checked two-letter transmission and genuine Fuse captures. Do not repeat completed programs.
+**First:** check inputs and live `main`. **Next:** Granada Publishing — Rainbow Squash. Nine Hole Golf has checked club input and genuine Fuse captures. Do not repeat completed programs.
 
 In parallel, compare remaining Spectrum Show originals with the live `src/bonus/www.thespectrumshow.net` tree. Process up to 12 independent game checks where practical, but push each completed program separately. Every published capture must come from actual input-driven Fuse play. Preserve all prior `60-programs` and other source bytes.
 
