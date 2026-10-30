@@ -1,0 +1,2 @@
+From actual BASIC: Z=left, X=right, C=down, F=up. START with S on instructions.
+Fuse 500%: wait 4s in all, press S 0.4s; wait 0.08s; capture maze; press Z 0.1s; wait 0.1s; capture active game; press X 0.1s; wait 0.1s; capture result. Outcome may be the high-score page after collision; do not confuse it with live gameplay.
