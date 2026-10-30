@@ -1,0 +1,2 @@
+Source-derived controls: 1,2,3 choose difficulty (source lines 2055-2080); M fires (line 110).
+Recorded Fuse speed 500%. Wait 3s at startup, press 1 for 0.2s to select slow difficulty, wait 6s, press m 0.2s, wait 0.5s, capture 01; press m 0.2s, wait 0.5s, capture 02. Screens are genuine and must differ.
