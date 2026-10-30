@@ -1,4 +1,4 @@
-r"""rfp driver: Forth source -> ras-syntax asm -> .sso -> .ssx.
+r"""rfc driver: Forth source -> ras-syntax asm -> .sso -> .ssx.
 
 A real (small) indirect-threaded Forth. The runtime (lib/forth_rt.asm) supplies
 the inner interpreter, colon mechanism and primitive words; rfc compiles the
@@ -461,7 +461,7 @@ def build(src_path, mode='ssx', stack=512, sdk=None):
 def main(argv=None):
     import argparse
     from pathlib import Path
-    parser = argparse.ArgumentParser(description='rfp: ZX-UX native Forth compiler')
+    parser = argparse.ArgumentParser(description='rfc: ZX-UX native Forth compiler')
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument('-S', action='store_true', help='emit Z80 assembly')
     modes.add_argument('-c', action='store_true', help='emit SSO1 relocatable object')
@@ -507,7 +507,7 @@ def main(argv=None):
                        [(1000, tape[1][0]), (2000, tape[1][1])])
         return 0
     except Exception as exc:
-        print('rfp: %s: %s' % (type(exc).__name__, exc), file=sys.stderr)
+        print('rfc: %s: %s' % (type(exc).__name__, exc), file=sys.stderr)
         return 1
 
 
