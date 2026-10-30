@@ -27,18 +27,23 @@ The 4-by-8 font is ZX-UX project code, not a third-party package.
 
 - **HiSoft Pascal 4 original compiler** — Copyright HiSoft (UK).
   ZX-UX includes binary code from the original Pascal compiler tape.
-  World of Spectrum Classic lists this software as "Available" and hosts
-  preserved tape images: https://worldofspectrum.net/item/0008255/
-  Copyright remains with the original rights holder.
+  The supplied licensing information states that the rights holders granted
+  World of Spectrum permission to distribute the original tape images
+  freely for non-commercial preservation and download:
+  https://worldofspectrum.net/item/0008255/
 
-- **HiSoft BASIC original compiler** — Copyright HiSoft (UK);
-  Cameron Hayne and Andrew Pennell are credited for the 1986 software.
+- **HiSoft BASIC original compiler** — Copyright HiSoft (UK) and original
+  authors Cameron Hayne and Andrew Pennell.
   ZX-UX includes original compiler tape images (.tzx/.tap) and runtime code.
-  World of Spectrum Classic lists these as "Available" for archive download:
+  The supplied licensing information states that the rights holders granted
+  World of Spectrum explicit permission to distribute the original tape
+  images freely for non-commercial preservation and download:
   https://worldofspectrum.net/item/0008249/
   Cameron Hayne also shares the manual at http://hayne.net/Spectrum/HiSoftBASIC/
-  Archive availability and free documentation do not place the software
-  in the public domain or under the separate pyhsb MIT licence.
+
+These archive permissions retain the original copyrights. They do not place
+either compiler in the public domain, grant general redistribution rights
+outside the named archives, or apply the separate pyhsb MIT licence.
 
 
 ===== Forth source programs =====
