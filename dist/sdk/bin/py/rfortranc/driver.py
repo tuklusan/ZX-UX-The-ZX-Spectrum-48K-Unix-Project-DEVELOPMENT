@@ -152,7 +152,7 @@ def _validate_abi_manifest(path, objects):
     for unit in units:
         common = unit.get('common', {})
         if not isinstance(common, dict):
-            raise ValueError('compiler interface unit has malformed COMMON contract: ' + str(unit.get('name')))
+            raise ValueError('compiler interface unit has malformed COMMON layout: ' + str(unit.get('name')))
         for block, members in common.items():
             if not isinstance(block, str) or not re.fullmatch(r'[0-9A-Z]{1,6}', block):
                 raise ValueError('compiler interface COMMON block name is invalid: ' + str(block))
