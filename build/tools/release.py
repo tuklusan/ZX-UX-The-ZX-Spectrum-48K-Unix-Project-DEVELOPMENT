@@ -51,6 +51,7 @@ def main():
         print('ZX-UX distribution rebuilt.')
         return 0
     run(py, '-B', TOOLS / 'portfolio.py')
+    run(py, '-B', TOOLS / 'basic_portfolio.py')
     if args.skip_fuse:
         print('ZX-UX rebuilt and RVM gallery generated.')
         return 0
@@ -59,7 +60,9 @@ def main():
     if args.fuse_libdir:
         command += ['--libdir', args.fuse_libdir]
     run(*command)
-    print('ZX-UX rebuilt; RVM and Fuse galleries generated.')
+    command[2] = str(TOOLS / 'basic_fuse_portfolio.py')
+    run(*command)
+    print('ZX-UX rebuilt; C48 and BASIC RVM/Fuse galleries generated.')
     return 0
 
 

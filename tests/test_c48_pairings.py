@@ -10,13 +10,13 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src/zx-ux-sdk'))
 import rtap
-import suite
 
 PAIRS = (('hanoi', 'queens8'), ('mobius', 'torus'),
          ('ball', 'hanoi'), ('ball', 'mobius'), ('ball', 'torus'))
 
 
 def one_pair(snapshot, pair):
+    import suite  # Optional external pairing runner; not a unittest dependency.
     # For BALL, load the longer-running companion first.  BALL otherwise
     # completes while the long cassette is still being loaded.
     ordered = tuple(reversed(pair)) if pair[0] == 'ball' else pair

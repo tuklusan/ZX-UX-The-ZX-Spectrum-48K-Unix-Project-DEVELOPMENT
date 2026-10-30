@@ -11,7 +11,7 @@ sys.dont_write_bytecode = True
 R = pathlib.Path(__file__).resolve().parents[1]
 B, S, D = R / 'build', R / 'src', R / 'dist'
 sys.path.insert(0, str(S / 'zx-ux-sdk/tools'))
-import osbuild, turbo_boot_build, c48build, sdkpack
+import osbuild, turbo_boot_build, c48build, sdkpack, basicpack
 
 
 def checked_dir(root):
@@ -64,6 +64,30 @@ def copy_bonus_programs(source, destination, no_cache):
     shutil.copy2(preview, output / preview.name)
 
 
+def preserve_existing_c48_release(old_dist, stage):
+    """Keep already-published C48 bonus files and actual screen galleries.
+
+    The historical C48 bonus ports and captures are release inputs held in
+    dist/, not recoverable from the BASIC-only source collection.
+    """
+    if not old_dist.is_dir():
+        return
+    for branch in ('bonus/60-programs', 'screenshots/rvm', 'screenshots/fuse'):
+        old = old_dist / branch
+        if not old.is_dir():
+            continue
+        for src in old.rglob('*'):
+            if not src.is_file():
+                continue
+            rel = src.relative_to(old)
+            if branch == 'bonus/60-programs' and 'C48' not in rel.parts:
+                continue
+            dst = stage / branch / rel
+            if not dst.exists():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
+
+
 def main():
     argv = sys.argv[1:]
     argv = argv[1:] if argv[:1] == ['--sjasm'] else argv
@@ -88,6 +112,8 @@ def main():
     no_cache = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
     shutil.copytree(corpus, stage / 'assets/c48-src', ignore=no_cache)
     copy_bonus_programs(bonus, stage / 'bonus', no_cache)
+    preserve_existing_c48_release(D, stage)
+    basicpack.package(S, stage)
     shutil.copytree(S / 'zx-ux', B / 'src', ignore=no_cache)
     shutil.copytree(S / 'zx-ux-sdk', B / 'sdk', ignore=no_cache)
     (B / 'out').mkdir()

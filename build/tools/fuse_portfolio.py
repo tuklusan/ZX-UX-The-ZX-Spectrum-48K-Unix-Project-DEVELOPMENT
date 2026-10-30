@@ -135,8 +135,11 @@ def run_case(names, destination, args, config=None):
     config = config or {}
     with tempfile.TemporaryDirectory(prefix='zxux-fuse-') as tmp:
         tape = Path(tmp) / 'run.tzx'
-        inputs = [str(BIN / (name + '.ssx')) for name in names]
-        if any(not Path(f).is_file() for f in inputs):
+        # BASIC uses verified short tape labels while retaining original SSX filenames.
+        programs = config.get('programs', {})
+        inputs = [(str(programs[name]) + '=' + name) if name in programs else
+                  str(BIN / (name + '.ssx')) for name in names]
+        if any(not Path(f.partition('=')[0]).is_file() for f in inputs):
             raise RuntimeError('compiled program missing')
         if rtap.main(['-o', str(tape), '--after', str(DIST / 'zx-ux/tzx/ZX-UX.tzx')] + inputs):
             raise RuntimeError('cannot append program to boot TZX')

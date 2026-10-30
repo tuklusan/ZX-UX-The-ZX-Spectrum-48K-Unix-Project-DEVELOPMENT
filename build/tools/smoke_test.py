@@ -54,6 +54,7 @@ def build(stage, sources, dest):
     dest.mkdir(parents=True)
     (dest/'demo.ssx').write_bytes(b'code')
 ''')
+        (tools / 'basicpack.py').write_text('def package(*args): return 1\n')
         (tools / 'sdkpack.py').write_text('''
 def pack(*args):
     args[-1].mkdir(parents=True)
@@ -124,6 +125,21 @@ def pack(*args):
         self.assertEqual((self.src / 'bonus/60-programs/01-demo/BASIC/demo.bas').read_text(),
                          (self.dist / 'bonus/60-programs/01-demo/BASIC/demo.bas').read_text())
         self.assertTrue((source / 'README.TXT').exists())
+
+    def test_existing_c48_release_survives_staged_rebuild(self):
+        # Historic C48 bonus files and real galleries exist only in the
+        # checked-in distribution, not the independent BASIC source tree.
+        old = self.dist / 'bonus/60-programs/01-demo/C48/SCREENSHOTS/intro.png'
+        old.parent.mkdir(parents=True)
+        old.write_bytes(b'existing C48 screenshot')
+        original = self.dist / 'screenshots/rvm/games/arith.png'
+        original.parent.mkdir(parents=True)
+        original.write_bytes(b'existing RVM screenshot')
+        self.run_builder()
+        self.assertEqual((self.dist / 'bonus/60-programs/01-demo/C48/SCREENSHOTS/intro.png').read_bytes(),
+                         b'existing C48 screenshot')
+        self.assertEqual((self.dist / 'screenshots/rvm/games/arith.png').read_bytes(),
+                         b'existing RVM screenshot')
 
     def test_layout_and_license(self):
         self.run_builder()
