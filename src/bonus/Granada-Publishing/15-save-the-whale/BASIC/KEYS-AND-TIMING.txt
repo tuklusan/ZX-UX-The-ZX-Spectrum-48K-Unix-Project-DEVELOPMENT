@@ -1,0 +1,9 @@
+SAVE THE WHALE — KEYS AND TIMING
+
+We checked the tokenized BASIC and a live Fuse 48K start.
+
+At the first prompt, 1 chooses difficult, 2 medium, and 3 easy. We selected 3 and pressed Return. In the active game, the source reads 5 for left, 8 for right, 7 for up, and 6 for down. The kayaks follow the whale after each move.
+
+The replay waits four seconds after tape load, selects difficulty 3, waits three seconds for the board, then holds 5 and 8 for 0.3 seconds each. It takes a screenshot after each move. Emulator speed is set to 100%.
+
+The screenshots show the running board, not a complete escape.
