@@ -45,34 +45,34 @@ The last successful remote readback is the only completed checkpoint. Before a n
 
 The private checker is enabled by owner request on 2026-10-30. Run its self-test when starting a new session. Before **every** GitHub write, check the complete proposed text, paths, full commit message, and exact push command with the private four-attempt workflow. Keep private checker files outside Git. If the checker rejects a change, stop that write after the allowed checks; do not weaken rules or publish the blocked content. Keep the writing rules in force for all new English prose. Run the other tests that apply to the game. Do not claim a passing run without running it.
 
-**Latest completed program:** Granada Publishing — Save the Whale, `15-save-the-whale`. The original TAP contains the same 2,751 BASIC program bytes as the recreated TZX, plus its stored variables. We regenerated 102 BASIC lines. In real Fuse 48K, we selected difficulty 3 and pressed 5 and 8. Two game views and a passing replay show the running board. The kayaks also move, so the captures alone do not measure the whale's exact displacement or prove an escape. The private checker passed.
+**Latest completed program:** Granada Publishing — Sheepdog Trials, `16-sheepdog-trials`. The original TAP contains the same 2,820 BASIC program bytes as the recreated TZX, plus stored variables. We regenerated 96 numbered BASIC lines. In genuine Fuse 48K, we pressed 8 and then 6; the visible move counter rose from 1 to 2. The replay passed, with two real game captures. We did not finish the trial. The private checker passed.
 
-**Previous verified main parent:** `b32bf92caa607e9376cb0f425fa39b449f5dbbc9`. Read live `main` for the commit containing this checkpoint. **Next program:** Granada Publishing — Sheepdog Trials. The two Guideline sources still need comparison. Do not count local-only work.
+**Previous verified main parent:** `e333f8bc431e7f31d5a1c8fe69f6023ef3f6a41a`. Read live `main` for the new commit containing this checkpoint. **Next program:** Granada Publishing — Spectrum Dice. The two Guideline source versions still need comparison. Do not count local-only work.
 
 ## Progress at pause — committed program directories
 
-**65 / 117 (55.6%) complete; 52 remaining (44.4%).** Counts reflect committed program directories against the preliminary archive inventory.
+**66 / 117 (56.4%) complete; 51 remaining (43.6%).** Counts reflect committed program directories against the preliminary archive inventory.
 
 | Collection | Done | Remaining | Total |
 |---|---:|---:|---:|
 | F77S | 20 | 0 | 20 |
-| Granada Publishing | 15 | 9 | 24 |
+| Granada Publishing | 16 | 8 | 24 |
 | Spectrum Show | 30 | 43 | 73 |
-| **Total** | **65** | **52** | **117** |
+| **Total** | **66** | **51** | **117** |
 
-The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, Mighty Missile, Noughts and Crosses, Masterbrain, Mirror Tile, Morse Code, Nine Hole Golf, Rainbow Squash, and Save the Whale now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
+The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, Mighty Missile, Noughts and Crosses, Masterbrain, Mirror Tile, Morse Code, Nine Hole Golf, Rainbow Squash, Save the Whale, and Sheepdog Trials now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
 
 ## Exact pause point — verified GitHub state
 
 The latest checked `main` before this guide update is:
 
-`b32bf92caa607e9376cb0f425fa39b449f5dbbc9` — Granada Rainbow Squash completed with a checked original TAP and two Fuse court views. Read live `main` for Save the Whale and this update.
+`e333f8bc431e7f31d5a1c8fe69f6023ef3f6a41a` — Granada Save the Whale completed with checked media, two keys, and genuine Fuse images. Read live HEAD for Sheepdog Trials and this update.
 
 Previously completed on remote:
 
 - **F77S: 20 of 20 programs.** Original TZX, independently decoded LLIST `.bas`, notes and Fuse captures/replays are committed. Some are numerical demonstrations rather than games; do not relabel execution as human gameplay. No native SSX.
 - **Spectrum Show: 30 program directories committed** at pause (not all 73 source entries). The initial 7 were replayed again from actual game starts after the user rejected title-screen-only captures. Programs 08–18 were added with hands-on replay and moves. Subsequent committed indices: **20, 21, 23, 24, 25, 27, 28, 34, 35, 36, 46, 48**. Missing index numbers are **not proof of missing programs**: inspect the archive and compare unique program identities and committed paths. Some entries may be duplicates, non-BASIC or not playable; record such findings truthfully. In particular, Outlander was flagged for LLIST rejection while media and actual Fuse gameplay were preserved. Never fabricate an LLIST listing.
-- **Granada: 15 of 24 initially inventoried program directories:** `01-across-the-ravine` through `15-save-the-whale` in the live tree. The original media, checked BASIC, game notes, Fuse replay scripts and captures remain available. Archive totals are preliminary, pending duplicate and non-BASIC checks.
+- **Granada: 16 of 24 initially inventoried program directories:** `01-across-the-ravine` through `16-sheepdog-trials` in the live tree. The source media, checked BASIC, notes, Fuse replays, and captures are committed. Archive totals remain preliminary until duplicate and non-BASIC checks are complete.
 
 **No uncommitted local work should be assumed to survive.** The old container had temporary probes, transfer JSON files and images; those are not proof of remote publication and may be gone. Look at live GitHub first. Re-run unfinished work from the original archive, not an unverified old screenshot.
 
@@ -91,7 +91,7 @@ Previously completed on remote:
 
 ## Where to resume concretely
 
-**First:** check inputs and live `main`. **Next:** Granada Publishing — Sheepdog Trials. Save the Whale has two genuine game views. Do not repeat completed programs.
+**First:** check inputs and live `main`. **Next:** Granada Publishing — Spectrum Dice. Sheepdog Trials has two accepted moves and genuine Fuse screenshots. Do not repeat finished programs.
 
 In parallel, compare remaining Spectrum Show originals with the live `src/bonus/www.thespectrumshow.net` tree. Process up to 12 independent game checks where practical, but push each completed program separately. Every published capture must come from actual input-driven Fuse play. Preserve all prior `60-programs` and other source bytes.
 

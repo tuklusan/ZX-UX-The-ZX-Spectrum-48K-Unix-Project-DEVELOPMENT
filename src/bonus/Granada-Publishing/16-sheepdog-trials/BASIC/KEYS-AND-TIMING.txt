@@ -1,0 +1,9 @@
+SHEEPDOG TRIALS — KEYS AND TIMING
+
+We checked the original BASIC and genuine Fuse 48K gameplay.
+
+The source reads 5 left, 8 right, 6 down, and 7 up. Each accepted move updates the visible Move count and may change sheep positions. The source has no opening menu.
+
+The replay waits 12 seconds for the game field, holds 8 for 0.15 seconds, captures the first move, waits two seconds, holds 6 for 0.15 seconds, and captures the second move. Fuse runs at 100% speed.
+
+A move counter of 2 shows two accepted key actions. No finished round is claimed.
