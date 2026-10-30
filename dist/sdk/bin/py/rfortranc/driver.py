@@ -110,7 +110,7 @@ def _validate_abi_manifest(path, objects):
     except (OSError, ValueError) as exc:
         raise ValueError('cannot read compiler interface manifest: ' + str(manifest_path)) from exc
     if manifest.get('schema') != 1 or manifest.get('format') != 'rfortranc-f77s-abi':
-        raise ValueError('unsupported ABI manifest: ' + str(manifest_path))
+        raise ValueError('unsupported compiler interface manifest: ' + str(manifest_path))
     entries = manifest.get('objects')
     units = manifest.get('units')
     calls = manifest.get('calls', [])
