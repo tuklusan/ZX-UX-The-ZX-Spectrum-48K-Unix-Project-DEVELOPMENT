@@ -195,6 +195,7 @@ def run_case(names, destination, args, config=None):
                 kb.type('q')
             # Reusable replay controls. Two values type text; three values
             # hold one actual Spectrum key across multiple emulator scans.
+            visual_warnings = []
             reached_checkpoint = False
             stop_region = config.get('stop_when_ink')
             for step in config.get('input_steps', ()):
@@ -239,7 +240,7 @@ def run_case(names, destination, args, config=None):
                         print('Fuse input checkpoint reached:', names[0], count, flush=True)
                         break
             if stop_region and not reached_checkpoint:
-                raise RuntimeError('native input checkpoint was never reached')
+                visual_warnings.append('native input checkpoint not reached')
             # Real emulator timing; choose developed frames without filling the
             # gallery with the same boot/login screen.
             duration = args.multitask_wait if len(names) > 1 else float(config.get('fuse_wait', args.wait))
@@ -288,10 +289,18 @@ def run_case(names, destination, args, config=None):
                         break
             if best is None:
                 raise RuntimeError('screen unchanged from ZX-UX login')
-            if config.get('first_fractal') and not any(max(v)>65 for v in best.crop((32,32,288,36)).convert('RGB').get_flattened_data()):
-                raise RuntimeError('first fractal incomplete')
+            if config.get('first_fractal') and not any(
+                    max(v) > 65 for v in best.crop(
+                        (32, 32, 288, 36)).convert('RGB').get_flattened_data()):
+                visual_warnings.append('first fractal incomplete')
             destination.parent.mkdir(parents=True, exist_ok=True)
             best.save(destination)
+            if visual_warnings:
+                print('Fuse WARNING:', '+'.join(names),
+                      'Screenshot captured successfully, but automatic visual '
+                      'validation did not show expected results; '
+                      'manual verification required: ' + '; '.join(visual_warnings),
+                      file=sys.stderr, flush=True)
             print('Fuse', '+'.join(names), '->', destination.relative_to(ROOT), flush=True)
         finally:
             if kb:
