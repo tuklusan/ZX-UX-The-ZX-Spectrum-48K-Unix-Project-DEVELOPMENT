@@ -17,8 +17,8 @@ _SJASMPLUS_HEX = re.compile(r"(?<![\w])\$([0-9A-Fa-f]+)")
 
 def _dependency():
     try:
-        from upeepz80 import PeepholeOptimizer
-        from upeepz80.z80 import (
+        from .upeepz80 import PeepholeOptimizer
+        from .upeepz80.z80 import (
             BARRIERS,
             DATA,
             TRANSPARENT,

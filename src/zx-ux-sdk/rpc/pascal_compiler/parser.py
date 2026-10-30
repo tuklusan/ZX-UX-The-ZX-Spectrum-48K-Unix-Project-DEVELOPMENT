@@ -294,6 +294,7 @@ class Parser:
     def _parse_routine(self) -> Routine:
         kind = self.take().value
         name = self.take().value
+        self.routine_names.add(name)
         parameters = self._parse_parameters()
         return_type: str | None = None
         if kind == "function":
