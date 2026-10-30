@@ -1,21 +1,8 @@
-NewYork: source-observed keys and timing
+NewYork — controls checked against original numbered BASIC lines
 
-These are keys tested by `INKEY$` comparisons in BASIC. Some comparisons mean a key is pressed, while others mean it is *not* pressed. They are detected keys, not automatically assigned directions; read the on-screen instructions for their roles.
+Q = move left, E = move right (BASIC lines 110-120). On the introduction screen hit any key, then input difficulty 1-8 (lines 2072-2110). Replay chooses 3 and starts moving after the attack wave and city appear.
 
-- **e** — checked at BASIC line 120
-- **q** — checked at BASIC line 110
-
-On-screen prompts from supplied archive:
-- BASIC line 100: "Score ="
-- BASIC line 100: "Level"
-- BASIC line 2020: "You are in control of a flying"
-- BASIC line 2035: "with your disc, self-destruct."
-- BASIC line 2040: "You flight controls are:"
-- BASIC line 2060: "Q.....Left, E.....Right"
-- BASIC line 2072: "Hit any key"
-- BASIC line 2100: "Level of difficulty(1-8)"
-- BASIC line 5004: "is complete,a     mother ship will pick up the    aliens - Prepare for the next   attack wave"
-
-Replay inputs: none sent automatically. Snapshot begins in its saved state.
-Capture: Fuse SDL 1.6.0, after 2.5 seconds, 100% speed; original ZX Spectrum 48K ROM.
-Scene is an observed screen, not proof of full gameplay.
+Replay uses the untouched .z80 snapshot in Fuse SDL 1.6.0, 48K ROM,
+100% emulation speed; injects actual keyboard presses over XTest.
+Captures 01-STATE.png after the first move and 02-AFTER-MOVES.png after
+the second. Delays are real elapsed seconds, not exact game frames.
