@@ -58,6 +58,11 @@ def build(stage_sdk: Path, programs: Path, dest: Path, *, stack: int = 512):
         head = b'ZXTape!\x1a\x01\x14' + bytes((0x30, len(title))) + title
         (ssxdir / (name + '.ssx')).write_bytes(data)
         rtap.write(str(tzxdir / (name + '.tzx')), head, [(1000, hdr), (2000, code)])
+    (dest / 'results.tsv').write_text(
+        'source\tcompile\tras\trld\tssx\ttzx\tresult\n' +
+        ''.join('%s\tPASS\tPASS\tPASS\tPASS\tPASS\tPASS\n'
+                % choices[name].relative_to(programs).as_posix()
+                for name in sorted(choices)), encoding='utf-8')
     return len(choices)
 
 

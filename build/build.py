@@ -11,7 +11,7 @@ sys.dont_write_bytecode = True
 R = pathlib.Path(__file__).resolve().parents[1]
 B, S, D = R / 'build', R / 'src', R / 'dist'
 sys.path.insert(0, str(S / 'zx-ux-sdk/tools'))
-import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, pascalpack
+import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, forthbuild, pascalpack
 
 
 def checked_dir(root):
@@ -114,6 +114,8 @@ def main():
     copy_bonus_programs(bonus, stage / 'bonus', no_cache)
     preserve_existing_c48_release(D, stage)
     basicpack.package(S, stage)
+    checked_dir(S / 'assets/forth-src')
+    shutil.copytree(S / 'assets/forth-src', stage / 'assets/forth-src', ignore=no_cache)
     pascalpack.package(S, stage)
     shutil.copytree(S / 'zx-ux', B / 'src', ignore=no_cache)
     shutil.copytree(S / 'zx-ux-sdk', B / 'sdk', ignore=no_cache)
@@ -132,6 +134,7 @@ def main():
     (stage / 'zx-ux/tzx').mkdir(parents=True)
     shutil.copy2(B / 'out/ZX-UX.tzx', stage / 'zx-ux/tzx/ZX-UX.tzx')
     c48build.build(B / 'sdk', stage / 'assets/c48-src', stage / 'assets/c48-bin')
+    forthbuild.build(B / 'sdk', stage / 'assets/forth-src', stage / 'assets/forth-bin')
     sdkpack.pack(S / 'zx-ux-sdk', S / 'zx-ux', B, stage / 'sdk/bin')
     (stage / 'sdk/bin/LICENSE').replace(stage / 'LICENSE')
     shutil.copytree(S / 'zx-ux', stage / 'zx-ux/src', ignore=no_cache)
