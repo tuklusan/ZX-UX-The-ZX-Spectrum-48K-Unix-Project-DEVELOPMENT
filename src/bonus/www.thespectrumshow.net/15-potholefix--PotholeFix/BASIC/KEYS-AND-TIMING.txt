@@ -1,0 +1,17 @@
+15-potholefix--PotholeFix
+Verified original 48K snapshot: PotholeFix.z80
+Original BASIC/controls: 5 left, 8 right
+Answer no to the instructions prompt, then steer on the moving pothole board.
+
+Reproduce from repository root:
+  sh src/bonus/www.thespectrumshow.net/15-potholefix--PotholeFix/BASIC/REPLAY.sh
+
+Replay steps in execution order (seconds of real key hold/wait):
+  key: n (0.20s)
+  key: Return (0.20s)
+  wait 1.20 seconds
+  key: 5 (0.55s)
+  shot: 01-STATE.png
+  key: 8 (0.55s)
+  shot: 02-AFTER-MOVES.png
+Fuse at 100% unless program setup requires 500%; captures are live, not sourced from supplied screenshots.
