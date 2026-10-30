@@ -1,0 +1,18 @@
+10-galaxiansfix2--GalaxiansFix2
+Verified original 48K snapshot: GalaxiansFix2.z80
+Original BASIC/controls: 1 left, 3 right, 0 laser
+Read the on-screen game instructions, press Enter to start, then steer and fire.
+
+Reproduce from repository root:
+  sh src/bonus/www.thespectrumshow.net/10-galaxiansfix2--GalaxiansFix2/BASIC/REPLAY.sh
+
+Replay steps in execution order (seconds of real key hold/wait):
+  wait 3.00 seconds
+  key: Return (0.25s)
+  wait 1.50 seconds
+  key: 1 (0.60s)
+  shot: 01-STATE.png
+  key: 3 (0.60s)
+  key: 0 (0.50s)
+  shot: 02-AFTER-MOVES.png
+Fuse at 100% unless program setup requires 500%; captures are live, not sourced from supplied screenshots.
