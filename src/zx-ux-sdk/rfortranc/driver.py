@@ -115,36 +115,36 @@ def _validate_abi_manifest(path, objects):
     units = manifest.get('units')
     calls = manifest.get('calls', [])
     if not isinstance(entries, list) or not isinstance(units, list) or not isinstance(calls, list):
-        raise ValueError('malformed ABI manifest: ' + str(manifest_path))
+        raise ValueError('malformed compiler interface manifest: ' + str(manifest_path))
     by_name = {Path(entry.get('name', '')).name: entry for entry in entries
                if isinstance(entry, dict)}
     if len(by_name) != len(entries):
-        raise ValueError('ABI manifest has duplicate or invalid object names')
+        raise ValueError('compiler interface manifest has duplicate or invalid object names')
     actual = {Path(obj).name: Path(obj).resolve() for obj in objects}
     if set(by_name) != set(actual):
-        raise ValueError('ABI manifest object set does not match link inputs')
+        raise ValueError('compiler interface manifest object set does not match link inputs')
     for name, obj in actual.items():
         entry = by_name[name]
         if entry.get('sha256') != _sha256(obj):
-            raise ValueError('ABI object hash mismatch: ' + name)
+            raise ValueError('compiler interface object hash mismatch: ' + name)
         if not entry.get('unit'):
-            raise ValueError('ABI object has no program-unit name: ' + name)
+            raise ValueError('compiler interface object has no program-unit name: ' + name)
     unit_by_name = {entry.get('name'): entry for entry in units
                     if isinstance(entry, dict) and entry.get('name')}
     if len(unit_by_name) != len(units):
-        raise ValueError('ABI manifest has duplicate or invalid unit signatures')
+        raise ValueError('compiler interface manifest has duplicate or invalid unit signatures')
     object_units = {entry['unit'] for entry in by_name.values()}
     if not object_units <= set(unit_by_name):
-        raise ValueError('ABI object refers to an unknown program unit')
+        raise ValueError('compiler interface object refers to an unknown program unit')
     for call in calls:
         if not isinstance(call, dict) or call.get('target') not in unit_by_name:
-            raise ValueError('ABI manifest has an unresolved call target')
+            raise ValueError('compiler interface manifest has an unresolved call target')
         target = unit_by_name[call['target']]
         if call.get('signature') != target:
-            raise ValueError('ABI call signature does not match target unit: ' + call['target'])
+            raise ValueError('compiler interface call signature does not match target unit: ' + call['target'])
         expected_kind = 'function' if target.get('kind') == 'function' else 'subroutine'
         if call.get('kind') != expected_kind:
-            raise ValueError('ABI call kind does not match target unit: ' + call['target'])
+            raise ValueError('compiler interface call kind does not match target unit: ' + call['target'])
     # Validate the retained source-level COMMON contracts.  Identical views
     # must remain identical across objects; intentionally alternate views are
     # legal and are retained as separate contracts for raw/mirrored storage.
@@ -152,16 +152,16 @@ def _validate_abi_manifest(path, objects):
     for unit in units:
         common = unit.get('common', {})
         if not isinstance(common, dict):
-            raise ValueError('ABI unit has malformed COMMON contract: ' + str(unit.get('name')))
+            raise ValueError('compiler interface unit has malformed COMMON contract: ' + str(unit.get('name')))
         for block, members in common.items():
             if not isinstance(block, str) or not re.fullmatch(r'[0-9A-Z]{1,6}', block):
-                raise ValueError('ABI COMMON block name is invalid: ' + str(block))
+                raise ValueError('compiler interface COMMON block name is invalid: ' + str(block))
             if not isinstance(members, list) or not members:
-                raise ValueError('ABI COMMON block has no ordered members: ' + block)
+                raise ValueError('compiler interface COMMON block has no ordered members: ' + block)
             normalized = []
             for member in members:
                 if not isinstance(member, dict):
-                    raise ValueError('ABI COMMON member is malformed: ' + block)
+                    raise ValueError('compiler interface COMMON member is malformed: ' + block)
                 name = member.get('name')
                 ty = member.get('type')
                 count = member.get('count')
@@ -171,7 +171,7 @@ def _validate_abi_manifest(path, objects):
                         not (isinstance(ty, str) and re.fullmatch(r'CHARACTER\*[1-9][0-9]{0,2}', ty))
                         or not isinstance(count, int) or count < 1
                         or not isinstance(is_array, bool)):
-                    raise ValueError('ABI COMMON member is invalid: ' + block + '/' + str(name))
+                    raise ValueError('compiler interface COMMON member is invalid: ' + block + '/' + str(name))
                 normalized.append((name, ty, count, is_array))
             common_blocks.setdefault(block, []).append((unit.get('name'), tuple(normalized)))
     for block, views in common_blocks.items():
@@ -182,7 +182,7 @@ def _validate_abi_manifest(path, objects):
         # cross-source layout.
         owners = [unit_name for unit_name, _view in views]
         if len(owners) != len(set(owners)):
-            raise ValueError('ABI COMMON block is duplicated within a unit: ' + block)
+            raise ValueError('compiler interface COMMON block is duplicated within a unit: ' + block)
     return manifest
 
 
@@ -266,7 +266,7 @@ def main(argv=None):
     p.add_argument('--separate', action='store_true', help='compile each F77S program unit to SSO and link them')
     p.add_argument('--link-only', action='store_true', help='link retained Z80 SSO objects without FORTRAN source')
     p.add_argument('--object-dir', help='preserve per-unit SSO objects (requires --separate)')
-    p.add_argument('--abi-manifest', help='F77S ABI manifest for retained SSO validation')
+    p.add_argument('--abi-manifest', help='F77S compiler interface manifest for retained SSO validation')
     p.add_argument('-o', '--output', help='output file (default SOURCE.ssx)')
     p.add_argument('--sdk', help='ZX-UX source SDK root or packaged SDK bin')
     p.add_argument('--std', choices=('zxux', 'f77s'), default='zxux',
