@@ -13,6 +13,16 @@
 
 If any required archive, source, tool or permission cannot be accessed, identify the missing item. Do not quietly substitute generated content, old snapshots, or unverified screenshots. Otherwise proceed autonomously, with minimal narration, and stop only for an actual blocker.
 
+## Writing rules for every English text
+
+Before writing or editing any English prose, **read the complete** `english-writing-rules for-technical-manuals.txt` from the project sources or the supplied original file. The file is a required input in each new chat, on the same footing as the ZIPs and GitHub push steps. If it cannot be read, request it before writing prose or proceeding with game notes.
+
+Apply **all** its English writing rules. This includes accurate source-based claims, the SANYALnet Labs voice, the specified pronouns, plain language, the required dry humor, sentence flow, and the rules against repeated or stock prose. Follow its **entire blocked-word and blocked-phrase list**, including the extra entries at the end. Never insert any blocked term into newly written English. Check finished text before staging it.
+
+These rules apply to every new or edited README, gameplay note, key list, timing guide, screenshot caption, replay comment written in English, Git commit message, progress report, and resume guide. They also apply to user-facing English updates. Do not copy blocked terms into prose merely to explain that they are blocked. Keep original media, quoted BASIC source, filenames, code syntax, test data, and existing third-party text unchanged; do not damage source bytes to enforce a prose rule.
+
+Write each game note only from original input, live code inspection, direct Fuse play, and visible screen results. No guessed controls or gameplay. Recheck the rules for each batch, before any GitHub write. The Spectrum has enough surprises without invented instructions.
+
 ## Scope and standing decisions
 
 Add **three separate bonus collections** alongside, and without modifying, the existing 60-programs collection:
