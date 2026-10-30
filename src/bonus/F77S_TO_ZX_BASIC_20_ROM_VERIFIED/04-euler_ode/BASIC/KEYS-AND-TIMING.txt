@@ -1,0 +1,11 @@
+EULER_ODE: Fuse replay keys and timing
+
+Tape: EULER_ODE.tzx, SHA-256 bb5648354b0379d2d1fa86d587bf9ce244c4f335dcaf6cf74ca774df41af5bc0
+Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
+Load: Fuse --auto-load from the original TZX; no injected keys.
+Emulator speed: 500 percent.
+Capture: 7.0 seconds after Fuse process launch, in an 800x600 Xvfb screen.
+Window: centered, crop (240,180)-(560,420) to 320x240 pixels.
+Screen: SCREENSHOTS/01-RESULT.png.
+Replay: sh BASIC/REPLAY.sh from the program folder, or sh REPLAY.sh here.
+The replay uses the unmodified tape; no synthetic gameplay inputs are claimed.
