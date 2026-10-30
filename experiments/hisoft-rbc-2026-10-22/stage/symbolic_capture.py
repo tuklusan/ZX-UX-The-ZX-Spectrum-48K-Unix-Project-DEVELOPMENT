@@ -376,9 +376,35 @@ def install(compiler_module):
                 capture = getattr(self, '_zxux_capture', None)
                 if capture is None:
                     raise ValueError('DATA was emitted without a capture')
-                capture.events.append(Emission(
-                    begin, 'data-source', f'BASIC line {self.line_no} DATA',
-                    bytes(self.far[begin:finish])))
+                # Dynamic numeric DATA has two address bytes with a genuine
+                # scalar symbol from the original expression parser. They are
+                # relocatable source words, not fixed DATA literals.
+                references = [(site, target) for site, target in
+                              getattr(self, '_zxux_data_scalar_targets', ())
+                              if begin <= site < finish]
+                cursor = begin
+                for site, target in sorted(references):
+                    if (site < cursor + 2 or site + 3 > finish or
+                            type(target) is not int or target < 0 or
+                            self.far[site - 2] != 0 or
+                            self.far[site - 1] not in (0x7B, 0x7C, 0x7D, 0x7E) or
+                            self.far[site + 2] != 0 or
+                            bytes(self.far[site:site + 2]) !=
+                            ((self.code_base + target) & 65535).to_bytes(2, 'little')):
+                        raise ValueError('dynamic DATA source word lacks exact parser witness')
+                    if site > cursor:
+                        capture.events.append(Emission(
+                            cursor, 'data-source', f'BASIC line {self.line_no} DATA',
+                            bytes(self.far[cursor:site])))
+                    capture.events.append(Emission(
+                        site, 'table-relocated', 'dw nn',
+                        bytes(self.far[site:site + 2]), target,
+                        'native_data_expressions:number_maybe_val'))
+                    cursor = site + 2
+                if cursor < finish:
+                    capture.events.append(Emission(
+                        cursor, 'data-source', f'BASIC line {self.line_no} DATA',
+                        bytes(self.far[cursor:finish])))
             return result
         cls.st_data = st_data
     # The original DEF FN compiler advances PC over private parameter slots

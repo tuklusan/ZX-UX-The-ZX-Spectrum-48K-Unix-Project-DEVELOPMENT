@@ -58,6 +58,32 @@ def _extended_read_body(stack_num):
     return result
 
 
+def _extended_read_source(stack_num):
+    """Use the original explicit Z80 instructions for dynamic READ operations."""
+    from z80asm import asm
+    setup = ('push af; inc hl; ld e,(hl); inc hl; ld d,(hl); ex de,hl; '
+             'push hl; ld hl,($5C6C); ld de,5; add hl,de; '
+             'ld ($5C6C),hl; pop hl; call {}; pop af').format(stack_num)
+    subtract = 'rst $28; defb $a1,$03,$38'
+    negative = 'rst $28; defb $1b,$38'
+    addition = 'rst $28; defb $a1,$0f,$38'
+    skip_negative_and_addition = f'jr +{len(asm(negative)) + 2 + len(asm(addition))}'
+    skip_addition = f'jr +{len(asm(addition))}'
+    choose_plus = 'cp {}; jr z,+{}'.format(
+        _DYNAMIC_ADD_ONE, len(asm(subtract)) + len(asm(skip_negative_and_addition))
+        + len(asm(negative)) + len(asm(skip_addition)))
+    choose_negative = 'cp {}; jr z,+{}'.format(
+        _DYNAMIC_NEGATE, len(asm(choose_plus)) + len(asm(subtract))
+        + len(asm(skip_negative_and_addition)))
+    choose_scalar = 'cp {}; jr z,+{}'.format(
+        _DYNAMIC_MARKER, sum(len(asm(part)) for part in (
+            choose_negative, choose_plus, subtract, skip_negative_and_addition,
+            negative, skip_addition, addition)))
+    return '; '.join((setup, choose_scalar, choose_negative, choose_plus,
+                      subtract, skip_negative_and_addition, negative,
+                      skip_addition, addition, 'jr +3'))
+
+
 def _is_dynamic_descriptor(value):
     return (isinstance(value, bytes) and len(value) == 5
             and value[0] == 0 and _DYNAMIC_SUB_ONE <= value[1] <= _DYNAMIC_MARKER
@@ -83,6 +109,8 @@ def with_literal_data_expressions(base):
             super().reset(program)
             self._zxux_dynamic_data = False
             self._zxux_dynamic_ops = False
+            self._zxux_data_scalar_targets = []
+            self._zxux_data_expression_targets = []
 
         def let_value(self):
             # Pass 0 records every DATA field before the sizing/storage passes.
@@ -102,10 +130,11 @@ def with_literal_data_expressions(base):
                           'cp {}; jr c,+{}; cp {}; jr nc,+{}',
                           len(body) + 10, _DYNAMIC_SUB_ONE, len(body) + 4,
                           _DYNAMIC_MARKER + 1, len(body))
-                self.emit_bytes(body)
+                self.emit(_extended_read_source(ROM['STACK_NUM']))
                 self.call_rt(RT.READ_REAL)
                 return
-            body = asm(_READ_DYNAMIC_BODY.format(ROM['STACK_NUM']))
+            source = _READ_DYNAMIC_BODY.format(ROM['STACK_NUM'])
+            body = asm(source)
             # Branch 1 skips the six-byte marker check plus the dynamic body;
             # branch 2 skips just the body. The body jumps past the three-byte
             # ordinary READ_REAL call after a successful variable dereference.
@@ -114,7 +143,7 @@ def with_literal_data_expressions(base):
             self.emit('ld hl,($5C6C); ld a,(hl); or a; '
                       'jr nz,+{}; inc hl; ld a,(hl); cp {}; jr nz,+{}',
                       len(body) + 6, _DYNAMIC_MARKER, len(body))
-            self.emit_bytes(body)
+            self.emit(source)
             self.call_rt(RT.READ_REAL)
 
         def let_string_value(self):
@@ -144,7 +173,20 @@ def with_literal_data_expressions(base):
         def number_maybe_val(self):
             if not getattr(self, '_zxux_in_data', False):
                 return super().number_maybe_val()
+            self._zxux_data_expression_targets = []
             value = self._zxux_data_expression(0)
+            if _is_dynamic_descriptor(value) and self.storing_data:
+                # The parser itself supplies the one scalar symbol. Capture its
+                # exact current DATA-field destination, never search output
+                # bytes for a marker or invent an address from finished code.
+                targets = self._zxux_data_expression_targets
+                if len(targets) != 1:
+                    self.not_supported('dynamic DATA scalar target is ambiguous')
+                target = targets[0]
+                if value[2:4] != ((self.code_base + target) & 65535).to_bytes(2, 'little'):
+                    self.not_supported('dynamic DATA scalar target differs from source')
+                self._zxux_data_scalar_targets.append(
+                    (self.data_start + self.data_size + 2, target))
             if not self.at_end() and self.get_char() != ord(','):
                 self.not_supported('DATA expression has a trailing operand')
             self.calc.append(value)
@@ -161,6 +203,7 @@ def with_literal_data_expressions(base):
                 if self.t != REAL:
                     self.not_supported('dynamic DATA requires real numeric scalar')
                 self._zxux_dynamic_data = True
+                self._zxux_data_expression_targets.append(addr)
                 absolute = (addr + self.code_base) & 0xFFFF
                 return bytes((0, _DYNAMIC_MARKER,
                               absolute & 255, absolute >> 8, 0))
