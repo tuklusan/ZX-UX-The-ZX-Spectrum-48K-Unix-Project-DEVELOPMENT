@@ -1,0 +1,18 @@
+MORSE CODE — KEYS AND TIMING
+
+We checked the original BASIC and ran a two-letter message in Fuse 1.6.0 on a Spectrum 48K.
+
+The tape first asks for any key. The menu then accepts 1 for Send Message, 2 for Random Letters, or 3 for Words. All three modes ask for a speed from 1 through 100. In the tested message mode, type capital letters and press Enter. We selected speed 100 and entered HI. The screen showed H, then HI. The program uses BEEP to send Morse tones; this replay starts Fuse without sound and checks visible changes only.
+
+From the repository root, run:
+  sh src/bonus/Granada-Publishing/12-morse-code/BASIC/REPLAY.sh
+
+Fuse runs at 100% speed. Waits are in real seconds.
+
+  1. Load the original TAP with the 48K ROM, then wait 3 seconds.
+  2. Press Space, wait 2 seconds, then press 1 and wait 0.8 seconds.
+  3. Enter 100 and press Enter, then wait 0.8 seconds.
+  4. Enter HI and press Enter. Wait 1 second; save 01-SENT-H.png.
+  5. Wait 2 more seconds; save 02-SENT-HI.png.
+
+The replay compares the displayed letters in the two captures. This checks a short transmission, not the complete exercise or audio signal.
