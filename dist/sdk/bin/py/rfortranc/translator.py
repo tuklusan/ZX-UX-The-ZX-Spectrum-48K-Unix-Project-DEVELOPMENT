@@ -2334,7 +2334,7 @@ def sparse_runtime(runtime, used_in):
     The legacy monolithic translator emitted every runtime helper into every
     SSO. Separate compilation had an O(units * runtime) footprint. Scan the
     static function bodies and recursively retain only reachable helpers.
-    Do not change the ABI or remove range checks from the retained helpers.
+    Do not change the calling format or remove range checks from retained helpers.
     """
     head = re.compile(r'^static\s+(?:void|int|float|char)\s*\*?\s*(f_[a-z0-9_]+)\s*\(', re.M)
     functions = {}
@@ -2416,7 +2416,7 @@ def convert(units, emit_units=None):
         unit.common_abi = common_view.get('__COMMON_ABI__', {})
         unit.common_function_wrappers = {}
     if emit_units is not None:
-        # Every independently translated unit sees the same COMMON ABI.
+        # Every independently translated unit sees the same COMMON layout.
         # The main translation owns one externally visible definition; the
         # remaining objects import it through the target linker.
         is_owner = any(u.kind == 'program' and u.name in emit_units for u in units)
@@ -2462,7 +2462,7 @@ def convert(units, emit_units=None):
     # A function expression has no statement slot around it where the caller
     # can flush/reload an incompatible COMMON mirror.  Generate a small
     # caller-specific wrapper for each such function use.  The wrapper keeps
-    # the existing function ABI, stores the caller's view before the call,
+    # the existing function calling format, stores the caller's view before the call,
     # reloads it after the callee returns, and is omitted when the caller has
     # no mixed COMMON synchronization work.
     for caller_ordinal, caller in enumerate(units):

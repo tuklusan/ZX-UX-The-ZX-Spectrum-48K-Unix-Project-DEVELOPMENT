@@ -22,7 +22,7 @@ class PascalError(Exception):
 def format_original_diagnostic(
     error: PascalError, source: str | None = None
 ) -> bytes:
-    """Format an evidence-backed HiSoft diagnostic for the native harness.
+    """Format a HiSoft diagnostic based on captured output for native tests.
 
     These byte strings are the diagnostic projection captured from the original
     48K compiler.  They deliberately preserve the Spectrum 32-column wrapping

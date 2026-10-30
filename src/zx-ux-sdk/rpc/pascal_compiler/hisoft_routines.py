@@ -304,7 +304,7 @@ class _RoutineEmitter:
 def compile_routine_program(program: Program, source: str) -> bytes | None:
     """Emit an exact recovered routine image, or return ``None``.
 
-    The current recovered ABI covers one integer procedure/function block and
+    The recovered calling format covers one integer procedure/function block and
     its integer/VAR main-program calls.  Unsupported AST shapes raise a
     ``PascalError`` from the emitter rather than falling back to a different
     calling convention.

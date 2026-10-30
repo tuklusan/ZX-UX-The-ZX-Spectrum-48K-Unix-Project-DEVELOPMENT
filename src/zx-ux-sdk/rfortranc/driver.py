@@ -83,7 +83,7 @@ def _abi_calls(units):
 
 
 def _write_abi_manifest(path, units, objects, sources):
-    """Persist compiler-owned ABI facts for later --link-only validation."""
+    """Save compiler-owned calling-layout data for later --link-only checks."""
     manifest = {
         'schema': 1,
         'format': 'rfortranc-f77s-abi',
@@ -179,7 +179,7 @@ def _validate_abi_manifest(path, objects):
             continue
         # The manifest records all views, including legal alternate layouts;
         # reject only duplicate unit declarations, which cannot be a valid
-        # cross-source contract.
+        # cross-source layout.
         owners = [unit_name for unit_name, _view in views]
         if len(owners) != len(set(owners)):
             raise ValueError('ABI COMMON block is duplicated within a unit: ' + block)
@@ -210,7 +210,7 @@ def _rcc_controls(args):
 def link_existing_objects(sdk, packaged, objects, target, args, rtap, tape_name):
     """Link retained native Z80 SSO objects without FORTRAN source parsing.
 
-    Compiler-produced object directories carry a sidecar ABI manifest. When
+    Compiler-produced object directories carry a sidecar link manifest. When
     present, validate its object hashes and source-level signatures before the
     linker; raw SSO inputs without a manifest remain linker/symbol-only.
     """

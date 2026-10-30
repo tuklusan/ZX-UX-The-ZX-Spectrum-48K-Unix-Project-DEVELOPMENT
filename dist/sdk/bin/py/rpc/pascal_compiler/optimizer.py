@@ -70,7 +70,7 @@ def _source_size(assembly: str) -> int:
 
 @dataclass(frozen=True)
 class OptimizationReport:
-    """Filtered assembler and deterministic size/statistics evidence."""
+    """Filtered assembler and deterministic size/statistics details."""
 
     assembly: str
     optimized_assembly: str

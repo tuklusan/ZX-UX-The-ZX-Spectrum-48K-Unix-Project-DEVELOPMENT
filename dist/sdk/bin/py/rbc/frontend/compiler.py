@@ -138,7 +138,7 @@ class Compiler:
         # v1.1 (the 48K compiler, side A) differs from v1.2 in a handful of places,
         # each marked 'v1.1' below; everything else is the same logic, moved.
         self.v11 = getattr(image, 'v11', False)
-        # exact: reproduce the original, bugs and all (the harness always uses this).
+        # exact: reproduce the original, bugs and all (the tests always use this).
         # Otherwise HiSoft's compile-time bugs are fixed; see fix notes by 'self.exact'.
         self.exact = exact
         if prog_addr is None:

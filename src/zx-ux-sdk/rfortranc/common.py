@@ -106,7 +106,7 @@ def layout(units):
             view_records.setdefault(block, []).append(
                 (unit.name, list(zip(per_block_names[block], members))))
         if per_block:
-            # Keep a source-level COMMON view contract for retained-object
+            # Keep a source-level COMMON view layout for retained-object
             # manifests.  This is separate from the generated aliases: the
             # linker-side validator needs the ordered storage sequence even
             # when the target uses a raw/mirrored representation.
@@ -166,7 +166,7 @@ def layout(units):
         return count * (5 if ty == 'REAL' else 2)
 
     # Incompatible views use raw bytes. Exact-layout blocks above retain their
-    # typed globals and ABI. Same-width CHARACTER views can alias the existing
+    # typed globals and calling layout. Same-width CHARACTER views can alias the existing
     # terminated representation; differing widths use packed FORTRAN bytes
     # plus per-unit mirrors so C NUL terminators never become storage data.
     for block in sorted(raw_blocks):
@@ -246,7 +246,7 @@ def layout(units):
         # C48 rejects pointer casts between the raw byte buffer and a typed
         # scalar.  Give each incompatible view a typed mirror and explicitly
         # move its bytes at unit entry, before/after SUBROUTINE calls, and on
-        # return.  The raw buffer remains the storage-sequence ABI.
+        # return.  The raw buffer retains the storage-sequence layout.
         for view_id, (unit_name, entries) in enumerate(views):
             aliases = uses.setdefault(unit_name, {})
             sync = aliases.setdefault('__COMMON_SYNC__', {'in': [], 'out': []})
