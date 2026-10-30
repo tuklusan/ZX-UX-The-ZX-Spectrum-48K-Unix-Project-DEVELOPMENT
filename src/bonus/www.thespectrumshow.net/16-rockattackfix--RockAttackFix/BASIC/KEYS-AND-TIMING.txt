@@ -1,0 +1,17 @@
+16-rockattackfix--RockAttackFix
+Verified original 48K snapshot: RockAttackFix.z80
+Original BASIC/controls: 1 rotate left, 3 rotate right, 9 thrust, 0 fire
+Start from the instructions, rotate the ship, thrust and fire on the asteroid playfield.
+
+Reproduce from repository root:
+  sh src/bonus/www.thespectrumshow.net/16-rockattackfix--RockAttackFix/BASIC/REPLAY.sh
+
+Replay steps in execution order (seconds of real key hold/wait):
+  key: space (0.20s)
+  wait 1.10 seconds
+  key: 1 (0.50s)
+  shot: 01-STATE.png
+  key: 9 (0.45s)
+  key: 0 (0.50s)
+  shot: 02-AFTER-MOVES.png
+Fuse at 100% unless program setup requires 500%; captures are live, not sourced from supplied screenshots.
