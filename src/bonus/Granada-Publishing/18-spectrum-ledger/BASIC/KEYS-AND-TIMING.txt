@@ -1,0 +1,9 @@
+SPECTRUM LEDGER — KEYS AND TIMING
+
+We checked the source and the original tape in Fuse 48K.
+
+The game first asks which of five horses to back. We entered 1 and Return. At the next input, we entered a stake of 10 and Return. The race runs automatically after that. The first screen capture shows the moving horses. The second shows a loss of 10 and a balance of 90.
+
+The replay starts the original TAP at Fuse speed 400%, waits 12 seconds for the intro, enters horse 1, waits one second, enters 10, waits four seconds for the race, and waits four more seconds for the result. The faster emulator setting is used to pass the opening sound sequence in practical time.
+
+Results are chosen by the game's own code. No outcome is changed by the replay.
