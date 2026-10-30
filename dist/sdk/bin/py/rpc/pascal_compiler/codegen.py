@@ -52,7 +52,7 @@ class Compiler:
             recovered = compile_routine_program(program, source)
             if recovered is None:
                 raise PascalError(
-                    "routine declaration is outside the recovered exact ABI"
+                    "routine declaration is outside the recovered exact calling convention"
                 )
             return recovered
         recovered_program = compile_program(program, source)

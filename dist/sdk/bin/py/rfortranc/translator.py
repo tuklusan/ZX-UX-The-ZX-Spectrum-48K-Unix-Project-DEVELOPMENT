@@ -2442,7 +2442,7 @@ def convert(units, emit_units=None):
             if dummy not in u.externals:
                 continue
             if u.vars[dummy][0] not in ('INTEGER','REAL','LOGICAL') or u.vars[dummy][1] is not None:
-                raise FortranError(u.line,'procedure dummy ABI requires scalar INTEGER/REAL/LOGICAL result')
+                raise FortranError(u.line,'procedure dummy requires scalar INTEGER/REAL/LOGICAL result')
             result_ty = u.vars[dummy][0]
             ctype_name = ctype(result_ty)
             dispatch = 'f_pd' + str(i) + '_' + dummy

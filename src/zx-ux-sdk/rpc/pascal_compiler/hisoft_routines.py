@@ -136,7 +136,7 @@ class _RoutineEmitter:
             code.extend(self.emit_value(value.left))
             code.extend(bytes.fromhex("D1 B7 ED 5A EC 79 66"))
             return bytes(code)
-        raise PascalError("unsupported expression in recovered routine ABI")
+        raise PascalError("unsupported expression in recovered routine calling convention")
 
     def store_value(self, name: str, value: object) -> bytes:
         code = bytearray()
