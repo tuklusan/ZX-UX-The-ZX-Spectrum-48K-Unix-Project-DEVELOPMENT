@@ -1,6 +1,6 @@
 \ F83 calendar port: public-domain F83 clock presentation reworked for rfc.
 \ Input is explicit (year month day): ZX-UX has no CP/M hardware clock port.
-\ Source and adaptation note: ../CORPUS.md
+\ Licence: ../LICENSES.md
 
 : leap? ( year -- flag )
   dup 4 mod 0= if
