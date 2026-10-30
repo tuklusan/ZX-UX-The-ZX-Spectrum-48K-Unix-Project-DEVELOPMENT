@@ -1,0 +1,11 @@
+S_SQUARE: Fuse replay keys and timing
+
+Tape: S_SQUARE.tzx, SHA-256 0f958af0b3521afff4f5da1bbd9b12c3648b372a2e280280b5ae89f6619ff78b
+Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
+Load: Fuse --auto-load from the original TZX; no injected keys.
+Emulator speed: 500 percent.
+Capture: 7.0 seconds after Fuse process launch, in an 800x600 Xvfb screen.
+Window: centered, crop (240,180)-(560,420) to 320x240 pixels.
+Screen: SCREENSHOTS/01-RESULT.png.
+Replay: sh BASIC/REPLAY.sh from the program folder, or sh REPLAY.sh here.
+The replay uses the unmodified tape; no synthetic gameplay inputs are claimed.
