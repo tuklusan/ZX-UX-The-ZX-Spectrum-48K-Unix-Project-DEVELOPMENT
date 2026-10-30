@@ -1,0 +1,2 @@
+From the actual BASIC: 5=left (line 220), 8=right (230), 6=down (240), 7=up (250).
+Tested replay: start 48K snapshot, wait 2s, Return 0.2s, wait 8s at 500% speed, press 8 for 0.7s, wait 1s, capture 01, press 7 for 0.5s, wait 1s, capture 02. Both are live Fuse pixels showing a changed game state.
