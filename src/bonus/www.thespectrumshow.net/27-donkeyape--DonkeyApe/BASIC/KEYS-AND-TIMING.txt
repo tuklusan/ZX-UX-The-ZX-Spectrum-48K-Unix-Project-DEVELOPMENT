@@ -1,0 +1,2 @@
+Source-derived controls: 8 moves right at line 258; 5 moves left at line 259; 7 climbs at the ladder and 9 jumps.
+Recorded Fuse speed 500%. Wait 2s at startup, press Return 0.3s, wait 7.0s, press 8 0.2s, wait 0.3s, capture 01; press 5 0.2s, wait 0.3s, capture 02. Screens are genuine and must differ.
