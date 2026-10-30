@@ -202,7 +202,7 @@ class _RoutineEmitter:
             # Main-program variables use the same global addresses, while
             # routine-local/parameter names are intentionally rejected here.
             return self.emit_value(value)
-        raise PascalError("unsupported main expression in recovered routine ABI")
+        raise PascalError("unsupported main expression in recovered routine calling convention")
 
     def emit_call(self, call: Call, routine_by_name: dict[str, Routine]) -> bytes:
         try:
@@ -260,7 +260,7 @@ class _RoutineEmitter:
                 elif isinstance(child, Output):
                     code.extend(self.emit_output(child))
                 else:
-                    raise PascalError("unsupported main statement in recovered routine ABI")
+                    raise PascalError("unsupported main statement in recovered routine calling convention")
         code.extend(bytes.fromhex("C3 AC 60"))
         return bytes(code)
 

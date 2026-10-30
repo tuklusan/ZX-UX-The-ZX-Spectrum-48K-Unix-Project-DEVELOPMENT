@@ -108,7 +108,7 @@ def _validate_abi_manifest(path, objects):
     try:
         manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     except (OSError, ValueError) as exc:
-        raise ValueError('cannot read ABI manifest: ' + str(manifest_path)) from exc
+        raise ValueError('cannot read compiler interface manifest: ' + str(manifest_path)) from exc
     if manifest.get('schema') != 1 or manifest.get('format') != 'rfortranc-f77s-abi':
         raise ValueError('unsupported ABI manifest: ' + str(manifest_path))
     entries = manifest.get('objects')
