@@ -46,6 +46,10 @@ CAPTURE = {
     # The intro flushes keys. Press Q only after the displayed intro is idle.
     '3dpaint': {'keys': '', 'frames': 3200, 'start_on_idle': 'q',
                 'expect_gameplay': True},
+    'hangman': {'keys': 'k', 'expect_text': 'Last:'},
+    'maze': {'keys': 'd', 'expect_text': 'accepted'},
+    'rogue': {'keys': 's', 'expect_text': 'accepted'},
+    'snake': {'keys': 'd', 'expect_text': 'accepted'},
 }
 
 
@@ -130,6 +134,13 @@ def run_one(name, category, config, max_frames):
             if intro_idle_frames >= 35:
                 runner.session.kb.add(zxux.parse_keys(config['start_on_idle']))
                 intro_started = True
+        if (name == '3dpaint' and intro_started and live_capture is None
+                and runner.fg.started is not None and frame_index % 5 == 0):
+            candidate, candidate_border = runner.picture()
+            if (len(candidate) == 6912 and
+                    any(((a >> 3) & 7) in (3, 4, 5, 6)
+                        for a in candidate[6144:])):
+                live_capture = (candidate, candidate_border)
         if first_fractal and runner.fg.started is not None and frame_index % 25 == 0:
             # The 48th scanline of the first fractal plots at screen y=8.
             # Test the *raw Spectrum bitmap*, including ink-black pixels.
@@ -152,7 +163,10 @@ def run_one(name, category, config, max_frames):
         raise RuntimeError(name + ': complete scene was not reached (' + str(runner.why) + ')')
     if config.get('start_on_idle') and not intro_started:
         raise RuntimeError(name + ': intro was not ready for a scripted key')
-    if name == 'invaders' and live_capture is not None and live_score > 0:
+    if name == '3dpaint' and live_capture is None:
+        raise RuntimeError(name + ': no verified gameplay frame')
+    if live_capture is not None and (
+            name == '3dpaint' or (name == 'invaders' and live_score > 0)):
         img, border = live_capture
     else:
         img, border = runner.picture()
