@@ -27,6 +27,19 @@ Use one directory per distinct original program; within each game use `BASIC/` a
 
 **Anti-bureaucracy:** minimal and sufficient direct work; work on up to **12 games in parallel** for analysis and genuine local emulation where resources allow. Finish and **push at every program boundary** to avoid loss if the local container disappears. Parallelize preparation and file uploads but serialize commits/ref updates against the exact newest live HEAD; do not push concurrent commits against a stale parent. No narration or prompts between routine steps.
 
+## Progress at pause — committed program directories
+
+**52 / 117 (44.4%) complete; 65 remaining (55.6%).** Counts reflect program directories present on live `main` when this resume file was updated, against the preliminary 117-program archive inventory.
+
+| Collection | Done | Remaining | Total |
+|---|---:|---:|---:|
+| F77S | 20 | 0 | 20 |
+| Granada Publishing | 2 | 22 | 24 |
+| Spectrum Show | 30 | 43 | 73 |
+| **Total** | **52** | **65** | **117** |
+
+The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. The next Granada program to finish is **Bobsleigh**. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
+
 ## Exact pause point — verified GitHub state
 
 The latest verified `main` at this pause is:
