@@ -9,11 +9,11 @@ Original BASIC and tokenized tape were kept unchanged.
 
 - BAS: exit 1
 
-  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
+  Diagnostic: `%RBC-WARNING RBC_WARN_HISOFT_SPLIT_IMAGE Line: - Statement: - HiSoft returned a combined D+E image rather than a single C-mode capture. The complete native source must be reconstructed before linking. | RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
 
 - TZX: exit 1
 
-  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
+  Diagnostic: `%RBC-WARNING RBC_WARN_HISOFT_SPLIT_IMAGE Line: - Statement: - HiSoft returned a combined D+E image rather than a single C-mode capture. The complete native source must be reconstructed before linking. | RBC_NATIVE_BLOCKED ValueError: the full compiled mode C image is required`
 
 - Comparison: unavailable. At least one compiler path refused a native build.
 

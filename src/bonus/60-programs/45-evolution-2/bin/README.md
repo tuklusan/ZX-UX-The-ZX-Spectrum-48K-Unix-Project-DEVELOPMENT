@@ -9,11 +9,11 @@ Original BASIC and tokenized tape were kept unchanged.
 
 - BAS: exit 1
 
-  Diagnostic: `RBC_NATIVE_BLOCKED UnsupportedTapeOperation: RBC E_TAPE_UNSUPPORTED: Line 1860: LOAD requires external tape I/O; RBC supports standalone BASIC programs only`
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: native memory limit exceeded: file=13932, image=12456, bss=1677, stack=384, total=14517, max=14000`
 
 - TZX: exit 1
 
-  Diagnostic: `RBC_NATIVE_BLOCKED UnsupportedTapeOperation: RBC E_TAPE_UNSUPPORTED: Line 1860: LOAD requires external tape I/O; RBC supports standalone BASIC programs only`
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: native memory limit exceeded: file=13932, image=12456, bss=1677, stack=384, total=14517, max=14000`
 
 - Comparison: unavailable. At least one compiler path refused a native build.
 

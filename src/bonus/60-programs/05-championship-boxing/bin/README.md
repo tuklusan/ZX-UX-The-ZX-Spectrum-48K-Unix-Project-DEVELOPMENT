@@ -9,11 +9,11 @@ Original BASIC and tokenized tape were kept unchanged.
 
 - BAS: exit 1
 
-  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: unresolved compiler bytes extend beyond native runtime`
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: native source baseline exceeds default memory limit: file=15934, image=13918, bss=940, stack=384, total=15242, limit=14000`
 
 - TZX: exit 1
 
-  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: unresolved compiler bytes extend beyond native runtime`
+  Diagnostic: `RBC_NATIVE_BLOCKED ValueError: original typed three-base HiSoft source unresolved: native source baseline exceeds default memory limit: file=15934, image=13918, bss=940, stack=384, total=15242, limit=14000`
 
 - Comparison: unavailable. At least one compiler path refused a native build.
 
