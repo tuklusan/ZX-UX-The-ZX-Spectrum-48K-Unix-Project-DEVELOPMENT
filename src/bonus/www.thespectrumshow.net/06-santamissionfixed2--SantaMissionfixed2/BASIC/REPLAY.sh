@@ -1,29 +1,46 @@
 #!/bin/sh
+# Real 48K Fuse keyboard replay against original SantaMissionfixed2.z80, no image substitution.
 set -eu
-BASIC_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-REPO=$(CDPATH= cd -- "$BASIC_DIR/../../../../.." && pwd)
-ROM=${ZX_ROM_48:-$REPO/src/zx-ux-sdk/rom/48.rom}
+HERE=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+ROOT=$(CDPATH= cd -- "$HERE/../../../../.." && pwd)
+ROM=${ZX_ROM_48:-$ROOT/src/zx-ux-sdk/rom/48.rom}
 FUSE=${FUSE_BIN:-fuse-sdl}
-test -f "$ROM"
-command -v xvfb-run >/dev/null
+test -f "$ROM" && test -f "$HERE/SantaMissionfixed2.z80"
 command -v "$FUSE" >/dev/null
+command -v xvfb-run >/dev/null
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
-mkdir -p "$TMP/.spectrum-roms"
+mkdir -p "$TMP/.spectrum-roms" "$HERE/SCREENSHOTS"
 cp "$ROM" "$TMP/.spectrum-roms/48.rom"
-HOME="$TMP" xvfb-run -a -s '-screen 0 800x600x24' python3 - "$FUSE" "$BASIC_DIR/SantaMissionfixed2.z80" "$BASIC_DIR/SCREENSHOTS/01-STATE.png" <<'PYREPLAY'
-import subprocess,sys,time
-from PIL import ImageGrab
+HOME="$TMP" xvfb-run -a -s '-screen 0 800x600x24' python3 - "$FUSE" "$HERE/SantaMissionfixed2.z80" "$HERE/SCREENSHOTS" <<'PY'
+import subprocess, sys, time
+from Xlib import X, XK, display
+from Xlib.ext import xtest
+from PIL import ImageGrab, ImageChops
 fuse,snapshot,output=sys.argv[1:]
-p=subprocess.Popen([fuse,'--no-sound','--machine','48','--speed','100','--snapshot',snapshot],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+p=subprocess.Popen([fuse,'--no-sound','--machine','48','--speed','100','--snapshot',snapshot],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+d=display.Display()
+def key(name,hold=.2):
+    c=d.keysym_to_keycode(XK.string_to_keysym(name))
+    if not c: raise RuntimeError('Unmapped key '+name)
+    xtest.fake_input(d,X.KeyPress,c); d.sync(); time.sleep(hold)
+    xtest.fake_input(d,X.KeyRelease,c); d.sync()
+def screen():
+    if p.poll() is not None: raise RuntimeError('Fuse exited before gameplay')
+    return ImageGrab.grab().crop((240,180,560,420))
 try:
- time.sleep(2.5)
- if p.poll() is not None: raise RuntimeError(p.stderr.read().decode(errors='replace'))
- screen=ImageGrab.grab()
- assert screen.size==(800,600), screen.size
- screen.crop((240,180,560,420)).save(output)
+    time.sleep(1.5)
+    initial=screen()
+    time.sleep(.7)
+    before=screen()
+    key('x',.65); time.sleep(.3)
+    first=screen()
+    if not ImageChops.difference(before,first).getbbox(): raise RuntimeError('First move had no visible effect')
+    first.save(output+'/01-STATE.png')
+    key('z',.65); time.sleep(.3)
+    second=screen()
+    if not ImageChops.difference(first,second).getbbox(): raise RuntimeError('Second move had no visible effect')
+    second.save(output+'/02-AFTER-MOVES.png')
 finally:
- p.terminate()
- try:p.wait(timeout=3)
- except subprocess.TimeoutExpired:p.kill();p.wait()
-PYREPLAY
+    p.kill(); p.wait(timeout=4); d.close()
+PY

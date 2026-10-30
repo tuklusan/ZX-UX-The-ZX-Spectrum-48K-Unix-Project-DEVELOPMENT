@@ -1,18 +1,8 @@
-SantaMissionfixed2: source-observed keys and timing
+SantaMissionfixed2 — controls checked against original numbered BASIC lines
 
-These are keys tested by `INKEY$` comparisons in BASIC. Some comparisons mean a key is pressed, while others mean it is *not* pressed. They are detected keys, not automatically assigned directions; read the on-screen instructions for their roles.
+X = move right, Z = move left (BASIC 121). A = move down (123), Q = climb/jump when possible (130-135), E = pick up from a valid tile (230), D = dig with a further direction prompt (140,1710-1720). Replay starts the saved game, moves right, then left; it does not claim to dig or finish a level.
 
-- **a** — checked at BASIC line 5030
-- **q** — checked at BASIC line 5030
-
-On-screen prompts from supplied archive:
-- BASIC line 1670: "The kids woke up and got you!!"
-- BASIC line 1710: "Direction to dig?  CAPS for down             Normal for sideways"
-- BASIC line 7515: "SCORE SO FAR:"
-- BASIC line 7515: "HI SCORE:"
-- BASIC line 9007: "SCORE:"
-- BASIC line 9007: "HI SCORE:"
-
-Replay inputs: none sent automatically. Snapshot begins in its saved state.
-Capture: Fuse SDL 1.6.0, after 2.5 seconds, 100% speed; original ZX Spectrum 48K ROM.
-Scene is an observed screen, not proof of full gameplay.
+Replay uses the untouched .z80 snapshot in Fuse SDL 1.6.0, 48K ROM,
+100% emulation speed; injects actual keyboard presses over XTest.
+Captures 01-STATE.png after the first move and 02-AFTER-MOVES.png after
+the second. Delays are real elapsed seconds, not exact game frames.
