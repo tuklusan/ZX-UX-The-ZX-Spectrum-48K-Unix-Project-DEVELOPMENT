@@ -4,7 +4,7 @@
 
 **Do not start editing, running games or pushing until these inputs are available in the new chat.** Ask the user to provide or confirm access to:
 
-1. **Live GitHub repository and write connection:** `tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT`, branch `main`. Read the live HEAD, tree, relevant source and scripts. Never treat the old repository ZIP as live state. Last confirmed HEAD at pause: `757e99727ac670e89da41a91b87d646a632d352a` (October 30, 2026); this is a checkpoint, **not** an expected future HEAD.
+1. **Live GitHub repository and write connection:** `tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT`, branch `main`. Read the live HEAD, tree, relevant source and scripts. Never treat the old repository ZIP as live state. Earlier checkpoint: `757e99727ac670e89da41a91b87d646a632d352a`. Later work is listed below. Check the current HEAD; no saved SHA is an expected future HEAD.
 2. **Original collection archives:** `F77S_TO_ZX_BASIC_20_ROM_VERIFIED.zip`, `Granada-Publishing.zip`, and `www.thespectrumshow.net.zip`. The archives include source media, original listings and, for Spectrum Show, reference screenshots. Ask for fresh attachments if unavailable; do not infer missing bytes from previously committed derivatives.
 3. **Mandatory repository write instructions:** read **all** of `Github Remote Repo Commit + Push Procedure used for ZX-UX v1.txt` before any GitHub write, including restrictions on staging, verification and force-free branch advances.
 4. **Project rules and source tools:** obtain the ZX-UX project instructions in this document and inspect live `src/bonus/60-programs/` and `build/tools/zx-tzx2bas.py` (verified TZX/ROM LLIST), the live Fuse/replay tools and tests, and `src/zx-ux-sdk/rom/48.rom`. Use repository tools in preference to reimplementing them.
@@ -39,28 +39,28 @@ Use one directory per distinct original program; within each game use `BASIC/` a
 
 ## Progress at pause — committed program directories
 
-**52 / 117 (44.4%) complete; 65 remaining (55.6%).** Counts reflect program directories present on live `main` when this resume file was updated, against the preliminary 117-program archive inventory.
+**56 / 117 (47.9%) complete; 61 remaining (52.1%).** Counts reflect program directories present on live `main` when this resume file was updated, against the preliminary 117-program archive inventory.
 
 | Collection | Done | Remaining | Total |
 |---|---:|---:|---:|
 | F77S | 20 | 0 | 20 |
-| Granada Publishing | 2 | 22 | 24 |
+| Granada Publishing | 6 | 18 | 24 |
 | Spectrum Show | 30 | 43 | 73 |
-| **Total** | **52** | **65** | **117** |
+| **Total** | **56** | **61** | **117** |
 
-The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. The next Granada program to finish is **Bobsleigh**. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
+The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, and Spectrum Invaders now have original media, checked listings, and real Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
 
 ## Exact pause point — verified GitHub state
 
-The latest verified `main` at this pause is:
+The latest checked `main` before this guide update is:
 
-`757e99727ac670e89da41a91b87d646a632d352a` — **Granada Capture the Quark** (8 original/listing/replay-related files; live Fuse left/right play captured; original TAP preserved and derived TZX checked). Verify that remote HEAD and trees have not changed before resuming; if they have, inspect and reconcile instead of overwriting.
+`dbd933040da5ee01d84bbec8bad092cf4070e8dd` — **Granada Spectrum Invaders**. We checked the unchanged original TAP, matching BASIC from its TZX copy, left/right steering, and a fire key in Fuse. Check the live HEAD again when work resumes. If it has moved, read the new files first; never overwrite other work.
 
 Previously completed on remote:
 
 - **F77S: 20 of 20 programs.** Original TZX, independently decoded LLIST `.bas`, notes and Fuse captures/replays are committed. Some are numerical demonstrations rather than games; do not relabel execution as human gameplay. No native SSX.
 - **Spectrum Show: 30 program directories committed** at pause (not all 73 source entries). The initial 7 were replayed again from actual game starts after the user rejected title-screen-only captures. Programs 08–18 were added with hands-on replay and moves. Subsequent committed indices: **20, 21, 23, 24, 25, 27, 28, 34, 35, 36, 46, 48**. Missing index numbers are **not proof of missing programs**: inspect the archive and compare unique program identities and committed paths. Some entries may be duplicates, non-BASIC or not playable; record such findings truthfully. In particular, Outlander was flagged for LLIST rejection while media and actual Fuse gameplay were preserved. Never fabricate an LLIST listing.
-- **Granada: 2 of 24 initially inventoried game directories**: `01-across-the-ravine` and `02-capture-the-quark`. *Capture the Quark* is last complete/pushed. **Bobsleigh was under active examination but had not passed complete play verification or been pushed** when paused. Resume Granada **Bobsleigh** next, then the rest of the collection, while also pursuing remaining Spectrum Show programs in batches up to 12. The originally stated 24/73 counts are preliminary archive inventories; verify distinct-program counts, duplicates and non-BASIC entries against source archives.
+- **Granada: 6 of 24 initially inventoried game directories:** `01-across-the-ravine`, `02-capture-the-quark`, `03-bobsleigh`, `04-fruit-machine`, `05-commando-jump`, and `06-spectrum-invaders`. The last four were played in genuine Fuse with real key actions. The source TAP bytes were kept, TZX program bytes were checked, and readable BASIC plus replay files were pushed per game. Remaining items need the same checks. `Noughts and Crosses` was examined locally, but typed string input did not reach a confirmed move; it was **not pushed**. Its first safe step is to retry the original TAP with correctly quoted two-digit row/column input. `Guideline` contains more than one source version; check whether they count as distinct games before publishing. The 24 Granada and 73 Spectrum Show totals remain early archive counts, subject to a source-by-source review.
 
 **No uncommitted local work should be assumed to survive.** The old container had temporary probes, transfer JSON files and images; those are not proof of remote publication and may be gone. Look at live GitHub first. Re-run unfinished work from the original archive, not an unverified old screenshot.
 
@@ -79,9 +79,9 @@ Previously completed on remote:
 
 ## Where to resume concretely
 
-**First:** request/check inputs in the first section and validate live `main`. **Next:** restart Granada **Bobsleigh** from `Granada-Publishing.zip`. Previously observed source archive members include `Granada-Publishing/Bobsleigh/Bobsleigh.tap`, `BASIC/Bobsleigh-recreated-tape.TZX`, `BASIC/Bobsleigh-tzx-LLIST.bas`, and `original-medium/Bobsleigh.tap`; distinguish originals from created files. The last observed Bobsleigh test did not establish a finished, reproducible in-game move session. Read its instructions and genuine gameplay screens; identify start/steering actions; get at least two real moves; inspect Fuse screenshots, then publish if verifiable.
+**First:** check the required inputs in the first section, read the English writing guide, and check live `main`. **Next:** choose the next untouched Granada source folder from `Granada-Publishing.zip`. `Noughts and Crosses` has a playable board at startup but needs a working, quoted two-digit input before any move can be claimed. `Laser Attack` and other unopened folders are also ready for first inspection. Do not repeat the six Granada directories already pushed.
 
-**After Bobsleigh:** inventory the remaining Granada original folders, prioritizing real games and source media, and complete them. In parallel, identify uncommitted Spectrum Show originals by comparing the ZIP with the **live remote `src/bonus/www.thespectrumshow.net` tree**. Continue genuine input-driven play, not screenshots of startup state. Track progress from remote directories, not old conversation totals. Do not touch existing 60-programs or already accepted source bytes.
+In parallel, compare remaining Spectrum Show originals with the live `src/bonus/www.thespectrumshow.net` tree. Process up to 12 independent game checks where practical, but push each completed program separately. Every published capture must come from actual input-driven Fuse play. Preserve all prior `60-programs` and other source bytes.
 
 ## Required remote readback / final state
 
