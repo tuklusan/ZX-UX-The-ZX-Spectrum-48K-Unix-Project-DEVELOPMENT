@@ -132,13 +132,13 @@ def pack(*args):
         old = self.dist / 'bonus/60-programs/01-demo/C48/SCREENSHOTS/intro.png'
         old.parent.mkdir(parents=True)
         old.write_bytes(b'existing C48 screenshot')
-        original = self.dist / 'screenshots/rvm/games/arith.png'
+        original = self.dist / 'screenshots/c48/rvm/games/arith.png'
         original.parent.mkdir(parents=True)
         original.write_bytes(b'existing RVM screenshot')
         self.run_builder()
         self.assertEqual((self.dist / 'bonus/60-programs/01-demo/C48/SCREENSHOTS/intro.png').read_bytes(),
                          b'existing C48 screenshot')
-        self.assertEqual((self.dist / 'screenshots/rvm/games/arith.png').read_bytes(),
+        self.assertEqual((self.dist / 'screenshots/c48/rvm/games/arith.png').read_bytes(),
                          b'existing RVM screenshot')
 
     def test_layout_and_license(self):

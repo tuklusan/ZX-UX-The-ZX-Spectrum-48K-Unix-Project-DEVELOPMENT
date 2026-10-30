@@ -72,7 +72,7 @@ def preserve_existing_c48_release(old_dist, stage):
     """
     if not old_dist.is_dir():
         return
-    for branch in ('bonus/60-programs', 'screenshots/rvm', 'screenshots/fuse'):
+    for branch in ('bonus/60-programs', 'screenshots/c48/rvm', 'screenshots/c48/fuse'):
         old = old_dist / branch
         if not old.is_dir():
             continue

@@ -27,7 +27,7 @@ from gallery import write_gallery
 from portfolio import captures, BIN, DIST, PAIRS, SOURCES
 import rtap
 
-OUT = DIST / 'screenshots/fuse'
+OUT = DIST / 'screenshots/c48/fuse'
 
 # Surgical Fuse-only overrides for screenshots that were being caught on
 # their greyed exit screens or with the wrong timing. The rest of the

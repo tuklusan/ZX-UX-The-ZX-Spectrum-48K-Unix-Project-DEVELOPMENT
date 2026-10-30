@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from basic_portfolio import cases, write_gallery
 from fuse_portfolio import run_case
 
-OUT = ROOT / 'dist/screenshots/fuse/basic'
+OUT = ROOT / 'dist/screenshots/c48/fuse/basic'
 
 
 def capture(i, collection, ssx, label, opts):

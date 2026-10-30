@@ -22,7 +22,7 @@ from gallery import write_gallery
 
 SOURCES = DIST / 'assets/c48-src'
 BIN = DIST / 'assets/c48-bin/ssx'
-OUT = DIST / 'screenshots/rvm'
+OUT = DIST / 'screenshots/c48/rvm'
 PAIRS = (('hanoi', 'queens8'), ('mobius', 'torus'))
 # Captures run graphics to completion rather than using the test suite's
 # short two-frame animation argument. Other programs retain test inputs.

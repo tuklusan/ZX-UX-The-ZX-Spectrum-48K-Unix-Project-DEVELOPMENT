@@ -93,7 +93,7 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
         image, border = selected
         if len(image) != 6912:
             raise RuntimeError('invalid Spectrum screen')
-        out = DIST / 'screenshots/rvm/basic' / collection / (ssx.stem + '.png')
+        out = DIST / 'screenshots/c48/rvm/basic' / collection / (ssx.stem + '.png')
         out.parent.mkdir(parents=True, exist_ok=True)
         rvm.write_png(image, str(out), border)
         if best < 8:
@@ -123,7 +123,7 @@ def main(argv=None):
             failures.append(ssx.stem)
     if wanted is not None:
         failures.extend(sorted(wanted - found))
-    out = DIST / 'screenshots/rvm/basic'
+    out = DIST / 'screenshots/c48/rvm/basic'
     count = write_gallery(out, 'RVM')
     if wanted is None and count != len(found):
         failures.append('incomplete BASIC RVM gallery')
