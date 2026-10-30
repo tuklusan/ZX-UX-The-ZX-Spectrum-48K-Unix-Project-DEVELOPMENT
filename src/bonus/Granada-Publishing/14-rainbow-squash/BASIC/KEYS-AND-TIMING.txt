@@ -1,0 +1,9 @@
+RAINBOW SQUASH — KEYS AND TIMING
+
+We checked the original BASIC and launched the original TAP with Fuse SDL 1.6.0.
+
+Return advances the input prompt for the next ball. The source checks 5 for left and 8 for right while the ball runs. The game can advance between key presses without player input.
+
+The replay waits 18 seconds at normal emulator speed for the color court to load, presses Return for 0.1 seconds, waits 0.4 seconds, holds 5 for 0.6 seconds, then holds 8 for 0.6 seconds. It captures the screen after each direction. The startup duration depends on the emulator and host speed.
+
+The two screenshots show active court changes. They do not establish a complete score or a controlled paddle position.
