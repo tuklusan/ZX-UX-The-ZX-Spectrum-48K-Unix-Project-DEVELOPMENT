@@ -45,34 +45,34 @@ The last successful remote readback is the only completed checkpoint. Before a n
 
 The private checker is enabled by owner request on 2026-10-30. Run its self-test when starting a new session. Before **every** GitHub write, check the complete proposed text, paths, full commit message, and exact push command with the private four-attempt workflow. Keep private checker files outside Git. If the checker rejects a change, stop that write after the allowed checks; do not weaken rules or publish the blocked content. Keep the writing rules in force for all new English prose. Run the other tests that apply to the game. Do not claim a passing run without running it.
 
-**Latest completed program:** Granada Publishing — Noughts and Crosses, `09-noughts-and-crosses`. We checked identical BASIC bytes in the source TAP and the supplied recreated TZX, regenerated 113 numbered lines, and entered two valid human moves, 11 and 22, in genuine Fuse 1.6.0. Both replies and a changed game board appear in the two Fuse screenshots. The replay and private checker passed. The source media remains unchanged.
+**Latest completed program:** Granada Publishing — Masterbrain, `10-mastermind`. We checked identical BASIC bytes in the original TAP and the supplied recreated TZX and regenerated 86 numbered lines. In real Fuse 1.6.0, we pressed Space, entered age 20, then played two valid guesses, 3333 and 4444. Two screenshots show separate color-guess rows, and the replay passed. The private checker passed. Original tape bytes remain unchanged.
 
-**Previous verified main parent:** `2ab949923334d4e9878891e423b921317b3a1e73`. Read live `main` for the commit containing this checkpoint. **Next program:** Granada Publishing — Mastermind. We still need to compare the two Guideline source versions. No local-only game counts as done.
+**Previous verified main parent:** `ce7d6d50f2b4c8fd3810d25ca1a80ce4f2b95eed`. Read live `main` for the new commit containing this checkpoint. **Next program:** Granada Publishing — Mirror Tile. The two Guideline source versions still need comparison. No local-only work counts as done.
 
 ## Progress at pause — committed program directories
 
-**59 / 117 (50.4%) complete; 58 remaining (49.6%).** Counts reflect committed program directories against the preliminary archive inventory.
+**60 / 117 (51.3%) complete; 57 remaining (48.7%).** Counts reflect committed program directories against the preliminary archive inventory.
 
 | Collection | Done | Remaining | Total |
 |---|---:|---:|---:|
 | F77S | 20 | 0 | 20 |
-| Granada Publishing | 9 | 15 | 24 |
+| Granada Publishing | 10 | 14 | 24 |
 | Spectrum Show | 30 | 43 | 73 |
-| **Total** | **59** | **58** | **117** |
+| **Total** | **60** | **57** | **117** |
 
-The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, Mighty Missile, and Noughts and Crosses now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
+The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, Mighty Missile, Noughts and Crosses, and Masterbrain now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
 
 ## Exact pause point — verified GitHub state
 
 The latest checked `main` before this guide update is:
 
-`2ab949923334d4e9878891e423b921317b3a1e73` — private checker and restart rules enabled. The newest program in this update is Granada Noughts and Crosses. Read the live HEAD for the commit that contains these files. Never overwrite other work.
+`ce7d6d50f2b4c8fd3810d25ca1a80ce4f2b95eed` — Granada Noughts and Crosses completed with preserved source, two input-driven moves and Fuse screenshots. Check the live HEAD for the commit that includes Masterbrain and this new status. Never overwrite other work.
 
 Previously completed on remote:
 
 - **F77S: 20 of 20 programs.** Original TZX, independently decoded LLIST `.bas`, notes and Fuse captures/replays are committed. Some are numerical demonstrations rather than games; do not relabel execution as human gameplay. No native SSX.
 - **Spectrum Show: 30 program directories committed** at pause (not all 73 source entries). The initial 7 were replayed again from actual game starts after the user rejected title-screen-only captures. Programs 08–18 were added with hands-on replay and moves. Subsequent committed indices: **20, 21, 23, 24, 25, 27, 28, 34, 35, 36, 46, 48**. Missing index numbers are **not proof of missing programs**: inspect the archive and compare unique program identities and committed paths. Some entries may be duplicates, non-BASIC or not playable; record such findings truthfully. In particular, Outlander was flagged for LLIST rejection while media and actual Fuse gameplay were preserved. Never fabricate an LLIST listing.
-- **Granada: 9 of 24 initially inventoried program directories:** `01-across-the-ravine`, `02-capture-the-quark`, `03-bobsleigh`, `04-fruit-machine`, `05-commando-jump`, `06-spectrum-invaders`, `07-laser-attack`, `08-mighty-missile`, and `09-noughts-and-crosses`. The seven later directories have checked source tapes, BASIC listings, gameplay notes, live Fuse play, replay scripts, and screenshots. We kept original TAP bytes unchanged. The two Guideline source versions still need checking before publication. The early archive totals remain subject to a check for repeated and non-BASIC entries.
+- **Granada: 10 of 24 initially inventoried program directories:** `01-across-the-ravine`, `02-capture-the-quark`, `03-bobsleigh`, `04-fruit-machine`, `05-commando-jump`, `06-spectrum-invaders`, `07-laser-attack`, `08-mighty-missile`, `09-noughts-and-crosses`, and `10-mastermind`. We kept the original tapes and added checked BASIC listings, observed Fuse play, replay scripts, and real game captures. The early archive totals remain subject to checking for repeated or non-BASIC items.
 
 **No uncommitted local work should be assumed to survive.** The old container had temporary probes, transfer JSON files and images; those are not proof of remote publication and may be gone. Look at live GitHub first. Re-run unfinished work from the original archive, not an unverified old screenshot.
 
@@ -91,7 +91,7 @@ Previously completed on remote:
 
 ## Where to resume concretely
 
-**First:** check the inputs and live `main`. **Next:** Granada Publishing — Mastermind. We finished Noughts and Crosses with row/column input `11` and `22`, and original gameplay screenshots. Continue with the untouched programs and do not repeat completed directories.
+**First:** check inputs and live `main`. **Next:** Granada Publishing — Mirror Tile. Masterbrain has two valid guesses and genuine screenshots on `main`. Do not repeat any completed program.
 
 In parallel, compare remaining Spectrum Show originals with the live `src/bonus/www.thespectrumshow.net` tree. Process up to 12 independent game checks where practical, but push each completed program separately. Every published capture must come from actual input-driven Fuse play. Preserve all prior `60-programs` and other source bytes.
 
