@@ -1,0 +1,3 @@
+Original instructions and listing: Q=up, A=down, O=left, P=right.
+Executed Fuse replay: wait 2 seconds, Return 0.2 seconds; wait 2 seconds; P 0.7 seconds; wait 1 second; screenshot 01; Q 0.5 seconds; wait 1 second; screenshot 02.
+Observed the MOWED counter update in actual game play.
