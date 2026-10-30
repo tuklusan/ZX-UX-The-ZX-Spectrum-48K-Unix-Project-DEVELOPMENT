@@ -1,0 +1,9 @@
+SPECTRUM DICE — KEYS AND TIMING
+
+We checked the original BASIC and a live Fuse 48K run.
+
+Return passes the first input prompt. The screen then asks for any key to throw. We used Space. Each throw may produce the same face as before, since the source chooses the result using RND.
+
+The replay waits four seconds for tape load, presses Return, waits two seconds, presses Space, waits four seconds and captures the die, then presses Space twice more with four-second waits. It captures the result after the third throw. The run uses 100% emulator speed.
+
+We compared the die faces in both saved images. No result is selected or changed by hand.
