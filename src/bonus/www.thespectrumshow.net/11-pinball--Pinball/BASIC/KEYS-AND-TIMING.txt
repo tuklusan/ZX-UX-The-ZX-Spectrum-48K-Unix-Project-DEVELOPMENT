@@ -1,0 +1,14 @@
+11-pinball--Pinball
+Verified original 48K snapshot: Pinball.z80
+Original BASIC/controls: 5 paddle left, 6 paddle right
+The Z80 resumes a live ball. Move the paddle left and right while the scoreboard changes.
+
+Reproduce from repository root:
+  sh src/bonus/www.thespectrumshow.net/11-pinball--Pinball/BASIC/REPLAY.sh
+
+Replay steps in execution order (seconds of real key hold/wait):
+  key: 5 (0.55s)
+  shot: 01-STATE.png
+  key: 6 (0.70s)
+  shot: 02-AFTER-MOVES.png
+Fuse at 100% unless program setup requires 500%; captures are live, not sourced from supplied screenshots.
