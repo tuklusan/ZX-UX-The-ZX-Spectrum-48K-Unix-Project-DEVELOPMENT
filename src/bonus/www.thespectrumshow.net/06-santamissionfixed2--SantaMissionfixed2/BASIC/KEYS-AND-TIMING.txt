@@ -1,0 +1,18 @@
+SantaMissionfixed2: source-observed keys and timing
+
+These are keys tested by `INKEY$` comparisons in BASIC. Some comparisons mean a key is pressed, while others mean it is *not* pressed. They are detected keys, not automatically assigned directions; read the on-screen instructions for their roles.
+
+- **a** — checked at BASIC line 5030
+- **q** — checked at BASIC line 5030
+
+On-screen prompts from supplied archive:
+- BASIC line 1670: "The kids woke up and got you!!"
+- BASIC line 1710: "Direction to dig?  CAPS for down             Normal for sideways"
+- BASIC line 7515: "SCORE SO FAR:"
+- BASIC line 7515: "HI SCORE:"
+- BASIC line 9007: "SCORE:"
+- BASIC line 9007: "HI SCORE:"
+
+Replay inputs: none sent automatically. Snapshot begins in its saved state.
+Capture: Fuse SDL 1.6.0, after 2.5 seconds, 100% speed; original ZX Spectrum 48K ROM.
+Scene is an observed screen, not proof of full gameplay.

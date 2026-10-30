@@ -1,0 +1,181 @@
+  90 REM SANTS'S MISSION
+  91 REM  NOVEMBER 1983
+  92 REM 
+  93 REM    SELLSOFT
+  94 REM 
+  95 REM 
+  96 REM 
+ 100 LET ht=0
+ 101 LET t=0: LET e=.05
+ 105 PAPER 5: BORDER 1: INK 0: BRIGHT 0: FLASH 0: INVERSE 0: CLS : GO SUB 8000: GO SUB 8200
+ 110 BORDER 1: LET y=-2: LET x=1: LET drop=0: LET jump=1: LET splat=0: LET str=5: LET gir=5: LET dex=5: LET tot=12: LET ox=x: LET oy=y: LET cx=x: LET cy=y
+ 111 GO SUB 2000
+ 115 LET flag=0: LET p$="{97}{99}{9A}{9B}                           ": LET s$="{9D}{9E}{9F}{A0}                          {9C}": GO TO 5015
+ 120 LET w$={10}{00}INKEY$: IF w$="" THEN GO TO 700
+ 121 LET x=x+(w$="x")-(w$="z")
+ 123 IF w$="a" THEN LET y=y+1
+ 130 IF w$="q" AND y=2 THEN GO TO 5000
+ 133 IF y<=4 AND w$="q" AND a$(y,x)="{91}" THEN LET y=y-1: GO SUB 870: GO TO 1000
+ 135 IF y>4 THEN IF w$="q" AND (a$(y-1,x)="{90}" OR a$(y-2,x)="{91}") THEN LET y=y-1: GO SUB 870: GO TO 1000
+ 140 IF w$="d" THEN GO TO 1700
+ 200 IF a$(y,x)="{92}" THEN GO TO 1200
+ 210 GO SUB 4000
+ 215 IF a$(y+1,x)=" " OR a$(y+1,x)="{A3}" OR a$(y+1,x)="{95}" THEN GO TO 1400
+ 225 IF a$(y,x)="{A3}" AND dex<5 THEN GO TO 1650
+ 230 IF w$="e" AND a$(y,x)="{95}" THEN GO TO 1500
+ 235 IF a$(y,x)="{A2}" THEN GO TO 1900
+ 290 GO TO 800
+ 700 IF NOT str THEN GO TO 9000
+ 702 IF RND>e THEN GO TO 800
+ 705 LET j=RND*6+7: LET k=RND*30+1
+ 710 IF a$(j,k)=" " OR a$(j,k)="{A3}" OR a$(j,k)="{91}" THEN GO TO 720
+ 715 GO TO 800
+ 720 IF a$(j+1,k)=" " OR a$(j+1,k)="{A3}" OR a$(j+1,k)="{91}" THEN LET j=j+1: GO TO 720
+ 725 PRINT INK 1;AT j+4,k-1;"{92}": LET a$(j,k)="{92}"
+ 830 IF tot=0 THEN BORDER 2
+ 840 LET ox=x: LET oy=y: LET cx=x: LET cy=y
+ 850 GO TO 120
+ 875 IF y>16 THEN LET y=16
+ 880 IF y<1 THEN LET y=1
+ 885 IF x>31 THEN LET x=31
+ 890 IF x<1 THEN LET x=1
+ 895 RETURN 
+1005 LET str=str-.1: GO SUB 2100
+1010 IF str<=0 THEN GO TO 9000
+1020 IF a$(y,x)="{91}" AND gir>5 THEN LET y=y+1: BEEP .05,0: BEEP .05,0: GO TO 800
+1030 GO SUB 4000
+1035 BEEP .05,24: GO TO 800
+1210 LET x=cx: LET y=cy
+1220 BEEP .05,12: BEEP .05,12
+1230 GO TO 800
+1405 LET oy=y: LET ox=x
+1406 LET co=1
+1410 LET y=y+1: GO SUB 4000: IF y=17 THEN GO TO 1670
+1411 LET oy=y: LET co=co+1: IF a$(y+1,x)<>" " AND a$(y+1,x)<>"{A3}" THEN LET str=str-co/5: GO SUB 2100: GO TO 1430
+1415 IF co=6 THEN LET splat=1
+1420 GO TO 1410
+1430 IF flag THEN RETURN 
+1432 IF NOT splat THEN GO TO 800
+1435 PRINT INK 2; PAPER 5; FLASH 1;AT y+4,x-3;"SPLAT": FOR q=12 TO 0 STEP -1: BEEP (12-q)/20,q-13: NEXT q
+1440 GO TO 9000
+1505 BEEP .1,12: BEEP .1,16: BEEP .1,12: BEEP .1,16: BEEP .1,19
+1510 LET no=RND*3+1: IF RND>.5 THEN GO TO 1525
+1515 PRINT #0;AT 0,0;" F O U N D  T H E  S H E R R Y !": FOR j=1 TO no: PRINT #0;"{93} ";: NEXT j: PRINT 
+1520 LET str=str+no*2: LET dex=dex-no: GO SUB 2000: GO SUB 2100: GO TO 1535
+1525 PRINT #0;AT 0,0;"G O T  T H E  M I N C E  P I E S"
+1530 FOR j=1 TO no: PRINT #0;"{94} ";: NEXT j: PRINT : LET str=str+no*2: LET gir=gir+no: GO SUB 2100: GO SUB 2200
+1535 LET a$(y,x)=" "
+1540 PRINT AT y+4,x-1;"{96}";AT y+3,x-1;"{97}"
+1541 FOR i=1 TO 150: NEXT i
+1545 PRINT #0;AT 0,0;"                                "
+1550 GO TO 800
+1655 IF RND*7>dex THEN GO TO 1670
+1660 LET t=t-dex+5: PRINT FLASH 1; INK 2; PAPER 4;AT 2,0;"   Careful - You're drunk!!     ": PAUSE 200: PRINT AT 2,0;"                                ": GO TO 800
+1670 PRINT INK 2; FLASH 1;AT 0,0;"       W H O O P S              ": PRINT : PRINT : PRINT FLASH 1; INK 3;" The kids woke up and got you!! ": PAUSE 300: GO TO 9000
+1705 BEEP .05,6: BEEP .05,8: BEEP .05,10
+1710 PRINT #0;AT 0,0;"Direction to dig?  CAPS for down             Normal for sideways"
+1715 LET q$=INKEY$: IF q$="" OR (q$<>"z" AND q$<>"x" AND q$<>"Z" AND q$<>"X" AND q$<>"q" AND q$<>"a") THEN GO TO 1715
+1720 LET dx=x+(q$="x" OR q$="X")-(q$="z" OR q$="Z"): LET dy=y+(q$="Z" OR q$="X" OR q$="a")-(q$="q")
+1735 INPUT INKEY$
+1740 FOR v=1 TO 4+RND*7: LET t=t-1: LET str=str-.2: LET gir=gir-.2: LET dex=dex+.2: GO SUB 2000: GO SUB 2100: GO SUB 2200: GO SUB 4000: BEEP .05,6: BEEP .05,8: BEEP .05,10
+1745 IF str<=0 THEN GO TO 9000
+1747 NEXT v
+1750 GO SUB 4020: LET a$(dy-1,dx+1)=" ": LET a$(dy,dx)=" ": PRINT AT dy+3,dx-1;" ";AT dy+4,dx-1;" ": GO SUB 4020
+1755 IF a$(y+1,x)=" " OR a$(y+1,x)="{A3}" OR a$(y+1,x)="{95}" THEN GO TO 1400
+1760 GO TO 800
+1910 LET t=t+30+str: LET oy=y: LET ox=x: PRINT OVER 1; INK 1;AT y+4,x-1;"{98}"
+1920 LET tot=tot-1: LET a$(y,x)=" ": GO TO 800
+1930 BEEP .05,12: BEEP .05,12: BEEP .05,16: BEEP .05,16: BEEP .05,19: BEEP .05,19
+2001 IF dex>10 THEN LET dex=10
+2002 IF dex<0 THEN LET dex=0
+2005 IF dex<5 THEN PRINT BRIGHT 1; FLASH 1; PAPER 5;AT 0,17;INT dex; FLASH 0;" "
+2010 PRINT BRIGHT 1; PAPER 5;AT 0,17;INT dex;" "
+2105 IF str>10 THEN LET str=10
+2110 PRINT BRIGHT 1; PAPER 6;AT 0,6;(INT str)+1;" "
+2115 REM RETURN 
+2205 IF gir<0 THEN LET gir=0
+2210 PRINT BRIGHT 1; PAPER 4;AT 0,28;INT gir
+2220 RETURN 
+4010 PRINT OVER 1;AT oy+4,ox-1;"{96}";AT oy+3,ox-1;"{97}"
+4020 PRINT OVER 1;AT y+4,x-1;"{96}";AT y+3,x-1;"{97}"
+4030 RETURN 
+5005 LET flag=0
+5010 LET p$=" {99}{9A}{9B}                           ": LET s$="{9D}{9E}{9F}{A0}                          {9C}"
+5015 LET co=1: LET s=1: FOR r=31 TO 1 STEP -1
+5020 LET r$=p$(r TO 31)+p$(1 TO r-1): LET t$=s$(r TO 31)+s$(1 TO r-1): LET s=s+1: PRINT INK 2;AT 2,0;r$;AT 3,0;t$
+5025 IF flag THEN GO TO 5090
+5030 IF INKEY$<>"a" AND INKEY$<>"q" THEN GO TO 5090
+5031 BEEP .05,12
+5035 IF y<2 THEN GO TO 5150
+5040 LET y=y-3: GO SUB 4000: IF x=s THEN GO TO 5200
+5045 BEEP .05,0: BEEP .05,0: LET flag=1: GO SUB 4020: GO SUB 1410: GO SUB 4020: GO TO 5090
+5090 IF str<=0 THEN GO TO 9000
+5095 NEXT r: IF NOT flag THEN GO TO 5015
+5100 LET flag=0: PRINT AT 2,0;"     ";AT 3,0;"      ";AT 3,30;" ": GO TO 800
+5150 LET x=s: REM IF s<6 THEN LET x=31+x
+5155 LET oy=y: LET y=1: LET ox=x: LET p$=" {99}{9A}{9B}                           ": LET flag=1: GO SUB 1410: PRINT AT 1,x-1;"  ": GO TO 5090
+5200 GO SUB 4020: LET p$="{97}{99}{99}{9B}                           ": IF tot<=0 THEN GO TO 7500
+5205 GO TO 5090
+7510 LET e=e+.05: PRINT FLASH 1; INK 1; PAPER 4;"      MISSION ACCOMPLISHED      "
+7515 PRINT PAPER 6; INK 2;AT 4,7;"SCORE SO FAR:";INT t;AT 5,8;"HI SCORE:";INT ht
+7520 FOR d=0 TO 36: BEEP .05,d: NEXT d
+7525 LET flag=0: PAUSE 300: GO TO 105
+7999 STOP 
+8004 RESTORE 8100: DIM a$(17,32)
+8010 FOR x=3 TO 17
+8015 READ b$
+8020 LET a$(x)=b$
+8030 NEXT x
+8040 RETURN 
+8110 DATA "     {92}{91}{92}     {92}{91}{92}     {92}{91}{92}     {92}{91}{92}"
+8111 DATA "     {92}{91}{92}     {92}{91}{92}     {92}{91}{92}     {92}{91}{92}"
+8115 DATA "{92}{92}{92}{92}{92}{92}{91}{92} {92}{92}{92}{92}{92}{91}{92}{92}{92} {92}{92}{92}{91}{92}{92}{92}{92}{92}{92}{92}{91}{92}"
+8120 DATA "{92}{A3}{A3}{A3}{A3}{92}{91}{92}{A3}{A3}{A3}{A3}{A3}{92}{91}{92}{A3}{A3}{A3}{A3}{A3}{92}{91}{92}{A3}{A3}{A3}{A3}{A3}{92}{91}{92}"
+8125 DATA "{92}{A3}{A3}{A3}{A3}{92}{91}{92}{A3}{A3}{A3}{A3}{A3}{92}{91}{92}{A3}{A3}{A3}{A3}{A3}{92}{91}{92}{A3}{A3}{A3}{A3}{A3}{92}{91}{92}"
+8130 DATA "{92}{A2}{A3}{90}{A2}{92}{91}{92}{A3}{A2}{A3}{90}{A3}{92}{91}{92}{A2}{A3}{A3}{90}{A3}{92}{91}{92}{A2}{A3}{A3}{90}{A3}{92}{91}{92}"
+8135 DATA "{92}{92}{92}{90}{92}{92}{91}{92} {92}{92}{90}{92}{92}{91}{92}{92}{92}{92}{90}{92}{92}{91}{92}{92}{92}{92}{90}{92}{92}{91}{92}"
+8136 DATA "{92}{A3}{A3}{90}{A3}{92}{91}{92}{A3}{A3}{A3}{90}{A3}{92}{91}{92}{A3}{A3}{A3}{90}{A3}{92}{91}{92}{A3}{A3}{A3}{90}{A3}{92}{91}{92}"
+8137 DATA "{92}{A3}{A3}{90}{A3}{92}{91}{92}{A3}{A3}{A3}{90}{A3}{92}{91}{92}{A3}{A3}{A3}{90}{A3}{92}{91}{92}{A3}{A3}{A3}{90}{A3}{92}{91}{92}"
+8138 DATA "{92}{90}{A3}{90}{A2}{92}{91}{92}{A3}{90}{A3}{90}{A2}{92}{91}{92}{A3}{90}{A3}{90}{A2}{92}{91}{92}{A3}{90}{A3}{90}{A2}{92}{91}{92}"
+8139 DATA "{92}{90}{92}{92}{92}{92}{91}{92} {90}{92}{92}{92}{92}{91}{92}{92}{90}{92}{92}{92}{92}{91}{92} {90}{92}{92}{92}{92}{91}{92}"
+8140 DATA "{92}{90}{A3}{A3}{A3}{92}{91}{92}{A3}{90}{A3}{A3}{A3}{92}{91}{92}{A3}{90}{A3}{A3}{A3}{92}{91}{92}{A3}{90}{A3}{A3}{A3}{92}{91}{92}"
+8145 DATA "{92}{90}{A3}{A3}{A3}{92}{91}{92}{A3}{90}{A3}{A3}{A3}{92}{91}{92}{A3}{90}{A3}{A3}{A3}{92}{91}{92}{A3}{90}{A3}{A3}{A3}{92}{91}{92}"
+8150 DATA "{92}{90} {A2}{95}  {92} {90}{A2}{95}   {92} {90}{A2}{95}   {92} {90}{A2}{95}   {92}"
+8155 DATA "{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}{92}"
+8205 INK 1: CLS 
+8210 FOR y=2 TO 17
+8214 LET s=144+(a$(y,x)="L")+(a$(y,x)="C")*2+(a$(y,x)="W")*3+(a$(y,x)="F")*5
+8215 REM REM IF a$(y,x)="F" THEN PRINT AT y+4,x;"{95}": GO TO 8250
+8220 REM IF a$(y,x)="B" OR a$(y,x)=" " THEN GO TO 8250
+8225 REM IF a$(y,x)="C" THEN PRINT AT y+4,x;"{91}": GO TO 8250
+8230 REM IF a$(y,x)="W" THEN PRINT AT y+4,x;"{92}": GO TO 8250
+8240 REM IF a$(y,x)="L" THEN PRINT AT y+4,x;"{90}"
+8250 PRINT AT y+4,0;a$(y): NEXT y
+8255 FOR y=9 TO 21: PRINT AT y,0;"{92}": NEXT y
+8265 PRINT AT 0,0; BRIGHT 1; INK 0; PAPER 6;"STREN:"; PAPER 5;TAB 12;"DEXT:";TAB 22; PAPER 4;"GIRTH:";TAB 32
+8270 INK 0
+8290 RETURN 
+9005 PRINT FLASH 1; INK 2;AT 2,0;" HARD LUCK SANTA - MISSION OVER ": IF ht<t THEN LET ht=t
+9007 PRINT PAPER 6;AT 4,10;"SCORE:";INT t;AT 5,8;"HI SCORE:";INT ht
+9010 FOR d=0 TO -36 STEP -1: BEEP .05,d: NEXT d
+9015 PAUSE 0: GO TO 101
+9200 STOP 
+9750 REM start
+9770 CLS : PRINT "Please wait..."
+9780 RESTORE 9950: FOR f=USR "a" TO USR "t"+7 STEP 8
+9785 FOR n=0 TO 7: READ a: POKE f+n,a: NEXT n: NEXT f
+9790 RUN 
+9805 CLEAR 
+9810 SAVE "santa" LINE 9750
+9830 PRINT INK 9; FLASH 1; OVER 0;"        REWIND TO VERIFY        "
+9840 VERIFY "santa"
+9860 PAUSE 50: RUN 
+9900 FOR y=1 TO 17: FOR x=1 TO 31
+9910 IF a$(y,x)="W" THEN LET a$(y,x)="{92}"
+9911 IF a$(y,x)="L" THEN LET a$(y,x)="{90}"
+9912 IF a$(y,x)="C" THEN LET a$(y,x)="{91}"
+9913 IF a$(y,x)="F" THEN LET a$(y,x)="{95}"
+9914 IF a$(y,x)="P" THEN LET a$(y,x)="{A2}"
+9915 IF a$(y,x)="B" THEN LET a$(y,x)="{A3}"
+9920 NEXT x: PRINT y+1: NEXT y
+9950 DATA 66,126,66,66,66,126,66,66,129,129,129,129,129,129,129,129,255,17,255,68,255,136,255,34,0,68,124,56,16,16,56,0,81,74,0,60,255,126,60,0,0,0,24,60,255,36,36,36,153,153,153,60,36,36,36,102,24,60,102,90,60,24,126,90,8,42,20,62,42,54,42,62,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,255,0,40,16,28,62,62,120,240,255,255,24,24,24,24,255,127,255,255,3,3,3,3,255,255,255,241,1,0,24,12,253,249,255,255,255,255,224,160,33,65,240,240,224,192,160,160,16,48,0,124,66,66,124,68,66,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
