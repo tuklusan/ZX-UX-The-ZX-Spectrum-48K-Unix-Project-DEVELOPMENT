@@ -1,0 +1,11 @@
+GAUSS_1D: Fuse replay keys and timing
+
+Tape: GAUSS_1D.tzx, SHA-256 21a0b62309a53b43cead698ab71318467c145ba3499bac17505337f1dff6aec4
+Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
+Load: Fuse --auto-load from the original TZX; no injected keys.
+Emulator speed: 500 percent.
+Capture: 7.0 seconds after Fuse process launch, in an 800x600 Xvfb screen.
+Window: centered, crop (240,180)-(560,420) to 320x240 pixels.
+Screen: SCREENSHOTS/01-RESULT.png.
+Replay: sh BASIC/REPLAY.sh from the program folder, or sh REPLAY.sh here.
+The replay uses the unmodified tape; no synthetic gameplay inputs are claimed.
