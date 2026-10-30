@@ -1,0 +1,2 @@
+Original ROM listing line 5000: waits for INKEY$ nonempty before launch. Any normal key, such as SPACE, starts the move.
+Tested genuine Fuse 48K replay: load original Ravine.tzx with --auto-load at 500% emulation speed; wait 14s total; SPACE 0.3s; wait 0.6s; capture 01; SPACE 0.3s; wait 0.6s; capture 02. Verify the two live screens differ.
