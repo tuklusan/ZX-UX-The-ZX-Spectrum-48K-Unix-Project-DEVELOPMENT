@@ -1,4 +1,4 @@
-"""Build the shipped FORTRAN corpus with the local ZX-UX SDK."""
+"""Build the shipped FORTRAN examples with the local ZX-UX SDK."""
 from __future__ import annotations
 import csv
 from pathlib import Path
@@ -18,16 +18,16 @@ def package(source: Path, stage: Path, sdk: Path):
     import rld
     import rtap
 
-    corpus = sorted((root / 'corpus').glob('*.f'))
+    examples = sorted((root / 'examples').glob('*.f'))
     units = sorted((root / 'separate').glob('*.f'))
     negative = sorted((root / 'negative').glob('*.f'))
-    if (len(corpus), len(units), [p.name for p in negative]) != (178, 6, ['f77s_data_bad.f']):
-        raise RuntimeError('FORTRAN corpus changed unexpectedly')
+    if (len(examples), len(units), [p.name for p in negative]) != (178, 6, ['f77s_data_bad.f']):
+        raise RuntimeError('FORTRAN examples changed unexpectedly')
     groups = [('main_step', 'main.f', 'step.f'),
               ('math_main', 'math_main.f', 'math_sub.f'),
               ('common_main', 'common_main.f', 'common_sub.f')]
-    jobs = [('corpus', p.stem, [p], p.name.startswith('f77s_'), False)
-            for p in corpus]
+    jobs = [('examples', p.stem, [p], p.name.startswith('f77s_'), False)
+            for p in examples]
     for name, a, b in groups:
         jobs.append(('separate', name, [root / 'separate' / a,
                                          root / 'separate' / b], True, True))
@@ -89,7 +89,7 @@ def package(source: Path, stage: Path, sdk: Path):
         writer.writerows(rows)
     if not rejected:
         raise RuntimeError('FORTRAN negative input was not rejected as expected')
-    if not all(any(kind == 'corpus' and name == required and status == 'PASS'
+    if not all(any(kind == 'examples' and name == required and status == 'PASS'
                    for kind, name, status, _ in rows)
                for required in ('hello', 'factorial', 'f77s_fmt')):
         raise RuntimeError('FORTRAN baseline programs failed; see results.tsv in staging')
