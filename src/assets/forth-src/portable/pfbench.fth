@@ -1,4 +1,4 @@
-\ Extracted from pForth fth/bench.fth, Phil Burk; ISC licence in ../LICENSES.md.
+\ Extracted from pForth fth/bench.fth, Phil Burk; ISC license in repository THIRD-PARTY.
 \ The original timing loop and unrelated ANS-only benchmarks are omitted.
 
 create data1 23 , 45 , 67 , 89 , 111 , 222 , 333 , 444 ,

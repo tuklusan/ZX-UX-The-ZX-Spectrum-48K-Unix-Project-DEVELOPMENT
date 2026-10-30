@@ -1,6 +1,6 @@
 \ F83 huffman.blk port: in-memory byte stream replaces the CP/M file layer.
 \ The compact fixed codebook covers the message alphabet and terminates itself.
-\ Licence: ../LICENSES.md
+\ See repository THIRD-PARTY for the original license terms.
 
 create packed 16 allot
 variable out-ptr  variable out-bits  variable out-byte

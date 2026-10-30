@@ -7,7 +7,7 @@ import shutil
 import struct
 
 EXCLUDE = {'__pycache__', 'tests', 'tools'}
-EXTRA_EXCLUDE = {'README.md', 'THIRD-PARTY.md'}
+EXTRA_EXCLUDE = {'README.md'}
 
 def pack(sdk_source: Path, os_source: Path, os_build: Path, output: Path):
     output.mkdir(parents=True, exist_ok=True)
@@ -17,7 +17,7 @@ def pack(sdk_source: Path, os_source: Path, os_build: Path, output: Path):
         if path.is_dir() or EXCLUDE.intersection(path.relative_to(sdk_source).parts):
             continue
         rel = path.relative_to(sdk_source)
-        if rel.name in EXTRA_EXCLUDE or rel.parts[0] == 'bin' or rel in (Path('LICENSE'), Path('THIRD-PARTY.txt')):
+        if rel.name in EXTRA_EXCLUDE or rel.parts[0] == 'bin':
             continue
         target = support / rel
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -26,9 +26,6 @@ def pack(sdk_source: Path, os_source: Path, os_build: Path, output: Path):
     rom.mkdir(exist_ok=True)
     shutil.copyfile(os_source / 'rom/48.rom', rom / '48.rom')
     shutil.copyfile(os_source / 'font4x8.bin', rom / 'font4x8.bin')
-    # Required notices accompany the independent SDK.
-    shutil.copyfile(sdk_source / 'LICENSE', output / 'LICENSE')
-    shutil.copyfile(sdk_source / 'THIRD-PARTY.txt', output / 'THIRD-PARTY.txt')
     # All command shims are directly in sdk/bin/, alongside their modules.
     for script in sorted((sdk_source / 'bin').iterdir()):
         if not script.is_file():

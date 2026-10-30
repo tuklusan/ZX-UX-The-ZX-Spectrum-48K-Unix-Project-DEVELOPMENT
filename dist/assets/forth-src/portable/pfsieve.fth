@@ -1,4 +1,4 @@
-\ pForth fth/siev.fth, Phil Burk; ISC licence in ../LICENSES.md.
+\ pForth fth/siev.fth, Phil Burk; ISC license in repository THIRD-PARTY.
 \ TSIZE is tuned from 8190 to 1024 bytes for the ZX-UX program arena.
 
 DECIMAL 1024 CONSTANT TSIZE

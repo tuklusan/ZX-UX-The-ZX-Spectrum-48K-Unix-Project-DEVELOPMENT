@@ -1,4 +1,4 @@
-\ Worms? movement-loop port, David S. Maynard; MIT licence in ../LICENSES.md.
+\ Worms? movement-loop port, David S. Maynard; MIT license in repository THIRD-PARTY.
 \ The Atari/C64 assembly display, sound and keyboard drivers are replaced by
 \ the rfc console.  Six W/A/S/D turns move one worm across an 8x6 board.
 

@@ -137,7 +137,8 @@ def main():
     forthbuild.build(B / 'sdk', stage / 'assets/forth-src', stage / 'assets/forth-bin')
     sdkpack.pack(S / 'zx-ux-sdk', S / 'zx-ux', B, stage / 'sdk/bin')
     fortranpack.package(S, stage, B / 'sdk')
-    (stage / 'sdk/bin/LICENSE').replace(stage / 'LICENSE')
+    shutil.copy2(R / 'LICENSE', stage / 'LICENSE')
+    shutil.copy2(R / 'THIRD-PARTY', stage / 'THIRD-PARTY')
     shutil.copytree(S / 'zx-ux', stage / 'zx-ux/src', ignore=no_cache)
     # Final payload step: include documentation only after all builders succeed.
     # Stage it before publication so failed copies cannot damage last-good dist/.

@@ -1,7 +1,7 @@
 """A bare 48K Spectrum for the SDK tools: Z80 + 48K ROM + flat RAM.
 
 The Z80 is the bundled z80-python core (sdk/z80_python, MIT, unmodified;
-see sdk/THIRD-PARTY.md) with the faster handlers of z80fast.py.  This module only supplies the host side: 64K of
+see repository THIRD-PARTY) with the faster handlers of z80fast.py.  This module only supplies the host side: 64K of
 memory with the ROM write-protected, an I/O hook, a T-state clock and a run
 loop that stops at chosen addresses.  rcc's float folding (rcc/romfp.py) and
 the program VM (rvm.py) both run on it, so the SDK needs nothing outside the

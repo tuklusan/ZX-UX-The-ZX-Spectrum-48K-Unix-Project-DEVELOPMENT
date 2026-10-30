@@ -22,6 +22,7 @@ class RebuildChecks(unittest.TestCase):
         (self.src / 'zx-ux/rom/48.rom').write_bytes(b'rom')
         (self.src / 'zx-ux/font4x8.bin').write_bytes(b'font')
         (self.src / 'zx-ux/unix.asm').write_bytes(b'kernel source')
+        (self.src / 'assets/forth-src').mkdir(parents=True)
         (self.src / 'assets/c48-src').mkdir(parents=True)
         (self.src / 'assets/c48-src/demo.c').write_text('void main(void) {}')
         (self.src / 'docs').mkdir()
@@ -34,6 +35,8 @@ class RebuildChecks(unittest.TestCase):
         (bonus / 'sixty-programs-social-preview.png').write_bytes(b'preview')
         (bonus / 'c48lib').mkdir()
         (bonus / 'c48lib/c48lib.h').write_bytes(b'library header')
+        (self.root / 'LICENSE').write_text('project license')
+        (self.root / 'THIRD-PARTY').write_text('third party')
         (self.root / 'build').mkdir()
         (self.root / 'build/build.py').write_bytes(BUILD.read_bytes())
         (tools / 'osbuild.py').write_text('''
@@ -55,12 +58,16 @@ def build(stage, sources, dest):
     (dest/'demo.ssx').write_bytes(b'code')
 ''')
         (tools / 'basicpack.py').write_text('def package(*args): return 1\n')
+        (tools / 'pascalpack.py').write_text('def package(*args): return 1\n')
+        (tools / 'fortranpack.py').write_text('def package(*args): return 1\n')
+        (tools / 'forthbuild.py').write_text('''
+def build(stage, sources, dest):
+    dest.mkdir(parents=True)
+''')
         (tools / 'sdkpack.py').write_text('''
 def pack(*args):
     args[-1].mkdir(parents=True)
     (args[-1]/'rcc').write_text('sdk')
-    (args[-1]/'LICENSE').write_text('project license')
-    (args[-1]/'THIRD-PARTY.txt').write_text('third party')
 ''')
 
     def run_builder(self, ok=True):
@@ -149,7 +156,8 @@ def pack(*args):
         self.assertEqual((self.dist / 'zx-ux/src/rom/48.rom').read_bytes(), b'rom')
         self.assertEqual((self.dist / 'LICENSE').read_text(), 'project license')
         self.assertFalse((self.dist / 'sdk/bin/LICENSE').exists())
-        self.assertEqual((self.dist / 'sdk/bin/THIRD-PARTY.txt').read_text(), 'third party')
+        self.assertFalse((self.dist / 'sdk/bin/THIRD-PARTY.txt').exists())
+        self.assertEqual((self.dist / 'THIRD-PARTY').read_text(), 'third party')
 
     def test_missing_numbered_program_preserves_prior_dist(self):
         self.run_builder()
