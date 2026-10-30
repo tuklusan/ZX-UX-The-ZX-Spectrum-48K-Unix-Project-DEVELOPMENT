@@ -1,0 +1,15 @@
+17-defender--Defender
+Verified original 48K snapshot: Defender.z80
+Original BASIC/controls: Z right, A left, Space fire
+The snapshot resumes a live horizontal shooter. Steer and fire.
+
+Reproduce from repository root:
+  sh src/bonus/www.thespectrumshow.net/17-defender--Defender/BASIC/REPLAY.sh
+
+Replay steps in execution order (seconds of real key hold/wait):
+  key: z (0.55s)
+  shot: 01-STATE.png
+  key: a (0.55s)
+  key: space (0.40s)
+  shot: 02-AFTER-MOVES.png
+Fuse at 100% unless program setup requires 500%; captures are live, not sourced from supplied screenshots.
