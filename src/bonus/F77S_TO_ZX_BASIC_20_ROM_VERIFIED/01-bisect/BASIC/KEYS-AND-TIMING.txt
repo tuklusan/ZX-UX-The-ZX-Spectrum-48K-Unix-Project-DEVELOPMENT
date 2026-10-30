@@ -1,0 +1,11 @@
+BISECT: Fuse replay keys and timing
+
+Tape: BISECT.tzx, SHA-256 15d15ebc2cf7e7502f033a2efbcaa95dfb6ab7dfbde3a9fbb809de4b825d94e9
+Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
+Load: Fuse --auto-load from the original TZX; no injected keys.
+Emulator speed: 500 percent.
+Capture: 7.0 seconds after Fuse process launch, in an 800x600 Xvfb screen.
+Window: centered, crop (240,180)-(560,420) to 320x240 pixels.
+Screen: SCREENSHOTS/01-RESULT.png.
+Replay: sh BASIC/REPLAY.sh from the program folder, or sh REPLAY.sh here.
+The replay uses the unmodified tape; no synthetic gameplay inputs are claimed.
