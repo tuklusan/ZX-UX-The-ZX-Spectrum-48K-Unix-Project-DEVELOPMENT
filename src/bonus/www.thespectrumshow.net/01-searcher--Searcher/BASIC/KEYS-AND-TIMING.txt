@@ -1,0 +1,18 @@
+Searcher: source-observed keys and timing
+
+No fixed `INKEY$` comparison with a literal key was found. The program may ask for numeric/text `INPUT`, redefine keys, use `PEEK`, or run without keyboard input.
+
+On-screen prompts from supplied archive:
+- BASIC line 5010: "YOU SCORED"
+- BASIC line 5040: "PRESS ANY KEY FOR ANOTHER GO"
+- BASIC line 8020: "YOU COMMAND YOUR SHIP ({UDG-A}{UDG-B}) USINGKEYS:-"
+- BASIC line 8021: "7 FOR UP, 8 FOR FORWARD"
+- BASIC line 8022: "6 FOR DOWN, 5 FOR BACKWARD"
+- BASIC line 8023: "9 FOR FIRE"
+- BASIC line 8025: "IF YOU REACH 1000 POINTS WALLS  ({UDG-H}) WILL START TO APPEAR. YOU   CANNOT DESTROY A WALL SO YOU    MUST GO AROUND IT. EVERY WALL   DODGED IS WORTH 50 POINTS."
+- BASIC line 8026: "YOU MAY GO BELOW THE HILLS AS   YOU MOVE FORWARD."
+- BASIC line 8029: "PRESS ENTER TO START"
+
+Replay inputs: none sent automatically. Snapshot begins in its saved state.
+Capture: Fuse SDL 1.6.0, after 2.5 seconds, 100% speed; original ZX Spectrum 48K ROM.
+Scene is an observed screen, not proof of full gameplay.
