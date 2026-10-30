@@ -1,0 +1,27 @@
+StarSwarm: source-observed keys and timing
+
+These are keys tested by `INKEY$` comparisons in BASIC. Some comparisons mean a key is pressed, while others mean it is *not* pressed. They are detected keys, not automatically assigned directions; read the on-screen instructions for their roles.
+
+- **0** — checked at BASIC lines 160, 1240
+- **1** — checked at BASIC line 1220
+- **2** — checked at BASIC line 1220
+- **6** — checked at BASIC line 140
+- **7** — checked at BASIC line 140
+
+On-screen prompts from supplied archive:
+- BASIC line 81: "SCORE="
+- BASIC line 640: "YOU HAVE REACHED THE HI-SCORE"
+- BASIC line 645: "PLEASE ENTER YOUR NAME"
+- BASIC line 645: "NAME>"
+- BASIC line 650: "HI-SCORE="
+- BASIC line 1070: "{0x1401}SCORE={0x1400}"
+- BASIC line 3010: "SCORE  10  30  50  70  90  110"
+- BASIC line 3060: "PRESS ANY KEY TO CONTINUE"
+- BASIC line 3120: "When you reach the star-base    you will have to shoot a        mother ship."
+- BASIC line 3140: "Bonus points are available,     so sharp shooting is needed     to gain high points."
+- BASIC line 3160: "6 Left  7 Right  0 Fire"
+- BASIC line 3170: "PRESS ANY KEY TO PLAY..."
+
+Replay inputs: none sent automatically. Snapshot begins in its saved state.
+Capture: Fuse SDL 1.6.0, after 2.5 seconds, 100% speed; original ZX Spectrum 48K ROM.
+Scene is an observed screen, not proof of full gameplay.
