@@ -39,28 +39,28 @@ Use one directory per distinct original program; within each game use `BASIC/` a
 
 ## Progress at pause — committed program directories
 
-**56 / 117 (47.9%) complete; 61 remaining (52.1%).** Counts reflect program directories present on live `main` when this resume file was updated, against the preliminary 117-program archive inventory.
+**58 / 117 (49.6%) complete; 59 remaining (50.4%).** Counts reflect program directories present on live `main` when this resume file was updated, against the preliminary 117-program archive inventory.
 
 | Collection | Done | Remaining | Total |
 |---|---:|---:|---:|
 | F77S | 20 | 0 | 20 |
-| Granada Publishing | 6 | 18 | 24 |
+| Granada Publishing | 8 | 16 | 24 |
 | Spectrum Show | 30 | 43 | 73 |
-| **Total** | **56** | **61** | **117** |
+| **Total** | **58** | **59** | **117** |
 
-The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, and Spectrum Invaders now have original media, checked listings, and real Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
+The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, and Mighty Missile now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
 
 ## Exact pause point — verified GitHub state
 
 The latest checked `main` before this guide update is:
 
-`dbd933040da5ee01d84bbec8bad092cf4070e8dd` — **Granada Spectrum Invaders**. We checked the unchanged original TAP, matching BASIC from its TZX copy, left/right steering, and a fire key in Fuse. Check the live HEAD again when work resumes. If it has moved, read the new files first; never overwrite other work.
+`349d26db146b318b809d9c2620eb2d786a278874` — **Granada Mighty Missile**. We checked the unchanged original TAP, matching BASIC from its TZX copy, and two live Fuse key moves. Check the live HEAD again when work resumes. If it has moved, read the new files first; never overwrite other work.
 
 Previously completed on remote:
 
 - **F77S: 20 of 20 programs.** Original TZX, independently decoded LLIST `.bas`, notes and Fuse captures/replays are committed. Some are numerical demonstrations rather than games; do not relabel execution as human gameplay. No native SSX.
 - **Spectrum Show: 30 program directories committed** at pause (not all 73 source entries). The initial 7 were replayed again from actual game starts after the user rejected title-screen-only captures. Programs 08–18 were added with hands-on replay and moves. Subsequent committed indices: **20, 21, 23, 24, 25, 27, 28, 34, 35, 36, 46, 48**. Missing index numbers are **not proof of missing programs**: inspect the archive and compare unique program identities and committed paths. Some entries may be duplicates, non-BASIC or not playable; record such findings truthfully. In particular, Outlander was flagged for LLIST rejection while media and actual Fuse gameplay were preserved. Never fabricate an LLIST listing.
-- **Granada: 6 of 24 initially inventoried game directories:** `01-across-the-ravine`, `02-capture-the-quark`, `03-bobsleigh`, `04-fruit-machine`, `05-commando-jump`, and `06-spectrum-invaders`. The last four were played in genuine Fuse with real key actions. The source TAP bytes were kept, TZX program bytes were checked, and readable BASIC plus replay files were pushed per game. Remaining items need the same checks. `Noughts and Crosses` was examined locally, but typed string input did not reach a confirmed move; it was **not pushed**. Its first safe step is to retry the original TAP with correctly quoted two-digit row/column input. `Guideline` contains more than one source version; check whether they count as distinct games before publishing. The 24 Granada and 73 Spectrum Show totals remain early archive counts, subject to a source-by-source review.
+- **Granada: 8 of 24 initially inventoried game directories:** `01-across-the-ravine`, `02-capture-the-quark`, `03-bobsleigh`, `04-fruit-machine`, `05-commando-jump`, `06-spectrum-invaders`, `07-laser-attack`, and `08-mighty-missile`. The last six have new checked tape copies, BASIC listings, notes, playable Fuse sessions, replay scripts, and screen captures. Original TAP bytes were preserved. `Noughts and Crosses` was examined locally, but its quoted row/column entry did not reach a confirmed move; **no files were pushed** for it. Try again from its original TAP and check the string input before making claims. `Guideline` has two source versions; determine whether they are distinct games before publishing. The 24 Granada and 73 Spectrum Show totals are early ZIP folder counts; review each source before final counting.
 
 **No uncommitted local work should be assumed to survive.** The old container had temporary probes, transfer JSON files and images; those are not proof of remote publication and may be gone. Look at live GitHub first. Re-run unfinished work from the original archive, not an unverified old screenshot.
 
