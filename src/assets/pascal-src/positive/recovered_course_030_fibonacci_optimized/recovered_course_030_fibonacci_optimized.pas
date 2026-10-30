@@ -1,11 +1,5 @@
-{ SPDX-License-Identifier: BSD-3-Clause
-  Adapted from modern-pascal/modern-pascal-course
-  030_fibonacci_optimized/fibonacci_optimized.dpr.
-  Restricts array to 0..23 and stops at F(23), the last Fibonacci
-  value <= 32767: original code used wider integers and computed F(40).
-  Removes Delphi platform directives and terminal pause.
-  Shortened long names after authentic HiSoft v1 compilation rejected them.
-}
+{ BSD-3-Clause; adapted from modern-pascal/modern-pascal-course/030_fibonacci_optimized/fibonacci_optimized.dpr.
+  Original copyright retained; HiSoft 16-bit Fibonacci range. }
 PROGRAM FIBOPT;
 VAR FIBO: ARRAY [0..23] OF INTEGER;
     I: INTEGER;

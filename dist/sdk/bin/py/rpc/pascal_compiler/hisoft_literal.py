@@ -1,14 +1,5 @@
-"""Exact lowering for the currently proven minimal HiSoft literal form.
-
-This is deliberately narrow. It covers one Pascal statement:
-
-    PROGRAM <name>; BEGIN WRITELN('<ASCII>'); END.
-
-The common prefix is a preserved runtime/code-generation blob from the
-independent ``15_char`` original capture. The source-dependent tail and the
-two relocation/length fields are emitted directly here. The blob's
-provenance and validation cases are documented in ``docs/source-format.md``.
-"""
+"""Emit the proven HiSoft PROGRAM/WRITELN form using captured CODE.
+Original 15_char prefix and tests: docs/source-format.md."""
 from __future__ import annotations
 # Copyright (c) 2026 Supratim Sanyal of SANYALnet Labs.
 # Based on original work by Supratim Sanyal of SANYALnet Labs.

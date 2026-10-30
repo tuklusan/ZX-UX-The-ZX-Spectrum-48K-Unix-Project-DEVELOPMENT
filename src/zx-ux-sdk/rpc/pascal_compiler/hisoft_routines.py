@@ -1,11 +1,5 @@
-"""Exact lowering for the recovered integer routine ABI.
-
-The routines in this module are derived from preserved original CODE images,
-not from a semantically equivalent calling convention.  The implementation is
-deliberately conservative: it returns ``None`` when an AST construct falls
-outside the recovered patterns, allowing the caller to fail explicitly rather
-than emit bytes that merely happen to run.
-"""
+"""Lower recovered HiSoft integer routines from original CODE images.
+Unsupported syntax returns None instead of guessed machine code."""
 from __future__ import annotations
 # Copyright (c) 2026 Supratim Sanyal of SANYALnet Labs.
 # Based on original work by Supratim Sanyal of SANYALnet Labs.

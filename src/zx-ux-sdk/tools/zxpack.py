@@ -1,33 +1,6 @@
 #!/usr/bin/env python3
-"""zxpack - reference codec for the ZX-UX UNIX v1 file compressor.
-
-Bit-exact model of the kernel's Z80 implementation (src/zx.asm): the
-build uses it to store files packed on the RAM disk image, and the test
-harness uses it to cross-check streams packed by the Spectrum.
-
-Format: LZ77 with a 2 KB window, every decision coded with an adaptive
-binary range coder (16-bit size and low, renormalised one bit at a time
-before each decision, carries added into the output; 8-bit probabilities
-of a 0, adaptation shift 4).  The encoder ends with the 16 bits of low.  The stream has no header and no end
-marker: the logical length is the file size kept in the i-node.
-
-    token        coded as
-    literal      m[st]=0, 8-bit tree (255 probabilities)
-    match        m[st]=1, r[st]=0, gamma((off-1)/16+1) [off], 4-bit tree
-                 of (off-1)%16 [olo], gamma(len-2) [len], len >= 3
-    repeat match m[st]=1, r[st]=1, gamma(len-1) [len], last offset again
-
-  st = the type of the previous token: 0 literal, 1 match, 2 repeat.  gamma(v) codes v >= 1 as
-  adaptive Elias gamma: before each mantissa bit k a "more" bit with its
-  own probability P[2k], the bit itself with P[2k+1]; the final "stop"
-  bit uses P[2n].
-
-  Parse (greedy with one step of lazy evaluation):
-    rl  = length of the repeat match at p      (0 if no last offset)
-    L   = longest match at p, nearest offset wins ties, L < 3 -> 0
-    if L and p+1 < n and rl < L and longest(p+1) > L+1: L = rl = 0
-    rl >= 2 and rl+1 >= L -> repeat match;  L -> match;  else literal
-"""
+"""ZX-UX UNIX v1 file compressor: LZ77 with adaptive range coding.
+Reference model for the kernel Z80 codec in src/zx.asm."""
 import sys
 from pathlib import Path
 
