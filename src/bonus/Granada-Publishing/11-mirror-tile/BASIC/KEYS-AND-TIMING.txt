@@ -1,0 +1,18 @@
+MIRROR TILE — KEYS AND TIMING
+
+We checked the original BASIC and played two moves in Fuse 1.6.0 on the 48K machine.
+
+Answer n when asked about your own words. The next prompt asks for the number of shuffles; we entered 2. The game draws a four-by-four letter board. To move, type the tile position, numbered 1 through 16 from the upper left, then press Enter. Only a tile next to the empty space can move. The original two-shuffle board accepted 12 followed by 16. After the second move, it displayed a two-move win.
+
+From the repository root, run:
+  sh src/bonus/Granada-Publishing/11-mirror-tile/BASIC/REPLAY.sh
+
+Fuse runs at 100% speed. Waits are in wall-clock seconds.
+
+  1. Load the original TAP with the 48K ROM, then wait 3 seconds.
+  2. Enter n, press Enter, and wait 0.5 seconds.
+  3. Enter 2, press Enter, and wait 14 seconds for the shuffled board.
+  4. Enter 12, press Enter, wait 4 seconds, and save 01-AFTER-12.png.
+  5. Enter 16, press Enter, wait 4 seconds, and save 02-AFTER-16.png.
+
+The replay compares the game board after both moves. The displayed solution came from the original tape, not from altered BASIC.
