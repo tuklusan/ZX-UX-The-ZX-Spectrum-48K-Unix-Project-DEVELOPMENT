@@ -1,0 +1,9 @@
+SPECTRUM SHOOT — KEYS AND TIMING
+
+We checked the original BASIC and a real Fuse 48K run.
+
+5 moves the crosshair left, 8 moves it right, 6 down, and 7 up. The f key fires. The moving bird is drawn independently of player input.
+
+The replay runs the original TAP in Fuse at 200% speed. It waits six seconds after tape load, waits two more seconds for the bird, holds 8 for 0.3 seconds, takes the first capture, waits 0.3 seconds, presses f for 0.3 seconds, and takes the second capture.
+
+The field changed, but the pictures do not prove a hit or a finished round.

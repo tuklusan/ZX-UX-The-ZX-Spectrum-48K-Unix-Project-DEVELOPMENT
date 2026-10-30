@@ -45,34 +45,34 @@ The last successful remote readback is the only completed checkpoint. Before a n
 
 The private checker is enabled by owner request on 2026-10-30. Run its self-test when starting a new session. Before **every** GitHub write, check the complete proposed text, paths, full commit message, and exact push command with the private four-attempt workflow. Keep private checker files outside Git. If the checker rejects a change, stop that write after the allowed checks; do not weaken rules or publish the blocked content. Keep the writing rules in force for all new English prose. Run the other tests that apply to the game. Do not claim a passing run without running it.
 
-**Latest completed program:** Granada Publishing — Spectrum Ledger, `18-spectrum-ledger`. We kept the original TAP, checked its 3,085 BASIC program bytes against the TZX, and regenerated 86 numbered lines. We picked horse 1 and wagered 10 in genuine Fuse 48K. The race ran and showed a loss of 10 and a remaining balance of 90 game credits. The replay and private checker passed.
+**Latest completed program:** Granada Publishing — Spectrum Shoot, `19-spectrum-shoot`. The original TAP and recreated TZX share 1,820 BASIC program bytes, and we regenerated 80 lines. In genuine Fuse 48K, we pressed 8 to move the crosshair and f to fire. The two captures show the active field. No hit or complete five-bird round was confirmed. The replay and private checker passed.
 
-**Previous verified main parent:** `da5adf8b6ff4a1aea058ade45036471bcd8cb5c3`. Read live `main` for the new commit containing this checkpoint. **Next program:** Granada Publishing — Spectrum Scrabble. The two Guideline sources still need comparison. Do not count local-only work.
+**Previous verified main parent:** `fcab3f974f1a0c3fa79a4c1ca11c481f50f79ecd`. Read live `main` for the new commit containing this checkpoint. **Next program:** Granada Publishing — Spectrum Smalltalk. Spectrum Scrabble is still awaiting confirmed puzzle control. The two Guideline sources still need comparison. Do not count local-only work.
 
 ## Progress at pause — committed program directories
 
-**68 / 117 (58.1%) complete; 49 remaining (41.9%).** Counts reflect committed program directories against the preliminary archive inventory.
+**69 / 117 (59.0%) complete; 48 remaining (41.0%).** Counts reflect committed program directories against the preliminary archive inventory.
 
 | Collection | Done | Remaining | Total |
 |---|---:|---:|---:|
 | F77S | 20 | 0 | 20 |
-| Granada Publishing | 18 | 6 | 24 |
+| Granada Publishing | 19 | 5 | 24 |
 | Spectrum Show | 30 | 43 | 73 |
-| **Total** | **68** | **49** | **117** |
+| **Total** | **69** | **48** | **117** |
 
-The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, Mighty Missile, Noughts and Crosses, Masterbrain, Mirror Tile, Morse Code, Nine Hole Golf, Rainbow Squash, Save the Whale, Sheepdog Trials, Spectrum Dice, and Spectrum Ledger now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
+The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, Mighty Missile, Noughts and Crosses, Masterbrain, Mirror Tile, Morse Code, Nine Hole Golf, Rainbow Squash, Save the Whale, Sheepdog Trials, Spectrum Dice, Spectrum Ledger, and Spectrum Shoot now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
 
 ## Exact pause point — verified GitHub state
 
 The latest checked `main` before this guide update is:
 
-`da5adf8b6ff4a1aea058ade45036471bcd8cb5c3` — Granada Spectrum Dice completed with checked tape, live throw input, and changing Fuse dice faces. Read live HEAD for Spectrum Ledger and this update.
+`fcab3f974f1a0c3fa79a4c1ca11c481f50f79ecd` — Granada Spectrum Ledger completed with checked tape and a live Fuse race result. Read live HEAD for Spectrum Shoot and this update.
 
 Previously completed on remote:
 
 - **F77S: 20 of 20 programs.** Original TZX, independently decoded LLIST `.bas`, notes and Fuse captures/replays are committed. Some are numerical demonstrations rather than games; do not relabel execution as human gameplay. No native SSX.
 - **Spectrum Show: 30 program directories committed** at pause (not all 73 source entries). The initial 7 were replayed again from actual game starts after the user rejected title-screen-only captures. Programs 08–18 were added with hands-on replay and moves. Subsequent committed indices: **20, 21, 23, 24, 25, 27, 28, 34, 35, 36, 46, 48**. Missing index numbers are **not proof of missing programs**: inspect the archive and compare unique program identities and committed paths. Some entries may be duplicates, non-BASIC or not playable; record such findings truthfully. In particular, Outlander was flagged for LLIST rejection while media and actual Fuse gameplay were preserved. Never fabricate an LLIST listing.
-- **Granada: 18 of 24 initially inventoried program directories:** `01-across-the-ravine` through `18-spectrum-ledger` in the live tree. The original tapes, checked BASIC, notes, live Fuse replays, and genuine captures are committed. Archive totals remain preliminary until duplicate and non-BASIC checks are complete.
+- **Granada: 19 of 24 initially inventoried program directories:** `01-across-the-ravine` through `19-spectrum-shoot` in the live tree. Original tapes, checked BASIC, notes, Fuse replays, and captures are committed. Spectrum Scrabble has not passed the active-grid input check and is not counted. Archive totals remain preliminary.
 
 **No uncommitted local work should be assumed to survive.** The old container had temporary probes, transfer JSON files and images; those are not proof of remote publication and may be gone. Look at live GitHub first. Re-run unfinished work from the original archive, not an unverified old screenshot.
 
@@ -91,7 +91,7 @@ Previously completed on remote:
 
 ## Where to resume concretely
 
-**First:** check inputs and live `main`. **Next:** Granada Publishing — Spectrum Scrabble. Spectrum Ledger has a completed live race and real screenshots. Do not repeat finished programs.
+**First:** check inputs and live `main`. **Next:** Granada Publishing — Spectrum Smalltalk. Return to Spectrum Scrabble after checking the active grid; its original input sequence has not yet been confirmed. Do not repeat finished programs.
 
 In parallel, compare remaining Spectrum Show originals with the live `src/bonus/www.thespectrumshow.net` tree. Process up to 12 independent game checks where practical, but push each completed program separately. Every published capture must come from actual input-driven Fuse play. Preserve all prior `60-programs` and other source bytes.
 
