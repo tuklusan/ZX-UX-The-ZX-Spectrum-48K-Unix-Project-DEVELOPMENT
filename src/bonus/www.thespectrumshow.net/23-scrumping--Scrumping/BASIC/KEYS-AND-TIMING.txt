@@ -1,0 +1,3 @@
+Original game controls: 1=left; 0=right. Intro text has PRESS ANY KEY and INPUT prompts; press Return to advance.
+Executed Fuse at 500% emulator speed: wait 2 sec; Return; wait 1; Return; wait 4; Return; wait 2; Return; wait 2; Return; wait 1; hold 1 for 0.5 sec; wait 0.5 sec; screenshot; hold 0 for 0.5 sec; wait 0.5 sec; screenshot.
+The game draws an orchard wall and displays an on-screen dropped-apple count while controls are pressed. The captured results are not a complete playthrough.
