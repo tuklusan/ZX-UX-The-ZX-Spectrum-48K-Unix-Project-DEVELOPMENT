@@ -1,4 +1,4 @@
-r"""rfc driver: Forth source -> ras-syntax asm -> .sso -> .ssx.
+r"""rfp driver: Forth source -> ras-syntax asm -> .sso -> .ssx.
 
 A real (small) indirect-threaded Forth. The runtime (lib/forth_rt.asm) supplies
 the inner interpreter, colon mechanism and primitive words; rfc compiles the
@@ -103,16 +103,13 @@ class ForthError(Exception):
 
 
 def sdk_dir():
-    """Locate the ZX-UX SDK (ras, rld). ZXUX_SDK overrides; else our sibling;
-    else the local-dev reference checkout."""
-    env = os.environ.get('ZXUX_SDK')
-    if env:
-        return env
+    """Use the adjacent source or packaged SDK; no reference checkout."""
     sibling = os.path.dirname(_HERE)
-    if os.path.isfile(os.path.join(sibling, 'ras.py')):
-        return sibling
-    return os.path.abspath(os.path.join(
-        _HERE, '..', '..', '..', 'reference', 'ZX-UX', 'src', 'zx-ux-sdk'))
+    sdk = os.environ.get('ZXUX_SDK', sibling)
+    if not all(os.path.isfile(os.path.join(sdk, n))
+               for n in ('ras.py', 'rld.py', 'rtap.py')):
+        raise ForthError('missing adjacent ZX-UX SDK (ras/rld/rtap)')
+    return sdk
 
 
 def runtime_asm():
@@ -461,56 +458,58 @@ def build(src_path, mode='ssx', stack=512, sdk=None):
     return text, data
 
 
-def main(argv):
-    out = None
-    mode = 'ssx'
-    stack = 512
-    files = []
-    i = 0
-    while i < len(argv):
-        a = argv[i]
-        if a in ('-o', '--stack'):
-            if i + 1 >= len(argv):
-                sys.stderr.write('rfc: %s requires a value\n' % a)
-                return 2
-            if a == '-o':
-                out = argv[i + 1]
-            else:
-                try:
-                    stack = int(argv[i + 1], 0)
-                except ValueError:
-                    sys.stderr.write('rfc: --stack needs a number, got %r\n' % argv[i + 1])
-                    return 2
-            i += 2
-            continue
-        if a == '-S':
-            mode = 'asm'
-        elif a == '-c':
-            mode = 'obj'
-        elif a.startswith('-'):
-            sys.stderr.write('rfc: unknown option %s\n' % a)
-            return 2
-        else:
-            files.append(a)
-        i += 1
-    if len(files) != 1:
-        sys.stderr.write('usage: rfc [-S|-c] [-o out] [--stack N] file.fth\n')
-        return 2
-    src = files[0]
-    if not os.path.isfile(src):
-        sys.stderr.write('rfc: source %s not found\n' % src)
-        return 1
-    ext = {'asm': '.s', 'obj': '.sso', 'ssx': '.ssx'}[mode]
-    target = out or os.path.splitext(src)[0] + ext
+def main(argv=None):
+    import argparse
+    from pathlib import Path
+    parser = argparse.ArgumentParser(description='rfp: ZX-UX native Forth compiler')
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('-S', action='store_true', help='emit Z80 assembly')
+    modes.add_argument('-c', action='store_true', help='emit SSO1 relocatable object')
+    parser.add_argument('-o', '--output', type=Path)
+    parser.add_argument('--stack', type=lambda x: int(x, 0), default=512)
+    parser.add_argument('--tzx', action='store_true', help='emit SSX and ZX-UX TZX')
+    parser.add_argument('source', type=Path)
+    args = parser.parse_args(argv)
+    if args.tzx and (args.S or args.c):
+        parser.error('--tzx requires linked SSX output')
+    if not 1 <= args.stack <= 65535:
+        parser.error('--stack must be in 1..65535')
+    source = args.source.resolve()
+    if not source.is_file() or source.suffix.lower() != '.fth':
+        parser.error('requires an existing .fth source')
+    mode = 'asm' if args.S else 'obj' if args.c else 'ssx'
+    out = (args.output or source.with_suffix(
+        '.s' if args.S else '.sso' if args.c else '.ssx')).resolve()
+    if out == source:
+        parser.error('cannot overwrite source')
+    if args.tzx and (not 1 <= len(source.stem) <= 10 or not source.stem.isascii()):
+        parser.error('cassette program name must be 1..10 ASCII characters')
     try:
-        text, data = build(src, mode=mode, stack=stack)
-    except ForthError as e:
-        sys.stderr.write('rfc: %s\n' % e)
+        text, data = build(source, mode=mode, stack=args.stack)
+        tape = None
+        if mode == 'ssx':
+            import rld, rtap
+            rld.parse_ssx(data)
+            if rtap.need(data) > 14000:
+                raise ForthError('exceeds ZX-UX 14000-byte program limit')
+            if args.tzx:
+                title = ('ZX-UX Forth ' + source.stem).encode('ascii')
+                head = b'ZXTape!\x1a\x01\x14' + bytes((0x30, len(title))) + title
+                tape = (head, rtap.records(data, source.stem))
+        out.parent.mkdir(parents=True, exist_ok=True)
+        if mode == 'asm':
+            out.write_text(text, encoding='utf-8')
+        else:
+            out.write_bytes(data)
+        if tape is not None:
+            import rtap
+            rtap.write(str(out.with_suffix('.tzx')), tape[0],
+                       [(1000, tape[1][0]), (2000, tape[1][1])])
+        return 0
+    except Exception as exc:
+        print('rfp: %s: %s' % (type(exc).__name__, exc), file=sys.stderr)
         return 1
-    if mode == 'asm':
-        with open(target, 'w', encoding='utf-8') as f:
-            f.write(text)
-    else:
-        with open(target, 'wb') as f:
-            f.write(data)
-    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main(sys.argv[1:]))

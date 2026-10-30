@@ -3,7 +3,7 @@
 
 Build scripts may call build(stage_sdk, programs, dest), as with c48build.
 For local development, --sdk can point to a read-only SDK containing ras,
-rld and rtap; rfc and its runtime are loaded from this tool's sibling SDK.
+rld and rtap; rfp and its runtime are loaded from this tool's sibling SDK.
 """
 from __future__ import annotations
 
@@ -38,12 +38,12 @@ def build(stage_sdk: Path, programs: Path, dest: Path, *, stack: int = 512):
     if not choices:
         raise ValueError('No .fth sources found: ' + str(programs))
 
-    # The complete staged SDK is preferred. The sibling supplies rfc when
+    # The complete staged SDK is preferred. The sibling supplies rfp when
     # developing against an SDK that has not yet incorporated Forth.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     sys.path.insert(0, str(stage_sdk.resolve()))
     import rtap
-    from rfc import driver
+    from rfp import driver
 
     ssxdir, tzxdir = dest / 'ssx', dest / 'tzx'
     ssxdir.mkdir(parents=True, exist_ok=True)
