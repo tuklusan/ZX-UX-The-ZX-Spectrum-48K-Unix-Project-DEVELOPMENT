@@ -1,15 +1,8 @@
-beltman: source-observed keys and timing
+beltman — controls checked against original numbered BASIC lines
 
-These are keys tested by `INKEY$` comparisons in BASIC. Some comparisons mean a key is pressed, while others mean it is *not* pressed. They are detected keys, not automatically assigned directions; read the on-screen instructions for their roles.
+8 = move right, 5 = move left (BASIC 30-50); 6 = move up, 7 = move down (60-80). Snapshot starts during play. Replay walks right then up in the maze, rather than photographing the initial board.
 
-- **5** — checked at BASIC line 30
-- **6** — checked at BASIC line 60
-- **7** — checked at BASIC line 60
-- **8** — checked at BASIC line 30
-
-On-screen prompts from supplied archive:
-- BASIC line 29: "Score>="
-
-Replay inputs: none sent automatically. Snapshot begins in its saved state.
-Capture: Fuse SDL 1.6.0, after 2.5 seconds, 100% speed; original ZX Spectrum 48K ROM.
-Scene is an observed screen, not proof of full gameplay.
+Replay uses the untouched .z80 snapshot in Fuse SDL 1.6.0, 48K ROM,
+100% emulation speed; injects actual keyboard presses over XTest.
+Captures 01-STATE.png after the first move and 02-AFTER-MOVES.png after
+the second. Delays are real elapsed seconds, not exact game frames.
