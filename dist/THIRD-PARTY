@@ -20,8 +20,7 @@ The SDK tools (`rcc`, `ras`, `rld`, `rtap`, `rvm`) require Python 3.11 or later.
 The 4-by-8 font is ZX-UX project code, not a third-party package.
 
 - **pyhsb HiSoft BASIC Python frontend** — Copyright (c) 2026 Melissa O'Neill.
-  MIT licence, with the original permission and conditions included at
-  the complete MIT license text and copyright notice retained below.
+  MIT licence. The complete permission terms and copyright notice appear below.
   The original 48K HiSoft runtime is distributed with the project owner's
   authorization and remains separate from pyhsb.
 

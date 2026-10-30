@@ -84,4 +84,4 @@ The original BASIC tapes, screenshots, and notes
 are kept in `src/bonus/60-programs/`. The build does not compile or
 modify these programs; it only includes them in `dist/bonus/`.
 
-See `src/zx-ux-sdk/LICENSE` and the SDK's third-party notices for licensing.
+See the repository's `LICENSE` and `THIRD-PARTY` files for the terms and notices.
