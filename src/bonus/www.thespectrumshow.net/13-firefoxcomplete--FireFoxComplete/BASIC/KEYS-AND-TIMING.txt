@@ -1,0 +1,19 @@
+13-firefoxcomplete--FireFoxComplete
+Verified original 48K snapshot: FireFoxComplete.z80
+Original BASIC/controls: IN 49150/57342 and 65278/55278 keyboard scans; source reads L and P plus X, second scan overlaps multiple keyboard rows
+Answer Start? and move with keyboard inputs while SCORE advances. Numeric IN scans are preserved verbatim in the listing.
+
+Reproduce from repository root:
+  sh src/bonus/www.thespectrumshow.net/13-firefoxcomplete--FireFoxComplete/BASIC/REPLAY.sh
+
+Replay steps in execution order (seconds of real key hold/wait):
+  key: y (0.20s)
+  key: Return (0.20s)
+  wait 2.00 seconds
+  key: x (0.35s)
+  key: l (0.35s)
+  shot: 01-STATE.png
+  key: p (0.35s)
+  wait 1.50 seconds
+  shot: 02-AFTER-MOVES.png
+Fuse at 100% unless program setup requires 500%; captures are live, not sourced from supplied screenshots.
