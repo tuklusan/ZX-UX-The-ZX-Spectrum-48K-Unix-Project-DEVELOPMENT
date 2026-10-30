@@ -1,0 +1,18 @@
+PROGRAM PN005;
+VAR CH:CHAR; SCORE:INTEGER;
+BEGIN
+  CH:='Y';
+  SCORE:=5;
+  CASE CH OF
+    'W':SCORE:=4;
+    'Y':BEGIN
+      CASE 32766 OF
+        -32767:SCORE:=5;
+         32766:SCORE:=6
+      END
+    END
+  END;
+  WRITELN('NEST5=',SCORE)
+END.
+
+

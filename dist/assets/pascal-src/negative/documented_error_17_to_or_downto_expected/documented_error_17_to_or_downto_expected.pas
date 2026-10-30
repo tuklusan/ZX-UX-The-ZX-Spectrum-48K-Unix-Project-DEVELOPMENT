@@ -1,0 +1,5 @@
+PROGRAM E17;
+VAR I: INTEGER;
+BEGIN
+  FOR I := 1 2 DO I := 1
+END.

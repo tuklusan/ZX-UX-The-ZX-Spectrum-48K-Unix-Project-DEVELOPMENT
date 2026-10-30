@@ -1,0 +1,5 @@
+PROGRAM E28;
+VAR I: INTEGER;
+BEGIN
+  FOR I := 'A' TO 2 DO I := 1
+END.

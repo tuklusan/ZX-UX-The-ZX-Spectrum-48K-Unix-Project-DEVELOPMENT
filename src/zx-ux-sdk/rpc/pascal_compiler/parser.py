@@ -493,7 +493,12 @@ class Parser:
         if name not in self.scope and name != self.result_name:
             raise PascalError(f"unknown identifier {name}", error_number=3)
         self.take(":=")
-        return Assignment(name, self.expression())
+        value = self.expression()
+        # A character literal is not an INTEGER or BOOLEAN value.
+        # Reject the error corpus's invalid assignments before code emission.
+        if isinstance(value, String) and self.scope.get(name) in ('integer', 'boolean'):
+            raise PascalError(f"wrong type in assignment to {name}", error_number=10)
+        return Assignment(name, value)
 
     def _parse_case(self) -> CaseStatement:
         self.take("case")

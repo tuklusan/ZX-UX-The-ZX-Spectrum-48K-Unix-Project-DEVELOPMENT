@@ -1,0 +1,12 @@
+PROGRAM NEGFLOW;
+VAR I, S:INTEGER;
+    A:ARRAY[-3..3] OF INTEGER;
+BEGIN
+  S:=0;
+  FOR I:=3 DOWNTO 1 DO
+  BEGIN
+    A[-I]:=-I;
+    S:=S+A[-I]
+  END;
+  WRITELN('SIGNED=',S)
+END.

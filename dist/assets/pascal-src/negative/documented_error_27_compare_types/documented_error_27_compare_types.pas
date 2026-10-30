@@ -1,0 +1,5 @@
+PROGRAM E27;
+VAR X: INTEGER;
+BEGIN
+  IF 'A' = X THEN X := 1
+END.

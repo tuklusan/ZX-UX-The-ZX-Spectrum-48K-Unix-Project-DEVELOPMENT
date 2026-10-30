@@ -11,7 +11,7 @@ sys.dont_write_bytecode = True
 R = pathlib.Path(__file__).resolve().parents[1]
 B, S, D = R / 'build', R / 'src', R / 'dist'
 sys.path.insert(0, str(S / 'zx-ux-sdk/tools'))
-import osbuild, turbo_boot_build, c48build, sdkpack, basicpack
+import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, pascalpack
 
 
 def checked_dir(root):
@@ -114,6 +114,7 @@ def main():
     copy_bonus_programs(bonus, stage / 'bonus', no_cache)
     preserve_existing_c48_release(D, stage)
     basicpack.package(S, stage)
+    pascalpack.package(S, stage)
     shutil.copytree(S / 'zx-ux', B / 'src', ignore=no_cache)
     shutil.copytree(S / 'zx-ux-sdk', B / 'sdk', ignore=no_cache)
     (B / 'out').mkdir()
