@@ -1,6 +1,6 @@
 CHOLESKY: Fuse replay keys and timing
 
-Tape: CHOLESKY.tzx, SHA-256 ebfd5eb866340815d35dc6d6a810277bc61871d42ed6cd307af97405237b2f50
+Tape: CHOLESKY.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

@@ -1,6 +1,6 @@
 GEMM_8BIT: Fuse replay keys and timing
 
-Tape: GEMM_8BIT.tzx, SHA-256 e5f2305387cdbcfa65fa6023299acc5cfdcd4fc76c6db7bc1c8dccecfbe0e8c4
+Tape: GEMM_8BIT.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

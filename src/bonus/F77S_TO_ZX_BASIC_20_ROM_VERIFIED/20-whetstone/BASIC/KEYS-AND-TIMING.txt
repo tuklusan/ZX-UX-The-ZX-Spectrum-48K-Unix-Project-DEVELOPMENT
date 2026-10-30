@@ -1,6 +1,6 @@
 WHETSTONE: Fuse replay keys and timing
 
-Tape: WHETSTONE.tzx, SHA-256 edc0810270ef19d0e6430268088f528c2ae8e259a0532bd68e666862e1140f73
+Tape: WHETSTONE.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

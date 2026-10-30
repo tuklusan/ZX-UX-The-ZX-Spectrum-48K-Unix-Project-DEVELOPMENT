@@ -3,15 +3,9 @@
 This directory is a local final-delivery test corpus imported from the user
 supplied archive `F83_Z80_20_DEMOS.zip`.
 
-Archive SHA-256:
-
-```text
-E004302C6CD3A3322F1C1FBB40450A25D771CD5F97AF1AB30949EE6C765C655D
-```
-
 ## Contents
 
-- `original/F83_Z80_SUITE/` is the extracted archive, retained for provenance.
+- `original/F83_Z80_SUITE/` is the extracted archive, kept as the original source.
   It includes the original `.F83` sources, `COMMON.F83`, optional `LINCORE.F83`,
   the `CPM/` line-ending copies, the included host-model tools, checksums, and
   reference outputs.  The archive's generated `tools/__pycache__/` was omitted.
@@ -21,16 +15,15 @@ E004302C6CD3A3322F1C1FBB40450A25D771CD5F97AF1AB30949EE6C765C655D
   lines.  `HOST_OUTPUT.TXT` is the included constrained-host-model fixture;
   `AUDIT_REPORT.TXT` records the archive's source audit and model run.
 
-The archive reports 20/20 source audits, constrained-model executions,
-independent numeric oracles, and host-output comparisons.  Those claims are
-evidence about the supplied host model, not evidence of a Z80 execution; this
-project adds the independent `rfc` → `ras` → `rld` → `rvm` check.
+The archive reports 20/20 source audits, constrained-model runs, and
+host-output comparisons. These results cover the supplied host model.
+The separate `rfc` → `ras` → `rld` → `rvm` check tests the Z80 target.
 
 ## Adaptation for rfc
 
 Each target `.fth` file contains, in order:
 
-1. a provenance comment;
+1. a source comment;
 2. the contents of `original/F83_Z80_SUITE/COMMON.F83`;
 3. `LINCORE.F83` for `minilin`, `lupivot`, and `polyfit`;
 4. the corresponding original demo source.
@@ -48,11 +41,8 @@ quadrature, ODE integration, relaxation, FFT, and polynomial fitting.
 
 ## License status
 
-The project owner has confirmed ownership of these sources.  The archive does
-not carry a separate license file; preserve that ownership/provenance note and
-the archive checksum when the corpus is moved.  If a public release requires a
-standalone license notice, add the owner's chosen project-compatible notice
-before publication.
+The project owner confirmed ownership of these sources. The supplied archive
+does not contain a separate licence file.
 
 ## Expected outputs
 

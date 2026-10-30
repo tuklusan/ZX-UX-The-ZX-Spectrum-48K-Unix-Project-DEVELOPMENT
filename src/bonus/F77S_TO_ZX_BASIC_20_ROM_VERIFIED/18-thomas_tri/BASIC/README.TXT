@@ -1,7 +1,6 @@
 THOMAS_TRI — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: THOMAS_TRI.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: a1ec373c19339e60c932ecc0fe7a468629fda18fca6a7e50cabc503d851a6404
 Listing: THOMAS_TRI.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

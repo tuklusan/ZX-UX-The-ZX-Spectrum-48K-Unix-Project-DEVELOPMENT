@@ -1,10 +1,7 @@
 # 21-numbers — Native RBC result
 
 Original BASIC and tokenized tape were kept unchanged.
-
-- BAS SHA-256: `ab2625f8b40e7b0cf98258d9c544a5d9142928906ad60bbfc67105c4666243ed`
-- TZX SHA-256: `8e0afa7b5c7c5d1f34f8e259f03085ca414d337661eee23fbf682d423bdfeb91`
-- Independent TZX conversion: passed, 121 BASIC lines; decoded SHA-256 `ab2625f8b40e7b0cf98258d9c544a5d9142928906ad60bbfc67105c4666243ed`.
+- Independent TZX conversion: passed, 121 BASIC lines.
 - Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
 - BAS: exit 1

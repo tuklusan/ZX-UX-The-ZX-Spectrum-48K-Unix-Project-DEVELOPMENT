@@ -1,7 +1,6 @@
 SIMPSON — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: SIMPSON.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: 820e5373c383a9b10bcd67ecc7b90c9777d6418e29d7b0e3fc944b8adc1bf562
 Listing: SIMPSON.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

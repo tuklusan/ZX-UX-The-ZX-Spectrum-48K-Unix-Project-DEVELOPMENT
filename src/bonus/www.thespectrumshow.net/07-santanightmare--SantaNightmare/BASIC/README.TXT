@@ -3,8 +3,7 @@
 Santa-themed action game with a setup screen for your preferred movement keys.
 
 Source: original website snapshot SantaNightmare.z80 from supplied archive, unchanged.
-Original Z80 SHA-256: d210ab75f033cc7ef46357db7407726bc1b1dd94b11c860beee7f65178f148ff
-Archive-derived TZX: SantaNightmare.tzx, SHA-256 5c8f15cfc4088dfe532b1ae5f98ccd7d81cb7015b2029316a64490cd3357be6c.
+Archive-derived TZX: SantaNightmare.tzx.
 This TZX was built by the source archive and is not an original website tape.
 Listing: SantaNightmare.bas independently decoded with build/tools/zx-tzx2bas.py
 from the archived TZX, not copied from any supplied BAS.

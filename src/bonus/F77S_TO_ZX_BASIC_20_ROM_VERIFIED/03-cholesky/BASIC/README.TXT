@@ -1,7 +1,6 @@
 CHOLESKY — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: CHOLESKY.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: ebfd5eb866340815d35dc6d6a810277bc61871d42ed6cd307af97405237b2f50
 Listing: CHOLESKY.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

@@ -1,6 +1,6 @@
 BRENT_ROOT: Fuse replay keys and timing
 
-Tape: BRENT_ROOT.tzx, SHA-256 e2ca75debbd44610237da7de98334eb419da90f5cf1e7bdbaa532c743394c8f7
+Tape: BRENT_ROOT.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

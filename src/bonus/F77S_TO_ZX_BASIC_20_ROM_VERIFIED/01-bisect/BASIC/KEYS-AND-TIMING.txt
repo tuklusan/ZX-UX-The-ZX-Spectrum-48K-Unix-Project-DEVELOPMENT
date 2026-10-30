@@ -1,6 +1,6 @@
 BISECT: Fuse replay keys and timing
 
-Tape: BISECT.tzx, SHA-256 15d15ebc2cf7e7502f033a2efbcaa95dfb6ab7dfbde3a9fbb809de4b825d94e9
+Tape: BISECT.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

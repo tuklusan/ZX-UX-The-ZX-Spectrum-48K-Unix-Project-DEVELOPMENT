@@ -34,11 +34,6 @@ python3 build/tools/zx-tzx2bas.py \
 ```
 
 The tool refuses to replace existing output files or to write directly
-into any preserved game `BASIC/` directory. The checked-in BAS files were
-replaced separately by an explicitly authorized repository update after
-conversion and verification. Running the tool does not alter those files.
+into any preserved game `BASIC/` directory. Running the tool does not change the checked-in BAS files.
 
-The `dist/` release, frozen SDK, TZX tapes, recorded emulator sessions,
-programs in `bin/`, and other project material were not changed by this
-BASIC-listing correction. This is a source-text correction only; it does
-not, by itself, prove that another compiler accepts every generated line.
+A readable BASIC listing does not guarantee that another compiler accepts it.

@@ -1,6 +1,6 @@
 MACHAR: Fuse replay keys and timing
 
-Tape: MACHAR.tzx, SHA-256 7d352511698190397c0ec4aa0ce95fc6985b971a96cde813a140e14a536901d9
+Tape: MACHAR.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

@@ -1,6 +1,6 @@
 LCG_RAND: Fuse replay keys and timing
 
-Tape: LCG_RAND.tzx, SHA-256 cd8c2c112c568268668df32865d8b8c4488bfafc04855288ceb26cb1d6f79d3e
+Tape: LCG_RAND.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

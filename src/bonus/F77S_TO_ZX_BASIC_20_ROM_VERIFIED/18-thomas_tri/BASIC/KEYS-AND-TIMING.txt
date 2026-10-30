@@ -1,6 +1,6 @@
 THOMAS_TRI: Fuse replay keys and timing
 
-Tape: THOMAS_TRI.tzx, SHA-256 a1ec373c19339e60c932ecc0fe7a468629fda18fca6a7e50cabc503d851a6404
+Tape: THOMAS_TRI.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

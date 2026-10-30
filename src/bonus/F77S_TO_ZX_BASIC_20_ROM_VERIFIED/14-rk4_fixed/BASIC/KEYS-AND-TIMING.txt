@@ -1,6 +1,6 @@
 RK4_FIXED: Fuse replay keys and timing
 
-Tape: RK4_FIXED.tzx, SHA-256 14e1f69e2501dc4ccef80356900a175e49a7db7314ee952c6cc40ce45201cdbc
+Tape: RK4_FIXED.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

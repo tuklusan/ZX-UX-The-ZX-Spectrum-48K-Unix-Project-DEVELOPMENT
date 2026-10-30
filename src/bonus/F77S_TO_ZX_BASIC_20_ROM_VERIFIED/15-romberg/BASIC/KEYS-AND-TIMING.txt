@@ -1,6 +1,6 @@
 ROMBERG: Fuse replay keys and timing
 
-Tape: ROMBERG.tzx, SHA-256 d77ff3e544437c3c83e4e4babd7a642450912db5985a4c6c470854ab8ee323f7
+Tape: ROMBERG.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

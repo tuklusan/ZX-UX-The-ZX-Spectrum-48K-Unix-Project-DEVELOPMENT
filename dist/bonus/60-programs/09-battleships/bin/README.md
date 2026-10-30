@@ -1,10 +1,7 @@
 # 09-battleships — Native RBC result
 
 Original BASIC and tokenized tape were kept unchanged.
-
-- BAS SHA-256: `fb7cf8d9a0efb2d08c3bb9f61b3edfa7efafa5c9e5a90c0c7da5b7d03b0a9dc5`
-- TZX SHA-256: `7a762cdcb14d04a8d8d8318c2eb7e8a273aab9ef46dbfa22194c3b2fac5ed8d4`
-- Independent TZX conversion: passed, 131 BASIC lines; decoded SHA-256 `fb7cf8d9a0efb2d08c3bb9f61b3edfa7efafa5c9e5a90c0c7da5b7d03b0a9dc5`.
+- Independent TZX conversion: passed, 131 BASIC lines.
 - Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
 - BAS: exit 1

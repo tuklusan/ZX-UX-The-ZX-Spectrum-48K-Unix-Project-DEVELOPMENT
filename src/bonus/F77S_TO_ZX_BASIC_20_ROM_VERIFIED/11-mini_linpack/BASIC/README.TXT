@@ -1,7 +1,6 @@
 MINI_LINPACK — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: MINI_LINPACK.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: 58a8b0defb02d8635dc9c7202f00d5fb654997dc1b5545bcbecbe6c9248283e5
 Listing: MINI_LINPACK.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

@@ -24,8 +24,7 @@ source files: 940 from the SkoolKit reference collection, eight in the ROM
 source group, three in the World of Spectrum group, and one chess source.
 The Zilog PDF is not part of that archive.
 
-Private checkpoint archive SHA-256:
-`0ecb1935e9cf085268bb002a7ac2d2c1b45460ed4f0a172bc589d20ce371e1a1`
+Private checkpoint archive
 
 The private archive is **not approved for public redistribution**. Each
 external source keeps its own copyright and license. A source being available

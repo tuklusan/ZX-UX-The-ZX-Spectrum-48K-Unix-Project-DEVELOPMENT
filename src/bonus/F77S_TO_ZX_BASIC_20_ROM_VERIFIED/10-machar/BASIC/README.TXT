@@ -1,7 +1,6 @@
 MACHAR — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: MACHAR.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: 7d352511698190397c0ec4aa0ce95fc6985b971a96cde813a140e14a536901d9
 Listing: MACHAR.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

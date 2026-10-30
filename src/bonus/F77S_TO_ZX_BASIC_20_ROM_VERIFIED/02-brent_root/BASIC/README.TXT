@@ -1,7 +1,6 @@
 BRENT_ROOT — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: BRENT_ROOT.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: e2ca75debbd44610237da7de98334eb419da90f5cf1e7bdbaa532c743394c8f7
 Listing: BRENT_ROOT.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

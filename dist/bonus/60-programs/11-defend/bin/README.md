@@ -1,10 +1,7 @@
 # 11-defend — Native RBC result
 
 Original BASIC and tokenized tape were kept unchanged.
-
-- BAS SHA-256: `261d8ea20f7c57fe047275de3b0b9a1791eb803bba91d225304255eb0f3ff4a2`
-- TZX SHA-256: `1101e4d31798bca76d6ec7157f8820995356a6f3803d1cb09002461561d8a800`
-- Independent TZX conversion: passed, 125 BASIC lines; decoded SHA-256 `261d8ea20f7c57fe047275de3b0b9a1791eb803bba91d225304255eb0f3ff4a2`.
+- Independent TZX conversion: passed, 125 BASIC lines.
 - Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
 - BAS: exit 1

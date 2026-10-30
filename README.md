@@ -28,39 +28,16 @@ replaces `dist/` only after the whole build succeeds. A missing `dist/` is norma
 before the first build. Deleting `dist/` is safe because it contains generated
 outputs only. A failed build keeps the previous `dist/` intact.
 
-The canonical GitHub repository currently **tracks `dist/`** so built files
-survive cloud/container shutdown and manual mirror pulls. After a verified
-build, commit and push the changed distribution (`git add -A dist` followed
-by `git commit` and `git push`). The initial tracked distribution was recovered
-from the last checked-in release snapshot; it has not been freshly rebuilt
-as part of this repository-layout change.
+## BASIC compiler sources
 
-## RBC HiSoft frontend — fixed source
+The RBC compiler under `experiments/hisoft-rbc-2026-10-22/` uses the Python
+HiSoft frontend from
+https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft.
+The separate HiSoft BASIC v1.1 48K compiler TZX is a tape input, not the
+Python frontend.
 
-The RBC compiler work under `experiments/hisoft-rbc-2026-10-22/` uses
-**only** the Python HiSoft frontend from
-https://github.com/tuklusan/Python-BASIC-Compiler-for-ZX-Spectrum-Hisoft
-at commit `7cc87dafb58fcf5632b7190320dd11c30b4fe961`.
-The tracked `stage/hisoft_frontend_inputs.py` records that revision and the
-expected Git blob SHA for each upstream Python file. In a fresh checkout,
-retrieve those exact files and check their hashes; do not ask which frontend
-repository to use or substitute its moving `main` branch.
-
-The separate authentic HiSoft BASIC v1.1 48K compiler TZX remains a verified,
-untracked tape input. It is not the Python frontend.
-
-## RBC Z80 optimizer — fixed upstream
-
-The RBC Z80 optimizer uses **only** the upstream source at
-https://github.com/tuklusan/upeepz80
-at commit `a48d725704b132c3ff23ac77232a3a412b56b15f`.
-The tracked `stage/upeepz80_codegen.py` pins that revision, and
-`stage/gate8_native_whole_optimizer.py` checks the upstream Git blob
-identities of `upeepz80/__init__.py`, `upeepz80/peephole.py`, and
-`upeepz80/z80.py` before importing the optimizer. In a fresh checkout,
-retrieve the exact revision, check the recorded SHA-1 values, and do not ask
-which upstream to use or substitute its moving `main` branch.
-The fixed source identity does not prove Gate 8 runtime equivalence.
+The Z80 optimizer source comes from https://github.com/tuklusan/upeepz80.
+The optimizer's presence does not prove that generated programs run correctly.
 
 The technical reference index lives in `src/docs/README.md`.
 Future manuals under `src/docs/` use Git LFS, as configured by the committed
@@ -103,8 +80,8 @@ emulator dependencies. The source-only layout and rebuild smoke checks do not
 need an assembler or emulator. Full execution verification requires the stated
 host tools and must be performed on the target machine.
 
-The original BASIC program collection and its tapes, screenshots, and notes
-are preserved in `src/bonus/60-programs/`. The build does not compile or
+The original BASIC tapes, screenshots, and notes
+are kept in `src/bonus/60-programs/`. The build does not compile or
 modify these programs; it only includes them in `dist/bonus/`.
 
 See `src/zx-ux-sdk/LICENSE` and the SDK's third-party notices for licensing.

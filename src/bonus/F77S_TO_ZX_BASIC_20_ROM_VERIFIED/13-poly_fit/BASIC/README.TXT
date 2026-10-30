@@ -1,7 +1,6 @@
 POLY_FIT — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: POLY_FIT.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: ebd850f4d7337354b57f6247b6e7dd2671454321b27700a4298a718a6d245d4a
 Listing: POLY_FIT.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

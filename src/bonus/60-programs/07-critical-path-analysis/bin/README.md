@@ -1,10 +1,7 @@
 # 07-critical-path-analysis — Native RBC result
 
 Original BASIC and tokenized tape were kept unchanged.
-
-- BAS SHA-256: `de33599fba94f379143362a47f558c07530fd7abad9f8eadb0adfb5508fbc58f`
-- TZX SHA-256: `8378c50ab4b9086e7b1f108808b3c7eccce8b8a5036a3119301ca671ed21a683`
-- Independent TZX conversion: passed, 120 BASIC lines; decoded SHA-256 `de33599fba94f379143362a47f558c07530fd7abad9f8eadb0adfb5508fbc58f`.
+- Independent TZX conversion: passed, 120 BASIC lines.
 - Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
 - BAS: exit 1

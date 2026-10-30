@@ -1,6 +1,6 @@
 TINY_FFT: Fuse replay keys and timing
 
-Tape: TINY_FFT.tzx, SHA-256 7fbe7cafeec4a004b2551e4e8c325193570c11f369124efb58fc9a85c82848d3
+Tape: TINY_FFT.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

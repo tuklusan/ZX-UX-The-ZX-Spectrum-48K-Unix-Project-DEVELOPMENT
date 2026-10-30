@@ -1,6 +1,6 @@
 NEWTON: Fuse replay keys and timing
 
-Tape: NEWTON.tzx, SHA-256 94fd92c2c527fe22bed8d47a12b793d202cc7028a812a93a260881e5481b209d
+Tape: NEWTON.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

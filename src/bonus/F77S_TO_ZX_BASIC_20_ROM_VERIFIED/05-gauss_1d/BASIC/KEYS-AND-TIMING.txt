@@ -1,6 +1,6 @@
 GAUSS_1D: Fuse replay keys and timing
 
-Tape: GAUSS_1D.tzx, SHA-256 21a0b62309a53b43cead698ab71318467c145ba3499bac17505337f1dff6aec4
+Tape: GAUSS_1D.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

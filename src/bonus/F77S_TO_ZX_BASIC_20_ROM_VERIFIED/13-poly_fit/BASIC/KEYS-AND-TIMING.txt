@@ -1,6 +1,6 @@
 POLY_FIT: Fuse replay keys and timing
 
-Tape: POLY_FIT.tzx, SHA-256 ebd850f4d7337354b57f6247b6e7dd2671454321b27700a4298a718a6d245d4a
+Tape: POLY_FIT.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

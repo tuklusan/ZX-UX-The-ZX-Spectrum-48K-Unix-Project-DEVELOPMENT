@@ -1,7 +1,6 @@
 RK4_FIXED — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: RK4_FIXED.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: 14e1f69e2501dc4ccef80356900a175e49a7db7314ee952c6cc40ce45201cdbc
 Listing: RK4_FIXED.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

@@ -1,7 +1,6 @@
 LU_PIVOT — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: LU_PIVOT.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: 08d3d91d2872a41fc38021ded63ca6c2111a3f1635f502ed2b2c3d84ae24d0f6
 Listing: LU_PIVOT.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

@@ -1,7 +1,6 @@
 ROMBERG — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: ROMBERG.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: d77ff3e544437c3c83e4e4babd7a642450912db5985a4c6c470854ab8ee323f7
 Listing: ROMBERG.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

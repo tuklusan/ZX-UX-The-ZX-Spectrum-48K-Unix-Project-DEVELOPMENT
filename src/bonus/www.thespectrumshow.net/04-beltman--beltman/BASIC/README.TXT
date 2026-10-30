@@ -3,8 +3,7 @@
 Move through a belt/platform maze while the program tracks score and time.
 
 Source: original website snapshot beltman.z80 from supplied archive, unchanged.
-Original Z80 SHA-256: 931e1a464e7b48aa79d3e9abe6bfdf68253aa1e2c8e964cb7679b8a9cfe74c4e
-Archive-derived TZX: beltman.tzx, SHA-256 f7941847292f4b5e8725294616591924412f1eb5967070504f5a37d3a7dbaf35.
+Archive-derived TZX: beltman.tzx.
 This TZX was built by the source archive and is not an original website tape.
 Listing: beltman.bas independently decoded with build/tools/zx-tzx2bas.py
 from the archived TZX, not copied from any supplied BAS.

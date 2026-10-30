@@ -1,10 +1,7 @@
 # 27-picture-pairs — Native RBC result
 
 Original BASIC and tokenized tape were kept unchanged.
-
-- BAS SHA-256: `4c5f9c2a211883f4f6cd05af4abb7f6b7d974c51f44a5ef81ce4fb135628d895`
-- TZX SHA-256: `0b20705fc318840e29056eb63df95a03a2b1ebc9b26f434398c3d2208f2ae494`
-- Independent TZX conversion: passed, 111 BASIC lines; decoded SHA-256 `4c5f9c2a211883f4f6cd05af4abb7f6b7d974c51f44a5ef81ce4fb135628d895`.
+- Independent TZX conversion: passed, 111 BASIC lines.
 - Compiler: checked HiSoft source, strict ROM syntax, real native ras/rld, no optimizer, maximum 14000 bytes, stack 384 bytes.
 
 - BAS: exit 1

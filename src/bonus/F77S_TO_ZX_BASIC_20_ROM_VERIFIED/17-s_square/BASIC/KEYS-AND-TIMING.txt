@@ -1,6 +1,6 @@
 S_SQUARE: Fuse replay keys and timing
 
-Tape: S_SQUARE.tzx, SHA-256 0f958af0b3521afff4f5da1bbd9b12c3648b372a2e280280b5ae89f6619ff78b
+Tape: S_SQUARE.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

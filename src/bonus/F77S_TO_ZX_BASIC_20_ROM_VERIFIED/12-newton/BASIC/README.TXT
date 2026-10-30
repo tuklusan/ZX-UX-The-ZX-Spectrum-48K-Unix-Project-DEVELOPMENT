@@ -1,7 +1,6 @@
 NEWTON — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: NEWTON.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: 94fd92c2c527fe22bed8d47a12b793d202cc7028a812a93a260881e5481b209d
 Listing: NEWTON.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

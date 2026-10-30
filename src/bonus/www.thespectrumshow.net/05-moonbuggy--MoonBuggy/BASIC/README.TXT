@@ -3,8 +3,7 @@
 Guide a Moon Buggy over rough ground and craters; the menu has a play option and key settings.
 
 Source: original website snapshot MoonBuggy.z80 from supplied archive, unchanged.
-Original Z80 SHA-256: 28e291f7633e3a274917951c7d846c61c359daa38e9de6cb97940883f709c63e
-Archive-derived TZX: MoonBuggy.tzx, SHA-256 284ab8d4d89e6c68c0351ba15c30cbdd740dc2bd4cfb67d4fad1cb63f80202b6.
+Archive-derived TZX: MoonBuggy.tzx.
 This TZX was built by the source archive and is not an original website tape.
 Listing: MoonBuggy.bas independently decoded with build/tools/zx-tzx2bas.py
 from the archived TZX, not copied from any supplied BAS.

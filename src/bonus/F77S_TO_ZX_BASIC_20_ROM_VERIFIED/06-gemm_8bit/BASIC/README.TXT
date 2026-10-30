@@ -1,7 +1,6 @@
 GEMM_8BIT — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: GEMM_8BIT.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: e5f2305387cdbcfa65fa6023299acc5cfdcd4fc76c6db7bc1c8dccecfbe0e8c4
 Listing: GEMM_8BIT.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

@@ -1,7 +1,6 @@
 JACOBI_RELAX — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: JACOBI_RELAX.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: cdc3512e7186a44163fb484ebf49f515537fc9a1a2348fe60256ca9b15d40a74
 Listing: JACOBI_RELAX.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

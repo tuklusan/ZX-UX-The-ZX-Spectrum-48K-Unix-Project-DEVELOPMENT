@@ -1,9 +1,7 @@
 17-defender--Defender
 
 Original archived Spectrum 48K game snapshot: Defender.z80
-Snapshot SHA-256: b7092487561a970e9e862aa8b49043262341c2a01b779662566328e9889f68a5
 Archive-derived tape: Defender.tzx
-TZX SHA-256: a1252c0d3de96c37955c0149ad0ceea9d9e1016a9dd24e1b2679fd0c61fab65a
 Verified BASIC listing independently decoded with build/tools/zx-tzx2bas.py.
 
 The snapshot resumes a live horizontal shooter. Steer and fire.

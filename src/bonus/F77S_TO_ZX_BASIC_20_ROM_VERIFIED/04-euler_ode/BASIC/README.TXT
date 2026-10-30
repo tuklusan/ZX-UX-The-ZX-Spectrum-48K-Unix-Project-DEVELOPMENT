@@ -1,7 +1,6 @@
 EULER_ODE — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: EULER_ODE.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: bb5648354b0379d2d1fa86d587bf9ce244c4f335dcaf6cf74ca774df41af5bc0
 Listing: EULER_ODE.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

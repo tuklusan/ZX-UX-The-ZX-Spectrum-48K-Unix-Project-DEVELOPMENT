@@ -1,7 +1,6 @@
 WHETSTONE — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: WHETSTONE.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: edc0810270ef19d0e6430268088f528c2ae8e259a0532bd68e666862e1140f73
 Listing: WHETSTONE.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

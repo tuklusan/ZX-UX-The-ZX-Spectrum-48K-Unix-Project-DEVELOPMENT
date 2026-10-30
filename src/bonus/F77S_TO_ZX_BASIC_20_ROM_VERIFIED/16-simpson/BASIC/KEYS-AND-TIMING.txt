@@ -1,6 +1,6 @@
 SIMPSON: Fuse replay keys and timing
 
-Tape: SIMPSON.tzx, SHA-256 820e5373c383a9b10bcd67ecc7b90c9777d6418e29d7b0e3fc944b8adc1bf562
+Tape: SIMPSON.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

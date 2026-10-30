@@ -1,7 +1,6 @@
 S_SQUARE — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: S_SQUARE.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: 0f958af0b3521afff4f5da1bbd9b12c3648b372a2e280280b5ae89f6619ff78b
 Listing: S_SQUARE.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

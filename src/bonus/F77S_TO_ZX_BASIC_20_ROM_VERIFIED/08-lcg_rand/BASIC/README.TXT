@@ -1,7 +1,6 @@
 LCG_RAND — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: LCG_RAND.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: cd8c2c112c568268668df32865d8b8c4488bfafc04855288ceb26cb1d6f79d3e
 Listing: LCG_RAND.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

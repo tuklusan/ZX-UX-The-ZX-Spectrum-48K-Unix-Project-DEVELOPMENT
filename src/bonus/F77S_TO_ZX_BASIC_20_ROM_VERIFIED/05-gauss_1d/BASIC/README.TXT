@@ -1,7 +1,6 @@
 GAUSS_1D — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: GAUSS_1D.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: 21a0b62309a53b43cead698ab71318467c145ba3499bac17505337f1dff6aec4
 Listing: GAUSS_1D.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 

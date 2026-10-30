@@ -1,6 +1,6 @@
 EULER_ODE: Fuse replay keys and timing
 
-Tape: EULER_ODE.tzx, SHA-256 bb5648354b0379d2d1fa86d587bf9ce244c4f335dcaf6cf74ca774df41af5bc0
+Tape: EULER_ODE.tzx
 Machine: original ZX Spectrum 48K ROM, Fuse 1.6.0 SDL
 Load: Fuse --auto-load from the original TZX; no injected keys.
 Emulator speed: 500 percent.

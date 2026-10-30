@@ -1,7 +1,6 @@
 BISECT — F77S FORTRAN demonstration converted to ZX Spectrum 48K BASIC
 
 Original media: BISECT.tzx, unchanged bytes from the supplied F77S archive.
-Source SHA-256: 15d15ebc2cf7e7502f033a2efbcaa95dfb6ab7dfbde3a9fbb809de4b825d94e9
 Listing: BISECT.bas, decoded independently from the original TZX with
 ZX-UX build/tools/zx-tzx2bas.py (Sinclair 48K ROM LLIST spacing).
 
