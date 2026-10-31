@@ -11,7 +11,7 @@ sys.dont_write_bytecode = True
 R = pathlib.Path(__file__).resolve().parents[1]
 B, S, D = R / 'build', R / 'src', R / 'dist'
 sys.path.insert(0, str(S / 'zx-ux-sdk/tools'))
-import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, forthbuild, pascalpack, fortranpack
+import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, forthbuild, pascalpack, fortranpack, rb2ctpack
 
 
 def checked_dir(root):
@@ -41,38 +41,21 @@ def copy_bonus_programs(source, destination, no_cache):
         raise RuntimeError('Missing or unsafe BASIC social preview: ' + str(preview))
     output.mkdir(parents=True)
     for program in program_dirs:
-        # Historical BASIC material is copied just as before.  C48 contains
-        # development files, so it needs a separate release allowlist.
-        target = output / program.name
-        def omit_c48(folder, names):
-            omitted = set(no_cache(folder, names))
+        # The separately packaged RB2CT hand ports never enter BASIC archives.
+        def no_port(folder, names):
+            ignored = set(no_cache(folder, names))
             if pathlib.Path(folder) == program:
-                omitted.add('C48')
-            return omitted
-        shutil.copytree(program, target, ignore=omit_c48)
-        c48 = program / 'C48'
-        if c48.is_dir():
-            release = target / 'C48'
-            release.mkdir()
-            for item in sorted(c48.iterdir()):
-                if item.is_file() and item.suffix.lower() in {'.c', '.ssx', '.tzx', '.asm'}:
-                    shutil.copy2(item, release / item.name)
-                elif item.is_dir() and item.name == 'SCREENSHOTS':
-                    shutil.copytree(item, release / item.name)
-    # Shared C48 library files are required without selective filtering.
-    shutil.copytree(collection / 'c48lib', output / 'c48lib')
+                ignored.add('C48')
+            return ignored
+        shutil.copytree(program, output / program.name, ignore=no_port)
     shutil.copy2(preview, output / preview.name)
 
 
 def preserve_existing_c48_release(old_dist, stage):
-    """Keep already-published C48 bonus files and actual screen galleries.
-
-    The historical C48 bonus ports and captures are release inputs held in
-    dist/, not recoverable from the BASIC-only source collection.
-    """
+    """Retain existing genuine C48 emulator captures during staged builds."""
     if not old_dist.is_dir():
         return
-    for branch in ('bonus/60-programs', 'screenshots/c48/rvm', 'screenshots/c48/fuse'):
+    for branch in ('screenshots/c48/rvm', 'screenshots/c48/fuse'):
         old = old_dist / branch
         if not old.is_dir():
             continue
@@ -80,12 +63,11 @@ def preserve_existing_c48_release(old_dist, stage):
             if not src.is_file():
                 continue
             rel = src.relative_to(old)
-            if branch == 'bonus/60-programs' and 'C48' not in rel.parts:
-                continue
             dst = stage / branch / rel
             if not dst.exists():
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dst)
+
 
 
 def main():
@@ -134,6 +116,7 @@ def main():
     (stage / 'zx-ux/tzx').mkdir(parents=True)
     shutil.copy2(B / 'out/ZX-UX.tzx', stage / 'zx-ux/tzx/ZX-UX.tzx')
     c48build.build(B / 'sdk', stage / 'assets/c48-src', stage / 'assets/c48-bin')
+    rb2ctpack.package(stage)
     forthbuild.build(B / 'sdk', stage / 'assets/forth-src', stage / 'assets/forth-bin')
     sdkpack.pack(S / 'zx-ux-sdk', S / 'zx-ux', B, stage / 'sdk/bin')
     fortranpack.package(S, stage, B / 'sdk')

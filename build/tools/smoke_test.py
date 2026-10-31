@@ -33,8 +33,6 @@ class RebuildChecks(unittest.TestCase):
             folder.mkdir(parents=True)
             (folder / 'demo.bas').write_text('10 PRINT "OK"')
         (bonus / 'sixty-programs-social-preview.png').write_bytes(b'preview')
-        (bonus / 'c48lib').mkdir()
-        (bonus / 'c48lib/c48lib.h').write_bytes(b'library header')
         (self.root / 'LICENSE').write_text('project license')
         (self.root / 'THIRD-PARTY').write_text('third party')
         (self.root / 'build').mkdir()
@@ -58,6 +56,7 @@ def build(stage, sources, dest):
     (dest/'demo.ssx').write_bytes(b'code')
 ''')
         (tools / 'basicpack.py').write_text('def package(*args): return 1\n')
+        (tools / 'rb2ctpack.py').write_text('def package(*args): return 3\n')
         (tools / 'pascalpack.py').write_text('def package(*args): return 1\n')
         (tools / 'fortranpack.py').write_text('def package(*args): return 1\n')
         (tools / 'forthbuild.py').write_text('''
@@ -99,7 +98,7 @@ def pack(*args):
         self.run_builder()
         output = self.dist / 'bonus/60-programs'
         expected = {f'{number:02d}-demo' for number in range(1, 61)}
-        expected.update(('sixty-programs-social-preview.png', 'c48lib'))
+        expected.add('sixty-programs-social-preview.png')
         self.assertEqual({p.name for p in output.iterdir()}, expected)
         self.assertEqual({p.name for p in (self.dist / 'bonus').iterdir()},
                          {'60-programs'})
@@ -107,46 +106,24 @@ def pack(*args):
                          b'preview')
         self.assertTrue((source / 'PROGRAMS.zip').exists())
         self.assertTrue((source / 'TOOLS/helper.py').exists())
-        self.assertEqual((output/'c48lib/c48lib.h').read_bytes(), b'library header')
+        self.assertFalse((output/'c48lib').exists())
         self.run_builder()
         self.assertEqual({p.name for p in output.iterdir()}, expected)
 
-    def test_selected_c48_release_files_only(self):
+    def test_historical_c48_port_is_not_copied_into_bonus(self):
         source = self.src / 'bonus/60-programs/01-demo/C48'
         source.mkdir()
-        allowed = ('main.c', 'main.ssx', 'main.tzx', 'glyphs.asm')
-        for name in allowed:
-            (source / name).write_bytes(name.encode())
-        for name in ('README.TXT', 'test-main.py', 'PORT-RESULT.txt', 'other.dat'):
-            (source / name).write_text('development only')
-        (source / 'build/tmp').mkdir(parents=True)
-        (source / 'build/tmp/generate.asm').write_text('exclude')
-        (source / 'SCREENSHOTS/nested').mkdir(parents=True)
-        (source / 'SCREENSHOTS/nested/sample.png').write_bytes(b'png')
+        (source / 'main.c').write_text('old port')
         self.run_builder()
-        result = self.dist / 'bonus/60-programs/01-demo/C48'
-        self.assertEqual({p.name for p in result.iterdir()}, set(allowed) | {'SCREENSHOTS'})
-        for name in allowed:
-            self.assertEqual((result / name).read_bytes(), (source / name).read_bytes())
-        self.assertEqual((result / 'SCREENSHOTS/nested/sample.png').read_bytes(), b'png')
-        self.assertEqual((self.src / 'bonus/60-programs/01-demo/BASIC/demo.bas').read_text(),
-                         (self.dist / 'bonus/60-programs/01-demo/BASIC/demo.bas').read_text())
-        self.assertTrue((source / 'README.TXT').exists())
+        self.assertFalse((self.dist / 'bonus/60-programs/01-demo/C48').exists())
+        self.assertEqual((source / 'main.c').read_text(), 'old port')
 
-    def test_existing_c48_release_survives_staged_rebuild(self):
-        # Historic C48 bonus files and real galleries exist only in the
-        # checked-in distribution, not the independent BASIC source tree.
-        old = self.dist / 'bonus/60-programs/01-demo/C48/SCREENSHOTS/intro.png'
-        old.parent.mkdir(parents=True)
-        old.write_bytes(b'existing C48 screenshot')
+    def test_existing_c48_gallery_survives_staged_rebuild(self):
         original = self.dist / 'screenshots/c48/rvm/games/arith.png'
         original.parent.mkdir(parents=True)
         original.write_bytes(b'existing RVM screenshot')
         self.run_builder()
-        self.assertEqual((self.dist / 'bonus/60-programs/01-demo/C48/SCREENSHOTS/intro.png').read_bytes(),
-                         b'existing C48 screenshot')
-        self.assertEqual((self.dist / 'screenshots/c48/rvm/games/arith.png').read_bytes(),
-                         b'existing RVM screenshot')
+        self.assertEqual(original.read_bytes(), b'existing RVM screenshot')
 
     def test_layout_and_license(self):
         self.run_builder()
