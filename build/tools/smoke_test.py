@@ -22,7 +22,10 @@ class RebuildChecks(unittest.TestCase):
         (self.src / 'zx-ux/rom/48.rom').write_bytes(b'rom')
         (self.src / 'zx-ux/font4x8.bin').write_bytes(b'font')
         (self.src / 'zx-ux/unix.asm').write_bytes(b'kernel source')
-        (self.src / 'assets/forth-src').mkdir(parents=True)
+        for name in ('numerical-analysis', 'portable', 'ported', 'examples'):
+            folder = self.src / 'assets/forth-src' / name
+            folder.mkdir(parents=True)
+            (folder / ('demo-' + name + '.fth')).write_text('1 .')
         (self.src / 'assets/c48-src').mkdir(parents=True)
         (self.src / 'assets/c48-src/demo.c').write_text('void main(void) {}')
         (self.src / 'docs').mkdir()
@@ -109,6 +112,14 @@ def pack(*args):
         self.assertFalse((output/'c48lib').exists())
         self.run_builder()
         self.assertEqual({p.name for p in output.iterdir()}, expected)
+
+    def test_only_forth_showcase_in_dist(self):
+        self.run_builder()
+        staged = self.dist / 'assets/forth-src'
+        self.assertEqual({p.name for p in staged.iterdir()},
+                         {'numerical-analysis', 'portable', 'ported'})
+        self.assertFalse((staged / 'examples').exists())
+        self.assertTrue((self.src / 'assets/forth-src/examples/demo-examples.fth').exists())
 
     def test_historical_c48_port_is_not_copied_into_bonus(self):
         source = self.src / 'assets/basic-src/original-sinclair-basic-collections/60-programs/01-demo/C48'

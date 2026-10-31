@@ -13,6 +13,8 @@ B, S, D = R / 'build', R / 'src', R / 'dist'
 sys.path.insert(0, str(S / 'zx-ux-sdk/tools'))
 import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, forthbuild, pascalpack, fortranpack, rb2ctpack
 
+FORTH_SHOWCASE_DIRS = ('numerical-analysis', 'portable', 'ported')
+
 
 def checked_dir(root):
     """Do not stage input links or special files."""
@@ -22,6 +24,7 @@ def checked_dir(root):
         mode = path.lstat().st_mode
         if not (stat.S_ISREG(mode) or stat.S_ISDIR(mode)):
             raise RuntimeError('Unsafe build input: ' + str(path))
+
 
 
 def copy_original_programs(source, destination, no_cache):
@@ -49,6 +52,18 @@ def copy_original_programs(source, destination, no_cache):
             return ignored
         shutil.copytree(program, output / program.name, ignore=no_port)
     shutil.copy2(preview, output / preview.name)
+
+
+def copy_forth_showcase(source, destination, no_cache):
+    """Stage only the genuine Forth demonstration collections."""
+    source = pathlib.Path(source)
+    destination = pathlib.Path(destination)
+    destination.mkdir(parents=True)
+    for name in FORTH_SHOWCASE_DIRS:
+        folder = source / name
+        if folder.is_symlink() or not folder.is_dir():
+            raise RuntimeError('Missing Forth showcase directory: ' + str(folder))
+        shutil.copytree(folder, destination / name, ignore=no_cache)
 
 
 def preserve_existing_c48_release(old_dist, stage):
@@ -99,7 +114,7 @@ def main():
     preserve_existing_c48_release(D, stage)
     basicpack.package(S, stage)
     checked_dir(S / 'assets/forth-src')
-    shutil.copytree(S / 'assets/forth-src', stage / 'assets/forth-src', ignore=no_cache)
+    copy_forth_showcase(S / 'assets/forth-src', stage / 'assets/forth-src', no_cache)
     pascalpack.package(S, stage)
     shutil.copytree(S / 'zx-ux', B / 'src', ignore=no_cache)
     shutil.copytree(S / 'zx-ux-sdk', B / 'sdk', ignore=no_cache)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Small, genuine ZX-UX executable galleries for the other SDK compilers."""
 from __future__ import annotations
+
 import argparse
 import concurrent.futures
 import json
@@ -16,13 +17,27 @@ ROOT = Path(__file__).resolve().parents[2]
 DIST = ROOT / 'dist'
 sys.path[:0] = [str(DIST / 'sdk/bin/py'), str(Path(__file__).resolve().parent)]
 
-# These samples are distributed by the corresponding compiler build stages.
-# No test input, old C48 port or ROM-interpreted BASIC is presented as another compiler.
 SAMPLES = {
-    'rb2ct': [('minelay', 'MINE'), ('galaxian', 'GALAX'), ('invaders', 'INVA')],
-    'rfc': [('hello', 'FTHHELLO'), ('demo', 'FTHDEMO')],
-    'rpc': [('literal_001', 'PASLIT01'), ('course_010_control', 'PASCTRL')],
-    'rfortranc': [('hello', 'F77HELLO'), ('factorial', 'F77FACT'), ('f77s_fmt', 'F77FMT')],
+    'rb2ct': ['minelay', 'galaxian', 'invaders'],
+    'rfc': [
+        'bisect', 'brentrot', 'cholesky', 'eulerode', 'gauss1d', 'gemm8bit',
+        'jacrelx', 'lcgrand', 'lupivot', 'machar', 'minilin', 'newton',
+        'polyfit', 'rk4fixed', 'romberg', 'simpson', 'square', 'thomastr',
+        'tinyfft', 'whetston', 'calendar', 'pfbench', 'pfsieve',
+        'hufdemo', 'worms',
+    ],
+    'rpc': [
+        'recovered_course_030_fibonacci_optimized',
+        'recovered_course_040_fibonacci_large',
+        'recovered_21_fibonacci_array',
+    ],
+    'rfortranc': [
+        'f77s_burkadj', 'f77s_burkcopy', 'f77s_burkcum', 'f77s_burkdot',
+        'f77s_burkflip', 'f77s_burkgcd', 'f77s_burkl1', 'f77s_burkl2',
+        'f77s_burkmean', 'f77s_burkmin', 'f77s_burkmm', 'f77s_burkprime',
+        'f77s_burkreal', 'f77s_burkrsrt', 'f77s_burkscale', 'f77s_burksort',
+        'f77s_burkvar', 'f77s_burkvec', 'bases', 'factorial', 'f77s_machar', 'prime',
+    ],
 }
 # Per-compiler capture recipes use the same runs.json as C48.
 CAPTURE = json.loads((ROOT / 'build/tools/runs.json').read_text())
@@ -30,38 +45,50 @@ CAPTURE = json.loads((ROOT / 'build/tools/runs.json').read_text())
 SOURCES = {
     'rb2ct': 'assets/rb2ct-bin/ssx',
     'rfc': 'assets/forth-bin/ssx',
-    'rpc': 'assets/pascal-bin/positive/ssx',
-    'rfortranc': 'assets/fortran-bin/examples/ssx',
+    'rpc': 'assets/pascal-bin/showcase/ssx',
+    'rfortranc': 'assets/fortran-bin/showcase/ssx',
 }
+LABEL_PREFIX = {'rfc': 'FTH', 'rpc': 'PAS', 'rfortranc': 'F77'}
+RB2CT_LABELS = ('MINE', 'GALAX', 'INVA')
+
+
+def label_for(compiler, index):
+    if compiler == 'rb2ct':
+        return RB2CT_LABELS[index]
+    return '%s%02d' % (LABEL_PREFIX[compiler], index + 1)
 
 
 def cases(compilers=None):
     for compiler, group in SAMPLES.items():
         if compilers is not None and compiler not in compilers:
             continue
-        for name, label in group:
+        for index, name in enumerate(group):
             source = DIST / SOURCES[compiler] / (name + '.ssx')
             if not source.is_file():
                 raise FileNotFoundError('missing ' + compiler + ' executable: ' + str(source))
-            yield compiler, name, label, source
+            yield compiler, name, label_for(compiler, index), source
 
 
 def write_gallery(compiler, engine):
     output = DIST / 'screenshots' / compiler / engine
     items = SAMPLES[compiler]
-    parts = ['<!doctype html><html lang="en"><meta charset="utf-8">',
-             '<meta name="viewport" content="width=device-width, initial-scale=1">',
-             '<title>ZX-UX %s — %s</title>' % (escape(compiler), escape(engine.upper())),
-             '<style>body{font:16px system-ui,sans-serif;max-width:1100px;margin:2em auto;padding:0 1em;background:#121212;color:#eee}figure{display:inline-block;vertical-align:top;margin:0 16px 24px 0}img{width:320px;image-rendering:pixelated}a{color:#9cf}</style>',
-             '<h1>ZX-UX %s — %s</h1><p>Real ZX-UX executable captures; not proof of complete gameplay.</p>' % (escape(compiler), escape(engine.upper()))]
-    for name, _ in items:
+    parts = [
+        '<!doctype html><html lang="en"><meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        '<title>ZX-UX %s — %s</title>' % (escape(compiler), escape(engine.upper())),
+        '<style>body{font:16px system-ui,sans-serif;max-width:1100px;margin:2em auto;padding:0 1em;background:#121212;color:#eee}figure{display:inline-block;vertical-align:top;margin:0 16px 24px 0}img{width:320px;image-rendering:pixelated}a{color:#9cf}</style>',
+        '<h1>ZX-UX %s — %s</h1><p>Real ZX-UX executable captures from curated showcase programs.</p>' % (escape(compiler), escape(engine.upper())),
+    ]
+    for name in items:
         png = output / (name + '.png')
         if not png.is_file() or png.stat().st_size == 0:
             raise FileNotFoundError('missing capture: ' + str(png))
         link = quote(os.path.relpath(DIST / SOURCES[compiler] / (name + '.ssx'), output).replace(os.sep, '/'), safe='/')
         rel = quote(png.name, safe='')
-        parts.append('<figure><a href="%s"><img src="%s" alt="%s" loading="lazy"></a><figcaption>%s · <a href="%s">SSX</a></figcaption></figure>' %
-                     (rel, rel, escape(name, quote=True), escape(name), escape(link, quote=True)))
+        parts.append(
+            '<figure><a href="%s"><img src="%s" alt="%s" loading="lazy"></a><figcaption>%s · <a href="%s">SSX</a></figcaption></figure>'
+            % (rel, rel, escape(name, quote=True), escape(name), escape(link, quote=True))
+        )
     parts.append('<footer>%d real captures</footer></html>' % len(items))
     output.mkdir(parents=True, exist_ok=True)
     (output / 'index.html').write_text('\n'.join(parts) + '\n', encoding='utf-8')
@@ -69,6 +96,7 @@ def write_gallery(compiler, engine):
 
 def capture_rvm(compiler, name, label, source, frames):
     import rvm
+
     with tempfile.TemporaryDirectory(prefix='zxux-' + compiler + '-') as tmp:
         alias = Path(tmp) / (label + '.ssx')
         shutil.copyfile(source, alias)
@@ -89,12 +117,10 @@ def capture_rvm(compiler, name, label, source, frames):
                 else:
                     picture = runner.session.program_screen(runner.fg)
                     if picture is None and compiler == 'rfc':
-                        # Forth prints to the shared tty, not a private screen.
                         picture = runner.picture()
                     if picture and len(picture[0]) == 6912 and live_frames >= (1 if compiler == 'rfc' else 3):
                         score = sum(bool(b) for b in picture[0][:6144])
-                        if (compiler == 'rb2ct' and score > best or
-                                compiler != 'rb2ct' and score > 0):
+                        if (compiler == 'rb2ct' and score > best or compiler != 'rb2ct' and score > 0):
                             chosen, best = (bytes(picture[0]), picture[1]), score
             if runner.check(limit=frames):
                 break
@@ -108,18 +134,25 @@ def capture_rvm(compiler, name, label, source, frames):
 
 def capture_fuse(compiler, name, label, source, args, number):
     from fuse_portfolio import run_case
+
     local = argparse.Namespace(**vars(args))
     local.display = args.display + number + 1
     dest = DIST / 'screenshots' / compiler / 'fuse' / (name + '.png')
-    config = {'programs': {label: source},
-              'capture_delay': 1.0 if compiler == 'rb2ct' else 0.0,
-              'fuse_wait': args.wait,
-              'sample_step': .2 if compiler == 'rb2ct' else .02}
+    config = {
+        'programs': {label: source},
+        'capture_delay': 1.0 if compiler == 'rb2ct' else 0.0,
+        'fuse_wait': args.wait,
+        'sample_step': .2 if compiler == 'rb2ct' else .02,
+    }
     config.update(CAPTURE.get(compiler + ':' + name, {}))
+    if compiler == 'rfortranc':
+        # The genuine tape loader can take several seconds before FORTRAN
+        # starts. Sample beyond that, including its 100-tick output hold.
+        config.update(fuse_wait=12.0, sample_step=.08,
+                      enter_pause=.12, post_command_wait=0.0)
     if compiler in ('rfc', 'rpc', 'rfortranc'):
-        # Score genuine Fuse frames against the independently captured
-        # RVM program screen; refuse the blank shell after a fast exit.
         config['reference'] = DIST / 'screenshots' / compiler / 'rvm' / (name + '.png')
+        config.setdefault('early_capture', True)
     run_case((label,), dest, local, config)
 
 
@@ -147,17 +180,16 @@ def main(argv=None):
         value = getattr(args, attr)
         if value is not None:
             setattr(args, attr, value.resolve())
-    # Preserve the established release until short-lived console examples pass Fuse.
+    # Sparse FORTRAN output cannot yet be verified reliably in Fuse.
     selected = ((args.compiler,) if args.compiler else
-                ('rb2ct', 'rfc') if args.engine == 'fuse' else tuple(SAMPLES))
+                ('rb2ct', 'rfc', 'rpc') if args.engine == 'fuse' else tuple(SAMPLES))
     tasks = list(cases(set(selected)))
     if args.engine == 'rvm':
         for compiler, name, label, source in tasks:
             capture_rvm(compiler, name, label, source, args.frames)
     else:
         with concurrent.futures.ProcessPoolExecutor(max_workers=args.jobs) as pool:
-            futures = [pool.submit(capture_fuse, *case, args, index)
-                       for index, case in enumerate(tasks)]
+            futures = [pool.submit(capture_fuse, *case, args, index) for index, case in enumerate(tasks)]
             for future in concurrent.futures.as_completed(futures):
                 future.result()
     for compiler in selected:

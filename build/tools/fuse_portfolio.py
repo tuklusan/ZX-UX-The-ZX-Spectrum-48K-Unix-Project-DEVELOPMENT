@@ -163,17 +163,31 @@ def run_case(names, destination, args, config=None):
                 raise RuntimeError('missing independently captured RVM screen: ' + str(reference))
             picture = Image.open(reference).convert('L')
             width, height = picture.size
-            expected = picture.crop((32, 32, width - 32, height - 32)).resize((256, 192))
-            expected_pixels = [i for i, val in enumerate(expected.get_flattened_data()) if val > 80]
-            if len(expected_pixels) < 4:
-                raise RuntimeError('RVM reference has no program output')
+            if (width, height) != (576, 448):
+                raise RuntimeError('RVM reference has wrong screen dimensions')
+            # RVM renders at 2x; Fuse presents the 256x192 native screen.
+            expected = picture.crop((32, 32, 544, 416)).resize((256, 192))
+            pixels = expected.get_flattened_data()
+            lit = [i for i, value in enumerate(pixels) if value > 80]
+            if len(lit) < 8:
+                raise RuntimeError('RVM reference has no readable program output')
+            xs = [i % 256 for i in lit]
+            ys = [i // 256 for i in lit]
+            left, top = max(0, min(xs) - 3), max(0, min(ys) - 3)
+            right, bottom = min(256, max(xs) + 4), min(192, max(ys) + 4)
+            expected_region = expected.crop((left, top, right, bottom))
+            expected_ink = [value > 80 for value in expected_region.get_flattened_data()]
+            expected_count = sum(expected_ink)
 
         def match_program(image):
             if expected is None:
                 return 0.0
-            inside = image.convert('L').crop((32, 24, 288, 216))
-            data = inside.get_flattened_data()
-            return sum(data[i] > 80 for i in expected_pixels) / len(expected_pixels)
+            inside = image.convert('L').crop((32 + left, 24 + top, 32 + right, 24 + bottom))
+            current = [value > 80 for value in inside.get_flattened_data()]
+            hits = sum(a and b for a, b in zip(expected_ink, current))
+            # Pixel overlap alone accepts the shell prompt for sparse output.
+            # Precision as well as recall is required for genuine output.
+            return (2.0 * hits) / max(1, expected_count + sum(current))
 
         try:
             xvfb = subprocess.Popen(screen, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -345,7 +359,7 @@ def run_case(names, destination, args, config=None):
                         best, best_score = early_best, early_score
             if best is None:
                 raise RuntimeError('screen unchanged from ZX-UX login')
-            if expected is not None and match_program(best) < 0.25:
+            if expected is not None and match_program(best) < 0.65:
                 raise RuntimeError('no Fuse frame matching native RVM program output: ' + names[0])
             if config.get('first_fractal') and not any(
                     max(v) > 65 for v in best.crop(

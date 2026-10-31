@@ -1,53 +1,64 @@
-"""Build the shipped FORTRAN examples with the local ZX-UX SDK."""
+"""Build the curated FORTRAN showcase with the local ZX-UX SDK."""
 from __future__ import annotations
+
 import csv
 from pathlib import Path
 import shutil
 import subprocess
 import sys
-import tempfile
+
+BURKARDT = (
+    'f77s_burkadj', 'f77s_burkcopy', 'f77s_burkcum', 'f77s_burkdot',
+    'f77s_burkflip', 'f77s_burkgcd', 'f77s_burkl1', 'f77s_burkl2',
+    'f77s_burkmean', 'f77s_burkmin', 'f77s_burkmm', 'f77s_burkprime',
+    'f77s_burkreal', 'f77s_burkrsrt', 'f77s_burkscale', 'f77s_burksort',
+    'f77s_burkvar', 'f77s_burkvec',
+)
+NUMERICAL = ('bases', 'factorial', 'f77s_machar', 'prime')
+FIELDS = ('collection', 'program', 'status', 'detail')
 
 
 def package(source: Path, stage: Path, sdk: Path):
-    root = source / 'assets/fortran-src'
-    target = stage / 'assets/fortran-src'
-    shutil.copytree(root, target)
-    output = stage / 'assets/fortran-bin'
+    root = source / 'assets/fortran-src/examples'
+    srcbase = stage / 'assets/fortran-src/showcase'
+    output = stage / 'assets/fortran-bin/showcase'
     rows = []
     sys.path.insert(0, str(sdk))
     import rld
     import rtap
 
-    examples = sorted((root / 'examples').glob('*.f'))
-    units = sorted((root / 'separate').glob('*.f'))
-    negative = sorted((root / 'negative').glob('*.f'))
-    if (len(examples), len(units), [p.name for p in negative]) != (178, 6, ['f77s_data_bad.f']):
-        raise RuntimeError('FORTRAN examples changed unexpectedly')
-    groups = [('main_step', 'main.f', 'step.f'),
-              ('math_main', 'math_main.f', 'math_sub.f'),
-              ('common_main', 'common_main.f', 'common_sub.f')]
-    jobs = [('examples', p.stem, [p], p.name.startswith('f77s_'), False)
-            for p in examples]
-    for name, a, b in groups:
-        jobs.append(('separate', name, [root / 'separate' / a,
-                                         root / 'separate' / b], True, True))
-    for index, (kind, name, files, f77s, separate) in enumerate(jobs, 1):
-        folder = output / kind
-        ssx = folder / 'ssx' / (name + '.ssx')
-        tzx = folder / 'tzx' / (name + '.tzx')
-        ssx.parent.mkdir(parents=True, exist_ok=True)
-        tzx.parent.mkdir(parents=True, exist_ok=True)
-        cmd = [sys.executable, '-B', str(source / 'zx-ux-sdk/bin/rfortranc'),
-               '--sdk', str(sdk), '--std', 'f77s' if f77s else 'zxux',
-               '--native', '-o', str(ssx)]
-        if separate:
-            cmd.append('--separate')
-        cmd += list(map(str, files))
+    jobs = [('burkardt', name) for name in BURKARDT] + [('numerical', name) for name in NUMERICAL]
+    missing = [name for _, name in jobs if not (root / (name + '.f')).is_file()]
+    if missing:
+        raise RuntimeError('FORTRAN showcase source(s) missing: ' + ', '.join(missing))
+    ssxdir = output / 'ssx'
+    tzxdir = output / 'tzx'
+    ssxdir.mkdir(parents=True, exist_ok=True)
+    tzxdir.mkdir(parents=True, exist_ok=True)
+    for index, (collection, name) in enumerate(jobs, 1):
+        original = root / (name + '.f')
+        dest = srcbase / collection
+        dest.mkdir(parents=True, exist_ok=True)
+        source_file = dest / original.name
+        lines = original.read_text(encoding='ascii').splitlines(keepends=True)
+        # Keep compiler-development fixtures unchanged. The distributed
+        # showcase copy holds its result for 100 Spectrum ticks before exit.
+        end = next((i for i, line in enumerate(lines)
+                    if line.strip().upper() in ('STOP', 'END')), None)
+        if end is None:
+            raise ValueError('missing FORTRAN program end: ' + name)
+        lines.insert(end, '      CALL SLEEP(100)\n')
+        source_file.write_text(''.join(lines), encoding='ascii')
+        ssx = ssxdir / (name + '.ssx')
+        tzx = tzxdir / (name + '.tzx')
+        cmd = [
+            sys.executable, '-B', str(source / 'zx-ux-sdk/bin/rfortranc'),
+            '--sdk', str(sdk), '--std', 'f77s' if name.startswith('f77s_') else 'zxux',
+            '--native', '-o', str(ssx), str(source_file),
+        ]
         result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode and not separate:
-            # A smaller bytecode/auto-fit image may fit when native does not.
-            retry = [a for a in cmd if a != '--native']
-            result = subprocess.run(retry, capture_output=True, text=True)
+        if result.returncode:
+            result = subprocess.run([arg for arg in cmd if arg != '--native'], capture_output=True, text=True)
         status = 'FAIL'
         detail = (result.stderr or result.stdout).strip().splitlines()[-1:] or ['compile failed']
         if result.returncode == 0:
@@ -56,14 +67,13 @@ def package(source: Path, stage: Path, sdk: Path):
                 rld.parse_ssx(data)
                 if rtap.need(data) > 14000:
                     raise ValueError('exceeds 14000-byte ZX-UX memory ceiling')
-                # Unique short cassette names, independent of long source names.
                 label = 'F%04d' % index
                 header, payload = rtap.records(data, label)
-                rtap.write(str(tzx), b'ZXTape!\x1a\x01\x14',
-                           [(1000, header), (2000, payload)])
+                rtap.write(str(tzx), b'ZXTape!\x1a\x01\x14', [(1000, header), (2000, payload)])
                 _, blocks = rtap.tzx_blocks(tzx.read_bytes())
-                if len(blocks) != 2 or [b for _, b in blocks] != [header, payload] or \
-                        not all(rtap._parity_ok(b) for _, b in blocks):
+                if (len(blocks) != 2 or
+                        [b for _, b in blocks] != [header, payload] or
+                        not all(rtap._parity_ok(b) for _, b in blocks)):
                     raise ValueError('invalid TZX cassette')
                 status, detail = 'PASS', ['SSX/TZX validated']
             except (OSError, ValueError, rld.LinkError, SystemExit) as error:
@@ -71,28 +81,14 @@ def package(source: Path, stage: Path, sdk: Path):
         if status != 'PASS':
             ssx.unlink(missing_ok=True)
             tzx.unlink(missing_ok=True)
-        rows.append((kind, name, status, detail[-1].replace('\t', ' ')))
-    with tempfile.TemporaryDirectory(prefix='fortran-negative-') as tmp:
-        result = subprocess.run([sys.executable, '-B',
-            str(source / 'zx-ux-sdk/bin/rfortranc'), '--std', 'f77s',
-            '--emit-c', '-o', str(Path(tmp) / 'bad.c'), str(negative[0])],
-            capture_output=True, text=True)
-        rejected = result.returncode != 0 and 'rfortranc:' in result.stderr
-        rows.append(('negative', negative[0].stem,
-                     'REJECTED' if rejected else 'FAIL',
-                     (result.stderr or result.stdout).strip().splitlines()[-1]
-                     if (result.stderr or result.stdout).strip() else 'expected compiler rejection'))
+        rows.append((collection, name, status, detail[-1].replace('\t', ' ')))
     output.mkdir(parents=True, exist_ok=True)
     with (output / 'results.tsv').open('w', newline='', encoding='utf-8') as stream:
         writer = csv.writer(stream, delimiter='\t')
-        writer.writerow(('kind', 'program', 'status', 'detail'))
+        writer.writerow(FIELDS)
         writer.writerows(rows)
-    if not rejected:
-        raise RuntimeError('FORTRAN negative input was not rejected as expected')
-    if not all(any(kind == 'examples' and name == required and status == 'PASS'
-                   for kind, name, status, _ in rows)
-               for required in ('hello', 'factorial', 'f77s_fmt')):
-        raise RuntimeError('FORTRAN baseline programs failed; see results.tsv in staging')
-    print('FORTRAN:', sum(r[2] == 'PASS' for r in rows), '/', len(rows) - 1,
-          'builds; 1 negative input rejected')
+    failures = [f'{collection}/{name}: {detail}' for collection, name, status, detail in rows if status != 'PASS']
+    if failures:
+        raise RuntimeError('FORTRAN showcase failed: ' + '; '.join(failures))
+    print('FORTRAN showcase:', len(rows), 'programs')
     return len(rows)
