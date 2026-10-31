@@ -45,13 +45,13 @@ The last successful remote readback is the only completed checkpoint. Before a n
 
 The private checker is enabled by owner request on 2026-10-30. Run its self-test when starting a new session. Before **every** GitHub write, check the complete proposed text, paths, full commit message, and exact push command with the private four-attempt workflow. Keep private checker files outside Git. If the checker rejects a change, stop that write after the allowed checks; do not weaken rules or publish the blocked content. Keep the writing rules in force for all new English prose. Run the other tests that apply to the game. Do not claim a passing run without running it.
 
-**Latest completed program:** Spectrum Show — Amaze, `41-amaze--Amaze`. We kept its original Z80 snapshot and archive tape versions. The tokenized TZX yielded 49 ordered BASIC lines in a local ROM-style decode, but the private text check rejected publication of the listing. We kept the original media unchanged. Fuse 48K replay pressed 5 and 8 after starting the maze, with three live captures. No complete game was confirmed.
+**Latest completed check:** Spectrum Show — Outlander, `14-outlander--Outlander`. We checked 149 physical BASIC tape records, including four opening records numbered 0; the remaining 145 increase in order. Each record formats independently, but repeated line zero still causes a strict TZX listing rejection. We preserved the original tape and snapshot. We reran Fuse 48K with A, P, S and O, obtaining two distinct live views; no complete round or exact movement was proved. The private checker passed the updated notes.
 
-**Previous verified main parent:** `817e3feb8356dba0d727440a89693719d1bef977` (tree `5f8f6aac83d50cc7bbc0095cd9a8a01f3d1c7ba5`). **Next work:** check Outlander’s unusual original tape line records, then close the collection. Do not count local-only work.
+**Previous verified main parent:** `07bd43a78783a877eceb440fef35e9212e7621e8` (tree `d173ba59ebf36cbe1c433a1baf006352127346c6`). **Next work:** none in the three preliminary source sets. Keep the two unusual listing results visible.
 
 ## Progress at pause — committed program directories
 
-**117 / 117 source folders committed after Amaze; 0 uncommitted source folders.** Outlander still needs its BASIC record audit. A folder is not proof of a complete game.
+**117 / 117 source folders committed; 0 uncommitted source folders.** Outlander’s unusual BASIC records have now been checked. Amaze has 49 locally verified lines but no separately published text listing. Neither result proves a complete game.
 
 | Collection | Done | Remaining | Total |
 |---|---:|---:|---:|
@@ -66,12 +66,12 @@ The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive coun
 
 The latest checked `main` before this guide update is:
 
-`817e3feb8356dba0d727440a89693719d1bef977` — main before the Amaze update. Read live HEAD before starting Outlander.
+`07bd43a78783a877eceb440fef35e9212e7621e8` — Amaze committed and read back. This is the parent for the Outlander notes update.
 
 Previously completed on remote:
 
 - **F77S: 20 of 20 programs.** Original TZX, independently decoded LLIST `.bas`, notes and Fuse captures/replays are committed. Some are numerical demonstrations rather than games; do not relabel execution as human gameplay. No native SSX.
-- **Spectrum Show: 73 program folders after Amaze.** All preliminary source identities have folders. Amaze has verified Fuse play but no published separate listing because the private text check rejected it. Outlander has a prior strict listing rejection; preserve the repeated line-zero records as found.
+- **Spectrum Show: 73 of 73 preliminary source folders committed.** Amaze has verified Fuse play but no separately published listing because the private text check rejected the unmodified lines. Outlander has 149 individually decoded physical records, but four opening line-zero records prevent a normal strict listing. Both original tapes remain intact.
 - **Granada: 24 of 24 source folders on main.** Spectrum Scrabble and Treasure Island were added with actual Fuse input after this guide’s earlier pause. Guideline and SpectrumGuideline remain two versions in one source folder.
 
 **No uncommitted local work should be assumed to survive.** The old container had temporary probes, transfer JSON files and images; those are not proof of remote publication and may be gone. Look at live GitHub first. Re-run unfinished work from the original archive, not an unverified old screenshot.
@@ -91,9 +91,9 @@ Previously completed on remote:
 
 ## Where to resume concretely
 
-**First:** check live `main`. **Next:** examine Outlander’s duplicate line-zero records and record the listing limits without changing source bytes. Its real Fuse captures already exist.
+**No further source folders remain in the three preliminary collections.** Outlander’s 149 physical line records have been checked and its Fuse run repeated. The strict listing limit and Amaze text-check rejection are recorded, not hidden.
 
-All 73 preliminary Spectrum Show source identities now have folders. Verify Outlander’s tape record structure before marking the collection audit finished. Preserve all prior `60-programs` and other source bytes.
+All 73 preliminary Spectrum Show source identities have folders. Preserve all original source bytes, and make no claim of full game completion or standalone BASIC listings for the two noted exceptions.
 
 ## Required remote readback / final state
 
