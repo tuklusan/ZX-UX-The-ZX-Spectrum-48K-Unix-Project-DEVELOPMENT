@@ -1,0 +1,3 @@
+There are no gameplay keys in the 24-line original BASIC. RUN begins the automatic holly drawing. We did not find a player input prompt.
+
+Fuse 48K at 400%: autoload the original TZX; wait 6 seconds for tape loading; press R then Return in the BASIC command area (0.04-second holds, 0.18-second waits); wait 1 second for the early drawing and another 9 seconds for a later drawing. The replay captures both stages. No movement is expected from keys because this is a graphics demonstration.
