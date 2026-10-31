@@ -1,0 +1,6 @@
+First-program menu, from BASIC lines 150-162:
+S lists the graphic characters on screen. P sends them to a printer (not tested). N loads the next BASIC program from the original tape. ENTER continues after the on-screen list.
+
+At Fuse 48K speed 250%, auto-load DungeonFinal.tzx and wait 3 seconds for the menu. Press S and ENTER, holding each for 0.10 seconds with 0.25 seconds after release. Wait 2 seconds, then capture the graphics list. Press ENTER, wait 1.2 seconds, and capture the menu again. Press N and ENTER, wait 7.2 seconds, and capture the second BASIC program loading and starting.
+
+These actions prove the original first-part menu and tape handoff, not active dungeon play. Player movement belongs to the separate second program.
