@@ -1,0 +1,17 @@
+COMPUTER SPACEGAMES
+===================
+From the book by Usborne Computer Programs 1982.
+
+The files from this book were available on WOS & Spectrum Computing however, they were not accurate and in some cases completely broken.
+It seems the original person who typed them in made some changes so the versions as of January 2021 on various website are not right.
+
+I have corrected:
+
+1. Text to uppercase to match the book.
+2. Fixed approx 10 bugs in various programs (Monster of Galacticon, Death Valley, Beat The Bug eyes etc)
+3. Added two colour versions to match the games shown on the front cover of the book.
+4. Changed the layout of some text to fit the screen.
+
+The new versions are now on one TAP file along with this text file.
+
+Paul Jenkinson - Jan 2021

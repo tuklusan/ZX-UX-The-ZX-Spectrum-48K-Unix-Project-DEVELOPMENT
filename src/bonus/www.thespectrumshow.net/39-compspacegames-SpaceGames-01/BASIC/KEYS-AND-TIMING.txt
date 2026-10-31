@@ -1,0 +1,3 @@
+This is a numeric-input game. BASIC line 90 reads the requested force. Press Return after each number. Lines 100 and 110 report too high and too low, and line 120 accepts the correct number.
+
+The replay loads the supplied single-program TZX tape using Fuse 48K at 400% speed. After a 5-second startup and any visible ROM notice, it presses R and Return briefly to run the loaded BASIC. It waits 2 seconds for the force prompt, enters 10 and Return, waits 0.7 seconds, then enters 20 and Return and waits another 0.7 seconds. A 0.18-second gap follows each key. The screen after each input was different. The force needed to win is random; no winning outcome is claimed.
