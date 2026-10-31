@@ -1,2 +1,14 @@
-From actual BASIC: Z=left, X=right, C=down, F=up. START with S on instructions.
-Fuse 500%: wait 4s in all, press S 0.4s; wait 0.08s; capture maze; press Z 0.1s; wait 0.1s; capture active game; press X 0.1s; wait 0.1s; capture result. Outcome may be the high-score page after collision; do not confuse it with live gameplay.
+RED CARPET — controls printed in the original game
+
+SPACE dismisses the initial stop-the-tape prompt.
+S starts from the Red Carpet instructions screen.
+Z = LEFT. X = RIGHT. C = DOWN. F = UP.
+
+The replay waits 2.5 seconds for Fuse startup. It presses SPACE for
+0.2 seconds, waits 0.7 seconds for the controls, then presses S for
+0.6 seconds. It waits 0.7 seconds for the maze. It presses F for
+0.18 seconds, then Z for 0.18 seconds. Screen captures before and after
+both moves show the white player travelling up and left.
+The game runs automatically between keys. Reversing into a new carpet
+trail can end play. The replay checks the player's actual position,
+not just moving text or the changing score.
