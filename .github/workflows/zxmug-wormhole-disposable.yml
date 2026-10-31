@@ -1,0 +1,162 @@
+name: Disposable ZX-MUG RBC + ZX-UX test
+on:
+  workflow_dispatch:
+    inputs:
+      wormhole_url:
+        description: "Full wormhole.app link including the fragment after #"
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 210
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download encrypted collection
+        shell: bash
+        env:
+          WH_LINK: ${{ inputs.wormhole_url }}
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$WH_LINK"
+          mkdir -p build/tmp/received build/tmp/results
+          npm install -g --ignore-scripts @ziuchen/wormhole-client@0.0.0-b081b13
+          wormhole download "$WH_LINK" --output build/tmp/received
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          files=list(Path('build/tmp/received').rglob('*.zip'))
+          if len(files)!=1: raise SystemExit('Expected exactly one downloaded ZIP')
+          with ZipFile(files[0]) as z:
+              n=sum(x.lower().endswith('.bas') for x in z.namelist())
+              print('BASIC listings:',n)
+              if n<100: raise SystemExit('Archive contents do not match ZX-MUG')
+          PY
+      - name: Compile all unique BASIC sources and test the resulting SSX files
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > build/tmp/run-tests.py <<'PY'
+          import csv,hashlib,os,re,subprocess,time,zipfile
+          from pathlib import Path
+          from concurrent.futures import ThreadPoolExecutor,as_completed
+          root=Path.cwd()
+          work=root/'build/tmp'
+          result=work/'results'
+          basdir=work/'bas'
+          bindir=work/'ssx'
+          for p in (result,basdir,bindir,result/'screens',result/'screen-text'):p.mkdir(parents=True,exist_ok=True)
+          sdk=root/'src/zx-ux-sdk'
+          packaged=root/'dist/sdk/bin/py'
+          boot=root/'dist/zx-ux/tzx/ZX-UX.tzx'
+          cenv={**os.environ,'PYTHONPATH':str(sdk)}
+          renv={**os.environ,'PYTHONPATH':str(packaged)}
+          archive=list((work/'received').rglob('*.zip'))[0]
+          unique={}
+          paths=[]
+          notes={}
+          with zipfile.ZipFile(archive) as z:
+              for item in z.infolist():
+                  path=item.filename
+                  if '/.git/' in path:continue
+                  if path.endswith('KEYS-AND-TIMING.TXT'):
+                      notes[path]=z.read(path).decode('utf8','replace')
+                  if not path.lower().endswith('.bas'):continue
+                  data=z.read(item)
+                  sid=hashlib.sha256(data).hexdigest()
+                  paths.append((path,sid,len(data)))
+                  if sid not in unique:
+                      unique[sid]=path
+                      (basdir/(sid+'.bas')).write_bytes(data)
+          def save(file,cols,rows):
+              with (result/file).open('w',newline='',encoding='utf8') as f:
+                  w=csv.DictWriter(f,fieldnames=cols,extrasaction='ignore')
+                  w.writeheader();w.writerows(rows)
+          save('paths.csv',['path','id','bytes'],[dict(path=p,id=s,bytes=n) for p,s,n in paths])
+          def compile_one(item):
+              sid,path=item
+              out=bindir/(sid+'.ssx')
+              t=time.monotonic()
+              try:
+                  r=subprocess.run(['python3','-m','rbc',str(basdir/(sid+'.bas')),'-o',str(out)],
+                    cwd=sdk,env=cenv,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                    text=True,errors='replace',timeout=50)
+                  return dict(id=sid,path=path,result='compiled' if r.returncode==0 and out.exists() else 'failed',
+                    code=r.returncode,bytes=out.stat().st_size if out.exists() else 0,
+                    seconds=round(time.monotonic()-t,2),message=(r.stdout+r.stderr)[-900:])
+              except subprocess.TimeoutExpired:
+                  return dict(id=sid,path=path,result='timeout',code=-1,bytes=0,
+                    seconds=round(time.monotonic()-t,2),message='50s compiler timeout')
+              except Exception as e:
+                  return dict(id=sid,path=path,result='error',code=-2,bytes=0,
+                    seconds=round(time.monotonic()-t,2),message=repr(e))
+          compiled=[]
+          with ThreadPoolExecutor(max_workers=4) as pool:
+              futures=[pool.submit(compile_one,x) for x in unique.items()]
+              for i,f in enumerate(as_completed(futures),1):
+                  compiled.append(f.result())
+                  if i%25==0:print(f'Compiled attempts: {i}/{len(futures)}',flush=True)
+          compiled.sort(key=lambda x:x['path'])
+          save('compile.csv',['id','path','result','code','bytes','seconds','message'],compiled)
+          def input_from_note(path):
+              if '/final-basic/' not in path:return ('',None)
+              prefix=path.split('/final-basic/')[0]+'/final-basic/DEMOS/'
+              matching=sorted(n for n in notes if n.startswith(prefix))
+              if not matching:return ('',None)
+              line=next((l for l in notes[matching[0]].splitlines() if 'Application path:' in l),'')
+              match=re.search(r'\btype\s+([A-Za-z0-9]{1,12})\b.*\bpress\s+ENTER\b',line,re.I)
+              return (matching[0],match.group(1).lower()+'\n' if match else None)
+          executions=[]
+          def run(row,mode,keys,notefile):
+              sid=row['id']
+              name=sid[:12]+'-'+mode
+              png=result/'screens'/(name+'.png')
+              cmd=['python3','-m','rvm','--headless','--mute','--frames','600',
+                   '--text','--system',str(boot),'--png',str(png)]
+              if keys is not None:cmd.extend(['--keys',keys])
+              cmd.append(str(bindir/(sid+'.ssx')))
+              t=time.monotonic()
+              try:
+                  r=subprocess.run(cmd,cwd=root,env=renv,stdout=subprocess.PIPE,
+                      stderr=subprocess.PIPE,text=True,errors='replace',timeout=100)
+                  output=(r.stdout+'\n'+r.stderr)
+                  (result/'screen-text'/(name+'.txt')).write_text(output[-12000:],encoding='utf8')
+                  return dict(id=sid,path=row['path'],mode=mode,note=notefile,keys=repr(keys) if keys else '',
+                    code=r.returncode,seconds=round(time.monotonic()-t,2),screenshot=png.name if png.exists() else '',
+                    message=output[-500:])
+              except subprocess.TimeoutExpired:
+                  return dict(id=sid,path=row['path'],mode=mode,note=notefile,keys=repr(keys) if keys else '',
+                    code=-1,seconds=round(time.monotonic()-t,2),screenshot=png.name if png.exists() else '',
+                    message='100s runtime timeout')
+              except Exception as e:
+                  return dict(id=sid,path=row['path'],mode=mode,note=notefile,keys=repr(keys) if keys else '',
+                    code=-2,seconds=round(time.monotonic()-t,2),screenshot='',message=repr(e))
+          passed=[r for r in compiled if r['result']=='compiled']
+          for i,row in enumerate(passed,1):
+              executions.append(run(row,'startup',None,''))
+              note,keys=input_from_note(row['path'])
+              if keys: executions.append(run(row,'note-trial',keys,note))
+              if i%10==0:print(f'Executed native programs: {i}/{len(passed)}',flush=True)
+          save('run.csv',['id','path','mode','note','keys','code','seconds','screenshot','message'],executions)
+          (result/'summary.txt').write_text(f'BASIC listings: {len(paths)}\nUnique: {len(unique)}\n'
+            f'RBC compiled: {len(passed)}\nZX-UX executions: {len(executions)}\n'
+            f'Source notes: {len(notes)}\n'
+            'Note trials replay only literal typed commands; startup and exit data alone do not prove correct game play.\n')
+          print((result/'summary.txt').read_text(),flush=True)
+          PY
+          python3 -u build/tmp/run-tests.py
+      - name: Upload results for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zxmug-rbc-zxux-results
+          path: build/tmp/results/
+          if-no-files-found: warn
+          retention-days: 1
