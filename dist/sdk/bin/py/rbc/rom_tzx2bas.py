@@ -569,7 +569,7 @@ def main(argv=None):
                                   program_index=args.program_index)
                 if args.verify_collection:
                     original = game / 'BASIC' / (game.name + '.bas')
-                    expected = original.read_bytes()
+                    expected = original.read_bytes().replace(b'\r\n', b'\n')
                     recovered = content.encode('ascii')
                     if recovered != expected:
                         first = next((i for i in range(min(len(recovered), len(expected)))
