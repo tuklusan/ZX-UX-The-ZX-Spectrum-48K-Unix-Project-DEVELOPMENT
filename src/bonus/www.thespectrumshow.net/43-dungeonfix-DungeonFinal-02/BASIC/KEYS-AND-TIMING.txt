@@ -1,0 +1,3 @@
+Fuse 48K, 400% speed: load DUNGEON.tzx with auto-load. After 6 seconds, the graphics loader is at its output question. Press N then ENTER to load the next BASIC program. Wait 17 seconds for statistics; tap C, then BACKSPACE to clear the echoed letter from the armour input field. Select 1 and ENTER for armour; select 1 and ENTER for weapon. Wait 2 seconds until Command? appears on the map.
+
+The observed game run pressed E, S, and W in turn (0.10 second holds, 0.65 second between keys). Original Dungeons.txt gives N/S/E/W as movement. A different random encounter may interrupt the sequence. The observed sinkhole placed the player on level two. ENTER at the starting entrance can end the game, as the original instructions warn. No full quest completion was attempted.
