@@ -1,0 +1,20 @@
+name: Disposable ZX-MUG RBC smoke
+on:
+  push:
+    paths:
+      - .github/workflows/zxmug-rbc-disposable.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: RBC smoke
+        run: |
+          set -eu
+          python3 --version
+          PYTHONPATH=src/zx-ux-sdk python3 -m rbc --help | head -20
+          test -f dist/zx-ux/tzx/ZX-UX.tzx
