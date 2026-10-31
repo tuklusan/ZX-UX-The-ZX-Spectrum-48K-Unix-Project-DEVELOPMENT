@@ -1,0 +1,5 @@
+MOONLANDER: enter a number from 0 to 30 at the BURN? prompt and press Enter. BASIC lines 100-160 read the entry and update the flight. Negative values become 0; values above 30 become 30.
+
+Fuse 48K replay: load the TZX for about 5 seconds. Press Enter, wait 0.8 seconds, then press R and Enter if the program has not started. After 1.4 seconds save the first prompt. Enter 0 and press Enter, wait 0.4 seconds, then enter 30 and press Enter, and wait another 0.4 seconds. REPLAY.sh records the first prompt and the two updated game screens.
+
+The captured flight screens show only these two choices. They do not show a completed landing.
