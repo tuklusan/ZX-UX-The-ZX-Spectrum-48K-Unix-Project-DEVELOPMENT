@@ -1,0 +1,3 @@
+This is Computer Choice sound routine 7. There are no player controls. Fuse loads the supplied TZX in Spectrum 48K mode. Return exits the tape load screen, then R and Return start RUN.
+
+At 400% speed, wait 4 seconds for the load, press Return for 0.04 seconds and wait 0.7 seconds. Press R and Return for 0.04 seconds each, with a 0.2-second release. Capture after 0.6 seconds and again 6 seconds later. There is no meaningful player movement to test.
