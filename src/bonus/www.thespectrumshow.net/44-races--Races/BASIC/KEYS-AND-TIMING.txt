@@ -1,0 +1,3 @@
+BASIC line 2: any key starts. Lines 7110-7120: Y places a bet, N skips betting. Lines 7140-7160: 1, 2 or 3 selects a horse. Line 7210: enter a numeric stake and press ENTER.
+
+Fuse 48K original snapshot at 300% speed: wait 2 seconds; ENTER; wait 1.3 seconds; Y; wait 1.3 seconds; 1; wait 1.3 seconds; type 2 then ENTER; wait 1.3 seconds. Capture the choices, stake request and animated race. These timings are for the replay, not guaranteed game timing on original hardware.
