@@ -123,8 +123,8 @@ def pack(*args):
         self.run_builder()
         staged = self.dist / 'assets/forth-src'
         self.assertEqual({p.name for p in staged.iterdir()},
-                         {'numerical-analysis', 'portable', 'ported'})
-        self.assertFalse((staged / 'examples').exists())
+                         {'examples', 'numerical-analysis', 'portable', 'ported'})
+        self.assertTrue((staged / 'examples/demo-examples.fth').exists())
         self.assertTrue((self.src / 'assets/forth-src/examples/demo-examples.fth').exists())
         self.assertFalse((staged / 'numerical-analysis/original').exists())
         self.assertTrue((self.src / 'assets/forth-src/numerical-analysis/original/F83_Z80_SUITE.zip').is_file())

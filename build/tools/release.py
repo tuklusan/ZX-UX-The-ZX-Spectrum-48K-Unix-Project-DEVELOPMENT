@@ -30,22 +30,42 @@ def main():
     p.add_argument('--fuse', default=shutil.which('fuse-sdl'))
     p.add_argument('--fuse-assets', default='/usr/share/fuse')
     p.add_argument('--fuse-libdir', default='')
+    p.add_argument('--only', choices=['rpc', 'rfc', 'rpc,rfc', 'rfc,rpc'],
+                   help='rebuild and recapture only the selected Pascal/Forth demos')
     p.add_argument('--build-only', action='store_true',
                    help='build the distribution without running emulators')
     p.add_argument('--skip-fuse', action='store_true',
                    help='build and capture RVM screenshots without Fuse')
     args = p.parse_args()
-    if not args.sjasm:
+    if not args.only and not args.sjasm:
         p.error('SJASMPlus executable required (PATH or --sjasm)')
-    sjasm = shutil.which(args.sjasm)
-    if not sjasm or not Path(sjasm).is_file():
-        p.error('SJASMPlus executable not found: ' + args.sjasm)
+    sjasm = shutil.which(args.sjasm) if args.sjasm else None
+    if not args.only and (not sjasm or not Path(sjasm).is_file()):
+        p.error('SJASMPlus executable not found: ' + str(args.sjasm))
     if not args.build_only and not args.skip_fuse:
         if not args.fuse or not shutil.which(args.fuse):
             p.error('Fuse SDL required (PATH or --fuse)')
         if not (Path(args.fuse_assets) / 'fuse.font').is_file():
             p.error('Fuse support files required (use --fuse-assets)')
     py = sys.executable
+    if args.only:
+        chosen = args.only.split(',')
+        run(py, '-B', ROOT / 'build/build.py', '--only', args.only)
+        if args.build_only:
+            return 0
+        for compiler in chosen:
+            run(py, '-B', TOOLS / 'compiler_portfolio.py', '--engine', 'rvm',
+                '--compiler', compiler)
+        if not args.skip_fuse:
+            for compiler in chosen:
+                command = [py, '-B', TOOLS / 'compiler_portfolio.py',
+                           '--engine', 'fuse', '--compiler', compiler,
+                           '--fuse', args.fuse, '--assets', args.fuse_assets]
+                if args.fuse_libdir:
+                    command += ['--libdir', args.fuse_libdir]
+                run(*command)
+        run(py, '-B', TOOLS / 'gallery_index.py')
+        return 0
     run(py, '-B', ROOT / 'build/build.py', Path(sjasm).resolve())
     if args.build_only:
         print('ZX-UX distribution rebuilt.')

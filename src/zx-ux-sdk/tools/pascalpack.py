@@ -33,8 +33,8 @@ def package(source: Path, stage: Path):
     missing = [str(p) for p in cases if not p.is_file()]
     if missing:
         raise ValueError('Missing Pascal showcase source(s): ' + '; '.join(missing))
-    srcbase = stage / 'assets/pascal-src/showcase'
-    outbase = stage / 'assets/pascal-bin/showcase'
+    srcbase = stage / 'assets/pascal-src/samples'
+    outbase = stage / 'assets/pascal-bin/samples'
     ssxdir, tzxdir = outbase / 'ssx', outbase / 'tzx'
     ssxdir.mkdir(parents=True)
     tzxdir.mkdir(parents=True)

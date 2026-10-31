@@ -4,6 +4,7 @@ import pathlib
 import re
 import shutil
 import stat
+import tempfile
 import subprocess
 import sys
 
@@ -13,7 +14,7 @@ B, S, D = R / 'build', R / 'src', R / 'dist'
 sys.path.insert(0, str(S / 'zx-ux-sdk/tools'))
 import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, forthbuild, pascalpack, fortranpack, rb2ctpack
 
-FORTH_SHOWCASE_DIRS = ('numerical-analysis', 'portable', 'ported')
+FORTH_SHOWCASE_DIRS = ('examples', 'numerical-analysis', 'portable', 'ported')
 
 
 def checked_dir(root):
@@ -92,16 +93,49 @@ def preserve_existing_c48_release(old_dist, stage):
 
 
 
+
+def build_selected(compilers):
+    """Rebuild only Pascal/Forth release assets; leave other releases alone."""
+    if not compilers or set(compilers) - {'rpc', 'rfc'}:
+        raise ValueError('Only rpc and rfc are supported for selective builds')
+    no_cache = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
+    with tempfile.TemporaryDirectory(prefix='zxux-selected-', dir=B) as temporary:
+        stage = pathlib.Path(temporary) / 'stage'
+        updates = []
+        if 'rpc' in compilers:
+            pascalpack.package(S, stage)
+            updates.extend(('assets/pascal-src/samples', 'assets/pascal-bin/samples'))
+        if 'rfc' in compilers:
+            checked_dir(S / 'assets/forth-src')
+            copy_forth_showcase(S / 'assets/forth-src', stage / 'assets/forth-src', no_cache)
+            forthbuild.build(S / 'zx-ux-sdk', stage / 'assets/forth-src',
+                             stage / 'assets/forth-bin')
+            updates.extend(('assets/forth-src', 'assets/forth-bin'))
+        for rel in updates:
+            dest = D / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.move(str(stage / rel), str(dest))
+        if 'rpc' in compilers:
+            for rel in ('assets/pascal-src/showcase', 'assets/pascal-bin/showcase'):
+                stale = D / rel
+                if stale.exists():
+                    shutil.rmtree(stale)
+
+
 def main():
     argv = sys.argv[1:]
+    if argv[:1] == ['--only'] and len(argv) == 2:
+        return build_selected(argv[1].split(','))
     argv = argv[1:] if argv[:1] == ['--sjasm'] else argv
     sjasm = (str(pathlib.Path(argv[0]).resolve()) if len(argv) == 1
              else shutil.which('sjasmplus') or 'sjasmplus')
     # Both source collections are independent of disposable dist/.
-    corpus = S / 'assets/c48-src'
+    c_sources = S / 'assets/c48-src'
     originals = S / 'assets/basic-src/original-sinclair-basic-collections'
     docs = S / 'docs'
-    for source in (corpus, originals, docs):
+    for source in (c_sources, originals, docs):
         checked_dir(source)
     if D.exists() or D.is_symlink():
         checked_dir(D)
@@ -114,7 +148,7 @@ def main():
     stage = B / 'dist-new'
     # Python cache files are never source inputs or release deliverables.
     no_cache = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
-    shutil.copytree(corpus, stage / 'assets/c48-src', ignore=no_cache)
+    shutil.copytree(c_sources, stage / 'assets/c48-src', ignore=no_cache)
     copy_original_programs(originals, stage / 'bonus', no_cache)
     preserve_existing_c48_release(D, stage)
     basicpack.package(S, stage)

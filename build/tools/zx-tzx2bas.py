@@ -487,9 +487,10 @@ def listing(tape: bytes, *, program_index: int | None = None) -> str:
 def _protected_listing_destination(path: Path) -> bool:
     """Never generate into any preserved 60-game BASIC directory."""
     parts = path.resolve().parts
-    for i in range(len(parts) - 3):
-        if (parts[i:i + 2] == ('bonus', '60-programs')
-                and parts[i + 2][:2].isdigit() and parts[i + 3] == 'BASIC'):
+    for i in range(len(parts) - 6):
+        if (parts[i:i + 5] == ('src', 'assets', 'basic-src',
+                               'original-sinclair-basic-collections', '60-programs')
+                and parts[i + 5][:2].isdigit() and parts[i + 6] == 'BASIC'):
             return True
     return False
 

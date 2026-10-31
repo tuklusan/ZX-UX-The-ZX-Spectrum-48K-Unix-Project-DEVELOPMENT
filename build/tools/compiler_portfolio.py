@@ -19,13 +19,7 @@ sys.path[:0] = [str(DIST / 'sdk/bin/py'), str(Path(__file__).resolve().parent)]
 
 SAMPLES = {
     'rb2ct': ['minelay', 'galaxian', 'invaders'],
-    'rfc': [
-        'bisect', 'brentrot', 'cholesky', 'eulerode', 'gauss1d', 'gemm8bit',
-        'jacrelx', 'lcgrand', 'lupivot', 'machar', 'minilin', 'newton',
-        'polyfit', 'rk4fixed', 'romberg', 'simpson', 'square', 'thomastr',
-        'tinyfft', 'whetston', 'calendar', 'pfbench', 'pfsieve',
-        'hufdemo', 'worms',
-    ],
+    'rfc': [p.stem for p in sorted((DIST / 'assets/forth-bin/ssx').glob('*.ssx'))],
     'rpc': [
         'recovered_course_030_fibonacci_optimized',
         'recovered_course_040_fibonacci_large',
@@ -56,7 +50,7 @@ CAPTURE = json.loads((ROOT / 'build/tools/runs.json').read_text())
 SOURCES = {
     'rb2ct': 'assets/rb2ct-bin/ssx',
     'rfc': 'assets/forth-bin/ssx',
-    'rpc': 'assets/pascal-bin/showcase/ssx',
+    'rpc': 'assets/pascal-bin/samples/ssx',
     'rfortranc': 'assets/fortran-bin/samples/ssx',
 }
 LABEL_PREFIX = {'rfc': 'FTH', 'rpc': 'PAS', 'rfortranc': 'F77'}
@@ -193,10 +187,15 @@ def main(argv=None):
         if value is not None:
             setattr(args, attr, value.resolve())
     selected = ((args.compiler,) if args.compiler else tuple(SAMPLES))
+    if any(not SAMPLES[name] for name in selected):
+        raise RuntimeError('No compiled programs found for selected compiler')
     tasks = list(cases(set(selected)))
     if args.engine == 'rvm':
-        for compiler, name, label, source in tasks:
-            capture_rvm(compiler, name, label, source, args.frames)
+        with concurrent.futures.ProcessPoolExecutor(max_workers=args.jobs) as pool:
+            futures = [pool.submit(capture_rvm, compiler, name, label, source, args.frames)
+                       for compiler, name, label, source in tasks]
+            for future in concurrent.futures.as_completed(futures):
+                future.result()
     else:
         with concurrent.futures.ProcessPoolExecutor(max_workers=args.jobs) as pool:
             futures = [pool.submit(capture_fuse, *case, args, index) for index, case in enumerate(tasks)]
