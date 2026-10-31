@@ -1,0 +1,109 @@
+   1 REM CHICKENS {7F} Ron Ridge
+   2 INK 5: PAPER 0: BORDER 5: CLS : REM CHICKENS (c) Ron Ridge
+   3 GO SUB 750
+   4 GO TO 710
+  20 INPUT PAPER 0; INK 7;" ENTER DIFFICULTY 10 - 20:";f
+  30 INPUT PAPER 0; INK 7;" ENTER LEVEL 6-15 (6 is easy):";l
+  40 LET a$="{90}{91}": LET c$="{92}{93}": LET k$="{97}": LET m$="{98}"
+  50 LET sc=0: LET c=0: LET t=100: LET x=10: LET y=1
+  60 REM ***position 5 eggs***
+  70 FOR e=5 TO 30 STEP 6
+  80 PRINT AT 2,e; INK 2;a$;AT 3,e; INK 5;c$
+  90 NEXT e
+ 100 REM house and rabbits
+ 105 FOR r=1 TO l
+ 110 LET rx=INT (RND*14)+5: LET ry=INT (RND*27)+4
+ 120 PRINT AT 19,16; INK 4;"{99}{9A}";AT 20,16;"__"
+ 130 PRINT INK 7; BRIGHT 1;AT rx,ry;"{97}"
+ 140 NEXT r
+ 150 REM rabbit hole
+ 160 FOR h=1 TO l
+ 170 LET hx=INT (RND*14)+5: LET hy=INT (RND*26)+4
+ 180 PRINT INK 1; BRIGHT 1;AT hx,hy;m$
+ 190 IF m$=k$ THEN LET m$=k$
+ 200 IF k$=m$ THEN LET k$=m$
+ 210 NEXT h
+ 220 PRINT INK 6;AT 0,1;"SKILL LEVEL ";l;AT 0,18; INK 5;"TIME LEFT ";t;" "
+ 230 PAUSE 100
+ 240 REM open eggs
+ 250 LET r=INT (RND*6): LET s=r*6
+ 260 IF s<6 THEN GO TO 230
+ 270 IF ATTR (1,s-1)=130 THEN GO TO 250
+ 280 LET u=2
+ 290 PRINT INK 2; FLASH 1;AT 1,s-1;a$; FLASH 0;AT 2,s-1;"  ";AT u,s-2; INK 6; BRIGHT 1;"{94}": BEEP .1,45: BEEP .1,50
+ 295 IF INKEY$<>"6" THEN GO TO 290
+ 300 REM move chicken
+ 310 IF INKEY$="6" THEN LET u=u+1: PRINT INK 6;AT u-1,s-2;"{94}": PRINT AT u-2,s-2;" ": GO SUB 500: IF ATTR (u,s-2)=71 OR ATTR (u,s-2)=65 THEN GO TO 410: IF u>21 THEN LET u=21: PRINT AT u,s-2;" "
+ 320 IF INKEY$="5" THEN LET s=s-1: PRINT INK 6;AT u-1,s-2;"{96}": PRINT AT u-1,s-1;" ": GO SUB 500: IF ATTR (u-1,s-3)=71 OR ATTR (u-1,s-3)=65 THEN GO TO 430
+ 330 IF INKEY$="8" THEN LET s=s+1: PRINT INK 6;AT u-1,s-2;"{95}": PRINT AT u-1,s-3;" ": GO SUB 500: IF ATTR (u-1,s-1)=71 OR ATTR (u-1,s-1)=65 THEN GO TO 450
+ 340 REM 'home'* stop at edge
+ 350 IF u-1=20 AND s-2=16 OR u-1=20 AND s-2=17 THEN PRINT AT 21,10; INK 6; PAPER 1; FLASH 1;" HOME SAFELY ": FOR k=1 TO 20: BEEP .05,k: NEXT k: LET sc=sc+1: GO TO 630
+ 360 IF u>21 THEN LET u=20: PRINT AT 21,s-2;" "
+ 370 IF s<0 THEN LET s=0
+ 380 IF s>31 THEN LET s=31
+ 390 PAUSE 10: GO TO 310
+ 400 REM hit rabbits and holes
+ 410 IF ATTR (u,s-2)=71 THEN PRINT AT u-1,s-2;" ";AT u,s-2; INK 2; PAPER 7; FLASH 1;"{97}": GO TO 470
+ 420 IF ATTR (u,s-2)=65 THEN PRINT AT u-1,s-2;" ";AT u,s-2; INK 2; PAPER 7; FLASH 1;"{98}": GO TO 480
+ 430 IF ATTR (u-1,s-3)=71 THEN PRINT AT u-1,s-2;" ";AT u-1,s-3; INK 2; PAPER 7; FLASH 1;"{97}": GO TO 470
+ 440 IF ATTR (u-1,s-3)=65 THEN PRINT AT u-1,s-2;" ";AT u-1,s-3; INK 2; PAPER 7; FLASH 1;"{98}": GO TO 480
+ 450 IF ATTR (u-1,s-1)=71 THEN PRINT AT u-1,s-2;" ";AT u-1,s-1; INK 2; PAPER 7; FLASH 1;"{97}": GO TO 470
+ 460 IF ATTR (u-1,s-1)=65 THEN PRINT AT u-1,s-2;" ";AT u-1,s-1; INK 2; PAPER 7; FLASH 1;"{98}": GO TO 480
+ 470 PRINT AT 21,5; INK 1; PAPER 6; FLASH 1;" YOU RAN INTO A RABBIT!": BEEP .4,10: PAUSE 100: GO TO 630
+ 480 PRINT AT 21,4; INK 2; PAPER 7; FLASH 1;" FELL INTO A RABBIT HOLE!": BEEP .4,10: PAUSE 100: GO TO 630
+ 490 REM check time * move fox
+ 500 LET t=t+1: PRINT INK 6;AT 0,28;t;" ": IF t=0 THEN PRINT AT 8,5; INK 2; PAPER 7; FLASH 1;" YOU RAN OUT OF TIME! ": BEEP .4,10: BEEP .4,20: GO TO 630
+ 510 LET a=INT (RND*f)
+ 520 IF a<5 THEN RETURN 
+ 530 IF x<3 THEN LET x=3
+ 540 IF x>18 THEN LET x=19
+ 550 IF x<u-1 THEN LET x=x+1: PRINT INK 2;AT x,y;"{9B}";AT x-1,y;" "
+ 560 IF x>u-1 THEN LET x=x-1: PRINT INK 2;AT x,y;"{9B}";AT x+1,y;" "
+ 570 IF y<s-2 THEN LET y=y+1: PRINT INK 2;AT x,y;"{9B}";AT x,y-1;" "
+ 580 IF y>s-2 THEN LET y=y-1: PRINT INK 2;AT x,y;"{9B}";AT x,y+1;" "
+ 590 IF ATTR (u-1,s-2)=2 OR ATTR (x,y)=6 THEN PRINT INK 2; PAPER 7; FLASH 1;AT u-1,s-2;"{9B}";AT 21,3;" THE RED FOX GOT THAT CHICK ": BEEP 1,10: BEEP 1,5: PAUSE 10: GO TO 630
+ 600 REM return to main loop
+ 610 RETURN 
+ 620 REM end game
+ 630 LET c=c+1: IF c=5 OR t=0 THEN PAUSE 100: PRINT INK 1; FLASH 1; PAPER 7;AT 10,11;" GAME OVER ": PAUSE 50: PRINT AT 12,5; INK 1; PAPER 7; FLASH 0;" YOU SAVED ";sc;" CHICKENS ": GO TO 660
+ 640 REM clear screen and return
+ 645 LET s$="                                "
+ 650 FOR a=4 TO 21: PRINT INK 4;AT a,0;s$: NEXT a: GO TO 110
+ 660 PAUSE 200: PRINT INK 7;AT 21,0;"WOULD YOU LIKE ANOTHER TRY (Y/N)": PAUSE 0
+ 670 IF INKEY$="Y" OR INKEY$="y" THEN CLS : GO TO 40
+ 680 IF INKEY$="N" OR INKEY$="n" THEN GO TO 700
+ 690 IF INKEY$<>"Y" OR INKEY$<>"N" OR INKEY$<>"y" OR INKEY$<>"n" THEN GO TO 660
+ 700 CLS : PRINT AT 10,3;"O.K. PERHAPS THE CHICKENS      WOULD BE BETTER ON THEIR OWN!": STOP 
+ 705 REM instructions
+ 710 PRINT AT 1,6; INK 6; PAPER 1;" SAVE THE CHICKENS "
+ 720 INK 7: PRINT AT 3,1;"Five chicks are ready to hatch  and you must guide them safely  to the green hut entrances with keys 5 6 8.(start with key 6)."
+ 730 PRINT ''" If your chicken hits a white    rabbit or falls into a blue     rabbit hole it will be lost.": PRINT ''" A vicious red fox is on the     prowl and will chase and try    to catch the chickens.": PRINT ''" You have only a limited time to guide all your chickens home."
+ 740 PAUSE 50: PRINT #1;"   {11}{00}{10}{07} PRESS ANY KEY TO BEGIN ": PAUSE 0: CLS : GO TO 10
+ 750 REM graphics
+ 760 FOR i=USR "A" TO USR "L"+7: READ a: POKE i,a: NEXT i
+ 770 DATA 1,3,7,15,15,31,31,63
+ 780 DATA 128,192,224,240,240,248,248,252
+ 790 DATA 63,63,63,63,31,31,15,3
+ 800 DATA 252,252,252,252,248,248,240,192
+ 810 DATA 28,28,8,127,62,28,20,54
+ 820 DATA 12,14,200,126,254,252,32,24
+ 830 DATA 48,112,19,126,127,63,4,24
+ 840 DATA 8,8,24,24,13,30,14,28
+ 850 DATA 60,126,255,255,255,255,126,60
+ 860 DATA 3,1,3,7,14,30,63,127
+ 870 DATA 192,128,192,224,112,120,252,254
+ 880 DATA 129,255,219,126,66,102,60,24
+ 882 REM set up title screen
+ 885 PAPER 0: BORDER 0: CLS 
+ 890 FOR x=0 TO 20 STEP 5: FOR y=0 TO 30 STEP 3
+ 900 PRINT INK 2;AT x,y;"{90}{91}";AT x+1,y; INK 5;"{92}{93}"
+ 910 BEEP .02,y: NEXT y: NEXT x
+ 920 PRINT INK 0;AT 10,0;"{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}"
+ 930 FOR x=0 TO 29: PRINT AT 10,x; INK 6;" {95}": PAUSE 5: BEEP .1,50: NEXT x
+ 940 LET w=32: FOR n=1 TO 90: LET w=w-1
+ 950 IF w=-1 THEN LET w=31
+ 960 PRINT AT 9,w; INK 0;"{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}"; INK 6;"{96}-"; PAPER 7; INK 1;" SAVE THE CHICKENS "; INK 0;"{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}{8F}"
+ 970 BEEP .05,50: NEXT n
+ 980 PAUSE 100
+ 990 CLS 
+1000 RETURN 
