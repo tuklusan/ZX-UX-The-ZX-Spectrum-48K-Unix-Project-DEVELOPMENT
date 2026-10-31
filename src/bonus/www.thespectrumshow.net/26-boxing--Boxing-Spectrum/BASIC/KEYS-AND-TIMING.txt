@@ -1,0 +1,5 @@
+BOXING — KEYS AND TIMING
+
+We checked the original program listing and the game displayed by Fuse 48K. The screen states 5 left, 8 right, and 0 punch. Press p at the title, enter a name with Return, then play. We used a 400% emulator speed to pass the opening graphics.
+
+The replay waits 3 seconds at the title, presses p for 0.2 seconds, enters a short name and Return, and waits 6 seconds for the ring. It then holds 5, 8, and 0 for 0.6 seconds each, with a 2-second rest before each saved screenshot. The ring and boxer positions were checked in real Fuse output. These captures do not show the end of a fight.
