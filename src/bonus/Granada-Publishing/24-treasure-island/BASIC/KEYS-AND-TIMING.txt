@@ -1,0 +1,9 @@
+From original BASIC lines 3515-3560:
+5 moves left and advances down one row.
+8 moves right and advances down one row.
+6 advances down one row.
+H calls the help routine. We did not test H.
+
+Replay timing with Fuse 48K at 250%: load original TreasureIsland.tap using --auto-load --tape. Wait 2.5 seconds. Press R for 0.12 seconds and ENTER for 0.12 seconds, each followed by a 0.20 second release wait. Wait 3 seconds. Save the first island map. Press 5 for 0.16 seconds, release for 0.20 seconds, wait 1.3 seconds and capture. Do the same with 8 and then 6. The map is random, so pictures can differ between runs.
+
+We saw the active island map and screen changes after the keys. No complete treasure hunt or finished round is claimed.
