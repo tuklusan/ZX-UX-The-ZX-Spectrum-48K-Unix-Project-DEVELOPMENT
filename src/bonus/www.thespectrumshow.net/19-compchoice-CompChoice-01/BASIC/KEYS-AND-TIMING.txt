@@ -1,0 +1,3 @@
+This routine has no documented gameplay keys. Fuse loads the supplied single-program TZX into 48K BASIC, then Return leaves the load screen. In BASIC keyword mode, press R for RUN and Return to execute it. The source ends with STOP at line 65.
+
+Replay at 400% speed: wait 4 seconds for loading, press Return for 0.04 seconds, wait 0.7 seconds, press R for 0.04 seconds, press Return for 0.04 seconds, wait 0.6 seconds and capture the screen; wait 6 more seconds and capture the STOP result. The two pressed keys start BASIC, not player movement. The source has no player controls.
