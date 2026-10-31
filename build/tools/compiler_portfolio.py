@@ -157,11 +157,12 @@ def capture_fuse(compiler, name, label, source, args, number):
     }
     config.update(CAPTURE.get(compiler + ':' + name, {}))
     if compiler == 'rfortranc':
-        # The genuine tape loader can take several seconds before FORTRAN
-        # starts. Sample beyond that, including its 100-tick output hold.
-        config.update(fuse_wait=12.0, sample_step=.08,
+        # Select actual FORTRAN output, not the loader or an empty exit screen.
+        config.update(fuse_speed=200, capture_delay=0.0,
+                      console_output=True, early_capture=False,
+                      fuse_wait=9.0, sample_step=.15,
                       enter_pause=.12, post_command_wait=0.0)
-    if compiler in ('rfc', 'rpc', 'rfortranc'):
+    if compiler in ('rfc', 'rpc'):
         config['reference'] = DIST / 'screenshots' / compiler / 'rvm' / (name + '.png')
         config.setdefault('early_capture', True)
     run_case((label,), dest, local, config)
@@ -191,9 +192,7 @@ def main(argv=None):
         value = getattr(args, attr)
         if value is not None:
             setattr(args, attr, value.resolve())
-    # Sparse FORTRAN output cannot yet be verified reliably in Fuse.
-    selected = ((args.compiler,) if args.compiler else
-                ('rb2ct', 'rfc', 'rpc') if args.engine == 'fuse' else tuple(SAMPLES))
+    selected = ((args.compiler,) if args.compiler else tuple(SAMPLES))
     tasks = list(cases(set(selected)))
     if args.engine == 'rvm':
         for compiler, name, label, source in tasks:

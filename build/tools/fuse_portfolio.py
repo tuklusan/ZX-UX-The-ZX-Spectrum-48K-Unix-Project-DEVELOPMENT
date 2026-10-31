@@ -340,6 +340,13 @@ def run_case(names, destination, args, config=None):
                     score += sum((max(p) - min(p)) > 60 for p in pixels.get_flattened_data())
                 if expected is not None:
                     score = match_program(candidate)
+                if config.get('console_output'):
+                    pixels = candidate.convert('L')
+                    loading = sum(v > 60 for v in pixels.crop((0, 165, 260, 188)).get_flattened_data())
+                    output_ink = sum(v > 60 for v in pixels.crop((0, 22, 260, 155)).get_flattened_data())
+                    if loading > 5 or not 5 <= output_ink <= 500:
+                        continue
+                    score = output_ink
                 if config.get('capture_last') or score > best_score:
                     best, best_score = candidate, score
                 if config.get('first_fractal'):
