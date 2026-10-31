@@ -35,7 +35,7 @@ Example, one tape:
     python3 build/tools/zx-tzx2bas.py game.tzx -o staged/game.bas
 
 Example, preserved 60-program collection (no original files are touched):
-    python3 build/tools/zx-tzx2bas.py --corpus src/assets/basic-src/original-sinclair-basic-collections/60-programs \
+    python3 build/tools/zx-tzx2bas.py --collection src/assets/basic-src/original-sinclair-basic-collections/60-programs \
         --out-dir build/tmp/tzx-basic-listings
 
 For license attribution and version information, run --about.
@@ -516,15 +516,15 @@ def main(argv=None):
     ap.add_argument('--about', action='store_true',
                     help='show ZX-UX attribution and the ROM reference')
     ap.add_argument('tzx', type=Path, nargs='?', help='preserved TZX input')
-    ap.add_argument('--corpus', type=Path,
+    ap.add_argument('--collection', type=Path,
                     help='directory containing all 60 numbered game folders')
     ap.add_argument('-o', '--output', type=Path,
                     help='single-tape BAS path (stdout if omitted)')
     ap.add_argument('--out-dir', type=Path,
-                    help='staging directory for --corpus (never the original BASIC tree)')
+                    help='staging directory for --collection (never the original BASIC tree)')
     ap.add_argument('--program-index', type=int, default=None,
                     help='zero-based BASIC program on tape')
-    ap.add_argument('--verify-corpus', action='store_true',
+    ap.add_argument('--verify-collection', action='store_true',
                     help='compare TZX listings to original BAS bytes, without writing')
     args = ap.parse_args(argv)
     if args.about:
@@ -534,15 +534,15 @@ def main(argv=None):
         print('License: see ZX-UX repository LICENSE.')
         print('Reference: Sinclair Spectrum 48K ROM LLIST/OUT-LINE/PO-TOKENS.')
         return 0
-    if bool(args.tzx) == bool(args.corpus):
-        ap.error('specify either one TZX or --corpus')
-    if args.corpus and (args.output or (not args.out_dir and not args.verify_corpus)
-                        or (args.out_dir and args.verify_corpus)):
-        ap.error('--corpus requires --out-dir, or --verify-corpus alone')
-    if args.verify_corpus and not args.corpus:
-        ap.error('--verify-corpus requires --corpus')
+    if bool(args.tzx) == bool(args.collection):
+        ap.error('specify either one TZX or --collection')
+    if args.collection and (args.output or (not args.out_dir and not args.verify_collection)
+                        or (args.out_dir and args.verify_collection)):
+        ap.error('--collection requires --out-dir, or --verify-collection alone')
+    if args.verify_collection and not args.collection:
+        ap.error('--verify-collection requires --collection')
     if args.tzx and args.out_dir:
-        ap.error('--out-dir is for --corpus only')
+        ap.error('--out-dir is for --collection only')
     try:
         rom_keywords()  # Verify the embedded exact original table before use.
         if args.tzx:
@@ -555,7 +555,7 @@ def main(argv=None):
                 print(f'Listed {len(content.splitlines())} BASIC lines into {args.output}',
                       file=sys.stderr)
         else:
-            root = args.corpus.resolve()
+            root = args.collection.resolve()
             games = sorted(p for p in root.iterdir()
                            if p.is_dir() and len(p.name) > 3
                            and p.name[:2].isdigit() and p.name[2] == '-')
@@ -567,7 +567,7 @@ def main(argv=None):
                 tape = game / 'BASIC' / (game.name + '.tzx')
                 content = listing(tape.read_bytes(),
                                   program_index=args.program_index)
-                if args.verify_corpus:
+                if args.verify_collection:
                     original = game / 'BASIC' / (game.name + '.bas')
                     expected = original.read_bytes()
                     recovered = content.encode('ascii')
@@ -582,7 +582,7 @@ def main(argv=None):
                     if _protected_listing_destination(dest) or dest.exists():
                         raise TapeError(f'protected or existing output: {dest}')
                     planned.append((tape, dest, content))
-            if args.verify_corpus:
+            if args.verify_collection:
                 print('Verified 60/60 independent TZX listings against preserved BAS bytes', file=sys.stderr)
             else:
                 for tape, dest, content in planned:

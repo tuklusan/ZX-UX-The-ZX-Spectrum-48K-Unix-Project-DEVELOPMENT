@@ -21,7 +21,7 @@ From the ZX-UX repository root:
 
 ```sh
 python3 build/tools/zx-tzx2bas.py \
-  --corpus src/assets/basic-src/original-sinclair-basic-collections/60-programs \
+  --collection src/assets/basic-src/original-sinclair-basic-collections/60-programs \
   --out-dir build/tmp/tzx-basic-listings
 ```
 

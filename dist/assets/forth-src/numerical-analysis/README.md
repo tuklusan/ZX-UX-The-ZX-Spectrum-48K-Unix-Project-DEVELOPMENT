@@ -1,6 +1,6 @@
-# F83 numerical-analysis corpus
+# F83 numerical-analysis collection
 
-This directory is a local final-delivery test corpus imported from the user
+This directory is a local final-delivery test collection imported from the user
 supplied archive `F83_Z80_20_DEMOS.zip`.
 
 ## Contents
