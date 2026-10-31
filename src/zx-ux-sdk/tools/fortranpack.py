@@ -15,6 +15,13 @@ BURKARDT = (
     'f77s_burkvar', 'f77s_burkvec',
 )
 FUNDAMENTALS = ('bases', 'factorial', 'f77s_machar', 'prime')
+NUMERICAL_ANALYSIS = (
+    'na_bisect', 'na_brent', 'na_cholesky', 'na_euler',
+    'na_fft', 'na_gauss', 'na_gemm', 'na_jacobi',
+    'na_lcg', 'na_lupivot', 'na_machar', 'na_minilin',
+    'na_newton', 'na_polyfit', 'na_rk4', 'na_romberg',
+    'na_simpson', 'na_square', 'na_thomas', 'na_whet',
+)
 FIELDS = ('collection', 'program', 'status', 'detail')
 
 
@@ -27,7 +34,9 @@ def package(source: Path, stage: Path, sdk: Path):
     import rld
     import rtap
 
-    jobs = [('burkardt', name) for name in BURKARDT] + [('fundamentals', name) for name in FUNDAMENTALS]
+    jobs = ([('burkardt', name) for name in BURKARDT] +
+            [('fundamentals', name) for name in FUNDAMENTALS] +
+            [('numerical-analysis', name) for name in NUMERICAL_ANALYSIS])
     missing = [name for collection, name in jobs
                if not (root / collection / (name + '.f')).is_file()]
     if missing:
@@ -46,7 +55,7 @@ def package(source: Path, stage: Path, sdk: Path):
         tzx = tzxdir / (name + '.tzx')
         cmd = [
             sys.executable, '-B', str(source / 'zx-ux-sdk/bin/rfortranc'),
-            '--sdk', str(sdk), '--std', 'f77s' if name.startswith('f77s_') else 'zxux',
+            '--sdk', str(sdk), '--std', 'f77s' if name.startswith(('f77s_', 'na_')) else 'zxux',
             '--native', '-o', str(ssx), str(source_file),
         ]
         result = subprocess.run(cmd, capture_output=True, text=True)

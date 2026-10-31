@@ -43,6 +43,11 @@ SAMPLES = {
         'f77s_burkmean', 'f77s_burkmin', 'f77s_burkmm', 'f77s_burkprime',
         'f77s_burkreal', 'f77s_burkrsrt', 'f77s_burkscale', 'f77s_burksort',
         'f77s_burkvar', 'f77s_burkvec', 'bases', 'factorial', 'f77s_machar', 'prime',
+        'na_bisect', 'na_brent', 'na_cholesky', 'na_euler',
+        'na_fft', 'na_gauss', 'na_gemm', 'na_jacobi',
+        'na_lcg', 'na_lupivot', 'na_machar', 'na_minilin',
+        'na_newton', 'na_polyfit', 'na_rk4', 'na_romberg',
+        'na_simpson', 'na_square', 'na_thomas', 'na_whet',
     ],
 }
 # Per-compiler capture recipes use the same runs.json as C48.
