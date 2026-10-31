@@ -1,0 +1,5 @@
+BUG EYES (COLOUR): BASIC lines 70-150 read a number from 1 to 4 when OO appears. The right number for the current screen position scores a hit; * is shown. No separate fire key is used.
+
+The colour version pauses at line 15. In Fuse 48K at 50% speed, let the TZX load for 5 seconds, press Enter, wait 0.8 seconds, enter R and Enter when needed, wait 1.2 seconds, then press Space to clear the colour title screen. Watch for OO and try 1, 4, 2, and 3 in a repeated cycle. Each numbered input is held for 0.12 seconds. The game uses random positions and a short input window.
+
+REPLAY.sh captures a live eyes frame, another after at least two number presses, and a hit frame. It reports failure if those views are not seen within 45 seconds. The source screenshots are not used as replay output.
