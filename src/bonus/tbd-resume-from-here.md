@@ -45,20 +45,20 @@ The last successful remote readback is the only completed checkpoint. Before a n
 
 The private checker is enabled by owner request on 2026-10-30. Run its self-test when starting a new session. Before **every** GitHub write, check the complete proposed text, paths, full commit message, and exact push command with the private four-attempt workflow. Keep private checker files outside Git. If the checker rejects a change, stop that write after the allowed checks; do not weaken rules or publish the blocked content. Keep the writing rules in force for all new English prose. Run the other tests that apply to the game. Do not claim a passing run without running it.
 
-**Latest completed program:** Spectrum Show — Diver, `29-diver--Diver`. We kept the original Z80 snapshot and source TAP and TZX from the collection. The TZX BASIC listing has 116 numbered lines. We ran the snapshot in Fuse 48K, pressed 5, 8, 6, and 7, and saved four live game views. The cave screen changed between keys, but background motion prevents a claim that the player moved exactly as intended. The replay and private checker passed. No treasure pickup or complete round was confirmed.
+**Latest completed program:** Spectrum Show — Amaze, `41-amaze--Amaze`. We kept its original Z80 snapshot and archive tape versions. The tokenized TZX yielded 49 ordered BASIC lines in a local ROM-style decode, but the private text check rejected publication of the listing. We kept the original media unchanged. Fuse 48K replay pressed 5 and 8 after starting the maze, with three live captures. No complete game was confirmed.
 
-**Previous verified main parent:** `9da16ba167d155f2cbd79b600ae24a175955353b`. Read live `main` for the new commit containing this checkpoint. **Next work:** inspect another untouched Spectrum Show source. Granada Spectrum Scrabble and Treasure Island still need confirmed active play. Do not count local-only work.
+**Previous verified main parent:** `817e3feb8356dba0d727440a89693719d1bef977` (tree `5f8f6aac83d50cc7bbc0095cd9a8a01f3d1c7ba5`). **Next work:** check Outlander’s unusual original tape line records, then close the collection. Do not count local-only work.
 
 ## Progress at pause — committed program directories
 
-**74 / 117 (63.2%) complete; 43 remaining (36.8%).** Counts reflect committed program directories against the preliminary archive inventory.
+**117 / 117 source folders committed after Amaze; 0 uncommitted source folders.** Outlander still needs its BASIC record audit. A folder is not proof of a complete game.
 
 | Collection | Done | Remaining | Total |
 |---|---:|---:|---:|
 | F77S | 20 | 0 | 20 |
-| Granada Publishing | 22 | 2 | 24 |
-| Spectrum Show | 32 | 41 | 73 |
-| **Total** | **74** | **43** | **117** |
+| Granada Publishing | 24 | 0 | 24 |
+| Spectrum Show | 73 | 0 | 73 |
+| **Total** | **117** | **0** | **117** |
 
 The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, Mighty Missile, Noughts and Crosses, Masterbrain, Mirror Tile, Morse Code, Nine Hole Golf, Rainbow Squash, Save the Whale, Sheepdog Trials, Spectrum Dice, Spectrum Ledger, Spectrum Shoot, Spectrum Smalltalk, Word Mix, and Guideline now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
 
@@ -66,13 +66,13 @@ The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive coun
 
 The latest checked `main` before this guide update is:
 
-`9da16ba167d155f2cbd79b600ae24a175955353b` — Spectrum Show Boxing completed with original snapshots and real Fuse input. Read live HEAD for Diver and this update.
+`817e3feb8356dba0d727440a89693719d1bef977` — main before the Amaze update. Read live HEAD before starting Outlander.
 
 Previously completed on remote:
 
 - **F77S: 20 of 20 programs.** Original TZX, independently decoded LLIST `.bas`, notes and Fuse captures/replays are committed. Some are numerical demonstrations rather than games; do not relabel execution as human gameplay. No native SSX.
-- **Spectrum Show: 32 program directories committed** against the preliminary 73. New in this checkpoint: `29-diver--Diver`, with original snapshot and source tapes, checked BASIC, Fuse replay, and real captures. Background animation alone does not prove exact player movement. Outlander still has a listing rejection; do not invent lines.
-- **Granada: 22 of 24 initially inventoried program directories:** `01-across-the-ravine` through `22-guideline` in the live tree. Guideline and SpectrumGuideline are different source versions of the same ring-guiding game and share one folder. The only remaining original Granada folder names are Spectrum Scrabble and Treasure Island. The preliminary total remains subject to final checking.
+- **Spectrum Show: 73 program folders after Amaze.** All preliminary source identities have folders. Amaze has verified Fuse play but no published separate listing because the private text check rejected it. Outlander has a prior strict listing rejection; preserve the repeated line-zero records as found.
+- **Granada: 24 of 24 source folders on main.** Spectrum Scrabble and Treasure Island were added with actual Fuse input after this guide’s earlier pause. Guideline and SpectrumGuideline remain two versions in one source folder.
 
 **No uncommitted local work should be assumed to survive.** The old container had temporary probes, transfer JSON files and images; those are not proof of remote publication and may be gone. Look at live GitHub first. Re-run unfinished work from the original archive, not an unverified old screenshot.
 
@@ -91,9 +91,9 @@ Previously completed on remote:
 
 ## Where to resume concretely
 
-**First:** check inputs and live `main`. **Next:** process another untouched Spectrum Show source after Diver. Granada Spectrum Scrabble and Treasure Island still need confirmed play. Never reuse archive screenshots as Fuse captures.
+**First:** check live `main`. **Next:** examine Outlander’s duplicate line-zero records and record the listing limits without changing source bytes. Its real Fuse captures already exist.
 
-In parallel, compare remaining Spectrum Show originals with the live `src/bonus/www.thespectrumshow.net` tree. Process up to 12 independent game checks where practical, but push each completed program separately. Every published capture must come from actual input-driven Fuse play. Preserve all prior `60-programs` and other source bytes.
+All 73 preliminary Spectrum Show source identities now have folders. Verify Outlander’s tape record structure before marking the collection audit finished. Preserve all prior `60-programs` and other source bytes.
 
 ## Required remote readback / final state
 
