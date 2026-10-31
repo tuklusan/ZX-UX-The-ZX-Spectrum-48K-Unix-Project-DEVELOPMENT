@@ -1,0 +1,50 @@
+   1 REM *BANK RAID*
+   2 REM By G.Creasey
+  10 REM typed by P Jenkinson
+  11 REM for The Spectrum Show
+  30 LET z=50010: LET x=50070: LET v=50001: LET w=50068: LET hs=0: PAPER 0: INK 7: BRIGHT 1: BORDER 0: CLS : GO TO 80
+  40 POKE w,3: LET j=USR x: POKE w,3: LET j=USR x: POKE v,5: LET j=USR z
+  50 POKE w,7: LET j=USR x: POKE w,7: LET j=USR x: POKE w,7: LET j=USR x: POKE v,9: LET j=USR z: POKE v,9: LET j=USR z
+  60 POKE w,11: LET j=USR x: POKE v,15: LET j=USR z: POKE v,15: LET j=USR z: POKE w,17: LET j=USR x: POKE w,17: LET j=USR x
+  70 RETURN 
+  80 RESTORE 90: FOR n=50010 TO 50066: READ a: POKE n,a: NEXT n: FOR n=50070 TO 50126: READ a: POKE n,a: NEXT n
+  90 DATA 58,81,195,7,7,7,71,62,175,152,50,81,195,30,8,205,119,195,58,81,195,61,50,81,195,29,32,243,201,22,32,205,137,195,203,30,35,21,32,250,208,205,137,195,203,254,201,58,81,195,71,14,0,205,170,34,201
+ 100 DATA 58,148,195,7,7,7,71,62,175,152,50,148,195,30,8,205,179,195,58,148,195,61,50,148,195,29,32,243,201,22,32,205,197,195,203,22,43,21,32,250,208,205,197,195,203,198,201,58,148,195,71,14,255,205,170,34,201
+ 110 GO TO 440
+ 120 RESTORE 130: FOR n=USR "a" TO USR "q"+7: READ a: POKE n,a: NEXT n
+ 130 DATA 24,60,60,24,126,24,36,36,0,3,4,4,63,33,45,12,0,224,48,24,252,132,180,48,0,7,12,24,63,33,45,12,0,192,32,32,252,132,180,48
+ 140 DATA 12,4,60,204,255,56,214,198,48,32,60,51,255,28,107,99,15,17,33,255,255,255,223,28,255,255,255,255,255,254,255,28
+ 150 DATA 255,255,255,255,255,127,255,56,240,136,132,255,255,255,251,56,56,56,16,124,16,40,40,40,28,62,127,73,73,127,93,85
+ 160 DATA 195,255,90,102,102,90,255,195,255,255,195,195,195,195,255,255,255,219,219,219,219,219,255,147,0,0,204,51,204,0,0,0
+ 170 LET r=0: LET l=3: LET s=0: LET a=19: LET b=15
+ 180 PRINT AT 0,0; INK 7; PAPER 1;"  SCORE=     HI=     ROBBERS=   "
+ 190 PRINT AT 1,0; INK 1;"{9F}{9F}{9F}{9F}{9F} {9F}{9F}{9F}{9F}{9F}{9F} {9F}{9F}{9F}{9F}{9F}{9F} {9F}{9F}{9F}{9F}{9F}{9F} {9F}{9F}{9F}{9F}{9F}"
+ 200 PRINT AT 3,0; INK 4;" {9D}   {9D}     {9D}     {9D}     {9D}  {9D}     ";AT 5,0; INK 4;"{9E}{9E}{9E}{9E}{9E}   {9E}{9E}{9E}{9E}   {9E}{9E}{9E}{9E}{9E}  {9E}{9E}{9E}{9E}      "
+ 210 PRINT AT 7,0;" {9C}  {9C}    {9C}    {9C}    {9C} {9C}   {9C}    ";AT 9,0; INK 7;"  {9B} {9B}   {9B} {9B}{9B}  {9B}  {9B}{9B}     {9B}  {9B}  "
+ 220 PRINT AT 11,0; INK 3;"    {9E}{9E}{9E}{9E}{9E}    {9E}{9E}{9E}{9E}{9E}   {9E}{9E}{9E}{9E}{9E}   {9E}{9E}{9E}{9E}{9E}";AT 13,0; INK 0; PAPER 4;"                                "
+ 230 LET a$="{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}{A0}": INK 2: PRINT AT 2,0;a$;AT 4,0;a$;AT 6,0;a$;AT 8,0;a$;AT 10,0;a$;AT 12,0;a$
+ 240 INK 7: PRINT AT 14,0;"--------------------------------";AT 16,0;"================================";AT 18,0;"--------------------------------"
+ 250 PRINT AT 15,0; INK 6;" {93}{94}    {96} {96}    {93}{94}  {99}{9A}   {93}{94}  {96}  {93}{94}";AT 17,0; INK 5;"  {95}    {91}{92}   {97}{98}   {91}{92}   {95}   {91}{92}  {97}{98}"
+ 260 FOR n=19 TO 20: PRINT AT n,0; INK 0; PAPER 4;"                                ": NEXT n: PRINT AT 21,0; PAPER 2; INK 7;"    B  A  N  K     R  A  I  D   "
+ 270 LET a1=a: LET b1=b: PRINT INK 7; PAPER 1;AT 0,16;hs;AT 0,29;l
+ 280 PRINT AT 0,8; PAPER 1; INK 7;s: BEEP .001,(RND*20)+30: PRINT INK 8; PAPER 8;AT a,b;" ": GO SUB 40
+ 290 IF SCREEN$ (a1,b1)<>" " THEN GO TO 360
+ 300 IF a1=1 THEN IF b1=5 OR b1=12 OR b1=19 OR b1=26 THEN GO TO 390
+ 310 IF a1=1 THEN GO TO 360
+ 320 PRINT AT a1,b1; PAPER 8; INK 8;"{90}": LET a=a1: LET b=b1
+ 330 IF INKEY$="0" THEN LET a1=a1-2: LET s=s+10: BEEP .003,50
+ 340 LET b1=b1+(INKEY$="2" AND b1<31)-(INKEY$="1" AND b1>0)
+ 350 GO TO 280
+ 360 FOR n=1 TO 50: PRINT AT a1,b1; OVER 1; INK 8;"{90}": BEEP .005,n/a: BEEP .001,RND*60: NEXT n: OVER 0
+ 370 BEEP 1,-30: LET l=l-1: PRINT AT 0,29; PAPER 1; INK 7;l: IF l=0 THEN GO TO 420
+ 380 LET a=19: LET b=15: GO TO 270
+ 390 PRINT AT a,b; INK 8;" ": FOR n=1 TO 4: FOR m=0 TO 6: PRINT AT a1,b1; INK m;"{90}": BEEP .005,m: BEEP .003,m*2: NEXT m: NEXT n: LET s=s+100: LET r=r+1: IF r=4 THEN GO TO 410
+ 400 GO TO 380
+ 410 FOR n=0 TO 30: BEEP .005,n: BEEP .001,n*2: BEEP .002,n*2: NEXT n: LET r=0: LET s=s+150: LET a=19: LET b=15: GO TO 180
+ 420 FOR n=1 TO 100: NEXT n: FOR n=-10 TO -20: BEEP .5,n: NEXT n: IF s>hs THEN LET hs=s: BEEP .05,10: BEEP .05,20: BEEP .05,30: PRINT #0; FLASH 1;"A NEW HIGH SCORE!!!!!"
+ 430 FOR n=1 TO 500: NEXT n
+ 440 BEEP .1,10: CLS : PRINT PAPER 2; INK 7;AT 0,0;"    B  A  N  K     R A I D      "
+ 450 PRINT AT 3,0; INK 4;"You, Ronnie Robber, and your    assistants, must steal all the  money from the City Bank."
+ 460 PRINT ''' INK 5;"Unfortunately, to do this you   must cross the road, avoid the  moving doorways, keep away from the security guards, the        electronic Ghostiebots and the  burglar alarms."
+ 470 PRINT ''' INK 7;"USE:   <-1  2->  0-FORWARD"
+ 480 PRINT AT 21,0; PAPER 1; INK 7;"   PRESS ANY KEY TO PLAY GAME   ": PAUSE 0: BEEP .05,10: BEEP .05,15: CLS : GO TO 120
