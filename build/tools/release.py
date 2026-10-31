@@ -52,7 +52,9 @@ def main():
         return 0
     run(py, '-B', TOOLS / 'portfolio.py')
     run(py, '-B', TOOLS / 'basic_portfolio.py')
+    run(py, '-B', TOOLS / 'compiler_portfolio.py', '--engine', 'rvm')
     if args.skip_fuse:
+        run(py, '-B', TOOLS / 'gallery_index.py', '--engine', 'rvm')
         print('ZX-UX rebuilt and RVM gallery generated.')
         return 0
     command = [py, '-B', TOOLS / 'fuse_portfolio.py', '--fuse', args.fuse,
@@ -62,7 +64,13 @@ def main():
     run(*command)
     command[2] = str(TOOLS / 'basic_fuse_portfolio.py')
     run(*command)
-    print('ZX-UX rebuilt; C48 and BASIC RVM/Fuse galleries generated.')
+    command = [py, '-B', TOOLS / 'compiler_portfolio.py', '--engine', 'fuse',
+               '--fuse', args.fuse, '--assets', args.fuse_assets]
+    if args.fuse_libdir:
+        command += ['--libdir', args.fuse_libdir]
+    run(*command)
+    run(py, '-B', TOOLS / 'gallery_index.py')
+    print('ZX-UX rebuilt; compiler RVM/Fuse galleries generated.')
     return 0
 
 

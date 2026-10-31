@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture actual ZX-UX BASIC SSX screens in RVM, never archival tape pictures."""
+"""Capture actual ZX-UX RBC SSX screens in RVM, never archival tape pictures."""
 from __future__ import annotations
 
 import argparse
@@ -19,7 +19,7 @@ from zxscreen import screen_text
 
 
 def cases():
-    root = DIST / 'assets/basic-bin'
+    root = DIST / 'assets/rbc-bin'
     for collection in sorted(root.iterdir()) if root.is_dir() else ():
         if not collection.is_dir():
             continue
@@ -32,8 +32,8 @@ def cases():
 
 def write_gallery(out: Path, engine: str):
     parts = ['<!doctype html><html lang="en"><meta charset="utf-8">',
-             '<title>ZX-UX BASIC — %s</title>' % escape(engine),
-             '<h1>ZX-UX BASIC — %s</h1>' % escape(engine),
+             '<title>ZX-UX RBC — %s</title>' % escape(engine),
+             '<h1>ZX-UX RBC — %s</h1>' % escape(engine),
              '<p>Native ZX-UX program screens; a screen alone is not gameplay verification.</p>']
     count = 0
     for collection in sorted(p for p in out.iterdir() if p.is_dir()) if out.is_dir() else ():
@@ -93,16 +93,16 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
         image, border = selected
         if len(image) != 6912:
             raise RuntimeError('invalid Spectrum screen')
-        out = DIST / 'screenshots/c48/rvm/basic' / collection / (ssx.stem + '.png')
+        out = DIST / 'screenshots/rbc/rvm' / collection / (ssx.stem + '.png')
         out.parent.mkdir(parents=True, exist_ok=True)
         rvm.write_png(image, str(out), border)
         if best < 8:
-            print('BASIC RVM WARNING:', ssx.stem,
+            print('RBC RVM WARNING:', ssx.stem,
                   'Screenshot captured successfully, but automatic visual '
                   'validation did not show expected results; '
                   'manual verification required: low screen ink coverage',
                   file=sys.stderr, flush=True)
-        print('BASIC RVM', ssx.stem, runner.why, 'ink', best, flush=True)
+        print('RBC RVM', ssx.stem, runner.why, 'ink', best, flush=True)
 
 
 def main(argv=None):
@@ -119,14 +119,14 @@ def main(argv=None):
         try:
             run_one(collection, ssx, label, args.frames)
         except Exception as e:
-            print('BASIC RVM FAIL:', ssx.stem, str(e), file=sys.stderr, flush=True)
+            print('RBC RVM FAIL:', ssx.stem, str(e), file=sys.stderr, flush=True)
             failures.append(ssx.stem)
     if wanted is not None:
         failures.extend(sorted(wanted - found))
-    out = DIST / 'screenshots/c48/rvm/basic'
+    out = DIST / 'screenshots/rbc/rvm'
     count = write_gallery(out, 'RVM')
     if wanted is None and count != len(found):
-        failures.append('incomplete BASIC RVM gallery')
+        failures.append('incomplete RBC RVM gallery')
     return 1 if failures else 0
 
 

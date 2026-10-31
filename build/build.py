@@ -63,6 +63,8 @@ def preserve_existing_c48_release(old_dist, stage):
             if not src.is_file():
                 continue
             rel = src.relative_to(old)
+            if 'basic' in rel.parts:
+                continue  # The old RBC galleries are not C48 programs.
             dst = stage / branch / rel
             if not dst.exists():
                 dst.parent.mkdir(parents=True, exist_ok=True)

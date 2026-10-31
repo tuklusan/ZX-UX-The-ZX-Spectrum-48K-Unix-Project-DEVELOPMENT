@@ -39,25 +39,25 @@ class BasicDistribution(unittest.TestCase):
             readme = game / 'bin/README.md'
             self.assertNotEqual(original_ssx.is_file(), readme.is_file())
             if readme.is_file():
-                self.assertFalse((target / 'assets/basic-bin/60-programs/tzx' / (title + '.tzx')).exists())
+                self.assertFalse((target / 'assets/rbc-bin/60-programs/tzx' / (title + '.tzx')).exists())
                 continue
             accepted.append(title)
             self.assertEqual(original_ssx.read_bytes(),
-                             (target / 'assets/basic-bin/60-programs/ssx' / original_ssx.name).read_bytes())
+                             (target / 'assets/rbc-bin/60-programs/ssx' / original_ssx.name).read_bytes())
             data = original_ssx.read_bytes()
             info = rld.parse_ssx(data)
             self.assertLessEqual(max(rtap.need(data), len(data)), 14000)
             label = basicpack.tape_name(title)
             self.assertNotIn(label, labels)
             labels.add(label)
-            tape = (target / 'assets/basic-bin/60-programs/tzx' / (title + '.tzx')).read_bytes()
+            tape = (target / 'assets/rbc-bin/60-programs/tzx' / (title + '.tzx')).read_bytes()
             _, blocks = rtap.tzx_blocks(tape)
             self.assertEqual(len(blocks), 2)
             self.assertEqual(blocks[0][1], rtap.records(data, label)[0])
             self.assertEqual(blocks[1][1], rtap.records(data, label)[1])
         self.assertEqual(len(accepted), 34)
-        self.assertEqual({p.stem for p in (target / 'assets/basic-bin/60-programs/ssx').glob('*.ssx')}, set(accepted))
-        self.assertEqual({p.stem for p in (target / 'assets/basic-bin/60-programs/tzx').glob('*.tzx')}, set(accepted))
+        self.assertEqual({p.stem for p in (target / 'assets/rbc-bin/60-programs/ssx').glob('*.ssx')}, set(accepted))
+        self.assertEqual({p.stem for p in (target / 'assets/rbc-bin/60-programs/tzx').glob('*.tzx')}, set(accepted))
 
     def test_other_collection_and_failed_game(self):
         original = ROOT / 'src/bonus/60-programs/53-russian-roulette'
@@ -71,13 +71,13 @@ class BasicDistribution(unittest.TestCase):
             (game / 'bin/01-sample.ssx').write_bytes((original / 'bin/53-russian-roulette.ssx').read_bytes())
             stage = Path(temp) / 'dist'
             self.assertEqual(basicpack.package(source, stage), 1)
-            self.assertEqual((stage / 'assets/basic-bin/demo/ssx/01-sample.ssx').read_bytes(),
+            self.assertEqual((stage / 'assets/rbc-bin/demo/ssx/01-sample.ssx').read_bytes(),
                              (original / 'bin/53-russian-roulette.ssx').read_bytes())
             (game / 'bin/01-sample.ssx').unlink()
             (game / 'bin/README.md').write_text('Rejected input\n')
             stage2 = Path(temp) / 'dist2'
             basicpack.package(source, stage2)
-            self.assertFalse((stage2 / 'assets/basic-bin/demo/tzx/01-sample.tzx').exists())
+            self.assertFalse((stage2 / 'assets/rbc-bin/demo/tzx/01-sample.tzx').exists())
 
     def test_both_clis_offline(self):
         packaged = ROOT / 'dist/sdk/bin'

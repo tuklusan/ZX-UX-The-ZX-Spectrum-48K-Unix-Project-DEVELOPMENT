@@ -45,7 +45,7 @@ def package(source: Path, stage: Path):
         if not games:
             raise ValueError('empty BASIC collection: ' + collection)
         tape_names = set()
-        base = stage / 'assets/basic-bin' / collection
+        base = stage / 'assets/rbc-bin' / collection
         (base / 'ssx').mkdir(parents=True, exist_ok=True)
         (base / 'tzx').mkdir(parents=True, exist_ok=True)
         for game in games:

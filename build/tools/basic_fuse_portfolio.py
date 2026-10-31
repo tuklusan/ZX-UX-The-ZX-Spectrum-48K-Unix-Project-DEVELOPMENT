@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from basic_portfolio import cases, write_gallery
 from fuse_portfolio import run_case
 
-OUT = ROOT / 'dist/screenshots/c48/fuse/basic'
+OUT = ROOT / 'dist/screenshots/rbc/fuse'
 
 
 def capture(i, collection, ssx, label, opts):
@@ -55,13 +55,13 @@ def main(argv=None):
             try:
                 task.result()
             except Exception as exc:
-                print('BASIC Fuse FAIL', pending[task], exc, file=sys.stderr, flush=True)
+                print('RBC Fuse FAIL', pending[task], exc, file=sys.stderr, flush=True)
                 problems.append(pending[task])
     if wanted is not None:
         problems.extend(sorted(wanted - {e[1].stem for e in runs}))
     count = write_gallery(OUT, 'Fuse')
     if wanted is None and count != len(runs):
-        problems.append('incomplete BASIC Fuse gallery')
+        problems.append('incomplete RBC Fuse gallery')
     return 1 if problems else 0
 
 
