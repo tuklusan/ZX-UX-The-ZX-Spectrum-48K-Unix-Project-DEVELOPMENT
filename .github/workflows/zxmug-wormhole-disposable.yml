@@ -28,7 +28,38 @@ jobs:
           echo "::add-mask::$WH_LINK"
           mkdir -p build/tmp/received build/tmp/results
           npm install -g --ignore-scripts @ziuchen/wormhole-client@0.0.0-b081b13
-          wormhole download "$WH_LINK" --output build/tmp/received
+          if ! wormhole download "$WH_LINK" --output build/tmp/received; then
+            echo "Wormhole CLI could not decrypt metadata. Trying official browser downloader."
+            npm install --prefix build/tmp --no-save --ignore-scripts playwright
+            build/tmp/node_modules/.bin/playwright install chromium
+            cat > build/tmp/receive.cjs <<'JS'
+          const {chromium} = require('playwright');
+          const path = require('node:path');
+          (async () => {
+            const browser = await chromium.launch({headless:true, args:['--no-sandbox']});
+            try {
+              const page = await browser.newPage({acceptDownloads:true});
+              page.setDefaultTimeout(90000);
+              await page.goto(process.env.WH_LINK, {waitUntil:'domcontentloaded', timeout:90000});
+              const choices=page.getByRole('button',{name:/download/i});
+              const links=page.getByRole('link',{name:/download/i});
+              await Promise.race([
+                choices.first().waitFor({state:'visible',timeout:90000}).catch(()=>{}),
+                links.first().waitFor({state:'visible',timeout:90000}).catch(()=>{})
+              ]);
+              console.log('Download controls:',(await choices.allTextContents()).slice(0,6));
+              const target=await choices.count()?choices.first():links.first();
+              const receipt=page.waitForEvent('download',{timeout:240000});
+              await target.click();
+              const dl=await receipt;
+              const filename=path.basename(dl.suggestedFilename());
+              await dl.saveAs(path.join('build/tmp/received',filename));
+              console.log('Browser downloaded:',filename);
+            } finally {await browser.close();}
+          })().catch(e=>{console.error('Browser receiver:',e.message);process.exit(1);});
+          JS
+            node build/tmp/receive.cjs
+          fi
           python3 - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile
