@@ -1,0 +1,3 @@
+MONSTERS OF GALACTICON: BASIC line 210 asks WHICH WEAPON? (R,S OR T). Line 220 reads the letter. Each encounter changes based on the monster and chosen weapon. There is no movement control.
+
+In Fuse 48K at 400% speed, load the source TZX for 5 seconds, press Enter for 0.08 seconds, wait 0.5 seconds, then R and Enter to run the loaded listing. Wait 1.2 seconds for the first monster. Enter R and Enter, wait 0.35 seconds, then enter S and Enter, and wait 0.35 seconds. Keys are held for 0.08 seconds, then released with a 0.16-second pause. REPLAY.sh captures the first prompt and both results. The random monster order can differ each run.
