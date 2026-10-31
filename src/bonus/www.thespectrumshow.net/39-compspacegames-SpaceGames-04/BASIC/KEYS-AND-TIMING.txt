@@ -1,0 +1,6 @@
+BUG EYES: real controls from BASIC lines 70-150.
+When OO appears, press 1, 2, 3, or 4 for its screen position. A match displays * and increases the score. No separate firing key appears in the listing.
+
+Fuse 48K replay at 50% speed: allow about 5 seconds for the small TZX to load, press Enter, wait 0.8 seconds, then press R and Enter to run. Watch for eyes and enter 1, 4, 2, and 3 in a repeated cycle, holding each for 0.12 seconds. The program moves quickly and randomizes the eye position. The replay checks live frames for the eyes before input, another eyes frame after at least two number presses, and a hit marker after further input. The script stops after success, or reports a failure after 45 seconds.
+
+Screenshots are from the running Fuse window, not the archive's reference pictures. A moving eye or a hit marker alone does not prove a full round was finished.
