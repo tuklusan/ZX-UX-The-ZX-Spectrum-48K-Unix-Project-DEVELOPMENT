@@ -14,8 +14,9 @@ ROOT = Path(__file__).resolve().parents[2]
 DIST = ROOT / 'dist'
 sys.path[:0] = [str(DIST / 'sdk/bin/py'), str(ROOT / 'src/zx-ux-sdk/tools')]
 from basicpack import tape_name
+sys.path.insert(0, str(DIST / 'sdk/bin/py'))  # basicpack imports the source SDK
 import rvm
-from zxscreen import screen_text
+from capture_replay import steps, rvm_actions
 
 
 def cases():
@@ -61,6 +62,7 @@ def write_gallery(out: Path, engine: str):
 def run_one(collection: str, ssx: Path, label: str, frames: int):
     # RVM takes its /dev/cassette/ name from the supplied filename.
     # Use precisely the short, checked rtap name, never the long game title.
+    recorded = steps(collection, ssx.stem)
     with tempfile.TemporaryDirectory(prefix='zxux-basic-rvm-') as temporary:
         alias = Path(temporary) / (label + '.ssx')
         shutil.copyfile(ssx, alias)
@@ -68,18 +70,38 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
             raise RuntimeError('RVM input changed')
         opt = rvm.Options()
         opt.prog = str(alias)
+        opt.system = str(DIST / 'zx-ux/tzx/ZX-UX.tzx')
         opt.headless = True
         runner = rvm.Runner(opt)
         runner.start()
+        scripted = False
+        queued = 0
+        post_key = None
+        first_picture = None
         selected = None
         best = -1
+        # A documented original-BASIC replay is only a candidate for native RBC.
+        # Queue its keys after ZX-UX has actually started the compiled process.
         for frame in range(frames + 3000):
             runner.frame()
             job = runner.fg
+            if job.started is not None and not scripted:
+                if recorded:
+                    actions = rvm_actions(recorded)
+                    queued = len(actions)
+                    runner.session.kb.add(actions)
+                scripted = True
             if job.started is not None:
                 picture = runner.session.program_screen(job)
                 if picture and (selected is None or frame % 10 == 0):
                     pixels, border = picture
+                    if first_picture is None:
+                        first_picture = bytes(pixels)
+                    # A frame after the first recorded action takes priority
+                    # over an attractive but idle title screen.
+                    if recorded and queued and len(runner.session.kb.queue) < queued - 2:
+                        if bytes(pixels) != first_picture and sum(bool(v) for v in pixels[:6144]) >= 8:
+                            post_key = (bytes(pixels), border)
                     # Select an actual process-owned display, not the loader or shell.
                     score = sum(bool(v) for v in pixels[:6144])
                     if score > best:
@@ -90,12 +112,21 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
                 break
         if runner.fg.started is None or selected is None:
             raise RuntimeError('no independently observed native process screen: ' + ssx.name)
+        if post_key is not None:
+            selected = post_key
+        elif recorded:
+            print('RBC RVM WARNING:', ssx.stem,
+                  'no changed post-key screen was observed; using a live program screen',
+                  file=sys.stderr, flush=True)
         image, border = selected
         if len(image) != 6912:
             raise RuntimeError('invalid Spectrum screen')
         out = DIST / 'screenshots/rbc/rvm' / collection / (ssx.stem + '.png')
         out.parent.mkdir(parents=True, exist_ok=True)
         rvm.write_png(image, str(out), border)
+        if recorded and runner.session.kb.queue:
+            print('RBC RVM WARNING:', ssx.stem, 'recorded key sequence unfinished',
+                  file=sys.stderr, flush=True)
         if best < 8:
             print('RBC RVM WARNING:', ssx.stem,
                   'Screenshot captured successfully, but automatic visual '

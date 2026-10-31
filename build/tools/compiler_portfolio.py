@@ -3,6 +3,7 @@
 from __future__ import annotations
 import argparse
 import concurrent.futures
+import json
 from html import escape
 import os
 from pathlib import Path
@@ -23,6 +24,9 @@ SAMPLES = {
     'rpc': [('literal_001', 'PASLIT01'), ('course_010_control', 'PASCTRL')],
     'rfortranc': [('hello', 'F77HELLO'), ('factorial', 'F77FACT'), ('f77s_fmt', 'F77FMT')],
 }
+# Per-compiler capture recipes use the same runs.json as C48.
+CAPTURE = json.loads((ROOT / 'build/tools/runs.json').read_text())
+
 SOURCES = {
     'rb2ct': 'assets/rb2ct-bin/ssx',
     'rfc': 'assets/forth-bin/ssx',
@@ -111,6 +115,11 @@ def capture_fuse(compiler, name, label, source, args, number):
               'capture_delay': 1.0 if compiler == 'rb2ct' else 0.0,
               'fuse_wait': args.wait,
               'sample_step': .2 if compiler == 'rb2ct' else .02}
+    config.update(CAPTURE.get(compiler + ':' + name, {}))
+    if compiler in ('rfc', 'rpc', 'rfortranc'):
+        # Score genuine Fuse frames against the independently captured
+        # RVM program screen; refuse the blank shell after a fast exit.
+        config['reference'] = DIST / 'screenshots' / compiler / 'rvm' / (name + '.png')
     run_case((label,), dest, local, config)
 
 
@@ -138,12 +147,9 @@ def main(argv=None):
         value = getattr(args, attr)
         if value is not None:
             setattr(args, attr, value.resolve())
-    # Short-lived Pascal/FORTRAN console jobs cannot yet be captured reliably
-    # by Fuse; RVM provides their verified compiler galleries instead.
+    # Preserve the established release until short-lived console examples pass Fuse.
     selected = ((args.compiler,) if args.compiler else
                 ('rb2ct', 'rfc') if args.engine == 'fuse' else tuple(SAMPLES))
-    if args.engine == 'fuse' and any(c not in ('rb2ct', 'rfc') for c in selected):
-        parser.error('use RVM for short-lived Pascal and FORTRAN examples')
     tasks = list(cases(set(selected)))
     if args.engine == 'rvm':
         for compiler, name, label, source in tasks:

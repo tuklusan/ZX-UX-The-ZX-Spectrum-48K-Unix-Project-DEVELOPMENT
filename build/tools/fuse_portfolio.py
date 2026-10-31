@@ -13,6 +13,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from html import escape
@@ -150,6 +151,30 @@ def run_case(names, destination, args, config=None):
             env['LD_LIBRARY_PATH'] = str(args.libdir)
         xvfb = fuse = None
         kb = None
+        early = []
+        stop_early = threading.Event()
+        early_thread = None
+        reference = config.get('reference')
+        expected = None
+        if reference:
+            from PIL import Image
+            reference = Path(reference)
+            if not reference.is_file():
+                raise RuntimeError('missing independently captured RVM screen: ' + str(reference))
+            picture = Image.open(reference).convert('L')
+            width, height = picture.size
+            expected = picture.crop((32, 32, width - 32, height - 32)).resize((256, 192))
+            expected_pixels = [i for i, val in enumerate(expected.get_flattened_data()) if val > 80]
+            if len(expected_pixels) < 4:
+                raise RuntimeError('RVM reference has no program output')
+
+        def match_program(image):
+            if expected is None:
+                return 0.0
+            inside = image.convert('L').crop((32, 24, 288, 216))
+            data = inside.get_flattened_data()
+            return sum(data[i] > 80 for i in expected_pixels) / len(expected_pixels)
+
         try:
             xvfb = subprocess.Popen(screen, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             time.sleep(.8)
@@ -186,6 +211,27 @@ def run_case(names, destination, args, config=None):
                 values = [] if len(names) > 1 or name == 'hanoi' else config.get('args', [])
                 command = '/dev/cassette/' + name + ''.join(' ' + str(v) for v in values)
                 kb.type(command + (' &' if len(names) > 1 else ''))
+                # Short console programs can print and exit during the Return
+                # key's normal hold. Sample real Fuse frames while it is down.
+                if config.get('early_capture') and len(names) == 1:
+                    baseline = screenshot(display).convert('RGB').crop((32, 24, 288, 216))
+
+                    def sample_early():
+                        while not stop_early.is_set() and len(early) < 300:
+                            try:
+                                candidate = screenshot(display)
+                                inner = candidate.convert('RGB').crop((32, 24, 288, 216))
+                                changed = ImageChops.difference(inner, baseline)
+                                pixels = changed.convert('L').resize((128, 96))
+                                delta = sum(v > 40 for v in pixels.getdata())
+                                ink = sum(v > 48 for v in inner.convert('L').resize((128, 96)).getdata())
+                                if delta >= 4 and ink >= 8:
+                                    early.append((match_program(candidate) if expected else delta * 2 + ink, candidate))
+                            except OSError:
+                                break
+                            time.sleep(.015)
+                    early_thread = threading.Thread(target=sample_early, daemon=True)
+                    early_thread.start()
                 kb.key('\n', pause=config.get('enter_pause', .8))
                 time.sleep(config.get('post_command_wait', 2.0))
             if len(names) == 1 and names[0] == 'invaders':
@@ -214,11 +260,12 @@ def run_case(names, destination, args, config=None):
                     shifted = key.isupper()
                     if shifted:
                         kb.event('Shift_L', True)
-                    kb.event(key.lower(), True)
+                    hold_key = {'\n': 'Return', ' ': 'space'}.get(key, key.lower())
+                    kb.event(hold_key, True)
                     try:
                         time.sleep(float(duration))
                     finally:
-                        kb.event(key.lower(), False)
+                        kb.event(hold_key, False)
                         if shifted:
                             kb.event('Shift_L', False)
                 else:
@@ -277,6 +324,8 @@ def run_case(names, destination, args, config=None):
                 if names == ('kaleido',):
                     pixels = candidate.crop((32, 24, 288, 216)).convert('RGB').resize((80, 60))
                     score += sum((max(p) - min(p)) > 60 for p in pixels.get_flattened_data())
+                if expected is not None:
+                    score = match_program(candidate)
                 if config.get('capture_last') or score > best_score:
                     best, best_score = candidate, score
                 if config.get('first_fractal'):
@@ -287,8 +336,17 @@ def run_case(names, destination, args, config=None):
                         best = candidate
                         print('Fuse', names[0], 'first fractal completed', flush=True)
                         break
+            if early_thread:
+                stop_early.set()
+                early_thread.join(timeout=2)
+                if early:
+                    early_score, early_best = max(early, key=lambda pair: pair[0])
+                    if expected is None or early_score > best_score:
+                        best, best_score = early_best, early_score
             if best is None:
                 raise RuntimeError('screen unchanged from ZX-UX login')
+            if expected is not None and match_program(best) < 0.25:
+                raise RuntimeError('no Fuse frame matching native RVM program output: ' + names[0])
             if config.get('first_fractal') and not any(
                     max(v) > 65 for v in best.crop(
                         (32, 32, 288, 36)).convert('RGB').get_flattened_data()):
@@ -303,6 +361,9 @@ def run_case(names, destination, args, config=None):
                       file=sys.stderr, flush=True)
             print('Fuse', '+'.join(names), '->', destination.relative_to(ROOT), flush=True)
         finally:
+            stop_early.set()
+            if early_thread and early_thread.is_alive():
+                early_thread.join(timeout=2)
             if kb:
                 kb.close()
             for proc in (fuse, xvfb):

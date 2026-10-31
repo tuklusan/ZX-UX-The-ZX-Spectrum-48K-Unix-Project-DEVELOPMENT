@@ -10,6 +10,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from basic_portfolio import cases, write_gallery
+from capture_replay import steps, fuse_steps
 from fuse_portfolio import run_case
 
 OUT = ROOT / 'dist/screenshots/rbc/fuse'
@@ -19,8 +20,10 @@ def capture(i, collection, ssx, label, opts):
     local = argparse.Namespace(**vars(opts))
     local.display = opts.display + i + 1
     out = OUT / collection / (ssx.stem + '.png')
+    recorded = steps(collection, ssx.stem)
     run_case((label,), out, local,
-             {'programs': {label: ssx}, 'capture_delay': 1.0,
+             {'programs': {label: ssx}, 'post_command_wait': 0.6,
+              'input_steps': fuse_steps(recorded),
               'fuse_wait': opts.wait, 'sample_step': .2})
 
 
