@@ -13,16 +13,38 @@ import rtap
 
 
 def collections(source: Path):
-    historical = source / 'bonus/60-programs'
-    if historical.is_dir():
-        yield '60-programs', historical
-    additional = source / 'assets/basic-src'
-    if additional.is_dir():
-        for folder in sorted(additional.iterdir()):
-            if not folder.is_dir() or folder.is_symlink() or folder.name == '60-programs':
+    base = source / 'assets/basic-src'
+    archive = base / 'original-sinclair-basic-collections'
+    if archive.is_symlink() or (archive.exists() and not archive.is_dir()):
+        raise ValueError('unsafe BASIC collections directory: ' + str(archive))
+    seen = set()
+    if archive.is_dir():
+        for folder in sorted(archive.iterdir()):
+            if folder.is_symlink():
+                raise ValueError('linked BASIC collection not permitted: ' + str(folder))
+            if not folder.is_dir():
+                continue  # collection preparation guide and other source notes
+            if not re.fullmatch(r'[a-zA-Z0-9_.-]+', folder.name):
+                raise ValueError('unsafe BASIC collection name: ' + folder.name)
+            if folder.name != '60-programs':
+                # Other original collections remain archival until RBC verdicts
+                # appear. Their BASIC programs are not silently compiled.
+                games = (p for p in folder.iterdir() if p.is_dir() and
+                         re.fullmatch(r'[0-9][0-9]-.+', p.name))
+                if not any((game / 'bin' / (game.name + '.ssx')).is_file() or
+                           (game / 'bin/README.md').is_file() for game in games):
+                    continue
+            seen.add(folder.name)
+            yield folder.name, folder
+    if base.is_dir():
+        for folder in sorted(base.iterdir()):
+            if folder.name == archive.name:
+                continue
+            if not folder.is_dir() or folder.is_symlink() or folder.name in seen:
                 raise ValueError('unsafe or duplicate BASIC collection: ' + str(folder))
-            if not re.fullmatch(r'[a-zA-Z0-9_-]+', folder.name):
-                raise ValueError('unsafe BASIC collection name')
+            if not re.fullmatch(r'[a-zA-Z0-9_.-]+', folder.name):
+                raise ValueError('unsafe BASIC collection name: ' + folder.name)
+            seen.add(folder.name)
             yield folder.name, folder
 
 

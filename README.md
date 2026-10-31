@@ -23,7 +23,9 @@ All paths used by the build resolve from the location of the scripts, not
 from the current working directory or this folder's name.
 
 The build copies C48 program sources from `src/assets/c48-src/` and the original
-60 BASIC programs from `src/bonus/` into a new staged distribution. It then
+60 BASIC programs from
+`src/assets/basic-src/original-sinclair-basic-collections/60-programs/`
+into a new staged distribution. It then
 replaces `dist/` only after the whole build succeeds. A missing `dist/` is normal
 before the first build. Deleting `dist/` is safe because it contains generated
 outputs only. A failed build keeps the previous `dist/` intact.
@@ -54,11 +56,10 @@ its source tree at `dist/zx-ux/src/`. The project license is at
 `dist/LICENSE`. The SDK is in `dist/sdk/bin/`; compiled C48 programs
 are in `dist/assets/c48-bin/`.
 
-Each historical BASIC program is copied into `dist/bonus/60-programs/`.
-Optional sibling `C48/` folders contribute only top-level `.c`, `.ssx`,
-`.tzx`, `.asm` files and the complete `SCREENSHOTS/` folder. Developer notes,
-checks, and build intermediates are not part of that C48 release payload.
-The shared `src/bonus/60-programs/c48lib/` is copied in full.
+The 60 original BASIC games are copied into `dist/bonus/60-programs/`
+without their legacy C48 hand ports. Those three ports are packaged separately
+from `src/zx-ux-sdk/rb2ct/ports/`, with shared C48 support in its `c48lib/`.
+The other original BASIC collections remain archived until RBC results exist.
 
 ## Optional emulation and screenshots
 
@@ -80,8 +81,9 @@ emulator dependencies. The source-only layout and rebuild smoke checks do not
 need an assembler or emulator. Full execution verification requires the stated
 host tools and must be performed on the target machine.
 
-The original BASIC tapes, screenshots, and notes
-are kept in `src/bonus/60-programs/`. The build does not compile or
-modify these programs; it only includes them in `dist/bonus/`.
+The original BASIC tapes, screenshots and notes live under
+`src/assets/basic-src/original-sinclair-basic-collections/`. Packaging does not
+compile or modify the archived programs. Only the 60-game collection is
+currently included in `dist/bonus/`.
 
 See the repository's `LICENSE` and `THIRD-PARTY` files for the terms and notices.

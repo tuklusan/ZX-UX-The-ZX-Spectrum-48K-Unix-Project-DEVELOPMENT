@@ -27,7 +27,7 @@ class RebuildChecks(unittest.TestCase):
         (self.src / 'assets/c48-src/demo.c').write_text('void main(void) {}')
         (self.src / 'docs').mkdir()
         (self.src / 'docs/manual.txt').write_text('manual')
-        bonus = self.src / 'bonus/60-programs'
+        bonus = self.src / 'assets/basic-src/original-sinclair-basic-collections/60-programs'
         for number in range(1, 61):
             folder = bonus / f'{number:02d}-demo/BASIC'
             folder.mkdir(parents=True)
@@ -84,17 +84,17 @@ def pack(*args):
         self.run_builder()
         self.assertFalse((self.dist/'stale').exists())
         self.assertEqual((self.dist/'docs/manual.txt').read_text(), 'manual')
-        self.assertEqual((self.src/'bonus/60-programs/01-demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
+        self.assertEqual((self.src/'assets/basic-src/original-sinclair-basic-collections/60-programs/01-demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
 
     def test_bonus_has_only_numbered_programs_and_preview(self):
-        source = self.src / 'bonus/60-programs'
+        source = self.src / 'assets/basic-src/original-sinclair-basic-collections/60-programs'
         extras = ('CLEAN-INDEX.json', 'CLEANUP-SUMMARY.json', 'INDEX.csv',
                   'PROGRAMS.zip', 'README-FIRST.TXT', 'SHA256SUMS.txt')
         for name in extras:
             (source / name).write_text('historical source data')
         (source / 'TOOLS').mkdir()
         (source / 'TOOLS/helper.py').write_text('pass')
-        (self.src / 'bonus/other-source.txt').write_text('not for release')
+        (self.src / 'assets/basic-src/original-sinclair-basic-collections/other-source.txt').write_text('not for release')
         self.run_builder()
         output = self.dist / 'bonus/60-programs'
         expected = {f'{number:02d}-demo' for number in range(1, 61)}
@@ -111,7 +111,7 @@ def pack(*args):
         self.assertEqual({p.name for p in output.iterdir()}, expected)
 
     def test_historical_c48_port_is_not_copied_into_bonus(self):
-        source = self.src / 'bonus/60-programs/01-demo/C48'
+        source = self.src / 'assets/basic-src/original-sinclair-basic-collections/60-programs/01-demo/C48'
         source.mkdir()
         (source / 'main.c').write_text('old port')
         self.run_builder()
@@ -140,7 +140,7 @@ def pack(*args):
         self.run_builder()
         target = self.dist / 'bonus/60-programs/01-demo/BASIC/demo.bas'
         before = target.read_bytes()
-        folder = self.src / 'bonus/60-programs/60-demo'
+        folder = self.src / 'assets/basic-src/original-sinclair-basic-collections/60-programs/60-demo'
         import shutil
         shutil.rmtree(folder)
         self.run_builder(ok=False)
@@ -172,7 +172,7 @@ def pack(*args):
         self.assertEqual((self.dist/'docs/late.txt').read_text(), 'latest')
 
     def test_caches_are_not_distributed(self):
-        for folder in (self.src/'docs', self.src/'bonus',
+        for folder in (self.src/'docs', self.src/'assets/basic-src/original-sinclair-basic-collections',
                        self.src/'assets/c48-src', self.src/'zx-ux-sdk'):
             cache = folder / '__pycache__'
             cache.mkdir()

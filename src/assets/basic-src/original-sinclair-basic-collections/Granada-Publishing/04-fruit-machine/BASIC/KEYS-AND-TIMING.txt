@@ -1,0 +1,19 @@
+FRUIT MACHINE — KEYS AND TIMING
+
+We read the BASIC source and watched three spins in live Fuse 48K play.
+
+The first spin runs on its own. At the next prompt, press Y for another spin. After the next result, press Y again for a third spin. The symbols and money can change after each spin. The score and prize values depend on the outcome; the run is not fixed to any prize.
+
+Run from the repository root:
+  sh src/assets/basic-src/original-sinclair-basic-collections/Granada-Publishing/04-fruit-machine/BASIC/REPLAY.sh
+
+Fuse SDL 1.6.0 runs at 50% speed for this sample. Each wait is real clock time.
+
+  1. Open the original FruitMachine.tap with the 48K ROM and automatic tape load.
+  2. Wait 6.5 seconds for the first result; save 01-FIRST-SPIN.png.
+  3. Hold Y for 0.15 seconds, release, then wait 0.15 seconds.
+  4. Wait 3.0 seconds for the second result; save 02-SECOND-SPIN.png.
+  5. Hold Y for 0.15 seconds, release, then wait 0.15 seconds.
+  6. Wait 3.0 seconds for the third result; save 03-THIRD-SPIN.png.
+
+The script checks that each saved view differs from the prior view. We also inspected all three screens for changing fruit symbols and money. A changed picture alone is never proof of a full game.

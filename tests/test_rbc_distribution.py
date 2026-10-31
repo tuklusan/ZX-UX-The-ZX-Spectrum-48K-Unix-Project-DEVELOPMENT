@@ -18,7 +18,7 @@ import rtap
 
 class BasicDistribution(unittest.TestCase):
     def test_accepted_results_and_originals(self):
-        source = ROOT / 'src/bonus/60-programs'
+        source = ROOT / 'src/assets/basic-src/original-sinclair-basic-collections/60-programs'
         target = ROOT / 'dist'
         games = sorted(source.glob('[0-9][0-9]-*'))
         self.assertEqual(len(games), 60)
@@ -60,7 +60,7 @@ class BasicDistribution(unittest.TestCase):
         self.assertEqual({p.stem for p in (target / 'assets/rbc-bin/60-programs/tzx').glob('*.tzx')}, set(accepted))
 
     def test_other_collection_and_failed_game(self):
-        original = ROOT / 'src/bonus/60-programs/53-russian-roulette'
+        original = ROOT / 'src/assets/basic-src/original-sinclair-basic-collections/60-programs/53-russian-roulette'
         with tempfile.TemporaryDirectory() as temp:
             source = Path(temp) / 'source'
             game = source / 'assets/basic-src/demo/01-sample'
@@ -78,6 +78,26 @@ class BasicDistribution(unittest.TestCase):
             stage2 = Path(temp) / 'dist2'
             basicpack.package(source, stage2)
             self.assertFalse((stage2 / 'assets/rbc-bin/demo/tzx/01-sample.tzx').exists())
+
+    def test_multiple_original_collections(self):
+        original = ROOT / 'src/assets/basic-src/original-sinclair-basic-collections/60-programs/53-russian-roulette'
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / 'src'
+            archive = source / 'assets/basic-src/original-sinclair-basic-collections'
+            for name in ('first-set', 'second-set'):
+                game = archive / name / '01-sample'
+                (game / 'BASIC').mkdir(parents=True)
+                (game / 'bin').mkdir()
+                for suffix in ('.bas', '.tzx'):
+                    (game / 'BASIC' / ('01-sample' + suffix)).write_bytes(
+                        (original / 'BASIC' / ('53-russian-roulette' + suffix)).read_bytes())
+                (game / 'bin/01-sample.ssx').write_bytes(
+                    (original / 'bin/53-russian-roulette.ssx').read_bytes())
+            (archive / 'not-yet-compiled/01-pending/BASIC').mkdir(parents=True)
+            self.assertEqual(basicpack.package(source, Path(temp) / 'dist'), 2)
+            for name in ('first-set', 'second-set'):
+                self.assertTrue((Path(temp) / 'dist/assets/rbc-bin' / name / 'ssx/01-sample.ssx').is_file())
+            self.assertFalse((Path(temp) / 'dist/assets/rbc-bin/not-yet-compiled').exists())
 
     def test_both_clis_offline(self):
         packaged = ROOT / 'dist/sdk/bin'

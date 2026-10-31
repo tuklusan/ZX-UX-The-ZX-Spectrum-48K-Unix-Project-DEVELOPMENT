@@ -1,0 +1,20 @@
+LASER ATTACK — KEYS AND TIMING
+
+We read the original BASIC and watched the controls in live Fuse 48K play.
+
+Choose a difficulty from 1 to 10 and press Return. The replay uses 1. Press 7 to fire. Press any other key to turn the ship; this sample uses 8. The ship continues moving while the keys are released.
+
+Run from the repository root:
+  sh src/assets/basic-src/original-sinclair-basic-collections/Granada-Publishing/07-laser-attack/BASIC/REPLAY.sh
+
+The script uses Fuse SDL 1.6.0 at 100% speed. All waits refer to real clock time.
+
+  1. Load the original LaserAttack.tap with the 48K ROM.
+  2. Wait 2.0 seconds for the difficulty prompt.
+  3. Hold 1 for 0.10 seconds and Return for 0.10 seconds; wait 0.15 seconds after each.
+  4. Wait 18.0 seconds for source setup and active play; save 01-IN-GAME.png.
+  5. Hold 8 for 0.45 seconds; release, wait 0.15 and then 0.3 seconds; save 02-AFTER-TURN.png.
+  6. Hold 7 for 0.45 seconds; release, wait 0.15 and then 0.3 seconds; save 03-AFTER-FIRE.png.
+  7. Hold 8 again for 0.45 seconds; release, wait 0.15 and then 0.3 seconds; save 04-AFTER-SECOND-TURN.png.
+
+The four views come from the original TAP running in Fuse. The script rejects unchanged pairs of frames, and we inspected the on-screen ship and its direction. No native game result is implied.

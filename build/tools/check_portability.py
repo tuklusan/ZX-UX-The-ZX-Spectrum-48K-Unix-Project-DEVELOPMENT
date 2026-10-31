@@ -13,7 +13,7 @@ TOOLS = ROOT / 'build/tools'
 def main():
     required = (ROOT / 'build/build.py', ROOT / 'src/zx-ux',
                 ROOT / 'src/zx-ux-sdk', ROOT / 'src/assets/c48-src',
-                ROOT / 'src/bonus/60-programs',
+                ROOT / 'src/assets/basic-src/original-sinclair-basic-collections/60-programs',
                 ROOT / 'src/docs/README.md')
     for item in required:
         if not item.exists():
@@ -27,8 +27,9 @@ def main():
     compile((ROOT / 'build/build.py').read_bytes(), str(ROOT / 'build/build.py'), 'exec')
     if not isinstance(json.loads((TOOLS / 'runs.json').read_text()), dict):
         raise RuntimeError('Invalid local run configurations')
-    collection = ROOT / 'src/bonus/60-programs'
-    if not (collection / 'c48lib').is_dir() or (collection / 'c48lib').is_symlink():
+    collection = ROOT / 'src/assets/basic-src/original-sinclair-basic-collections/60-programs'
+    c48lib = ROOT / 'src/zx-ux-sdk/rb2ct/ports/c48lib'
+    if not c48lib.is_dir() or c48lib.is_symlink():
         raise RuntimeError('Missing or unsafe shared C48 library')
     folders = sorted(p for p in collection.iterdir()
                      if p.is_dir() and p.name[:2].isdigit())

@@ -24,7 +24,7 @@ def checked_dir(root):
             raise RuntimeError('Unsafe build input: ' + str(path))
 
 
-def copy_bonus_programs(source, destination, no_cache):
+def copy_original_programs(source, destination, no_cache):
     """Stage only the 60 BASIC program folders and the social preview PNG.
 
     The source collection retains its historical metadata, tools and archives;
@@ -79,9 +79,9 @@ def main():
              else shutil.which('sjasmplus') or 'sjasmplus')
     # Both source collections are independent of disposable dist/.
     corpus = S / 'assets/c48-src'
-    bonus = S / 'bonus'
+    originals = S / 'assets/basic-src/original-sinclair-basic-collections'
     docs = S / 'docs'
-    for source in (corpus, bonus, docs):
+    for source in (corpus, originals, docs):
         checked_dir(source)
     if D.exists() or D.is_symlink():
         checked_dir(D)
@@ -95,7 +95,7 @@ def main():
     # Python cache files are never source inputs or release deliverables.
     no_cache = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
     shutil.copytree(corpus, stage / 'assets/c48-src', ignore=no_cache)
-    copy_bonus_programs(bonus, stage / 'bonus', no_cache)
+    copy_original_programs(originals, stage / 'bonus', no_cache)
     preserve_existing_c48_release(D, stage)
     basicpack.package(S, stage)
     checked_dir(S / 'assets/forth-src')

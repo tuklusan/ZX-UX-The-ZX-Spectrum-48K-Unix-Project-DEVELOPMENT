@@ -1,0 +1,20 @@
+14-outlander--Outlander
+Verified original 48K snapshot: Outlander.z80
+Original BASIC/controls: A left, S right, P up, L down, O fire (from archive BAS; independent TZX listing failed)
+Answer no to instructions and use the keyboard while the live scrolling surface is visible. The TZX cannot be independently LLIST-decoded because it contains duplicate line 0 records.
+
+Reproduce from repository root:
+  sh src/assets/basic-src/original-sinclair-basic-collections/www.thespectrumshow.net/14-outlander--Outlander/BASIC/REPLAY.sh
+
+Replay steps in execution order (seconds of real key hold/wait):
+  key: n (0.20s)
+  key: Return (0.20s)
+  wait 3.00 seconds
+  key: a (0.55s)
+  key: p (0.40s)
+  shot: 01-STATE.png
+  key: s (0.55s)
+  key: o (0.30s)
+  wait 1.50 seconds
+  shot: 02-AFTER-MOVES.png
+Fuse at 100% unless program setup requires 500%; captures are live, not sourced from supplied screenshots.
