@@ -1,4 +1,0 @@
-PROGRAM E26;
-BEGIN
-  READ(1)
-END.

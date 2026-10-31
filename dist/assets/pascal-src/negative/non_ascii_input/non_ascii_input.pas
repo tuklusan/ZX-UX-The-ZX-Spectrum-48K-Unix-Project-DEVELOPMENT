@@ -1,5 +1,0 @@
-PROGRAM NONASCII;
-BEGIN
-  WRITELN(1 + )
-END.
-{ÿ}

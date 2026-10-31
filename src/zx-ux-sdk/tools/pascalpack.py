@@ -25,8 +25,11 @@ SHOWCASE = (
 
 
 def package(source: Path, stage: Path):
-    root = source / 'assets/pascal-src/positive'
-    cases = [root / name / (name + '.pas') for name in SHOWCASE]
+    root = source / 'assets/pascal-src'
+    numerical = sorted((root / 'numerical-analysis').glob('*.pas'))
+    if len(numerical) != 22:
+        raise ValueError('Pascal numerical-analysis showcase must contain 22 programs')
+    cases = [root / 'positive' / name / (name + '.pas') for name in SHOWCASE] + numerical
     missing = [str(p) for p in cases if not p.is_file()]
     if missing:
         raise ValueError('Missing Pascal showcase source(s): ' + '; '.join(missing))
@@ -43,11 +46,12 @@ def package(source: Path, stage: Path):
         asmfile = Path(tmp) / 'case.s'
         for number, pas in enumerate(cases, 1):
             case = pas.stem
-            dest = srcbase / case
+            collection = ('numerical-analysis' if pas in numerical else 'fibonacci')
+            dest = srcbase / collection / case if collection == 'numerical-analysis' else srcbase / case
             dest.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(pas, dest / pas.name)
             row = dict.fromkeys(FIELDS, 'SKIP')
-            row.update(collection='showcase', program=case, status='FAIL', detail='not attempted')
+            row.update(collection=collection, program=case, status='FAIL', detail='not attempted')
             errors = io.StringIO()
             asmfile.unlink(missing_ok=True)
             with contextlib.redirect_stderr(errors):

@@ -1,4 +1,0 @@
-PROGRAM E09;
-VAR X: ;
-BEGIN
-END.

@@ -1,5 +1,0 @@
-PROGRAM E10;
-VAR X: INTEGER;
-BEGIN
-X := 'A';
-END.

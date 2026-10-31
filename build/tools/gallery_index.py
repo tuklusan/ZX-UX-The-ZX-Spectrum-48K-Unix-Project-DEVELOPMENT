@@ -22,7 +22,7 @@ def write_index(engines=('rvm', 'fuse')):
         for engine in engines:
             index = SCREENSHOTS / directory / engine / 'index.html'
             if not index.is_file():
-                if engine == 'fuse' and directory in ('rpc', 'rfortranc'):
+                if engine == 'fuse' and directory == 'rfortranc':
                     continue  # No valid real Fuse capture for fast-exiting programs.
                 raise FileNotFoundError('missing ' + str(index))
             links.append('<a href="%s/%s/index.html">%s</a>' % (directory, engine, escape(engine.upper())))

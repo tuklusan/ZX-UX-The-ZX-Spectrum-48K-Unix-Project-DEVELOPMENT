@@ -1,0 +1,26 @@
+collection	program	compile	ras	rld	ssx	tzx	status	detail
+fibonacci	recovered_course_030_fibonacci_optimized	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+fibonacci	recovered_course_040_fibonacci_large	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+fibonacci	recovered_21_fibonacci_array	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	bases	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkadj	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkcopy	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkcum	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkdot	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkflip	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkgcd	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkl1	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkl2	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkmean	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkmin	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkmm	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkprime	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkreal	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkrsrt	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkscale	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burksort	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkvar	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_burkvec	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	f77s_machar	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	factorial	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX
+numerical-analysis	prime	PASS	PASS	PASS	PASS	PASS	PASS	validated relocatable SSX1 and TZX

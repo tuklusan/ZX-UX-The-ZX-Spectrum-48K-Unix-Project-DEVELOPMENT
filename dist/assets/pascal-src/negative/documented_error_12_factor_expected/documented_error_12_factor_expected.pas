@@ -1,4 +1,0 @@
-PROGRAM E12;
-BEGIN
-  WRITELN(1 + )
-END.
