@@ -8,7 +8,7 @@ The Granada Publishing and Spectrum Show sets are **closed**. Every distinct pro
 |---|---:|---:|
 | Granada Publishing | 24 | 0 |
 | Spectrum Show | 73 | 0 |
-| F77S (closed earlier) | 20 | 0 |
+| Numerical Analysis (F77S, closed earlier) | 20 | 0 |
 | **Total** | **117** | **0** |
 
 These counts mean the source folders were processed and published. They do **not** mean every game was won or every tape yielded a stand-alone BASIC text listing. The original archive counts were checked as working inventories; identify new or duplicate source items before changing a total.
