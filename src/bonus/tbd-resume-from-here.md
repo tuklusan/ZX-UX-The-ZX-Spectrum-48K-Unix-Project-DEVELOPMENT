@@ -45,34 +45,34 @@ The last successful remote readback is the only completed checkpoint. Before a n
 
 The private checker is enabled by owner request on 2026-10-30. Run its self-test when starting a new session. Before **every** GitHub write, check the complete proposed text, paths, full commit message, and exact push command with the private four-attempt workflow. Keep private checker files outside Git. If the checker rejects a change, stop that write after the allowed checks; do not weaken rules or publish the blocked content. Keep the writing rules in force for all new English prose. Run the other tests that apply to the game. Do not claim a passing run without running it.
 
-**Latest completed program:** Granada Publishing — Word Mix, `21-word-mix`. We kept the original TAP, checked its 2,108 BASIC program bytes against the TZX, and regenerated 70 numbered lines. In genuine Fuse 48K, we started a round with Space, entered QUIT as the first answer, then DOG as the second. The program revealed its two words and a score of zero. The replay and private checker passed.
+**Latest completed program:** Granada Publishing — Guideline, `22-guideline`. We checked two original recordings as versions of the same ring-guiding game. Guideline.tzx holds 1,603 BASIC bytes and 74 lines, while SpectrumGuideline.tap holds 1,546 BASIC bytes and 71 lines. Each source matched its own listing. Both versions were played in real Fuse 48K with difficulty 2 and keys 6 and 7. Four genuine captures and both replays passed. The private checker passed.
 
-**Previous verified main parent:** `f19b9dd8a0855e25b5a7c10a24dc815bf561c77f`. Read live `main` for the new commit containing this checkpoint. **Next work:** Granada Publishing — Spectrum Scrabble, Treasure Island, and Guideline source comparison. Spectrum Scrabble and Treasure Island still lack confirmed active play. Do not count local-only work.
+**Previous verified main parent:** `5225c8987be1cc7e9ede5ebbf056eb9391650419`. Read live `main` for the new commit containing this checkpoint. **Next work:** Granada Publishing — Spectrum Scrabble and Treasure Island. Both still need confirmed input after their full loading and screen drawing. Then compare the remaining Spectrum Show source archive. Do not count local-only work.
 
 ## Progress at pause — committed program directories
 
-**71 / 117 (60.7%) complete; 46 remaining (39.3%).** Counts reflect committed program directories against the preliminary archive inventory.
+**72 / 117 (61.5%) complete; 45 remaining (38.5%).** Counts reflect committed program directories against the preliminary archive inventory.
 
 | Collection | Done | Remaining | Total |
 |---|---:|---:|---:|
 | F77S | 20 | 0 | 20 |
-| Granada Publishing | 21 | 3 | 24 |
+| Granada Publishing | 22 | 2 | 24 |
 | Spectrum Show | 30 | 43 | 73 |
-| **Total** | **71** | **46** | **117** |
+| **Total** | **72** | **45** | **117** |
 
-The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, Mighty Missile, Noughts and Crosses, Masterbrain, Mirror Tile, Morse Code, Nine Hole Golf, Rainbow Squash, Save the Whale, Sheepdog Trials, Spectrum Dice, Spectrum Ledger, Spectrum Shoot, Spectrum Smalltalk, and Word Mix now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
+The 24 Granada and 73 Spectrum Show totals are **preliminary source-archive counts**. Recheck duplicates, non-BASIC items, distinct identities and actual gameplay proof before treating these as final. A committed directory is not automatically proof of a fully playable game. Bobsleigh, Fruit Machine, Commando Jump, Spectrum Invaders, Laser Attack, Mighty Missile, Noughts and Crosses, Masterbrain, Mirror Tile, Morse Code, Nine Hole Golf, Rainbow Squash, Save the Whale, Sheepdog Trials, Spectrum Dice, Spectrum Ledger, Spectrum Shoot, Spectrum Smalltalk, Word Mix, and Guideline now have original media, checked listings, and live Fuse play samples on `main`. Their `bin/` areas have no native output. The progress baseline for a new chat is the latest live GitHub tree, not this frozen table.
 
 ## Exact pause point — verified GitHub state
 
 The latest checked `main` before this guide update is:
 
-`f19b9dd8a0855e25b5a7c10a24dc815bf561c77f` — Granada Spectrum Smalltalk completed with original media and two live replies. Read live HEAD for Word Mix and this update.
+`5225c8987be1cc7e9ede5ebbf056eb9391650419` — Granada Word Mix completed with original media and a real Fuse result screen. Read live HEAD for Guideline and this update.
 
 Previously completed on remote:
 
 - **F77S: 20 of 20 programs.** Original TZX, independently decoded LLIST `.bas`, notes and Fuse captures/replays are committed. Some are numerical demonstrations rather than games; do not relabel execution as human gameplay. No native SSX.
 - **Spectrum Show: 30 program directories committed** at pause (not all 73 source entries). The initial 7 were replayed again from actual game starts after the user rejected title-screen-only captures. Programs 08–18 were added with hands-on replay and moves. Subsequent committed indices: **20, 21, 23, 24, 25, 27, 28, 34, 35, 36, 46, 48**. Missing index numbers are **not proof of missing programs**: inspect the archive and compare unique program identities and committed paths. Some entries may be duplicates, non-BASIC or not playable; record such findings truthfully. In particular, Outlander was flagged for LLIST rejection while media and actual Fuse gameplay were preserved. Never fabricate an LLIST listing.
-- **Granada: 21 of 24 initially inventoried program directories:** `01-across-the-ravine` through `21-word-mix` in the live tree. The three remaining source identities are Spectrum Scrabble, Treasure Island, and Guideline. These names and the early 24-entry count need final duplicate and source checks.
+- **Granada: 22 of 24 initially inventoried program directories:** `01-across-the-ravine` through `22-guideline` in the live tree. Guideline and SpectrumGuideline are different source versions of the same ring-guiding game and share one folder. The only remaining original Granada folder names are Spectrum Scrabble and Treasure Island. The preliminary total remains subject to final checking.
 
 **No uncommitted local work should be assumed to survive.** The old container had temporary probes, transfer JSON files and images; those are not proof of remote publication and may be gone. Look at live GitHub first. Re-run unfinished work from the original archive, not an unverified old screenshot.
 
@@ -91,7 +91,7 @@ Previously completed on remote:
 
 ## Where to resume concretely
 
-**First:** check inputs and live `main`. **Next:** Granada Publishing — Spectrum Scrabble active-grid input, Treasure Island active map input, and the two Guideline source versions. Then continue the remaining Spectrum Show sources. Do not repeat finished programs.
+**First:** check inputs and live `main`. **Next:** Granada Publishing — Spectrum Scrabble and Treasure Island. Each needs a confirmed active input sequence after its slow screen drawing. Then resume remaining Spectrum Show titles.
 
 In parallel, compare remaining Spectrum Show originals with the live `src/bonus/www.thespectrumshow.net` tree. Process up to 12 independent game checks where practical, but push each completed program separately. Every published capture must come from actual input-driven Fuse play. Preserve all prior `60-programs` and other source bytes.
 
