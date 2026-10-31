@@ -1,0 +1,3 @@
+DEATH VALLEY (COLOUR): BASIC lines 40-50 ask for starting width, then Enter. Lines 240-300 read Q and P through INKEY$ for opposite steering changes. No Enter is used while steering.
+
+In Fuse 48K at 100% speed, wait 18 seconds for VALLEYCLR.tzx to load. Press Enter, wait 0.5 seconds, press R and Enter to run, and wait 1.2 seconds. Enter width 10 and press Enter. Wait 0.7 seconds, press Q and then P, then wait 0.3 seconds. Each key holds 0.08 seconds and releases for 0.16 seconds. The color screen and moving walls are captured during a short trial, not a complete run.
