@@ -150,6 +150,13 @@ def capture_fuse(compiler, name, label, source, args, number):
         'sample_step': .2 if compiler == 'rb2ct' else .02,
     }
     config.update(CAPTURE.get(compiler + ':' + name, {}))
+    if compiler in ('rfc', 'rpc'):
+        # Stable timing from actual Pascal and Forth Fuse / RVM comparisons.
+        # Sample every ~two 50 Hz video frames, including brief output.
+        config.update(type_key_pause=.12, capture_delay=0.0,
+                      fuse_wait=12.0, sample_step=.04,
+                      post_command_wait=0.0, enter_pause=.1,
+                      early_capture=True)
     if compiler == 'rfortranc':
         # Select actual FORTRAN output, not the loader or an empty exit screen.
         config.update(fuse_speed=200, capture_delay=0.0,

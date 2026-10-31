@@ -115,9 +115,9 @@ class Keyboard:
         self.t.XTestFakeKeyEvent(self.ptr, keycode, int(down), 0)
         self.x.XFlush(self.ptr)
 
-    def type(self, value):
+    def type(self, value, pause=.20):
         for ch in value:
-            self.key(ch)
+            self.key(ch, pause=pause)
 
     def close(self):
         if self.ptr:
@@ -215,7 +215,7 @@ def run_case(names, destination, args, config=None):
             if login is None:
                 raise RuntimeError('fresh ZX-UX TZX did not reach login')
             kb = Keyboard(display)
-            kb.type('root')
+            kb.type('root', pause=config.get('type_key_pause', .20))
             kb.key('\n', pause=.8)
             time.sleep(2)
             if not ImageChops.difference(screenshot(display).crop((10, 50, 310, 125)),
@@ -224,7 +224,8 @@ def run_case(names, destination, args, config=None):
             for name in names:
                 values = [] if len(names) > 1 or name == 'hanoi' else config.get('args', [])
                 command = '/dev/cassette/' + name + ''.join(' ' + str(v) for v in values)
-                kb.type(command + (' &' if len(names) > 1 else ''))
+                kb.type(command + (' &' if len(names) > 1 else ''),
+                        pause=config.get('type_key_pause', .20))
                 # Short console programs can print and exit during the Return
                 # key's normal hold. Sample real Fuse frames while it is down.
                 if config.get('early_capture') and len(names) == 1:
