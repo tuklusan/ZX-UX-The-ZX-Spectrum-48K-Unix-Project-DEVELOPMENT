@@ -1,4 +1,5 @@
-"""Build and package the three preserved manual BASIC-to-C48 ports."""
+"""RB2CT development placeholder checks."""
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -7,51 +8,31 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SDK = ROOT / 'src/zx-ux-sdk'
-sys.path[:0] = [str(SDK), str(SDK / 'tools')]
-import rld
-import rtap
-import rb2ctpack
-from rb2ct.driver import PORTS, available, build
+MESSAGE = 'rb2ct: under development\n'
 
 
-class Rb2ctDistribution(unittest.TestCase):
-    def test_legacy_port_sources_are_present(self):
-        self.assertEqual(available(), ['01-minelay', '25-galaxians', '58-invaders'])
-        for name in available():
-            self.assertEqual(len(list((PORTS / '60-programs' / name / 'C48').glob('*.c'))), 1)
+class Rb2ctPlaceholder(unittest.TestCase):
+    def test_entry_points(self):
+        with tempfile.TemporaryDirectory() as folder:
+            env = dict(os.environ, PYTHONPATH=str(SDK), PYTHONDONTWRITEBYTECODE='1')
+            commands = ([sys.executable, '-B', str(SDK / 'bin/rb2ct')],
+                        [sys.executable, '-B', '-m', 'rb2ct'])
+            for command in commands:
+                with self.subTest(command=command):
+                    result = subprocess.run(command, cwd=folder, env=env,
+                                            capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(result.stdout, MESSAGE)
+                    self.assertEqual(result.stderr, '')
+                    self.assertEqual(list(Path(folder).iterdir()), [])
 
-    def test_all_ports_compile_and_package(self):
-        with tempfile.TemporaryDirectory() as temp:
-            stage = Path(temp)
-            self.assertEqual(rb2ctpack.package(stage), 3)
-            for name, stem in (('01-minelay', 'minelay'),
-                               ('25-galaxians', 'galaxian'),
-                               ('58-invaders', 'invaders')):
-                src = stage / 'assets/rb2ct-src/60-programs' / name / 'C48' / (stem + '.c')
-                self.assertEqual(src.read_bytes(),
-                                 (PORTS / '60-programs' / name / 'C48' / src.name).read_bytes())
-                ssx = (stage / 'assets/rb2ct-bin/ssx' / (stem + '.ssx')).read_bytes()
-                tape = (stage / 'assets/rb2ct-bin/tzx' / (stem + '.tzx')).read_bytes()
-                self.assertTrue(rld.parse_ssx(ssx))
-                _, blocks = rtap.tzx_blocks(tape)
-                self.assertEqual(len(blocks), 2)
-                self.assertEqual([block for _, block in blocks],
-                                 list(rtap.records(ssx, stem)))
-            self.assertEqual(len(list((stage / 'assets/rb2ct-bin/ssx').glob('*.ssx'))), 3)
-            self.assertEqual(len(list((stage / 'assets/rb2ct-bin/tzx').glob('*.tzx'))), 3)
-
-    def test_cli_cannot_claim_unknown_basic_translation(self):
-        result = subprocess.run([sys.executable, '-B', str(SDK / 'bin/rb2ct'),
-                                 '02-fall-guy'], capture_output=True, text=True)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('no historical C48 hand port', result.stderr)
-
-    def test_cli_can_build_external_hand_port(self):
-        with tempfile.TemporaryDirectory() as temp:
-            source = PORTS / '60-programs/25-galaxians/C48/galaxian.c'
-            ssx, tzx = build(source, PORTS / 'c48lib', Path(temp))
-            self.assertTrue(ssx.is_file())
-            self.assertTrue(tzx.is_file())
+    def test_preserved_library(self):
+        common = SDK / 'rb2ct/ports/c48lib'
+        self.assertEqual({p.name for p in common.iterdir()},
+                         {'c48lib.h', 'c48lib.asm', 'c48lib-font.asm',
+                          'FONT-SOURCE.txt'})
+        self.assertFalse((SDK / 'rb2ct/ports/60-programs').exists())
+        self.assertFalse((SDK / 'tools/rb2ctpack.py').exists())
 
 
 if __name__ == '__main__':

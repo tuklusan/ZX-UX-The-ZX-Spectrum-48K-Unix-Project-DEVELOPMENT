@@ -18,7 +18,6 @@ DIST = ROOT / 'dist'
 sys.path[:0] = [str(DIST / 'sdk/bin/py'), str(Path(__file__).resolve().parent)]
 
 SAMPLES = {
-    'rb2ct': ['minelay', 'galaxian', 'invaders'],
     'rfc': [p.stem for p in sorted((DIST / 'assets/forth-bin/ssx').glob('*.ssx'))],
     'rpc': [
         'recovered_course_030_fibonacci_optimized',
@@ -48,18 +47,14 @@ SAMPLES = {
 CAPTURE = json.loads((ROOT / 'build/tools/runs.json').read_text())
 
 SOURCES = {
-    'rb2ct': 'assets/rb2ct-bin/ssx',
     'rfc': 'assets/forth-bin/ssx',
     'rpc': 'assets/pascal-bin/samples/ssx',
     'rfortranc': 'assets/fortran-bin/samples/ssx',
 }
 LABEL_PREFIX = {'rfc': 'FTH', 'rpc': 'PAS', 'rfortranc': 'F77'}
-RB2CT_LABELS = ('MINE', 'GALAX', 'INVA')
 
 
 def label_for(compiler, index):
-    if compiler == 'rb2ct':
-        return RB2CT_LABELS[index]
     return '%s%02d' % (LABEL_PREFIX[compiler], index + 1)
 
 
@@ -117,16 +112,13 @@ def capture_rvm(compiler, name, label, source, frames):
             runner.frame()
             if runner.fg and runner.fg.started is not None:
                 live_frames += 1
-                if compiler == 'rb2ct' and frame % 10:
-                    pass  # A longer-running graphical game needs sampling.
-                else:
-                    picture = runner.session.program_screen(runner.fg)
-                    if picture is None and compiler == 'rfc':
-                        picture = runner.picture()
-                    if picture and len(picture[0]) == 6912 and live_frames >= (1 if compiler == 'rfc' else 3):
-                        score = sum(bool(b) for b in picture[0][:6144])
-                        if (compiler == 'rb2ct' and score > best or compiler != 'rb2ct' and score > 0):
-                            chosen, best = (bytes(picture[0]), picture[1]), score
+                picture = runner.session.program_screen(runner.fg)
+                if picture is None and compiler == 'rfc':
+                    picture = runner.picture()
+                if picture and len(picture[0]) == 6912 and live_frames >= (1 if compiler == 'rfc' else 3):
+                    score = sum(bool(b) for b in picture[0][:6144])
+                    if score > 0:
+                        chosen, best = (bytes(picture[0]), picture[1]), score
             if runner.check(limit=frames):
                 break
         if runner.fg is None or runner.fg.started is None or chosen is None:
@@ -145,9 +137,9 @@ def capture_fuse(compiler, name, label, source, args, number):
     dest = DIST / 'screenshots' / compiler / 'fuse' / (name + '.png')
     config = {
         'programs': {label: source},
-        'capture_delay': 1.0 if compiler == 'rb2ct' else 0.0,
+        'capture_delay': 0.0,
         'fuse_wait': args.wait,
-        'sample_step': .2 if compiler == 'rb2ct' else .02,
+        'sample_step': .02,
     }
     config.update(CAPTURE.get(compiler + ':' + name, {}))
     if compiler in ('rfc', 'rpc'):

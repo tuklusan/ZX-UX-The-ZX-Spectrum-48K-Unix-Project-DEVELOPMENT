@@ -65,7 +65,6 @@ def build(stage, sources, dest):
     (dest/'demo.ssx').write_bytes(b'code')
 ''')
         (tools / 'basicpack.py').write_text('def package(*args): return 1\n')
-        (tools / 'rb2ctpack.py').write_text('def package(*args): return 3\n')
         (tools / 'pascalpack.py').write_text('def package(*args): return 1\n')
         (tools / 'fortranpack.py').write_text('def package(*args): return 1\n')
         (tools / 'forthbuild.py').write_text('''

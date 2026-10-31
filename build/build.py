@@ -12,7 +12,7 @@ sys.dont_write_bytecode = True
 R = pathlib.Path(__file__).resolve().parents[1]
 B, S, D = R / 'build', R / 'src', R / 'dist'
 sys.path.insert(0, str(S / 'zx-ux-sdk/tools'))
-import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, forthbuild, pascalpack, fortranpack, rb2ctpack
+import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, forthbuild, pascalpack, fortranpack
 
 FORTH_SHOWCASE_DIRS = ('examples', 'numerical-analysis', 'portable', 'ported')
 
@@ -45,7 +45,7 @@ def copy_original_programs(source, destination, no_cache):
         raise RuntimeError('Missing or unsafe BASIC social preview: ' + str(preview))
     output.mkdir(parents=True)
     for program in program_dirs:
-        # The separately packaged RB2CT hand ports never enter BASIC archives.
+        # Historical C48 folders never enter BASIC archives.
         def no_port(folder, names):
             ignored = set(no_cache(folder, names))
             if pathlib.Path(folder) == program:
@@ -172,7 +172,6 @@ def main():
     (stage / 'zx-ux/tzx').mkdir(parents=True)
     shutil.copy2(B / 'out/ZX-UX.tzx', stage / 'zx-ux/tzx/ZX-UX.tzx')
     c48build.build(B / 'sdk', stage / 'assets/c48-src', stage / 'assets/c48-bin')
-    rb2ctpack.package(stage)
     forthbuild.build(B / 'sdk', stage / 'assets/forth-src', stage / 'assets/forth-bin')
     sdkpack.pack(S / 'zx-ux-sdk', S / 'zx-ux', B, stage / 'sdk/bin')
     fortranpack.package(S, stage, B / 'sdk')

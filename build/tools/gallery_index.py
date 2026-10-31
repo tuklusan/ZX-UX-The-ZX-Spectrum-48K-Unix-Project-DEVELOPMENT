@@ -7,7 +7,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SCREENSHOTS = ROOT / 'dist/screenshots'
 COMPILERS = (('c48', 'rcc — C48'), ('rbc', 'rbc — Sinclair BASIC'),
-             ('rb2ct', 'rb2ct — historical BASIC-to-C48 ports'),
              ('rfc', 'rfc — Forth'), ('rpc', 'rpc — Pascal'),
              ('rfortranc', 'rfortranc — FORTRAN'))
 

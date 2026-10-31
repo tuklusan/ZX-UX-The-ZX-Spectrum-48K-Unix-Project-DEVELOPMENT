@@ -1,1 +1,1 @@
-"""Build manually ported Sinclair BASIC programs with the C48 toolchain."""
+"""Sinclair BASIC to C48 translator — under development."""

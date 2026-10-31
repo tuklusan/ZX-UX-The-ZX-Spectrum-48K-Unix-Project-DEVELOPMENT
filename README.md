@@ -57,8 +57,8 @@ its source tree at `dist/zx-ux/src/`. The project license is at
 are in `dist/assets/c48-bin/`.
 
 The 60 original BASIC games are copied into `dist/bonus/60-programs/`
-without their legacy C48 hand ports. Those three ports are packaged separately
-from `src/zx-ux-sdk/rb2ct/ports/`, with shared C48 support in its `c48lib/`.
+without historical C48 hand ports. `rb2ct` is under development; its
+`c48lib` support remains in the SDK.
 The other original BASIC collections remain archived until RBC results exist.
 
 ## Optional emulation and screenshots
