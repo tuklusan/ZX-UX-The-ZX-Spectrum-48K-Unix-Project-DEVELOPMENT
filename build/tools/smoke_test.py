@@ -26,6 +26,12 @@ class RebuildChecks(unittest.TestCase):
             folder = self.src / 'assets/forth-src' / name
             folder.mkdir(parents=True)
             (folder / ('demo-' + name + '.fth')).write_text('1 .')
+        original = self.src / 'assets/forth-src/numerical-analysis/original'
+        original.mkdir()
+        (original / 'F83_Z80_SUITE.zip').write_bytes(b'source archive')
+        sample_tests = self.src / 'assets/fortran-src/tests/examples'
+        sample_tests.mkdir(parents=True)
+        (sample_tests / 'check.f').write_text('      END\n')
         (self.src / 'assets/c48-src').mkdir(parents=True)
         (self.src / 'assets/c48-src/demo.c').write_text('void main(void) {}')
         (self.src / 'docs').mkdir()
@@ -120,6 +126,9 @@ def pack(*args):
                          {'numerical-analysis', 'portable', 'ported'})
         self.assertFalse((staged / 'examples').exists())
         self.assertTrue((self.src / 'assets/forth-src/examples/demo-examples.fth').exists())
+        self.assertFalse((staged / 'numerical-analysis/original').exists())
+        self.assertTrue((self.src / 'assets/forth-src/numerical-analysis/original/F83_Z80_SUITE.zip').is_file())
+        self.assertFalse((self.dist / 'assets/fortran-src/tests').exists())
 
     def test_historical_c48_port_is_not_copied_into_bonus(self):
         source = self.src / 'assets/basic-src/original-sinclair-basic-collections/60-programs/01-demo/C48'

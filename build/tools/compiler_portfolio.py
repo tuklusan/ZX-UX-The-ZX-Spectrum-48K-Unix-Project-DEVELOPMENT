@@ -52,7 +52,7 @@ SOURCES = {
     'rb2ct': 'assets/rb2ct-bin/ssx',
     'rfc': 'assets/forth-bin/ssx',
     'rpc': 'assets/pascal-bin/showcase/ssx',
-    'rfortranc': 'assets/fortran-bin/showcase/ssx',
+    'rfortranc': 'assets/fortran-bin/samples/ssx',
 }
 LABEL_PREFIX = {'rfc': 'FTH', 'rpc': 'PAS', 'rfortranc': 'F77'}
 RB2CT_LABELS = ('MINE', 'GALAX', 'INVA')
@@ -83,7 +83,7 @@ def write_gallery(compiler, engine):
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
         '<title>ZX-UX %s — %s</title>' % (escape(compiler), escape(engine.upper())),
         '<style>body{font:16px system-ui,sans-serif;max-width:1100px;margin:2em auto;padding:0 1em;background:#121212;color:#eee}figure{display:inline-block;vertical-align:top;margin:0 16px 24px 0}img{width:320px;image-rendering:pixelated}a{color:#9cf}</style>',
-        '<h1>ZX-UX %s — %s</h1><p>Real ZX-UX executable captures from curated showcase programs.</p>' % (escape(compiler), escape(engine.upper())),
+        '<h1>ZX-UX %s — %s</h1><p>Real ZX-UX executable captures from sample programs.</p>' % (escape(compiler), escape(engine.upper())),
     ]
     for name in items:
         png = output / (name + '.png')

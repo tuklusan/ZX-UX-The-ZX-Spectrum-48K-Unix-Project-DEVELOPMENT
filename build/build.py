@@ -63,7 +63,12 @@ def copy_forth_showcase(source, destination, no_cache):
         folder = source / name
         if folder.is_symlink() or not folder.is_dir():
             raise RuntimeError('Missing Forth showcase directory: ' + str(folder))
-        shutil.copytree(folder, destination / name, ignore=no_cache)
+        def skip_original_archive(folder_path, names):
+            ignored = set(no_cache(folder_path, names))
+            if name == 'numerical-analysis' and pathlib.Path(folder_path) == folder:
+                ignored.add('original')
+            return ignored
+        shutil.copytree(folder, destination / name, ignore=skip_original_archive)
 
 
 def preserve_existing_c48_release(old_dist, stage):

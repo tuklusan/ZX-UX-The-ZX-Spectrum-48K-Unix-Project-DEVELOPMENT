@@ -1,17 +1,18 @@
 # F83 numerical-analysis collection
 
-This directory is a local final-delivery test collection imported from the user
-supplied archive `F83_Z80_20_DEMOS.zip`.
+These 20 programs are adapted from the supplied Forth-83 archive,
+`src/assets/forth-src/numerical-analysis/original/F83_Z80_SUITE.zip`.
+The source archive is excluded from `dist/`.
 
 ## Contents
 
-- `original/F83_Z80_SUITE/` is the extracted archive, kept as the original source.
+- `original/F83_Z80_SUITE.zip` preserves the complete original suite.
   It includes the original `.F83` sources, `COMMON.F83`, optional `LINCORE.F83`,
   the `CPM/` line-ending copies, the included host-model tools, checksums, and
-  reference outputs.  The archive's generated `tools/__pycache__/` was omitted.
+  reference outputs.  The ZIP has no generated `tools/__pycache__/`.
 - The twenty lowercase `.fth` files in this directory are the rfc-target
   adaptations that `forthbuild.py` compiles.
-- `original/F83_Z80_SUITE/reference/EXPECTED.csv` contains the expected output
+- `F83_Z80_SUITE/reference/EXPECTED.csv` inside the ZIP contains the expected output
   lines.  `HOST_OUTPUT.TXT` is the included constrained-host-model fixture;
   `AUDIT_REPORT.TXT` records the archive's source audit and model run.
 
@@ -24,7 +25,7 @@ The separate `rfc` → `ras` → `rld` → `rvm` check tests the Z80 target.
 Each target `.fth` file contains, in order:
 
 1. a source comment;
-2. the contents of `original/F83_Z80_SUITE/COMMON.F83`;
+2. the contents of `F83_Z80_SUITE/COMMON.F83` inside the ZIP;
 3. `LINCORE.F83` for `minilin`, `lupivot`, and `polyfit`;
 4. the corresponding original demo source.
 
@@ -56,4 +57,4 @@ CHOLESKY, BRENT, NEWTON, BISECT, ROMBERG, SIMPSON, GAUSS,
 RK4, EULER, JACOBI, FFT, POLYFIT
 ```
 
-The archive's exact lines are in `original/F83_Z80_SUITE/reference/EXPECTED.csv`.
+The archive's exact lines are in its `F83_Z80_SUITE/reference/EXPECTED.csv`.

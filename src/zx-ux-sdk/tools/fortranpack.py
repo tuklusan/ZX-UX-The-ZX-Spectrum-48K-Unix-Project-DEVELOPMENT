@@ -1,4 +1,4 @@
-"""Build the curated FORTRAN showcase with the local ZX-UX SDK."""
+"""Build the curated FORTRAN samples with the local ZX-UX SDK."""
 from __future__ import annotations
 
 import csv
@@ -14,24 +14,24 @@ BURKARDT = (
     'f77s_burkreal', 'f77s_burkrsrt', 'f77s_burkscale', 'f77s_burksort',
     'f77s_burkvar', 'f77s_burkvec',
 )
-NUMERICAL = ('bases', 'factorial', 'f77s_machar', 'prime')
+FUNDAMENTALS = ('bases', 'factorial', 'f77s_machar', 'prime')
 FIELDS = ('collection', 'program', 'status', 'detail')
 
 
 def package(source: Path, stage: Path, sdk: Path):
-    root = source / 'assets/fortran-src/showcase'
-    srcbase = stage / 'assets/fortran-src/showcase'
-    output = stage / 'assets/fortran-bin/showcase'
+    root = source / 'assets/fortran-src/samples'
+    srcbase = stage / 'assets/fortran-src/samples'
+    output = stage / 'assets/fortran-bin/samples'
     rows = []
     sys.path.insert(0, str(sdk))
     import rld
     import rtap
 
-    jobs = [('burkardt', name) for name in BURKARDT] + [('numerical', name) for name in NUMERICAL]
+    jobs = [('burkardt', name) for name in BURKARDT] + [('fundamentals', name) for name in FUNDAMENTALS]
     missing = [name for collection, name in jobs
                if not (root / collection / (name + '.f')).is_file()]
     if missing:
-        raise RuntimeError('FORTRAN showcase source(s) missing: ' + ', '.join(missing))
+        raise RuntimeError('FORTRAN samples source(s) missing: ' + ', '.join(missing))
     ssxdir = output / 'ssx'
     tzxdir = output / 'tzx'
     ssxdir.mkdir(parents=True, exist_ok=True)
@@ -82,6 +82,6 @@ def package(source: Path, stage: Path, sdk: Path):
         writer.writerows(rows)
     failures = [f'{collection}/{name}: {detail}' for collection, name, status, detail in rows if status != 'PASS']
     if failures:
-        raise RuntimeError('FORTRAN showcase failed: ' + '; '.join(failures))
-    print('FORTRAN showcase:', len(rows), 'programs')
+        raise RuntimeError('FORTRAN samples failed: ' + '; '.join(failures))
+    print('FORTRAN samples:', len(rows), 'programs')
     return len(rows)
