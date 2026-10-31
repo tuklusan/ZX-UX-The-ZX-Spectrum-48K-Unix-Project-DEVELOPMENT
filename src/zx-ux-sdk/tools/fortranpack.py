@@ -19,7 +19,7 @@ FIELDS = ('collection', 'program', 'status', 'detail')
 
 
 def package(source: Path, stage: Path, sdk: Path):
-    root = source / 'assets/fortran-src/examples'
+    root = source / 'assets/fortran-src/showcase'
     srcbase = stage / 'assets/fortran-src/showcase'
     output = stage / 'assets/fortran-bin/showcase'
     rows = []
@@ -28,7 +28,8 @@ def package(source: Path, stage: Path, sdk: Path):
     import rtap
 
     jobs = [('burkardt', name) for name in BURKARDT] + [('numerical', name) for name in NUMERICAL]
-    missing = [name for _, name in jobs if not (root / (name + '.f')).is_file()]
+    missing = [name for collection, name in jobs
+               if not (root / collection / (name + '.f')).is_file()]
     if missing:
         raise RuntimeError('FORTRAN showcase source(s) missing: ' + ', '.join(missing))
     ssxdir = output / 'ssx'
@@ -36,19 +37,11 @@ def package(source: Path, stage: Path, sdk: Path):
     ssxdir.mkdir(parents=True, exist_ok=True)
     tzxdir.mkdir(parents=True, exist_ok=True)
     for index, (collection, name) in enumerate(jobs, 1):
-        original = root / (name + '.f')
+        original = root / collection / (name + '.f')
         dest = srcbase / collection
         dest.mkdir(parents=True, exist_ok=True)
         source_file = dest / original.name
-        lines = original.read_text(encoding='ascii').splitlines(keepends=True)
-        # Keep compiler-development fixtures unchanged. The distributed
-        # showcase copy holds its result for 100 Spectrum ticks before exit.
-        end = next((i for i, line in enumerate(lines)
-                    if line.strip().upper() in ('STOP', 'END')), None)
-        if end is None:
-            raise ValueError('missing FORTRAN program end: ' + name)
-        lines.insert(end, '      CALL SLEEP(100)\n')
-        source_file.write_text(''.join(lines), encoding='ascii')
+        shutil.copyfile(original, source_file)
         ssx = ssxdir / (name + '.ssx')
         tzx = tzxdir / (name + '.tzx')
         cmd = [
