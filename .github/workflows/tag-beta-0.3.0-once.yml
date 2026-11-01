@@ -1,0 +1,50 @@
+name: ZX-UX tag beta-0.3.0 once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/tag-beta-0.3.0-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  tag-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: true
+      - name: Create and verify beta-0.3.0 tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='c8bdf02df3977d2ecc400bfaa214becaff050090'
+          tag='beta-0.3.0'
+          test "$(git rev-parse HEAD^)" = "$target"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "Tag already exists; refusing to replace it"
+            exit 1
+          fi
+          git -c user.name='ZX-UX release runner' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              tag -a "$tag" "$target" -m "$tag"
+          git push origin "refs/tags/$tag"
+          remote_target="$(git ls-remote origin "refs/tags/$tag^{}" | cut -f1)"
+          test "$remote_target" = "$target"
+          echo "VERIFIED $tag -> $target"
+      - name: Remove one-time workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='c8bdf02df3977d2ecc400bfaa214becaff050090'
+          test "$(git rev-parse HEAD^)" = "$target"
+          git rm -- .github/workflows/tag-beta-0.3.0-once.yml
+          git -c user.name='ZX-UX release runner' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'Remove completed one-time beta-0.3.0 tag workflow'
+          git push origin HEAD:refs/heads/main
