@@ -1,0 +1,3 @@
+Original menu: 1 left, 2 right, 0 forward. BASIC lines 330-340 check these inputs. Any key starts from the title screen.
+
+Fuse 48K snapshot at 300% speed: wait 2 seconds for the title, press 1 for 0.14 seconds, wait 0.55 seconds, press 2 for 0.14 seconds, wait 0.55 seconds, press 0 for 0.14 seconds and wait 0.55 seconds. The board is live throughout and its moving objects affect the captured frames.

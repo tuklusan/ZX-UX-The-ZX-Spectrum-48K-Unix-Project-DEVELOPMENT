@@ -1,0 +1,3 @@
+BASIC lines 270 and 280: T=up, V=down, F=left, G=right. The original instructions show the same four keys. Difficulty is 1 (hard) to 10 (easy).
+
+Fuse 48K at 400%: load original snapshot; wait 2s; press R and Return to RUN; wait 1.1s; Return through instructions; wait 1.1s; capture level prompt; enter 1 then 0 with 1.1s after each; press Return; wait 0.7s; press Return and wait 0.15s; capture arena. Press F, G, V and T in order (0.04s holds, 0.07s waits), capturing after each. The robots continue moving while keys are pressed. Results can vary with random placement.

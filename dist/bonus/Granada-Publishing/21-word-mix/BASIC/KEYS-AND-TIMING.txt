@@ -1,0 +1,9 @@
+WORD MIX — KEYS AND TIMING
+
+We checked the original BASIC and genuine Fuse 48K input.
+
+The opening screen asks the player to stop the tape and press a key. We used Space. After the letters appear, the program accepts two word answers. We entered QUIT, then DOG. The first answer asks to reveal the round; the second is still read by the INPUT statement.
+
+The replay runs at Fuse speed 200%, waits three seconds after tape load, presses Space, waits eight seconds for the mixed letters, captures the puzzle, enters QUIT and Return, waits 0.7 seconds, enters DOG and Return, waits two seconds, and captures the revealed words.
+
+We checked the result screen. No correct guess was claimed.

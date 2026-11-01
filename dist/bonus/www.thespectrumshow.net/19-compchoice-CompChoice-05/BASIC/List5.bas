@@ -1,0 +1,6 @@
+  10 FOR f=USR "a" TO USR "a"+9
+  20 READ a: POKE f,a: NEXT f
+  30 DATA 33,0,0,17,0,0,205,181,3,201
+  40 POKE USR "a"+4,5
+  50 FOR f=0 TO 255: POKE USR "a"+1,f
+  60 RANDOMIZE USR USR "a": NEXT f: GO TO 50

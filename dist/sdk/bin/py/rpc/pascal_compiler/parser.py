@@ -162,7 +162,7 @@ class Parser:
         self.constants: dict[str, int] = {}
         self.scope: dict[str, str] = self.variables
         self.result_name: str | None = None
-        self.routine_names: set[str] = set()
+        self.routine_names: set[str] = {'sleep'}
 
     def peek(self) -> Token:
         return self.tokens[self.pos]
@@ -214,7 +214,9 @@ class Parser:
         routines: list[Routine] = []
         while self.peek().value in ("procedure", "function"):
             routines.append(self._parse_routine())
-        self.routine_names = {routine.name for routine in routines}
+        if any(routine.name == 'sleep' for routine in routines):
+            raise PascalError('SLEEP is a built-in procedure')
+        self.routine_names = {routine.name for routine in routines} | {'sleep'}
         self.scope = self.variables
         self.result_name = None
         self.take("begin")

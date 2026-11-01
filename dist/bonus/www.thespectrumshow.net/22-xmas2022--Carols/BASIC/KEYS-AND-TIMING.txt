@@ -1,0 +1,3 @@
+The program shows PRESS ANY KEY TO BEGIN (BASIC line 5). Press Space or another key to start. No direction controls or player turns are used.
+
+In Fuse 48K at 400%, autoload the original TZX and wait 6s; press R and Return to RUN; wait 2s for the start screen; press Space and wait 1s for the first title. Capture before and after the key, then again after 5s. Key holds are 0.05s with 0.15s pauses. The replay runs without audio, so the screens verify entry into the program but do not verify notes heard or a complete carol.

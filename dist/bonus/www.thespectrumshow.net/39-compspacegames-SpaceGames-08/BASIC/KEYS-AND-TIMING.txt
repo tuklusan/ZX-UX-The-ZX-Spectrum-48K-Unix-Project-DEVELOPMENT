@@ -1,0 +1,3 @@
+ALIEN SNIPERS: BASIC lines 40-60 read a difficulty from 1 to 10, then Enter. Lines 130-190 display a letter and a number. Press the alphabet letter that follows the displayed letter by the shown number. A key is read through INKEY$ during each brief target window. The game does not require Enter for each shot.
+
+To reproduce our short Fuse 48K session, run at 100% speed; allow 11 seconds for the original tape to load. Press Enter, wait 0.5 seconds, press R then Enter, and wait 1.2 seconds for the difficulty prompt. Enter 1 then Enter and wait 0.4 seconds for a target. Press A, wait 0.12 seconds, then C and wait 0.12 seconds. Each key is held 0.08 seconds followed by 0.16 seconds released. The next targets are random and may differ. We did not verify a score.

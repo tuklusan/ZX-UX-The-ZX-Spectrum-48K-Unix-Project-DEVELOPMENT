@@ -184,6 +184,12 @@ class Backend:
         return typ
 
     def call(self, node):
+        if node.name == 'sleep':
+            if len(node.arguments) != 1:
+                raise PascalError('SLEEP requires one INTEGER tick count')
+            self.expr(node.arguments[0])
+            self.emit('call _sleep')
+            return
         if node.name not in self.routines:
             raise PascalError('unknown routine ' + node.name)
         r = self.routines[node.name]
@@ -247,6 +253,8 @@ class Backend:
                 self.emit('ld d,(hl)')
                 self.emit('ex de,hl')
         elif isinstance(node, Call):
+            if node.name == 'sleep':
+                raise PascalError('SLEEP is a procedure, not a function')
             if self.routines[node.name].return_type is None:
                 raise PascalError('procedure is not an expression')
             self.call(node)

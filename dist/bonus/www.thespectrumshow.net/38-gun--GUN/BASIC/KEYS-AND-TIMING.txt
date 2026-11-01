@@ -1,0 +1,5 @@
+The instruction screen and BASIC line 5430 give 5=left, 6=down, 7=up, 8=right, and 0=fire. At startup, R and Return run the saved BASIC; Space clears the instruction screen, and 1 chooses the first level at lines 6200 to 6230.
+
+The replay opens the untouched snapshot in Fuse 48K at 400% speed. After a 2-second boot it clears any visible ROM notice, presses R and Return for 0.035 seconds each, then waits 15 seconds for the instruction screen. It presses Space for 0.3 seconds, waits 2 seconds, presses 1 for 0.25 seconds, and waits 2 more seconds. It holds 5 and 8 for 0.5 seconds each, then holds 0 for 0.3 seconds. A 0.2-second release wait follows each key; captures follow the movements. The sight visibly moved left and right, and the bullet display changed following fire.
+
+We did not check whether a shot hit a target, the lives ran out, or a level was won.

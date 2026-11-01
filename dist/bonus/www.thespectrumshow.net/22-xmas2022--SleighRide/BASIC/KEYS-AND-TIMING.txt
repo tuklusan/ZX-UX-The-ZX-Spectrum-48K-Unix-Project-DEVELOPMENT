@@ -1,0 +1,5 @@
+This is an unattended animated picture. The original BASIC source has no movement keys or player input.
+
+Fuse 48K replay at 250%: auto-load the original SleighRide.tzx. Wait 1.6 seconds, press R in Spectrum keyword mode for 0.09 seconds, release for 0.20 seconds; press ENTER for 0.09 seconds and release for 0.20 seconds. Wait 2.8 seconds and capture the first scene. Wait another 2.8 seconds and capture the next scene. Wait 5.5 seconds more and capture the later scene. The display changes as the original BASIC runs.
+
+The soundtrack was not captured because Fuse ran with sound disabled. No player actions or finished animation cycle are claimed.

@@ -1,0 +1,13 @@
+SANTA'S GROTO — on-screen controls
+
+P = UP; L = DOWN; Z = LEFT; X = RIGHT.
+
+The original Z80 opens with a BASIC listing. Enter RUN to start it.
+The replay waits 2.5 seconds for Fuse startup, uses R and ENTER at the
+Spectrum editor, and waits 1 second for the title. It presses SPACE,
+then waits 7 seconds for the game help to finish. A second SPACE moves
+past the help, then a third SPACE goes to the playing area. It waits
+2 seconds for the border, sledge and score to appear. It holds Z for
+0.7 seconds and X for 1 second. The recorded white sledge position
+must move left and then right. We checked actual movement on screen.
+The replay does not claim a completed level.

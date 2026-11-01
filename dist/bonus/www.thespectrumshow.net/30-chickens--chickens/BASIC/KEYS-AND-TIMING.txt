@@ -1,0 +1,7 @@
+The game asks for any key, difficulty 10-20 and level 6-15.
+We entered 10 and 6, pressing Enter after each number.
+The instructions name keys 5, 6 and 8, starting with 6.
+The BASIC reads key 6 to move down, 5 to move left, and 8 to move right.
+The first captured play frame came after six seconds; the next followed
+four presses of 6, two of 5 and two of 8, plus a two-second pause.
+The later frame shows changed play. Time and motion alone do not prove a win.

@@ -1,0 +1,9 @@
+SPECTRUM SMALLTALK — KEYS AND TIMING
+
+We checked the original BASIC and a real Fuse 48K run.
+
+The program accepts characters through INKEY$ and a final Enter. We entered two short sentences: i like games and my dog. A Space separates words. A reply may take a few seconds, so the replay waits nine seconds after each Enter to avoid typing before the program is ready.
+
+The replay waits four seconds for the intro, types the first sentence, waits nine seconds and saves the first reply, then types the second sentence and waits nine seconds before the final capture. Fuse runs at 100% speed.
+
+The two real screenshots show separate responses. No further conversation is claimed.

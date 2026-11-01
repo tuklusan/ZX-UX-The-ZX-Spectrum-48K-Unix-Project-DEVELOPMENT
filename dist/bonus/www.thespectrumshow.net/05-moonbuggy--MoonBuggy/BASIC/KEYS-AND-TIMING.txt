@@ -1,0 +1,8 @@
+MoonBuggy — controls checked against original numbered BASIC lines
+
+Main menu 1 = PLAY GAME (BASIC 20,45). Initial keys are Q = left, U = right, M = jump (BASIC 2 and 63-65); may be redefined using menu 3. Replay waits for the setup graphics and menu, chooses 1, drives right and jumps a crater.
+
+Replay uses the untouched .z80 snapshot in Fuse SDL 1.6.0, 48K ROM,
+100% emulation speed; injects actual keyboard presses over XTest.
+Captures 01-STATE.png after the first move and 02-AFTER-MOVES.png after
+the second. Delays are real elapsed seconds, not exact game frames.

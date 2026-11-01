@@ -1,0 +1,2 @@
+Source-derived controls: O moves left and P moves right (line 290); S and X steer vertically (line 295); A fires (line 990).
+Recorded Fuse speed 500%. Wait 2s at startup, press M for 0.05s, wait 3s, press P for 0.12s to start, wait 2s, press o 0.2s, wait 0.4s, capture 01; press p 0.2s, wait 0.4s, capture 02. Screens are genuine and must differ.

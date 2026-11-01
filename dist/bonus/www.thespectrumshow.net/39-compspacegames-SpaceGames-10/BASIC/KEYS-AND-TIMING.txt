@@ -1,0 +1,3 @@
+TRIP INTO THE FUTURE: BASIC lines 70-110 request two numeric entries. First enter a ship speed greater than 0 and less than 1, then Enter. Next enter a trip distance, then Enter. The program immediately prints its calculated result.
+
+We loaded FUTURE.tzx in Fuse 48K at 100% speed. Wait 11 seconds, press Enter, wait 0.5 seconds, press R and Enter, then wait 1.2 seconds. Enter 0.5 and Return, wait 0.7 seconds, enter 20 and Return, and wait another 0.7 seconds. Each key is held for 0.08 seconds and released for 0.16 seconds. The random target year may differ. Replay captures three genuine Fuse views.

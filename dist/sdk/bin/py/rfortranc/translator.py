@@ -3778,6 +3778,15 @@ def convert(units, emit_units=None):
                 return
             if s.startswith('CALL '):
                 m = re.fullmatch(r'CALL\s+(' + NAME + r')\s*\((.*)\)', s)
+                if m and m.group(1) == 'SLEEP':
+                    arguments = split_items(m.group(2)) if m.group(2).strip() else []
+                    if len(arguments) != 1:
+                        raise FortranError(line, 'SLEEP needs one INTEGER tick count')
+                    value, kind = expression(arguments[0], u, known, line, typed=True)
+                    if kind != 'INTEGER':
+                        raise FortranError(line, 'SLEEP needs INTEGER ticks')
+                    add(['sleep(' + value + ');'])
+                    return
                 if not m or m.group(1) not in known or known[m.group(1)].kind != 'subroutine':
                     raise FortranError(line, 'invalid or unknown SUBROUTINE call')
                 f, a = m.groups()

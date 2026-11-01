@@ -1,0 +1,2 @@
+Source-derived controls: 8 moves the player right (line 530), 5 moves left (505), 6 and 7 change a second movement value (510,520).
+Recorded Fuse speed 500%. Wait 2s at startup, press Return 0.3s, wait 7.0s, press 8 0.6s, wait 1s, capture 01; press 5 0.6s, wait 1s, capture 02. Screens are genuine and must differ.

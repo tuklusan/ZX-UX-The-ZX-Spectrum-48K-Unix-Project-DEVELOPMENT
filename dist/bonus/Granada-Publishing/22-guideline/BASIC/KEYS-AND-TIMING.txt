@@ -1,0 +1,9 @@
+GUIDELINE — KEYS AND TIMING
+
+We read both original BASIC programs and played a short sample from each original recording in Fuse 48K.
+
+Both versions ask for a difficulty. We entered 2 and Return. The source reads 6 and 7 during the line-following game. The on-screen directions call these up/down keys. The 6 key lowers the ring's path; 7 raises it.
+
+Each replay waits four seconds after loading, selects difficulty 2, waits four more seconds for the line and ring, presses 6 for 0.6 seconds and captures the first view, then presses 7 for 0.6 seconds, waits one second, and captures the second view. Fuse runs at 200% speed.
+
+We checked visible changes for each source version. Neither run is a full score test.

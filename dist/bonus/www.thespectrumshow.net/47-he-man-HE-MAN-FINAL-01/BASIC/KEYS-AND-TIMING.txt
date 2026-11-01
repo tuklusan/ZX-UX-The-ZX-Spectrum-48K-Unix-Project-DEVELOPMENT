@@ -1,0 +1,3 @@
+Fuse 48K, original HE-MAN TZX with BASIC and 768-byte CODE block. The tape auto-loads. At 200% speed we allowed 7 seconds to reach the quest instructions and captured the screen. SPACE held 0.07 second starts the quest. After 0.8 second we captured the status. Two more SPACE keys, each held 0.07 second and followed by 0.8 second, advanced the game through a battle result and another report.
+
+The source waits for a key at BASIC line 295. Battle outcomes are randomized. This check did not confirm a victory, directional moves, or a complete game.

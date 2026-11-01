@@ -1,0 +1,8 @@
+SantaMissionfixed2 — controls checked against original numbered BASIC lines
+
+X = move right, Z = move left (BASIC 121). A = move down (123), Q = climb/jump when possible (130-135), E = pick up from a valid tile (230), D = dig with a further direction prompt (140,1710-1720). Replay starts the saved game, moves right, then left; it does not claim to dig or finish a level.
+
+Replay uses the untouched .z80 snapshot in Fuse SDL 1.6.0, 48K ROM,
+100% emulation speed; injects actual keyboard presses over XTest.
+Captures 01-STATE.png after the first move and 02-AFTER-MOVES.png after
+the second. Delays are real elapsed seconds, not exact game frames.

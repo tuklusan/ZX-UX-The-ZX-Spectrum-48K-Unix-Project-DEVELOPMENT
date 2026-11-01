@@ -1,0 +1,3 @@
+DEATH VALLEY: BASIC lines 40-50 ask for the starting width, then Enter. Lines 240-300 read Q and P for opposite steering changes as the valley scrolls. The source reads these with INKEY$; Enter is not used for steering.
+
+In Fuse 48K at 100% speed, allow 18 seconds to load VALLEY.tzx. Press Enter, wait 0.5 seconds, press R and Enter, and wait 1.2 seconds. Enter width 10 and press Enter, then wait 0.7 seconds. Press Q and P in turn, then wait 0.3 seconds for the later frame. Keys are held for 0.08 seconds and released for 0.16 seconds each. Random wall shifts mean the same keys can produce different screens. We did not verify a win.

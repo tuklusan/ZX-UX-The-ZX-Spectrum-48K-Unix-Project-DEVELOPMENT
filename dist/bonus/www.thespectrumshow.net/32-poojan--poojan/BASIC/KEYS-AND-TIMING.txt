@@ -1,0 +1,13 @@
+POOJAN — controls shown in the original program
+
+A moves up. Z moves down. SPACE fires.
+Any key begins the first stage from the instructions screen.
+
+The replay starts the original Z80 in Fuse 48K mode at 400 percent speed.
+It waits 2.5 seconds for startup, then about 20 seconds for the menu
+and hall-of-fame screen. It presses SPACE for 0.1 seconds and waits 5 seconds
+for the stage display to finish. It holds Z for 0.4 seconds, then A for
+0.4 seconds, then SPACE for 0.3 seconds. Screen captures follow each key.
+We check that the player's vertical position goes down, then up, and
+that the last capture changes after the fire key. This is a brief game
+sample, not a completed round.

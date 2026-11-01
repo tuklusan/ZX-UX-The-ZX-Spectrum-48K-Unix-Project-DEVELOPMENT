@@ -1,0 +1,11 @@
+GALACTOIDS — controls seen on the original startup screen
+
+ENTER starts a new game from the instruction screen.
+Z moves the player ship left. X moves it right. SPACE fires.
+
+The replay waits 2.5 seconds for Fuse, handles any emulator startup box,
+then starts the game. It holds Z for 0.4 seconds, X for 0.8 seconds,
+and SPACE for 0.4 seconds. It saves the screen before play, after the
+start key, and after each action. Player positions must show left-to-right
+motion, rather than just changing enemies or moving shots.
+The controls and live movement were checked with the original Z80.

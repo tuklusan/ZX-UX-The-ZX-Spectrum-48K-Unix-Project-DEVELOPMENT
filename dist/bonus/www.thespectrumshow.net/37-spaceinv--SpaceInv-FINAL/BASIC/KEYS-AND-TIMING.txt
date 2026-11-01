@@ -1,0 +1,5 @@
+The original BASIC listing says 5 moves left (line 330), 8 moves right (line 320), and 0 fires (line 350). Its instruction screen repeats these controls at lines 5280 and 5290.
+
+Our Fuse SDL replay loads the untouched Z80 in 48K mode at normal speed. After 2.5 seconds, it dismisses any visible ROM alert. It presses Enter for the waiting RUN prompt and waits 2 seconds for the title. Press Space to answer the name prompt, enter A and Return, then enter N and Return to skip the help page. Wait 1.5 seconds; capture active play; hold 5 for 0.8 seconds, 8 for 1.3 seconds, and 0 for 0.3 seconds, with 0.25 seconds after each key release. The replay saves and checks separate screen images of each step.
+
+The two move samples put the black gun near x=131.5 and x=179.5 in the 320-pixel Fuse image. The screen also changed after firing. We did not check scoring, survival, or a complete run.

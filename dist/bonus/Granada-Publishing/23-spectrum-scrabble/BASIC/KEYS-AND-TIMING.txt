@@ -1,0 +1,6 @@
+Original BASIC controls, lines 7000-7110:
+5 moves the cursor left, 8 right, 6 down and 7 up. W asks for a word. R asks about ending the search. We tested the four movement keys, not word submission.
+
+Fuse 48K replay at 250%: auto-load the original TAP and wait 3 seconds. The program auto-starts. At the number-of-words prompt, type 2 and ENTER. Wait 1 second; type cat and ENTER; wait 1 second; type dog and ENTER; wait 4 seconds for puzzle building. Type n and ENTER to skip the preview; wait 6 seconds. Type y and ENTER to show the word list; wait 4 seconds. Capture the live puzzle. Press 8 twice, then 6, then 5. Hold each movement key 0.18 seconds, release for 0.25 seconds and allow 0.4 seconds before capturing its result. Prompt entry keys are held 0.10 seconds with a 0.25 second release wait.
+
+The grid changes from run to run. The highlight moved after every recorded key. A solved word or finished round was not confirmed.

@@ -1,0 +1,2 @@
+Source-derived controls: Code line 133: 8 moves the car right; line 134: 5 moves left; 6 moves down and 7 up. The printed title screen reverses the left/right labels; the executing BASIC is authoritative..
+Recorded Fuse speed 500%. Wait 2s at startup, press Return 0.15s, wait 4.0s, press 8 0.2s, wait 0.3s, capture 01; press 5 0.2s, wait 0.3s, capture 02. Screens are genuine and must differ.

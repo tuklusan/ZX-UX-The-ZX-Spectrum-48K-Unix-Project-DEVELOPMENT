@@ -1,0 +1,3 @@
+Controls from original BASIC lines 6000–6240: 5 moves the selected piece diagonally left, 8 diagonally right; another key cycles pieces; r prompts resignation. Quark moves automatically.
+
+Replay: original CaptureTheQuark.tap loads via Fuse SDL --auto-load (48K, 500% speed); allow 10 seconds, press 5 for 0.13 seconds; wait 0.5 seconds and capture 01-AFTER-LEFT.png. Press 8 for 0.13 seconds; wait 0.5 seconds and capture 02-AFTER-RIGHT.png. Compare images and reject no-change output.

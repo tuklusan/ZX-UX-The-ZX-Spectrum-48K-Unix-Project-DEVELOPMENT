@@ -1,0 +1,2 @@
+Source-derived controls: 7 is tested at line 120, 6 at line 110 for steering.
+Recorded Fuse speed 100%. Wait 2s at startup, press Return 0.3s, wait 1.0s, press 7 0.2s, wait 0.4s, capture 01; press 6 0.2s, wait 0.4s, capture 02. Screens are genuine and must differ.
