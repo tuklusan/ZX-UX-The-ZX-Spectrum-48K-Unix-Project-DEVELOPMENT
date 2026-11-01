@@ -52,6 +52,12 @@ jobs:
           test ! -e dist || exit 2
           printf 'head=%s\n' "$(git rev-parse HEAD)" > cleanroom-logs/meta.txt
           for entry in build c48-rvm rbc-rvm compilers-rvm c48-fuse rbc-fuse compilers-fuse gallery; do
+            if [[ "$entry" == *-fuse ]]; then
+              export ZXUX_FUSE_LOG_DIR="$PWD/cleanroom-logs/fuse-processes/$entry"
+              mkdir -p "$ZXUX_FUSE_LOG_DIR"
+            else
+              unset ZXUX_FUSE_LOG_DIR || true
+            fi
             case "$entry" in
               build) cmd=(python3 -B build/build.py /usr/local/bin/sjasmplus) ;;
               c48-rvm) cmd=(python3 -B build/tools/portfolio.py) ;;

@@ -6,6 +6,7 @@ via the kernel's /dev/cassette path. No simulated system calls or image
 substitutions. Xvfb, Fuse SDL and Pillow must be installed externally.
 """
 import argparse
+from contextlib import ExitStack
 import concurrent.futures
 import ctypes
 import os
@@ -134,7 +135,7 @@ def screenshot(display):
 
 def _run_case_once(names, destination, args, config=None):
     config = config or {}
-    with tempfile.TemporaryDirectory(prefix='zxux-fuse-') as tmp:
+    with tempfile.TemporaryDirectory(prefix='zxux-fuse-') as tmp, ExitStack() as log_stack:
         tape = Path(tmp) / 'run.tzx'
         # BASIC uses verified short tape labels while retaining original SSX filenames.
         programs = config.get('programs', {})
@@ -149,6 +150,22 @@ def _run_case_once(names, destination, args, config=None):
         env = dict(os.environ, DISPLAY=display, SDL_VIDEODRIVER='x11', SDL_AUDIODRIVER='dummy')
         if args.libdir:
             env['LD_LIBRARY_PATH'] = str(args.libdir)
+        log_root = os.environ.get('ZXUX_FUSE_LOG_DIR')
+        xvfb_output = fuse_output = subprocess.DEVNULL
+        if log_root:
+            folder = Path(log_root).resolve()
+            folder.mkdir(parents=True, exist_ok=True)
+            case = str(args.display) + '-' + re.sub(r'[^A-Za-z0-9_.-]', '_', '+'.join(names))
+            xvfb_output = log_stack.enter_context((folder / (case + '.xvfb.log')).open('ab'))
+            fuse_output = log_stack.enter_context((folder / (case + '.fuse.log')).open('ab'))
+            fuse_output.write(('START ' + time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()) +
+                               ' display=' + display + ' programs=' + '+'.join(names) + '\n').encode())
+            fuse_output.flush()
+        def trace(message):
+            if log_root:
+                fuse_output.write((time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()) +
+                                   ' ' + message + '\n').encode())
+                fuse_output.flush()
         xvfb = fuse = None
         kb = None
         early = []
@@ -190,7 +207,7 @@ def _run_case_once(names, destination, args, config=None):
             return (2.0 * hits) / max(1, expected_count + sum(current))
 
         try:
-            xvfb = subprocess.Popen(screen, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            xvfb = subprocess.Popen(screen, stdout=xvfb_output, stderr=subprocess.STDOUT)
             time.sleep(.8)
             if xvfb.poll() is not None:
                 raise RuntimeError('Xvfb could not start')
@@ -198,7 +215,8 @@ def _run_case_once(names, destination, args, config=None):
                        '--no-sound', '--speed', str(config.get('fuse_speed', args.speed)),
                        '--tape', str(tape), '--auto-load']
             fuse = subprocess.Popen(command, env=env, cwd=args.assets,
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                    stdout=fuse_output, stderr=subprocess.STDOUT)
+            trace('Fuse process launched')
             time.sleep(2.0)
             if fuse.poll() is not None:
                 raise RuntimeError('Fuse stopped during ZX-UX boot')
@@ -214,6 +232,7 @@ def _run_case_once(names, destination, args, config=None):
                     break
             if login is None:
                 raise RuntimeError('fresh ZX-UX TZX did not reach login')
+            trace('ZX-UX login reached')
             kb = Keyboard(display)
             kb.type('root', pause=config.get('type_key_pause', .20))
             kb.key('\n', pause=.8)
@@ -221,6 +240,7 @@ def _run_case_once(names, destination, args, config=None):
             if not ImageChops.difference(screenshot(display).crop((10, 50, 310, 125)),
                                          login.crop((10, 50, 310, 125))).getbbox():
                 raise RuntimeError('ZX-UX shell was not reached after login')
+            trace('ZX-UX shell reached')
             for name in names:
                 values = [] if len(names) > 1 or name == 'hanoi' else config.get('args', [])
                 command = '/dev/cassette/' + name + ''.join(' ' + str(v) for v in values)
@@ -382,6 +402,10 @@ def _run_case_once(names, destination, args, config=None):
                       'manual verification required: ' + '; '.join(visual_warnings),
                       file=sys.stderr, flush=True)
             print('Fuse', '+'.join(names), '->', destination.relative_to(ROOT), flush=True)
+            trace('Capture saved: ' + str(destination))
+        except Exception as error:
+            trace('ERROR ' + type(error).__name__ + ': ' + str(error))
+            raise
         finally:
             stop_early.set()
             if early_thread and early_thread.is_alive():
