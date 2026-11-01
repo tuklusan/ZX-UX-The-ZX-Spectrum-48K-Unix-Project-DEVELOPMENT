@@ -171,7 +171,7 @@ def main(argv=None):
     parser.add_argument('--rom', type=Path, default=ROOT / 'src/zx-ux/rom/48.rom')
     parser.add_argument('--libdir', type=Path)
     parser.add_argument('--display', type=int, default=600)
-    parser.add_argument('--jobs', type=int, default=4)
+    parser.add_argument('--jobs', type=int, default=8)
     parser.add_argument('--wait', type=int, default=8)
     parser.add_argument('--boot-wait', type=int, default=90)
     parser.add_argument('--speed', type=int, default=100)

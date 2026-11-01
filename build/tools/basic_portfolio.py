@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 from html import escape
 from pathlib import Path
 import shutil
@@ -140,18 +141,25 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--only', default='')
     p.add_argument('--frames', type=int, default=1500)
+    p.add_argument('--jobs', type=int, default=8)
     args = p.parse_args(argv)
+    if not 1 <= args.jobs <= 16:
+        p.error('--jobs must be 1..16')
     wanted = set(args.only.split(',')) if args.only else None
     found, failures = set(), []
-    for collection, ssx, label in cases():
-        if wanted is not None and ssx.stem not in wanted:
-            continue
-        found.add(ssx.stem)
-        try:
-            run_one(collection, ssx, label, args.frames)
-        except Exception as e:
-            print('RBC RVM FAIL:', ssx.stem, str(e), file=sys.stderr, flush=True)
-            failures.append(ssx.stem)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=args.jobs) as pool:
+        jobs = []
+        for collection, ssx, label in cases():
+            if wanted is not None and ssx.stem not in wanted:
+                continue
+            found.add(ssx.stem)
+            jobs.append((ssx.stem, pool.submit(run_one, collection, ssx, label, args.frames)))
+        for stem, future in jobs:
+            try:
+                future.result()
+            except Exception as e:
+                print('RBC RVM FAIL:', stem, str(e), file=sys.stderr, flush=True)
+                failures.append(stem)
     if wanted is not None:
         failures.extend(sorted(wanted - found))
     out = DIST / 'screenshots/rbc/rvm'

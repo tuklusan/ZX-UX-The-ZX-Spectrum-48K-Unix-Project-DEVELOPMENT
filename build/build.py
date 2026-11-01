@@ -182,6 +182,7 @@ def main():
     forthbuild.build(B / 'sdk', stage / 'assets/forth-src', stage / 'assets/forth-bin')
     sdkpack.pack(S / 'zx-ux-sdk', S / 'zx-ux', B, stage / 'sdk/bin')
     fortranpack.package(S, stage, B / 'sdk')
+    (stage / 'assets/fortran-bin/samples/results.tsv').unlink(missing_ok=True)
     shutil.copy2(R / 'LICENSE', stage / 'LICENSE')
     shutil.copy2(R / 'THIRD-PARTY', stage / 'THIRD-PARTY')
     shutil.copytree(S / 'zx-ux', stage / 'zx-ux/src', ignore=no_cache)

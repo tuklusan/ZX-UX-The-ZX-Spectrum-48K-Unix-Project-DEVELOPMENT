@@ -1,4 +1,4 @@
-name: ZX-UX infrastructure cleanup v2 one-shot
+name: ZX-UX infrastructure cleanup v2 corrected retry
 
 on:
   push:
@@ -48,6 +48,7 @@ jobs:
           set -euo pipefail
           test -z "$(git status --porcelain)"
           unzip -q build/tools/zxux-infra-cleanup-v2.zip -d "$RUNNER_TEMP"
+          sed -i 's/--jobs 4/--jobs 8/' "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh"
           bash "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh" all
       - name: Remove dist and rebuild from clean room
         shell: bash

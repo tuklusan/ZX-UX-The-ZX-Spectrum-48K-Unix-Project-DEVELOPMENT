@@ -52,12 +52,12 @@ for entry in build c48-rvm rbc-rvm compilers-rvm c48-fuse rbc-fuse compilers-fus
   fi
   case "$entry" in
     build) cmd=(python3 -B build/build.py /usr/local/bin/sjasmplus) ;;
-    c48-rvm) cmd=(python3 -B build/tools/portfolio.py) ;;
-    rbc-rvm) cmd=(python3 -B build/tools/basic_portfolio.py) ;;
-    compilers-rvm) cmd=(python3 -B build/tools/compiler_portfolio.py --engine rvm) ;;
-    c48-fuse) cmd=(python3 -B build/tools/fuse_portfolio.py --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 4) ;;
-    rbc-fuse) cmd=(python3 -B build/tools/basic_fuse_portfolio.py --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 4) ;;
-    compilers-fuse) cmd=(python3 -B build/tools/compiler_portfolio.py --engine fuse --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 4) ;;
+    c48-rvm) cmd=(python3 -B build/tools/portfolio.py --jobs 8) ;;
+    rbc-rvm) cmd=(python3 -B build/tools/basic_portfolio.py --jobs 8) ;;
+    compilers-rvm) cmd=(python3 -B build/tools/compiler_portfolio.py --engine rvm --jobs 8) ;;
+    c48-fuse) cmd=(python3 -B build/tools/fuse_portfolio.py --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 8) ;;
+    rbc-fuse) cmd=(python3 -B build/tools/basic_fuse_portfolio.py --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 8) ;;
+    compilers-fuse) cmd=(python3 -B build/tools/compiler_portfolio.py --engine fuse --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 8) ;;
     gallery) cmd=(python3 -B build/tools/gallery_index.py) ;;
   esac
   printf '%s: %q ' "$entry" "${cmd[@]}" >> cleanroom-logs/commands.txt
