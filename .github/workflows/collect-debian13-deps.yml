@@ -1,13 +1,12 @@
-name: ZX-UX collect Debian 13 build dependencies
+name: ZX-UX one-time Debian 13 offline dependency verification
 
 on:
-  workflow_dispatch:
-  workflow_run:
-    workflows: ["ZX-UX disposable clean-room rebuild"]
-    types: [completed]
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/collect-debian13-deps.yml
 
 permissions:
-  actions: read
   contents: write
 
 concurrency:
@@ -15,50 +14,46 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  collect:
-    # Run after the newer of the two existing clean-room jobs finishes.
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.id == 41262575769
+  verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           persist-credentials: true
-      - name: Require both existing runs to be finished
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download complete Debian 13 dependency closure and Pillow
         shell: bash
         run: |
           set -euo pipefail
-          for id in 41262482294 41262575769; do
-            status=$(curl -fsSL \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/runs/$id" \
-              | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
-            test "$status" = completed || {
-              echo "Clean-room run $id is still $status; not starting another collector" >&2
-              exit 1
-            }
-          done
-      - name: Download Debian package closure and Pillow
-        shell: bash
-        run: |
-          set -euo pipefail
+          docker run --rm -v "$PWD:/repo" -w /repo debian:13 \
+            bash build/dependencies/fetch-host-packages.sh
+          sudo chown -R "$(id -u):$(id -g)" build/dependencies/debian-13-amd64
           shopt -s nullglob
-          existing=(build/dependencies/debian-13-amd64/apt/*.deb)
-          wheels=(build/dependencies/debian-13-amd64/pip/*.whl)
-          if ((${#existing[@]} == 0 || ${#wheels[@]} == 0)); then
-            docker run --rm -v "$PWD:/repo" -w /repo debian:13 \
-              bash build/dependencies/fetch-host-packages.sh
-            sudo chown -R "$(id -u):$(id -g)" build/dependencies/debian-13-amd64
-          fi
           debs=(build/dependencies/debian-13-amd64/apt/*.deb)
           wheels=(build/dependencies/debian-13-amd64/pip/*.whl)
-          ((${#debs[@]} > 0 && ${#wheels[@]} > 0))
-          echo "APT packages: ${#debs[@]}; Pillow wheels: ${#wheels[@]}"
-      - name: Commit and push vendor installers
+          (("${#debs[@]}" > 0 && "${#wheels[@]}" > 0))
+          echo "Collected ${#debs[@]} APT packages and ${#wheels[@]} wheels."
+
+      - name: Verify fresh Debian 13 installation with networking disabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network none -v "$PWD:/repo" -w /repo debian:13 \
+            bash -euo pipefail -c '
+              bash build/dependencies/install-debian13-offline.sh
+              git config --global --add safe.directory /repo
+              command -v Xvfb
+              test -x /usr/bin/fuse-sdl
+              test -f /usr/share/fuse/fuse.font
+              /tmp/zxux-py/bin/python -c "from PIL import Image, ImageGrab, ImageChops; assert hasattr(Image.new(\"L\",(1,1)), \"get_flattened_data\")"
+              export PATH="/tmp/zxux-py/bin:$PATH"
+              python3 -B build/build.py /usr/local/bin/sjasmplus
+              echo "PASS: Debian 13 offline dependencies, Pillow, SJASMPlus and ZX-UX build"
+            ' 2>&1 | tee dependency-audit.log
+
+      - name: Commit and push packages and wheel
         shell: bash
         run: |
           set -euo pipefail
@@ -67,6 +62,14 @@ jobs:
           git add -f build/dependencies/debian-13-amd64/apt/*.deb \
                      build/dependencies/debian-13-amd64/pip/*.whl
           if ! git diff --cached --quiet; then
-            git commit -m "[skip ci] Vendor Debian 13 APT closure and Pillow wheel"
+            git commit -m "[skip ci] Include verified Debian 13 offline dependencies and Pillow"
             git push origin HEAD:main
           fi
+
+      - name: Upload verification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zx-ux-debian13-offline-verification
+          path: dependency-audit.log
+          retention-days: 1
