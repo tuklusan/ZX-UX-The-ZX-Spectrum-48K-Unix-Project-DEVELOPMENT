@@ -18,6 +18,7 @@ if (( EUID == 0 )); then apt=(apt-get); install_cmd=(install); else apt=(sudo ap
 "${apt[@]}" -y --allow-downgrades \
   -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- \
   install "${debs[@]}"
+git lfs install
 python3 -m venv /tmp/zxux-py
 /tmp/zxux-py/bin/python -m pip install --no-index --find-links "$base/pip" 'Pillow>=12.1,<13'
 "${install_cmd[@]}" -m 755 build/dependencies/sjasmplus/sjasmplus-1.24.0-linux-amd64 \

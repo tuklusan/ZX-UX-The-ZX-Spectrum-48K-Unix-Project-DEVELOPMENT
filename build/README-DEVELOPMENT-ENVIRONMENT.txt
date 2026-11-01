@@ -162,6 +162,10 @@ install order and dependencies. The APT source-list options prevent network
 repository downloads; a missing dependency is a real gap in the saved set.
 Avoid --no-download here: APT needs to process the local .deb paths.
 
+The APT bundle also installs git-lfs. Initialize it for the local mirror:
+
+    git lfs install
+
 Part B - Pillow for Python image capture (offline, inside the same
          virtual environment path the GitHub build uses).
 
