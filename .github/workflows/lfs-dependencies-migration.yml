@@ -1,0 +1,79 @@
+name: ZX-UX one-time dependency LFS migration
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/lfs-dependencies-migration.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zx-ux-cleanroom
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Convert tracked dependency installers to Git LFS without rewriting history
+        shell: bash
+        run: |
+          set -euo pipefail
+          git lfs version
+          git lfs install --local
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --renormalize -- build/dependencies
+          # The shell scripts must remain normal Git files.
+          for f in build/dependencies/*.sh; do
+            test "$(git check-attr filter -- "$f")" = "$f: filter: unset"
+            test "$(git show ":$f" | sed -n '1p')" = '#!/usr/bin/env bash'
+          done
+          binary_count=0
+          while IFS= read -r -d '' path; do
+            case "$path" in
+              *.deb|*.whl|*.tar.xz|*/sjasmplus-1.24.0-linux-amd64)
+                test "$(git show ":$path" | sed -n '1p')" = 'version https://git-lfs.github.com/spec/v1'
+                binary_count=$((binary_count + 1))
+                ;;
+            esac
+          done < <(git ls-files -z -- build/dependencies)
+          test "$binary_count" -ge 255
+          echo "LFS binary installers converted: $binary_count"
+          git diff --cached --quiet && { echo 'No files converted' >&2; exit 1; }
+          git commit -m "[skip ci] Store dependency installers as Git LFS objects"
+          git lfs push origin HEAD
+          git push origin HEAD:main
+      - name: Verify download through a new GitHub checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: verified-lfs
+          lfs: true
+          persist-credentials: false
+      - name: Verify LFS data in fresh working tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd verified-lfs
+          git lfs version
+          count=$(git lfs ls-files -n | grep -c '^build/dependencies/')
+          test "$count" -ge 255
+          for f in build/dependencies/debian-13-amd64/apt/*.deb; do
+            test -s "$f"
+            if head -c 100 "$f" | grep -aq 'version https://git-lfs.github.com/spec/v1'; then
+              echo "Unresolved LFS pointer: $f" >&2
+              exit 1
+            fi
+          done
+          test -s build/dependencies/debian-13-amd64/pip/*.whl
+          test -s build/dependencies/sjasmplus/sjasmplus-1.24.0-src.tar.xz
+          test -s build/dependencies/sjasmplus/sjasmplus-1.24.0-linux-amd64
+          test "$(head -n 1 build/dependencies/fetch-host-packages.sh)" = '#!/usr/bin/env bash'
+          echo "PASS: $count Git LFS dependency files downloaded from GitHub"

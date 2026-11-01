@@ -2,3 +2,9 @@
 src/docs/** filter=lfs diff=lfs merge=lfs -text
 # Keep the short reference index as a normal Git text file.
 src/docs/README.md -filter -diff -merge text
+
+# Keep dependency installers under Git LFS; preserve readable shell/text files.
+build/dependencies/** filter=lfs diff=lfs merge=lfs -text
+build/dependencies/**/*.sh -filter -diff -merge text
+build/dependencies/**/*.txt -filter -diff -merge text
+build/dependencies/**/*.md -filter -diff -merge text
