@@ -1,4 +1,4 @@
-name: ZX-UX infrastructure cleanup v2 corrected retry
+name: ZX-UX infrastructure cleanup v2 C48 path and Fuse timing retry
 
 on:
   push:
@@ -48,7 +48,23 @@ jobs:
           set -euo pipefail
           test -z "$(git status --porcelain)"
           unzip -q build/tools/zxux-infra-cleanup-v2.zip -d "$RUNNER_TEMP"
-          sed -i 's/--jobs 4/--jobs 8/' "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh"
+          sed -i 's/--jobs 4/--jobs 12/' "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh"
+          sed -i '/python3 -B build\/tools\/portfolio.py$/s/$/ --jobs 12/' "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh"
+          sed -i '/python3 -B build\/tools\/basic_portfolio.py$/s/$/ --jobs 12/' "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh"
+          sed -i '/python3 -B build\/tools\/compiler_portfolio.py --engine rvm$/s/$/ --jobs 12/' "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh"
+          cat >> "$RUNNER_TEMP/zxux-infra-cleanup-v2/phase1.py" <<'PY'
+          # The migration moves c48lib; keep the existing source checks current.
+          change('build/tools/check_portability.py',
+                 "c48lib = ROOT / 'src/zx-ux-sdk/rb2ct/ports/c48lib'",
+                 "c48lib = ROOT / 'src/zx-ux-sdk/rb2ct/c48lib'")
+          change('tests/test_rb2ct_distribution.py',
+                 "common = SDK / 'rb2ct/ports/c48lib'",
+                 "common = SDK / 'rb2ct/c48lib'")
+          # Wait two extra seconds for the actual Fuse SDL window to initialize.
+          change('build/tools/fuse_portfolio.py',
+                 "            time.sleep(6.0)\\n",
+                 "            time.sleep(8.0)\\n")
+          PY
           bash "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh" all
       - name: Remove dist and rebuild from clean room
         shell: bash
@@ -59,6 +75,7 @@ jobs:
           bash "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh" 3
           python3 -B build/tools/check_portability.py
           python3 -B build/tools/smoke_test.py
+          python3 -B -m unittest discover -s tests -p test_rb2ct_distribution.py
       - name: Clean, commit and push official main
         shell: bash
         run: |
