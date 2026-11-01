@@ -45,11 +45,14 @@ def package(source: Path, stage: Path):
     with tempfile.TemporaryDirectory(prefix='zx-ux-pascal-') as tmp:
         asmfile = Path(tmp) / 'case.s'
         for number, pas in enumerate(cases, 1):
-            case = pas.stem
+            case = pas.stem.removeprefix('f77s_')
+            case = {'recovered_21_fibonacci_array': 'fibarray',
+                    'recovered_course_030_fibonacci_optimized': 'fibopt',
+                    'recovered_course_040_fibonacci_large': 'fiblarge'}.get(pas.stem, case)
             collection = ('numerical-analysis' if pas in numerical else 'fibonacci')
             dest = srcbase / collection / case if collection == 'numerical-analysis' else srcbase / case
             dest.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(pas, dest / pas.name)
+            shutil.copyfile(pas, dest / (case + '.pas'))
             row = dict.fromkeys(FIELDS, 'SKIP')
             row.update(collection=collection, program=case, status='FAIL', detail='not attempted')
             errors = io.StringIO()

@@ -32,7 +32,7 @@ def main():
     if not isinstance(json.loads((TOOLS / 'runs.json').read_text()), dict):
         raise RuntimeError('Invalid local run configurations')
     collection = ROOT / 'src/assets/basic-src/original-sinclair-basic-collections/60-programs'
-    c48lib = ROOT / 'src/zx-ux-sdk/rb2ct/ports/c48lib'
+    c48lib = ROOT / 'src/zx-ux-sdk/rb2ct/c48lib'
     if not c48lib.is_dir() or c48lib.is_symlink():
         raise RuntimeError('Missing or unsafe shared C48 library')
     folders = sorted(p for p in collection.iterdir()

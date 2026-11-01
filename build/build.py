@@ -12,9 +12,9 @@ sys.dont_write_bytecode = True
 R = pathlib.Path(__file__).resolve().parents[1]
 B, S, D = R / 'build', R / 'src', R / 'dist'
 sys.path.insert(0, str(S / 'zx-ux-sdk/tools'))
-import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, forthbuild, pascalpack, fortranpack
+import osbuild, turbo_boot_build, c48build, sdkpack, basicpack, forthbuild, pascalpack, fortranpack, c48lib_build
 
-FORTH_SHOWCASE_DIRS = ('examples', 'numerical-analysis', 'portable', 'ported')
+FORTH_SHOWCASE_DIRS = ('examples', 'numerical-analysis')
 
 
 def checked_dir(root):
@@ -118,6 +118,8 @@ def build_selected(compilers):
             forthbuild.build(S / 'zx-ux-sdk', stage / 'assets/forth-src',
                              stage / 'assets/forth-bin')
             updates.extend(('assets/forth-src', 'assets/forth-bin'))
+        for rel in ('assets/forth-bin/results.tsv', 'assets/pascal-bin/samples/results.tsv'):
+            (stage / rel).unlink(missing_ok=True)
         for rel in updates:
             dest = D / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -156,14 +158,13 @@ def main():
     # Python cache files are never source inputs or release deliverables.
     no_cache = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
     shutil.copytree(c_sources, stage / 'assets/c48-src', ignore=no_cache)
-    copy_original_programs(originals, stage / 'bonus', no_cache)
-    preserve_existing_c48_release(D, stage)
     basicpack.package(S, stage)
     checked_dir(S / 'assets/forth-src')
     copy_forth_showcase(S / 'assets/forth-src', stage / 'assets/forth-src', no_cache)
     pascalpack.package(S, stage)
     shutil.copytree(S / 'zx-ux', B / 'src', ignore=no_cache)
     shutil.copytree(S / 'zx-ux-sdk', B / 'sdk', ignore=no_cache)
+    c48lib_build.build(B / 'sdk')
     (B / 'out').mkdir()
     (B / 'sdk/rom').mkdir(exist_ok=True)
     for name, folder in (('48.rom', 'rom'), ('font4x8.bin', '')):
@@ -180,8 +181,18 @@ def main():
     shutil.copy2(B / 'out/ZX-UX.tzx', stage / 'zx-ux/tzx/ZX-UX.tzx')
     c48build.build(B / 'sdk', stage / 'assets/c48-src', stage / 'assets/c48-bin')
     forthbuild.build(B / 'sdk', stage / 'assets/forth-src', stage / 'assets/forth-bin')
+    # Git cannot record empty directories: these are the sole tracking markers.
+    for name in ('rb2ct', 'rb2ct-src', 'rb2ct-bin'):
+        placeholder = stage / 'assets' / name / '.gitkeep'
+        placeholder.parent.mkdir(parents=True, exist_ok=True)
+        placeholder.touch()
+    (stage / 'assets/basic-src/README.txt').write_text(
+        'These original BAS/TZX files run under ZX Spectrum 48K BASIC, not ZX-UX; their accepted ZX-UX ports are in rbc-bin and future rb2ct-bin.\n', encoding='utf-8')
+    for rel in ('assets/forth-bin/results.tsv', 'assets/pascal-bin/samples/results.tsv'):
+        (stage / rel).unlink(missing_ok=True)
     sdkpack.pack(S / 'zx-ux-sdk', S / 'zx-ux', B, stage / 'sdk/bin')
     fortranpack.package(S, stage, B / 'sdk')
+    (stage / 'assets/fortran-bin/samples/results.tsv').unlink(missing_ok=True)
     (stage / 'assets/fortran-bin/samples/results.tsv').unlink(missing_ok=True)
     shutil.copy2(R / 'LICENSE', stage / 'LICENSE')
     shutil.copy2(R / 'THIRD-PARTY', stage / 'THIRD-PARTY')

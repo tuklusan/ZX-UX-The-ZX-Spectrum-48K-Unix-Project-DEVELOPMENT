@@ -20,14 +20,14 @@ sys.path[:0] = [str(DIST / 'sdk/bin/py'), str(Path(__file__).resolve().parent)]
 SAMPLES = {
     'rfc': [p.stem for p in sorted((DIST / 'assets/forth-bin/ssx').glob('*.ssx'))],
     'rpc': [
-        'recovered_course_030_fibonacci_optimized',
-        'recovered_course_040_fibonacci_large',
-        'recovered_21_fibonacci_array',
-        'bases', 'f77s_burkadj', 'f77s_burkcopy', 'f77s_burkcum',
-        'f77s_burkdot', 'f77s_burkflip', 'f77s_burkgcd', 'f77s_burkl1',
-        'f77s_burkl2', 'f77s_burkmean', 'f77s_burkmin', 'f77s_burkmm',
-        'f77s_burkprime', 'f77s_burkreal', 'f77s_burkrsrt', 'f77s_burkscale',
-        'f77s_burksort', 'f77s_burkvar', 'f77s_burkvec', 'f77s_machar',
+        'fibopt',
+        'fiblarge',
+        'fibarray',
+        'bases', 'burkadj', 'burkcopy', 'burkcum',
+        'burkdot', 'burkflip', 'burkgcd', 'burkl1',
+        'burkl2', 'burkmean', 'burkmin', 'burkmm',
+        'burkprime', 'burkreal', 'burkrsrt', 'burkscale',
+        'burksort', 'burkvar', 'burkvec', 'machar',
         'factorial', 'prime',
     ],
     'rfortranc': [

@@ -77,18 +77,6 @@ def package(source: Path, stage: Path):
                            (len(bas) != 1 or len(tzx) != 1 or
                             bas[0].stem != game.name or tzx[0].stem != game.name)):
                 raise ValueError('missing or ambiguous original BAS/TZX: ' + game.name)
-            target = stage / 'assets/basic-src' / collection / game.name
-            target.mkdir(parents=True, exist_ok=True)
-            for original in bas + tzx:
-                if original.is_symlink():
-                    raise ValueError('linked BASIC input')
-                shutil.copyfile(original, target / original.name)
-            for png in sorted((folder / 'SCREENSHOTS').glob('*.png')):
-                if png.is_symlink():
-                    raise ValueError('linked BASIC screenshot')
-                dst = (stage / 'screenshots/basic-original' / collection / game.name / png.name)
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(png, dst)
             executable = game / 'bin' / (game.name + '.ssx')
             reason = game / 'bin/README.md'
             if executable.is_symlink() or reason.is_symlink():
@@ -103,6 +91,17 @@ def package(source: Path, stage: Path):
                 raise ValueError('accepted RBC program has no BASIC listing: ' + game.name)
             if reason.is_file():
                 continue
+            # Only accepted binaries have released source listings.
+            basic = stage / 'assets/basic-src' / collection / game.name
+            rbc = stage / 'assets/rbc-src' / collection / game.name
+            basic.mkdir(parents=True, exist_ok=True)
+            rbc.mkdir(parents=True, exist_ok=True)
+            for original in bas + tzx:
+                if original.is_symlink():
+                    raise ValueError('linked BASIC input')
+                shutil.copyfile(original, basic / original.name)
+            for original in bas:
+                shutil.copyfile(original, rbc / original.name)
             data = executable.read_bytes()
             info = rld.parse_ssx(data)
             required = rtap.need(data)

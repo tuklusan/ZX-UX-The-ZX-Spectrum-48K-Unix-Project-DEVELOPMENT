@@ -71,7 +71,18 @@ def build(stage, sources, dest):
     dest.mkdir(parents=True)
     (dest/'demo.ssx').write_bytes(b'code')
 ''')
-        (tools / 'basicpack.py').write_text('def package(*args): return 1\n')
+        (tools / 'c48lib_build.py').write_text('''
+from pathlib import Path
+def build(sdk):
+    out = Path(sdk) / 'lib/c48lib.ssa'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(b'test archive')
+    return out
+''')
+        (tools / 'basicpack.py').write_text('''
+def package(source, stage):
+    (stage / 'assets/basic-src').mkdir(parents=True, exist_ok=True)
+''')
         (tools / 'pascalpack.py').write_text('def package(*args): return 1\n')
         (tools / 'fortranpack.py').write_text('def package(*args): return 1\n')
         (tools / 'forthbuild.py').write_text('''
@@ -94,46 +105,32 @@ def pack(*args):
         self.run_builder()
         self.assertTrue((self.dist/'zx-ux/tzx/ZX-UX.tzx').is_file())
         self.assertEqual((self.dist/'docs/manual.txt').read_text(), 'manual')
-        self.assertEqual((self.dist/'bonus/60-programs/01-demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
+        self.assertFalse((self.dist/'bonus').exists())
         (self.dist/'stale').write_text('obsolete')
         self.run_builder()
         self.assertFalse((self.dist/'stale').exists())
         self.assertEqual((self.dist/'docs/manual.txt').read_text(), 'manual')
         self.assertEqual((self.src/'assets/basic-src/original-sinclair-basic-collections/60-programs/01-demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
 
-    def test_bonus_has_only_numbered_programs_and_preview(self):
+    def test_original_collections_remain_source_only(self):
         source = self.src / 'assets/basic-src/original-sinclair-basic-collections/60-programs'
-        extras = ('CLEAN-INDEX.json', 'CLEANUP-SUMMARY.json', 'INDEX.csv',
-                  'PROGRAMS.zip', 'README-FIRST.TXT', 'SHA256SUMS.txt')
-        for name in extras:
-            (source / name).write_text('historical source data')
+        (source / 'PROGRAMS.zip').write_bytes(b'historical source archive')
         (source / 'TOOLS').mkdir()
         (source / 'TOOLS/helper.py').write_text('pass')
-        (self.src / 'assets/basic-src/original-sinclair-basic-collections/other-source.txt').write_text('not for release')
         self.run_builder()
-        output = self.dist / 'bonus/60-programs'
-        expected = {f'{number:02d}-demo' for number in range(1, 61)}
-        expected.add('sixty-programs-social-preview.png')
-        self.assertEqual({p.name for p in output.iterdir()}, expected)
-        self.assertEqual({p.name for p in (self.dist / 'bonus').iterdir()},
-                         {'60-programs', 'Granada-Publishing', 'numerical-analysis',
-                          'www.thespectrumshow.net'})
-        self.assertEqual((output / 'sixty-programs-social-preview.png').read_bytes(),
-                         b'preview')
+        self.assertFalse((self.dist / 'bonus').exists())
+        self.assertFalse((self.dist / 'assets/basic-src/original-sinclair-basic-collections').exists())
+        self.assertEqual((source / '01-demo/BASIC/demo.bas').read_text(), '10 PRINT "OK"')
         self.assertTrue((source / 'PROGRAMS.zip').exists())
         self.assertTrue((source / 'TOOLS/helper.py').exists())
-        for name in ('Granada-Publishing', 'numerical-analysis', 'www.thespectrumshow.net'):
-            self.assertEqual((self.dist / 'bonus' / name / '01-demo/BASIC/Program.bas').read_text(),
-                             '10 PRINT "OK"')
-        self.assertFalse((output/'c48lib').exists())
         self.run_builder()
-        self.assertEqual({p.name for p in output.iterdir()}, expected)
+        self.assertFalse((self.dist / 'bonus').exists())
 
     def test_only_forth_showcase_in_dist(self):
         self.run_builder()
         staged = self.dist / 'assets/forth-src'
         self.assertEqual({p.name for p in staged.iterdir()},
-                         {'examples', 'numerical-analysis', 'portable', 'ported'})
+                         {'examples', 'numerical-analysis'})
         self.assertTrue((staged / 'examples/demo-examples.fth').exists())
         self.assertTrue((self.src / 'assets/forth-src/examples/demo-examples.fth').exists())
         self.assertFalse((staged / 'numerical-analysis/original').exists())
@@ -148,12 +145,12 @@ def pack(*args):
         self.assertFalse((self.dist / 'bonus/60-programs/01-demo/C48').exists())
         self.assertEqual((source / 'main.c').read_text(), 'old port')
 
-    def test_existing_c48_gallery_survives_staged_rebuild(self):
+    def test_existing_c48_gallery_is_not_reused_in_clean_stage(self):
         original = self.dist / 'screenshots/c48/rvm/games/arith.png'
         original.parent.mkdir(parents=True)
         original.write_bytes(b'existing RVM screenshot')
         self.run_builder()
-        self.assertEqual(original.read_bytes(), b'existing RVM screenshot')
+        self.assertFalse(original.exists())
 
     def test_layout_and_license(self):
         self.run_builder()
@@ -165,14 +162,14 @@ def pack(*args):
         self.assertFalse((self.dist / 'sdk/bin/LICENSE').exists())
         self.assertFalse((self.dist / 'sdk/bin/THIRD-PARTY.txt').exists())
         self.assertEqual((self.dist / 'THIRD-PARTY').read_text(), 'third party')
+        self.assertEqual((self.root / 'build/sdk/lib/c48lib.ssa').read_bytes(), b'test archive')
 
-    def test_missing_numbered_program_preserves_prior_dist(self):
+    def test_missing_c48_source_preserves_prior_dist(self):
         self.run_builder()
-        target = self.dist / 'bonus/60-programs/01-demo/BASIC/demo.bas'
+        target = self.dist / 'zx-ux/tzx/ZX-UX.tzx'
         before = target.read_bytes()
-        folder = self.src / 'assets/basic-src/original-sinclair-basic-collections/60-programs/60-demo'
         import shutil
-        shutil.rmtree(folder)
+        shutil.rmtree(self.src / 'assets/c48-src')
         self.run_builder(ok=False)
         self.assertEqual(target.read_bytes(), before)
 

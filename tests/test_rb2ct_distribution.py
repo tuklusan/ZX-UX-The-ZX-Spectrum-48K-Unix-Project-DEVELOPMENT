@@ -27,7 +27,7 @@ class Rb2ctPlaceholder(unittest.TestCase):
                     self.assertEqual(list(Path(folder).iterdir()), [])
 
     def test_preserved_library(self):
-        common = SDK / 'rb2ct/ports/c48lib'
+        common = SDK / 'rb2ct/c48lib'
         self.assertEqual({p.name for p in common.iterdir()},
                          {'c48lib.h', 'c48lib.asm', 'c48lib-font.asm',
                           'FONT-SOURCE.txt'})

@@ -12,17 +12,23 @@ COMPILERS = (('c48', 'rcc — C48'), ('rbc', 'rbc — Sinclair BASIC'),
 
 
 def write_index(engines=('rvm', 'fuse')):
+    complete = engines == ('rvm', 'fuse')
+    if complete:
+        from asset_gallery import finalize
+        finalize()
     lines = ['<!doctype html><html lang="en"><meta charset="utf-8">',
              '<title>ZX-UX compiler screenshots</title>',
              '<style>body{font:18px system-ui,sans-serif;max-width:820px;margin:2em auto;padding:0 1em;background:#121212;color:#eee}a{color:#9cf}li{margin:.7em 0}</style>',
              '<h1>ZX-UX compiler screenshots</h1><ul>']
     for directory, title in COMPILERS:
+        if complete:
+            directory = {'c48': 'c48-bin', 'rbc': 'rbc-bin',
+                         'rfc': 'forth-bin', 'rpc': 'pascal-bin',
+                         'rfortranc': 'fortran-bin'}[directory]
         links = []
         for engine in engines:
             index = SCREENSHOTS / directory / engine / 'index.html'
             if not index.is_file():
-                if engine == 'fuse' and directory == 'rfortranc':
-                    continue  # No valid real Fuse capture for fast-exiting programs.
                 raise FileNotFoundError('missing ' + str(index))
             links.append('<a href="%s/%s/index.html">%s</a>' % (directory, engine, escape(engine.upper())))
         lines.append('<li>%s: %s</li>' % (escape(title), ' · '.join(links)))

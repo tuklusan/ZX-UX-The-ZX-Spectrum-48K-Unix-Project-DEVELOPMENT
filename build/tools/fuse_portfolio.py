@@ -217,7 +217,7 @@ def _run_case_once(names, destination, args, config=None):
             fuse = subprocess.Popen(command, env=env, cwd=args.assets,
                                     stdout=fuse_output, stderr=subprocess.STDOUT)
             trace('Fuse process launched')
-            time.sleep(6.0)
+            time.sleep(8.0)
             if fuse.poll() is not None:
                 raise RuntimeError('Fuse stopped during ZX-UX boot')
             send_rom_load(display)

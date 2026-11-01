@@ -1,8 +1,0 @@
-SantaNightmare — controls checked against original numbered BASIC lines
-
-Three instruction pages explain five stages (BASIC 9210-9270). The game asks for four separate keys (60-100). Replay defines A = left, D = right, W = up, S = down, advances the first-stage reminder, waits for the traffic-light countdown, and uses A and D to steer Santa during the tree-avoidance stage (1900-1960).
-
-Replay uses the untouched .z80 snapshot in Fuse SDL 1.6.0, 48K ROM,
-100% emulation speed; injects actual keyboard presses over XTest.
-Captures 01-STATE.png after the first move and 02-AFTER-MOVES.png after
-the second. Delays are real elapsed seconds, not exact game frames.

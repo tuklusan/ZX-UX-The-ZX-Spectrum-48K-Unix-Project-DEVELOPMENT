@@ -1,8 +1,0 @@
-NewYork — controls checked against original numbered BASIC lines
-
-Q = move left, E = move right (BASIC lines 110-120). On the introduction screen hit any key, then input difficulty 1-8 (lines 2072-2110). Replay chooses 3 and starts moving after the attack wave and city appear.
-
-Replay uses the untouched .z80 snapshot in Fuse SDL 1.6.0, 48K ROM,
-100% emulation speed; injects actual keyboard presses over XTest.
-Captures 01-STATE.png after the first move and 02-AFTER-MOVES.png after
-the second. Delays are real elapsed seconds, not exact game frames.
