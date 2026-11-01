@@ -10,6 +10,9 @@ Take a full Git checkout of this repository to a new Debian 13 (trixie)
 64-bit PC or virtual machine, install the saved build dependencies, and run
 the same clean-room rebuild command used by GitHub Actions.
 
+As of October 2026, the full clean-room build takes about 90 minutes on
+a GitHub Actions runner. Local machine timings may differ.
+
 Use Debian 13/amd64 (Intel or AMD x86-64), NOT Ubuntu, Debian testing, or
 ARM64 with the packages in build/dependencies/. The Debian package archive
 contains Debian-specific binary packages. It is not a bootable OS image.
