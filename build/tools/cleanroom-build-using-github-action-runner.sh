@@ -5,18 +5,32 @@ cd "$(dirname "$0")/../.."
 export PYTHONDONTWRITEBYTECODE=1
 
 set -euxo pipefail
-sudo apt-get update
-sudo apt-get install -y software-properties-common
-sudo add-apt-repository -y universe
-sudo apt-get update
-sudo apt-get install -y build-essential curl python3 python3-venv xvfb x11-utils libxtst6 libx11-6 fuse-emulator-sdl
-python3 -m venv /tmp/zxux-py
-/tmp/zxux-py/bin/python -m pip install 'Pillow>=12.1,<13'
+# On a prepared Debian 13 machine, reuse the tracked offline installers.
+# A disposable GitHub Ubuntu runner still bootstraps its dependencies.
+if test -x /usr/local/bin/sjasmplus \
+  && test -x /usr/bin/fuse-sdl \
+  && command -v Xvfb >/dev/null \
+  && test -f /usr/share/fuse/fuse.font \
+  && test -x /tmp/zxux-py/bin/python \
+  && /tmp/zxux-py/bin/python -c 'from PIL import Image, ImageGrab, ImageChops; assert hasattr(Image.new("L",(1,1)), "get_flattened_data")'; then
+  echo 'Using locally installed build dependencies'
+else
+  sudo apt-get update
+  sudo apt-get install -y software-properties-common
+  . /etc/os-release
+  if [ "$ID" = ubuntu ]; then
+    sudo add-apt-repository -y universe
+    sudo apt-get update
+  fi
+  sudo apt-get install -y build-essential curl python3 python3-venv xvfb x11-utils libxtst6 libx11-6 fuse-emulator-sdl
+  python3 -m venv /tmp/zxux-py
+  /tmp/zxux-py/bin/python -m pip install 'Pillow>=12.1,<13'
+  curl -fL --retry 3 https://github.com/z00m128/sjasmplus/releases/download/v1.24.0/sjasmplus-1.24.0-src.tar.xz -o /tmp/sjasmplus-src.tar.xz
+  tar -xJf /tmp/sjasmplus-src.tar.xz -C /tmp
+  make -C /tmp/sjasmplus-1.24.0 -j2
+  sudo install -m 755 /tmp/sjasmplus-1.24.0/sjasmplus /usr/local/bin/sjasmplus
+fi
 export PATH="/tmp/zxux-py/bin:$PATH"
-curl -fL --retry 3 https://github.com/z00m128/sjasmplus/releases/download/v1.24.0/sjasmplus-1.24.0-src.tar.xz -o /tmp/sjasmplus-src.tar.xz
-tar -xJf /tmp/sjasmplus-src.tar.xz -C /tmp
-make -C /tmp/sjasmplus-1.24.0 -j2
-sudo install -m 755 /tmp/sjasmplus-1.24.0/sjasmplus /usr/local/bin/sjasmplus
 sjasmplus --version
 command -v fuse-sdl
 test -f /usr/share/fuse/fuse.font
