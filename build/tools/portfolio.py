@@ -5,6 +5,7 @@ Usage: python3 build/tools/portfolio.py [--only NAME[,NAME]] [--frames N]
 No C48 programs are recompiled. The two multitasking scenes are included.
 """
 import argparse
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import concurrent.futures
 import json
 import os
@@ -259,6 +260,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--only', default='')
     p.add_argument('--frames', type=int, default=1500)
+    p.add_argument('--jobs', type=int, default=1)
     p.add_argument('--jobs', type=int, default=8)
     args = p.parse_args()
     if not 1 <= args.jobs <= 16:
@@ -268,21 +270,27 @@ def main():
     failures = []
     with concurrent.futures.ProcessPoolExecutor(max_workers=args.jobs) as pool:
         jobs = []
-        for name, category, config in captures():
-            if only is not None and name not in only:
-                continue
-            found.add(name)
-            jobs.append((name, pool.submit(run_one, name, category, config, args.frames)))
-        for names in PAIRS:
-            identifier = '-'.join(names)
-            if only is None or identifier in only:
-                jobs.append((identifier, pool.submit(run_pair, names)))
-        for identifier, future in jobs:
+        if not 1 <= args.jobs <= 16:
+        p.error('--jobs must be 1..16')
+    tasks = []
+    for name, category, config in captures():
+        if only is not None and name not in only:
+            continue
+        found.add(name)
+        tasks.append((name, run_one, (name, category, config, args.frames)))
+    for names in PAIRS:
+        identifier = '-'.join(names)
+        if only is None or identifier in only:
+            tasks.append((identifier, run_pair, (names,)))
+    with ProcessPoolExecutor(max_workers=args.jobs) as pool:
+        pending = {pool.submit(fn, *params): name for name, fn, params in tasks}
+        for future in as_completed(pending):
+            name = pending[future]
             try:
                 future.result()
             except Exception as exc:
-                print('RVM FAIL:', identifier, exc, file=sys.stderr)
-                failures.append(identifier)
+                print('RVM FAIL:', name, exc, file=sys.stderr)
+                failures.append(name)
     if only is not None and not only <= found | {'-'.join(p) for p in PAIRS}:
         failures.append('unknown program(s): ' + ','.join(sorted(only-found-{'-'.join(p) for p in PAIRS})))
     count = write_gallery(OUT, 'RVM — ZX-UX kernel')

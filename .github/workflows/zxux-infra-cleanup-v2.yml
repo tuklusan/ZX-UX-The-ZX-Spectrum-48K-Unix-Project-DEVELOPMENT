@@ -1,4 +1,4 @@
-name: ZX-UX infrastructure cleanup v2 C48 path and Fuse timing retry
+name: ZX-UX infrastructure cleanup v2 parallel RVM12 retry
 
 on:
   push:
