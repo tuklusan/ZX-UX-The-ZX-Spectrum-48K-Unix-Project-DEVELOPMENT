@@ -45,6 +45,9 @@ def tape_name(name: str) -> str:
     value = ''.join(c for c in name.upper() if c.isascii() and c.isalnum())
     if not 1 <= len(value) or not value[:2].isdigit():
         raise ValueError('game needs a stable two-digit tape ID: ' + name)
+    variant = re.search(r'-(\d{2})$', name)
+    if variant:
+        return value[:8] + variant.group(1)
     return value[:10]
 
 
