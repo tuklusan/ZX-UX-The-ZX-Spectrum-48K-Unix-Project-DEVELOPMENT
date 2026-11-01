@@ -61,13 +61,23 @@ free disk space are sensible starting allocations, not tested minimums.
 3. MOVE THE REPOSITORY TO THE NEW MACHINE
 -----------------------------------------
 Transfer the WHOLE Git checkout, including its hidden .git directory and
-tracked dist/ directory, from USB/shared storage. The path on your USB
+tracked dist/ directory, from USB/shared storage. On the ONLINE source
+machine, run 'git lfs pull' before copying, so the working tree contains
+real dependency packages instead of LFS pointer text. The path on your USB
 depends on how it is mounted. Copy it into your home directory.
 
-If connected to the internet and Git is already available, instead run:
+If connected to the internet, prepare Git LFS and clone the actual binary
+installers (Git without LFS would leave small pointer files instead):
 
+    sudo apt-get update
+    sudo apt-get install -y git git-lfs
+    git lfs install
     git clone https://github.com/tuklusan/ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT.git
     cd ZX-UX-The-ZX-Spectrum-48K-Unix-Project-DEVELOPMENT
+    git lfs pull
+
+On an EXISTING online mirror, use 'git lfs install', 'git pull --ff-only',
+then 'git lfs pull' to update and hydrate the new binary files.
 
 If copying from a USB volume named ZXUSB, for example, enter:
 (change ZXUSB to your actual USB volume name)
@@ -104,6 +114,11 @@ Check the downloaded installers:
     ls build/dependencies/debian-13-amd64/apt/*.deb
     ls build/dependencies/debian-13-amd64/pip/*.whl
     ls -l build/dependencies/sjasmplus/
+
+The .deb files must be real packages, not small Git LFS pointer text.
+If you see 'version https://git-lfs.github.com/spec/v1' in a package,
+run 'git lfs pull' on a connected mirror and copy it again. The offline
+APT package bundle includes git-lfs for future local mirror updates.
 
 IMPORTANT: The five initial .deb files saved directly under
 build/dependencies/debian-13-amd64/ are NOT the complete APT closure.
@@ -190,6 +205,7 @@ Run:
     test -f /usr/share/fuse/fuse.font
     /tmp/zxux-py/bin/python -c 'from PIL import Image, ImageGrab, ImageChops; assert hasattr(Image.new("L",(1,1)), "get_flattened_data"); print("Pillow ready")'
     git rev-parse --show-toplevel
+    git lfs version
     git ls-tree -r HEAD dist | sed -n '1,3p'
 
 These should all succeed. If any step fails, repair it before running

@@ -17,7 +17,7 @@ trap 'rm -f "$empty_status"' EXIT
 "${apt[@]}" -y --download-only --no-install-recommends \
   -o "Dir::State::status=$empty_status" \
   -o "Dir::Cache::archives=$base/apt/" \
-  install bash ca-certificates coreutils git build-essential curl \
+  install bash ca-certificates coreutils git git-lfs build-essential curl \
           python3 python3-venv xvfb x11-utils libxtst6 libx11-6 fuse-emulator-sdl
 venv=$(mktemp -d)
 trap 'rm -f "$empty_status"; rm -rf "$venv"' EXIT
