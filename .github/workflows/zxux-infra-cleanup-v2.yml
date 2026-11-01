@@ -62,8 +62,8 @@ jobs:
                  "common = SDK / 'rb2ct/c48lib'")
           # Wait two extra seconds for the actual Fuse SDL window to initialize.
           change('build/tools/fuse_portfolio.py',
-                 "            time.sleep(6.0)\\n",
-                 "            time.sleep(8.0)\\n")
+                 "            time.sleep(6.0)\n",
+                 "            time.sleep(8.0)\n")
           PY
           bash "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh" all
       - name: Remove dist and rebuild from clean room
