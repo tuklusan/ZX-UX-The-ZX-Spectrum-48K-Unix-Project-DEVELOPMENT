@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check the relocatable source-only project layout without extra build tools."""
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,9 @@ def main():
     required = (ROOT / 'build/build.py', ROOT / 'src/zx-ux',
                 ROOT / 'src/zx-ux-sdk', ROOT / 'src/assets/c48-src',
                 ROOT / 'src/assets/basic-src/original-sinclair-basic-collections/60-programs',
+                ROOT / 'src/assets/basic-src/original-sinclair-basic-collections/Granada-Publishing',
+                ROOT / 'src/assets/basic-src/original-sinclair-basic-collections/numerical-analysis',
+                ROOT / 'src/assets/basic-src/original-sinclair-basic-collections/www.thespectrumshow.net',
                 ROOT / 'src/docs/README.md')
     for item in required:
         if not item.exists():
@@ -42,6 +46,14 @@ def main():
         c48 = folder / 'C48'
         if c48.is_symlink() or (c48.exists() and not c48.is_dir()):
             raise RuntimeError('Invalid optional C48 directory: ' + folder.name)
+    for name, expected in (('Granada-Publishing', 24), ('numerical-analysis', 20),
+                           ('www.thespectrumshow.net', 73)):
+        root = collection.parent / name
+        games = [p for p in root.iterdir()
+                 if p.is_dir() and not p.is_symlink() and
+                 re.fullmatch(r'[0-9][0-9]-.+', p.name)]
+        if len(games) != expected:
+            raise RuntimeError(f'Expected {expected} original BASIC programs in {name}')
     # Run the launcher from outside the project; the current directory must not matter.
     with tempfile.TemporaryDirectory() as elsewhere:
         result = subprocess.run([sys.executable, '-B', str(TOOLS / 'release.py'),

@@ -26,14 +26,6 @@ def collections(source: Path):
                 continue  # collection preparation guide and other source notes
             if not re.fullmatch(r'[a-zA-Z0-9_.-]+', folder.name):
                 raise ValueError('unsafe BASIC collection name: ' + folder.name)
-            if folder.name != '60-programs':
-                # Other original collections remain archival until RBC verdicts
-                # appear. Their BASIC programs are not silently compiled.
-                games = (p for p in folder.iterdir() if p.is_dir() and
-                         re.fullmatch(r'[0-9][0-9]-.+', p.name))
-                if not any((game / 'bin' / (game.name + '.ssx')).is_file() or
-                           (game / 'bin/README.md').is_file() for game in games):
-                    continue
             seen.add(folder.name)
             yield folder.name, folder
     if base.is_dir():
@@ -74,13 +66,15 @@ def package(source: Path, stage: Path):
             if game.is_symlink():
                 raise ValueError('linked BASIC game not permitted')
             folder = game / 'BASIC'
-            bas = list(folder.glob('*.bas'))
-            tzx = list(folder.glob('*.tzx'))
-            if len(bas) != 1 or len(tzx) != 1 or bas[0].stem != game.name or tzx[0].stem != game.name:
+            bas = sorted(folder.glob('*.bas'))
+            tzx = sorted(folder.glob('*.tzx'))
+            if not tzx or (collection == '60-programs' and
+                           (len(bas) != 1 or len(tzx) != 1 or
+                            bas[0].stem != game.name or tzx[0].stem != game.name)):
                 raise ValueError('missing or ambiguous original BAS/TZX: ' + game.name)
             target = stage / 'assets/basic-src' / collection / game.name
             target.mkdir(parents=True, exist_ok=True)
-            for original in (bas[0], tzx[0]):
+            for original in bas + tzx:
                 if original.is_symlink():
                     raise ValueError('linked BASIC input')
                 shutil.copyfile(original, target / original.name)
@@ -92,8 +86,16 @@ def package(source: Path, stage: Path):
                 shutil.copyfile(png, dst)
             executable = game / 'bin' / (game.name + '.ssx')
             reason = game / 'bin/README.md'
-            if executable.is_file() == reason.is_file() or executable.is_symlink() or reason.is_symlink():
-                raise ValueError('BASIC result must be precisely one SSX or README: ' + game.name)
+            if executable.is_symlink() or reason.is_symlink():
+                raise ValueError('linked BASIC result: ' + game.name)
+            if executable.is_file() and reason.is_file():
+                raise ValueError('conflicting BASIC result: ' + game.name)
+            if not executable.is_file() and not reason.is_file():
+                if collection == '60-programs':
+                    raise ValueError('missing BASIC result: ' + game.name)
+                continue  # Source-only collection; no RBC verdict yet.
+            if executable.is_file() and not bas:
+                raise ValueError('accepted RBC program has no BASIC listing: ' + game.name)
             if reason.is_file():
                 continue
             data = executable.read_bytes()

@@ -42,6 +42,13 @@ class RebuildChecks(unittest.TestCase):
             folder.mkdir(parents=True)
             (folder / 'demo.bas').write_text('10 PRINT "OK"')
         (bonus / 'sixty-programs-social-preview.png').write_bytes(b'preview')
+        for name, count in (('Granada-Publishing', 24), ('numerical-analysis', 20),
+                            ('www.thespectrumshow.net', 73)):
+            for number in range(1, count + 1):
+                folder = bonus.parent / name / f'{number:02d}-demo/BASIC'
+                folder.mkdir(parents=True)
+                (folder / 'Program.bas').write_text('10 PRINT "OK"')
+                (folder / 'Program.tzx').write_bytes(b'original tape')
         (self.root / 'LICENSE').write_text('project license')
         (self.root / 'THIRD-PARTY').write_text('third party')
         (self.root / 'build').mkdir()
@@ -109,11 +116,15 @@ def pack(*args):
         expected.add('sixty-programs-social-preview.png')
         self.assertEqual({p.name for p in output.iterdir()}, expected)
         self.assertEqual({p.name for p in (self.dist / 'bonus').iterdir()},
-                         {'60-programs'})
+                         {'60-programs', 'Granada-Publishing', 'numerical-analysis',
+                          'www.thespectrumshow.net'})
         self.assertEqual((output / 'sixty-programs-social-preview.png').read_bytes(),
                          b'preview')
         self.assertTrue((source / 'PROGRAMS.zip').exists())
         self.assertTrue((source / 'TOOLS/helper.py').exists())
+        for name in ('Granada-Publishing', 'numerical-analysis', 'www.thespectrumshow.net'):
+            self.assertEqual((self.dist / 'bonus' / name / '01-demo/BASIC/Program.bas').read_text(),
+                             '10 PRINT "OK"')
         self.assertFalse((output/'c48lib').exists())
         self.run_builder()
         self.assertEqual({p.name for p in output.iterdir()}, expected)

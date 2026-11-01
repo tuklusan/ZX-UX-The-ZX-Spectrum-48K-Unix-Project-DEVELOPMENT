@@ -94,10 +94,31 @@ class BasicDistribution(unittest.TestCase):
                 (game / 'bin/01-sample.ssx').write_bytes(
                     (original / 'bin/53-russian-roulette.ssx').read_bytes())
             (archive / 'not-yet-compiled/01-pending/BASIC').mkdir(parents=True)
-            self.assertEqual(basicpack.package(source, Path(temp) / 'dist'), 2)
+            (archive / 'not-yet-compiled/01-pending/BASIC/Only.tzx').write_bytes(b'old tape')
+            self.assertEqual(basicpack.package(source, Path(temp) / 'dist'), 3)
             for name in ('first-set', 'second-set'):
                 self.assertTrue((Path(temp) / 'dist/assets/rbc-bin' / name / 'ssx/01-sample.ssx').is_file())
-            self.assertFalse((Path(temp) / 'dist/assets/rbc-bin/not-yet-compiled').exists())
+            self.assertTrue((Path(temp) / 'dist/assets/basic-src/not-yet-compiled/01-pending/Only.tzx').is_file())
+            self.assertFalse(list((Path(temp) / 'dist/assets/rbc-bin/not-yet-compiled/ssx').glob('*.ssx')))
+
+    def test_original_filenames_and_pending_programs(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / 'src/assets/basic-src/original-sinclair-basic-collections'
+            ravine = root / 'Granada-Publishing/01-ravine/BASIC'
+            ravine.mkdir(parents=True)
+            (ravine / 'Ravine.bas').write_text('10 PRINT "RAVINE"\n')
+            (ravine / 'Ravine.tzx').write_bytes(b'original Granada tape')
+            show = root / 'www.thespectrumshow.net/14-outlander/BASIC'
+            show.mkdir(parents=True)
+            (show / 'Outlander.tzx').write_bytes(b'original Spectrum Show tape')
+            stage = Path(temp) / 'dist'
+            self.assertEqual(basicpack.package(Path(temp) / 'src', stage), 2)
+            self.assertEqual((stage / 'assets/basic-src/Granada-Publishing/01-ravine/Ravine.bas').read_text(),
+                             '10 PRINT "RAVINE"\n')
+            self.assertEqual((stage / 'assets/basic-src/www.thespectrumshow.net/14-outlander/Outlander.tzx').read_bytes(),
+                             b'original Spectrum Show tape')
+            self.assertFalse(list((stage / 'assets/rbc-bin/Granada-Publishing/ssx').glob('*.ssx')))
+            self.assertFalse(list((stage / 'assets/rbc-bin/www.thespectrumshow.net/tzx').glob('*.tzx')))
 
     def test_both_clis_offline(self):
         packaged = ROOT / 'dist/sdk/bin'

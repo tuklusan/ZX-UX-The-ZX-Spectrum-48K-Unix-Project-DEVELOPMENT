@@ -22,9 +22,9 @@ Or run `python3 build/tools/release.py --build-only --sjasm /path/to/sjasmplus`.
 All paths used by the build resolve from the location of the scripts, not
 from the current working directory or this folder's name.
 
-The build copies C48 program sources from `src/assets/c48-src/` and the original
-60 BASIC programs from
-`src/assets/basic-src/original-sinclair-basic-collections/60-programs/`
+The build copies C48 program sources from `src/assets/c48-src/` and all four
+original BASIC collections from
+`src/assets/basic-src/original-sinclair-basic-collections/`
 into a new staged distribution. It then
 replaces `dist/` only after the whole build succeeds. A missing `dist/` is normal
 before the first build. Deleting `dist/` is safe because it contains generated
@@ -56,10 +56,11 @@ its source tree at `dist/zx-ux/src/`. The project license is at
 `dist/LICENSE`. The SDK is in `dist/sdk/bin/`; compiled C48 programs
 are in `dist/assets/c48-bin/`.
 
-The 60 original BASIC games are copied into `dist/bonus/60-programs/`
-without historical C48 hand ports. `rb2ct` is under development; its
-`c48lib` support remains in the SDK.
-The other original BASIC collections remain archived until RBC results exist.
+All four original BASIC collections are copied into `dist/bonus/` without
+historical C48 hand ports. Existing BASIC listings and tapes are also staged
+under `dist/assets/basic-src/` by collection. Only programs with accepted native
+RBC results receive SSX/TZX executables and new RVM/Fuse screenshots.
+`rb2ct` is under development; its `c48lib` support remains in the SDK.
 
 ## Optional emulation and screenshots
 
@@ -83,7 +84,7 @@ host tools and must be performed on the target machine.
 
 The original BASIC tapes, screenshots and notes live under
 `src/assets/basic-src/original-sinclair-basic-collections/`. Packaging does not
-compile or modify the archived programs. Only the 60-game collection is
-currently included in `dist/bonus/`.
+compile or modify the archived programs. The other three collections have
+no accepted RBC binaries yet.
 
 See the repository's `LICENSE` and `THIRD-PARTY` files for the terms and notices.

@@ -26,7 +26,7 @@ def cases():
             continue
         for ssx in sorted((collection / 'ssx').glob('*.ssx')):
             original = DIST / 'assets/basic-src' / collection.name / ssx.stem
-            if not (original / (ssx.stem + '.bas')).is_file():
+            if not any(original.glob('*.bas')):
                 raise RuntimeError('missing original BASIC source: ' + ssx.stem)
             yield collection.name, ssx, tape_name(ssx.stem)
 
@@ -44,10 +44,10 @@ def write_gallery(out: Path, engine: str):
             original = DIST / 'assets/basic-src' / collection.name / png.stem
             links = []
             for suffix in ('.bas', '.tzx'):
-                source = original / (png.stem + suffix)
-                if source.is_file():
+                for source in sorted(original.glob('*' + suffix)):
                     href = quote(__import__('os').path.relpath(source, out).replace('\\', '/'), safe='/')
-                    links.append('<a href="%s">%s</a>' % (escape(href, quote=True), suffix[1:].upper()))
+                    links.append('<a href="%s">%s</a>' %
+                                 (escape(href, quote=True), escape(source.name)))
             parts.append('<figure><a href="%s"><img src="%s" alt="%s" width="320"></a>'
                          '<figcaption>%s — %s</figcaption></figure>' %
                          (escape(rel, quote=True), escape(rel, quote=True), escape(png.stem),

@@ -28,31 +28,38 @@ def checked_dir(root):
 
 
 
-def copy_original_programs(source, destination, no_cache):
-    """Stage only the 60 BASIC program folders and the social preview PNG.
+ORIGINAL_BASIC_COUNTS = {'60-programs': 60, 'Granada-Publishing': 24,
+                         'numerical-analysis': 20, 'www.thespectrumshow.net': 73}
 
-    The source collection retains its historical metadata, tools and archives;
-    those top-level items are not release payloads.
+def copy_original_programs(source, destination, no_cache):
+    """Copy numbered original BASIC programs from all four collections.
+
+    Do not distribute collection-level preparation tools or historical C48 ports.
     """
-    collection = source / '60-programs'
-    output = destination / '60-programs'
-    program_dirs = sorted(p for p in collection.iterdir()
+    for name, expected in ORIGINAL_BASIC_COUNTS.items():
+        collection = source / name
+        if collection.is_symlink() or not collection.is_dir():
+            raise RuntimeError('Missing or unsafe BASIC collection: ' + str(collection))
+        programs = sorted(p for p in collection.iterdir()
                           if p.is_dir() and re.fullmatch(r'\d{2}-.+', p.name))
-    if [int(p.name[:2]) for p in program_dirs] != list(range(1, 61)):
-        raise RuntimeError('Expected exactly 60 numbered BASIC program directories')
-    preview = collection / 'sixty-programs-social-preview.png'
-    if not preview.is_file() or preview.is_symlink():
-        raise RuntimeError('Missing or unsafe BASIC social preview: ' + str(preview))
-    output.mkdir(parents=True)
-    for program in program_dirs:
-        # Historical C48 folders never enter BASIC archives.
-        def no_port(folder, names):
-            ignored = set(no_cache(folder, names))
-            if pathlib.Path(folder) == program:
-                ignored.add('C48')
-            return ignored
-        shutil.copytree(program, output / program.name, ignore=no_port)
-    shutil.copy2(preview, output / preview.name)
+        if len(programs) != expected:
+            raise RuntimeError(f'Expected {expected} BASIC program directories in {name}')
+        if name == '60-programs' and [int(p.name[:2]) for p in programs] != list(range(1, 61)):
+            raise RuntimeError('Expected exactly 60 numbered BASIC programs')
+        output = destination / name
+        output.mkdir(parents=True)
+        for program in programs:
+            def no_port(folder, names):
+                ignored = set(no_cache(folder, names))
+                if pathlib.Path(folder) == program:
+                    ignored.add('C48')
+                return ignored
+            shutil.copytree(program, output / program.name, ignore=no_port)
+        if name == '60-programs':
+            preview = collection / 'sixty-programs-social-preview.png'
+            if preview.is_symlink() or not preview.is_file():
+                raise RuntimeError('Missing or unsafe BASIC social preview: ' + str(preview))
+            shutil.copy2(preview, output / preview.name)
 
 
 def copy_forth_showcase(source, destination, no_cache):
