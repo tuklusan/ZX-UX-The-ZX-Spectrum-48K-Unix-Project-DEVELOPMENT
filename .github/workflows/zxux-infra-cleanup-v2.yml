@@ -1,4 +1,4 @@
-name: ZX-UX infrastructure cleanup v2 parallel RVM12 retry
+name: ZX-UX infrastructure cleanup v2 single clean-room build
 
 on:
   push:
@@ -18,12 +18,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
-      - name: Clone live main with LFS
+      - name: Clone main with LFS
         uses: actions/checkout@v4
         with:
           lfs: true
           persist-credentials: true
-      - name: Install ZX-UX dependencies
+      - name: Install build dependencies
         shell: bash
         run: |
           set -euo pipefail
@@ -41,42 +41,28 @@ jobs:
           echo /tmp/zxux-py/bin >> "$GITHUB_PATH"
           test -x /usr/bin/fuse-sdl
           test -f /usr/share/fuse/fuse.font
-          sjasmplus --version
-      - name: Apply supplied workflow phases 1, 2, 3
+      - name: Source cleanup and isolated tests before expensive build
         shell: bash
         run: |
           set -euo pipefail
           test -z "$(git status --porcelain)"
           unzip -q build/tools/zxux-infra-cleanup-v2.zip -d "$RUNNER_TEMP"
-          sed -i 's/--jobs 4/--jobs 12/' "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh"
-          sed -i '/python3 -B build\/tools\/portfolio.py$/s/$/ --jobs 12/' "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh"
-          sed -i '/python3 -B build\/tools\/basic_portfolio.py$/s/$/ --jobs 12/' "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh"
-          sed -i '/python3 -B build\/tools\/compiler_portfolio.py --engine rvm$/s/$/ --jobs 12/' "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh"
-          cat >> "$RUNNER_TEMP/zxux-infra-cleanup-v2/phase1.py" <<'PY'
-          # The migration moves c48lib; keep the existing source checks current.
-          change('build/tools/check_portability.py',
-                 "c48lib = ROOT / 'src/zx-ux-sdk/rb2ct/ports/c48lib'",
-                 "c48lib = ROOT / 'src/zx-ux-sdk/rb2ct/c48lib'")
-          change('tests/test_rb2ct_distribution.py',
-                 "common = SDK / 'rb2ct/ports/c48lib'",
-                 "common = SDK / 'rb2ct/c48lib'")
-          # Wait two extra seconds for the actual Fuse SDL window to initialize.
-          change('build/tools/fuse_portfolio.py',
-                 "            time.sleep(6.0)\n",
-                 "            time.sleep(8.0)\n")
-          PY
-          bash "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh" all
-      - name: Remove dist and rebuild from clean room
+          bash "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh" 1
+          python3 -B build/tools/check_portability.py
+          python3 -B -m unittest discover -s tests -p test_rb2ct_distribution.py
+          python3 -B build/tools/smoke_test.py
+          python3 -B build/tools/portfolio.py --help >/dev/null
+          python3 -B build/tools/basic_portfolio.py --help >/dev/null
+          python3 -B build/tools/compiler_portfolio.py --help >/dev/null
+          python3 -B build/tools/fuse_portfolio.py --help >/dev/null
+      - name: One clean-room build and gallery verification
         shell: bash
         run: |
           set -euo pipefail
           rm -rf dist/
           bash "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh" 2
           bash "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh" 3
-          python3 -B build/tools/check_portability.py
-          python3 -B build/tools/smoke_test.py
-          python3 -B -m unittest discover -s tests -p test_rb2ct_distribution.py
-      - name: Clean, commit and push official main
+      - name: Clean commit and push official main
         shell: bash
         run: |
           set -euo pipefail
@@ -95,6 +81,6 @@ jobs:
           fi
           git -c user.name='ZX-UX release runner' \
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-              commit -m 'Apply infrastructure cleanup v2 and clean-room rebuild'
+              commit -m 'Apply infrastructure cleanup v2 and single clean-room rebuild'
           git push origin HEAD:refs/heads/main
           git rev-parse HEAD
