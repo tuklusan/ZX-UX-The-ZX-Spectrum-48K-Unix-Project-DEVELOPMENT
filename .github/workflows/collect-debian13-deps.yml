@@ -16,6 +16,8 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4

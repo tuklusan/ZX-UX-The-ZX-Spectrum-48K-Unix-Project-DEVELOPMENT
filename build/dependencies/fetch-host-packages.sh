@@ -18,8 +18,7 @@ trap 'rm -f "$empty_status"' EXIT
   -o "Dir::State::status=$empty_status" \
   -o "Dir::Cache::archives=$base/apt/" \
   install bash ca-certificates coreutils git build-essential curl \
-          software-properties-common python3 python3-venv \
-          xvfb x11-utils libxtst6 libx11-6 fuse-emulator-sdl
+          python3 python3-venv xvfb x11-utils libxtst6 libx11-6 fuse-emulator-sdl
 venv=$(mktemp -d)
 trap 'rm -f "$empty_status"; rm -rf "$venv"' EXIT
 python3 -m venv "$venv"
