@@ -208,7 +208,7 @@ def _run_case_once(names, destination, args, config=None):
 
         try:
             xvfb = subprocess.Popen(screen, stdout=xvfb_output, stderr=subprocess.STDOUT)
-            time.sleep(.8)
+            time.sleep(5.0)
             if xvfb.poll() is not None:
                 raise RuntimeError('Xvfb could not start')
             command = [str(args.fuse), '--machine', '48', '--rom-48', str(args.rom),
@@ -217,7 +217,7 @@ def _run_case_once(names, destination, args, config=None):
             fuse = subprocess.Popen(command, env=env, cwd=args.assets,
                                     stdout=fuse_output, stderr=subprocess.STDOUT)
             trace('Fuse process launched')
-            time.sleep(2.0)
+            time.sleep(6.0)
             if fuse.poll() is not None:
                 raise RuntimeError('Fuse stopped during ZX-UX boot')
             send_rom_load(display)
@@ -236,7 +236,7 @@ def _run_case_once(names, destination, args, config=None):
             kb = Keyboard(display)
             kb.type('root', pause=config.get('type_key_pause', .20))
             kb.key('\n', pause=.8)
-            time.sleep(2)
+            time.sleep(8)
             if not ImageChops.difference(screenshot(display).crop((10, 50, 310, 125)),
                                          login.crop((10, 50, 310, 125))).getbbox():
                 raise RuntimeError('ZX-UX shell was not reached after login')
@@ -426,6 +426,7 @@ def run_case(names, destination, args, config=None):
     """Retry transient emulator startup errors, never invalid program output."""
     startup_errors = (
         'Xvfb could not start',
+        'FUSE window is missing',
         'Fuse stopped during ZX-UX boot',
         'Fuse stopped before ZX-UX login',
         'fresh ZX-UX TZX did not reach login',
@@ -485,7 +486,7 @@ def main():
     p.add_argument('--only', default='')
     p.add_argument('--display', type=int, default=98)
     p.add_argument('--jobs', type=int, default=6)
-    p.add_argument('--boot-wait', type=int, default=60)
+    p.add_argument('--boot-wait', type=int, default=120)
     p.add_argument('--wait', type=int, default=4)
     p.add_argument('--speed', type=int, default=100)
     p.add_argument('--multitask-wait', type=int, default=60)
