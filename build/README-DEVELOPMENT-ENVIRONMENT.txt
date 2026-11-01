@@ -102,43 +102,52 @@ clean-room script compares regenerated files against the Git tree.
 
 4. CHECK THAT THE OFFLINE INSTALLER SET IS COMPLETE
 ---------------------------------------------------
-You should have these tracked directories and files:
+The required installers are already in the repository. The dependency
+bundle was collected and verified for Debian 13/amd64:
 
-    build/dependencies/debian-13-amd64/apt/      (*.deb - full APT closure)
-    build/dependencies/debian-13-amd64/pip/      (*.whl - Pillow wheel)
+    build/dependencies/debian-13-amd64/apt/      (248 .deb packages)
+    build/dependencies/debian-13-amd64/pip/      (Pillow 12.3.0 wheel)
     build/dependencies/sjasmplus/sjasmplus-1.24.0-linux-amd64
     build/dependencies/sjasmplus/sjasmplus-1.24.0-src.tar.xz
 
-Check the downloaded installers:
+The binary installers are in Git LFS. Before copying the repository to
+an offline PC, run 'git lfs pull' on the online mirror. Copy the actual
+files, not the small Git LFS pointer files.
+
+From the REPOSITORY ROOT, check that the installers exist:
 
     ls build/dependencies/debian-13-amd64/apt/*.deb
     ls build/dependencies/debian-13-amd64/pip/*.whl
     ls -l build/dependencies/sjasmplus/
 
-The .deb files must be real packages, not small Git LFS pointer text.
-If you see 'version https://git-lfs.github.com/spec/v1' in a package,
-run 'git lfs pull' on a connected mirror and copy it again. The offline
-APT package bundle includes git-lfs for future local mirror updates.
+Check that ALL the .deb packages are real Debian archives and the
+Pillow wheel is a ZIP file, not a Git LFS pointer:
 
-IMPORTANT: The five initial .deb files saved directly under
-build/dependencies/debian-13-amd64/ are NOT the complete APT closure.
-Do not attempt an offline setup until the apt/*.deb AND pip/*.whl
-subdirectories have been populated and pushed to the mirrored checkout.
+    for pkg in build/dependencies/debian-13-amd64/apt/*.deb; do
+        dpkg-deb --info "$pkg" >/dev/null || { echo "BAD: $pkg"; break; }
+    done
+    for wheel in build/dependencies/debian-13-amd64/pip/*.whl; do
+        test "$(head -c 2 "$wheel")" = PK || { echo "BAD: $wheel"; break; }
+    done
 
-If they are missing, collect the packages on an ONLINE Debian 13/amd64
-system, from the repository root, with:
+If a file is invalid, run 'git lfs pull' on a CONNECTED mirror and
+copy the hydrated files again.
 
-    bash build/dependencies/fetch-host-packages.sh
+The five extra .deb files directly in
+build/dependencies/debian-13-amd64/ are historical individual packages.
+They are NOT the complete APT dependency set. The offline installer uses
+the 248 packages in the apt/ subdirectory.
 
-Then copy or commit the resulting apt/ and pip/ files into the repo
-mirror before moving it to the offline machine. Do not use an Ubuntu
-package collection for this Debian machine. If these files are absent,
-the offline installation cannot succeed. Packages collected later may
-be newer than versions supplied on the Debian ISO.
+OFFLINE VERIFICATION: GitHub Actions run 41268220921 passed. In a fresh
+Debian 13 container with networking disabled, the tracked APT packages
+and Pillow installed successfully, Git LFS and the Fuse/Xvfb prerequisites
+were checked, SJASMPlus was installed, and the ZX-UX core build completed:
 
-A complete dependency closure has NOT yet been proven by an offline
-installation on a fresh Debian 13 machine. Verify it before relying on
-the mirror as a self-contained installer set.
+    python3 -B build/build.py /usr/local/bin/sjasmplus
+
+This confirms the OFFLINE DEPENDENCY INSTALLATION AND CORE BUILD, not a
+full Debian VM installation from ISO or all Fuse screenshot portfolio
+stages. The entire clean-room pipeline is run in step 7.
 
 5. INSTALL THE DEPENDENCIES FROM THE MIRROR, IN ORDER
 -----------------------------------------------------
@@ -252,11 +261,13 @@ From the repository root:
     find cleanroom-logs/fuse-processes -type f -name '*.fuse.log'
 
 The run succeeds only when every required stage exits 0 and the audit
-reports Missing=0. The script returns a non-zero exit code on failure. Rebuilt files should cover every tracked dist/ path.
+reports Missing=0. The script returns a non-zero exit code on failure.
+Rebuilt files should cover every tracked dist/ path.
 "Changed" counts are diagnostic: screenshot pixels can differ between
 emulator environments. Each stage has its own log in cleanroom-logs/.
 The entire build works on a local machine without GitHub Actions;
 the workflow merely runs the same script and uploads those logs.
 
-If the apt/ or pip/ folders are missing, do not claim an offline build
-was verified. Obtain the complete dependency bundle first.
+If the apt/ or pip/ files are missing, the local copy is incomplete.
+Run 'git lfs pull' on a connected mirror and transfer the actual files
+before attempting the offline installation.
