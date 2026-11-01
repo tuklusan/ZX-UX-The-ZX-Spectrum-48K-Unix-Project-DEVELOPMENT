@@ -132,7 +132,7 @@ def screenshot(display):
                        SPECTRUM_X + 288, SPECTRUM_Y + 216))
 
 
-def run_case(names, destination, args, config=None):
+def _run_case_once(names, destination, args, config=None):
     config = config or {}
     with tempfile.TemporaryDirectory(prefix='zxux-fuse-') as tmp:
         tape = Path(tmp) / 'run.tzx'
@@ -396,6 +396,26 @@ def run_case(names, destination, args, config=None):
                     except subprocess.TimeoutExpired:
                         proc.kill()
                         proc.wait(timeout=3)
+
+
+def run_case(names, destination, args, config=None):
+    """Retry transient emulator startup errors, never invalid program output."""
+    startup_errors = (
+        'Xvfb could not start',
+        'Fuse stopped during ZX-UX boot',
+        'Fuse stopped before ZX-UX login',
+        'fresh ZX-UX TZX did not reach login',
+        'ZX-UX shell was not reached after login',
+    )
+    for attempt in range(2):
+        try:
+            return _run_case_once(names, destination, args, config)
+        except RuntimeError as error:
+            if attempt or not str(error).startswith(startup_errors):
+                raise
+            print('Fuse RETRY boot:', '+'.join(names), error,
+                  file=sys.stderr, flush=True)
+            time.sleep(1)
 
 
 def add_source_links():

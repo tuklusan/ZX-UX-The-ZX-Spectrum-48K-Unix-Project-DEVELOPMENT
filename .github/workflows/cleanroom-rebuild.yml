@@ -57,16 +57,19 @@ jobs:
               c48-rvm) cmd=(python3 -B build/tools/portfolio.py) ;;
               rbc-rvm) cmd=(python3 -B build/tools/basic_portfolio.py) ;;
               compilers-rvm) cmd=(python3 -B build/tools/compiler_portfolio.py --engine rvm) ;;
-              c48-fuse) cmd=(python3 -B build/tools/fuse_portfolio.py --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 4) ;;
-              rbc-fuse) cmd=(python3 -B build/tools/basic_fuse_portfolio.py --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 4) ;;
-              compilers-fuse) cmd=(python3 -B build/tools/compiler_portfolio.py --engine fuse --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 4) ;;
+              c48-fuse) cmd=(python3 -B build/tools/fuse_portfolio.py --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 2) ;;
+              rbc-fuse) cmd=(python3 -B build/tools/basic_fuse_portfolio.py --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 2) ;;
+              compilers-fuse) cmd=(python3 -B build/tools/compiler_portfolio.py --engine fuse --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 2) ;;
               gallery) cmd=(python3 -B build/tools/gallery_index.py) ;;
             esac
             printf '%s: %q ' "$entry" "${cmd[@]}" >> cleanroom-logs/commands.txt
             printf '\n' >> cleanroom-logs/commands.txt
             printf 'START %s %s\n' "$entry" "$(date -u +%FT%TZ)"
-            timeout --signal=TERM --kill-after=30s 175m "${cmd[@]}" > "cleanroom-logs/$entry.log" 2>&1
-            rc=$?
+            if timeout --signal=TERM --kill-after=30s 175m "${cmd[@]}" > "cleanroom-logs/$entry.log" 2>&1; then
+              rc=0
+            else
+              rc=$?
+            fi
             printf '%s\t%d\n' "$entry" "$rc" >> cleanroom-logs/exit-codes.tsv
             printf 'END %s rc=%s %s\n' "$entry" "$rc" "$(date -u +%FT%TZ)"
             tail -n 12 "cleanroom-logs/$entry.log"
@@ -125,7 +128,7 @@ jobs:
         with:
           name: zx-ux-cleanroom-audit
           path: cleanroom-logs/
-          retention-days: 7
+          retention-days: 1
 
       - name: Signal failed rebuilds
         if: always()
