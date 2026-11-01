@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: zx-ux-cleanroom
+  cancel-in-progress: false
+
 jobs:
   cleanroom:
     runs-on: ubuntu-24.04
