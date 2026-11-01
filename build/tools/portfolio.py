@@ -6,7 +6,6 @@ No C48 programs are recompiled. The two multitasking scenes are included.
 """
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
-import concurrent.futures
 import json
 import os
 import sys
@@ -260,18 +259,13 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--only', default='')
     p.add_argument('--frames', type=int, default=1500)
-    p.add_argument('--jobs', type=int, default=1)
-    p.add_argument('--jobs', type=int, default=8)
+    p.add_argument('--jobs', type=int, default=12)
     args = p.parse_args()
     if not 1 <= args.jobs <= 16:
         p.error('--jobs must be 1..16')
     only = set(args.only.split(',')) if args.only else None
     found = set()
     failures = []
-    with concurrent.futures.ProcessPoolExecutor(max_workers=args.jobs) as pool:
-        jobs = []
-        if not 1 <= args.jobs <= 16:
-        p.error('--jobs must be 1..16')
     tasks = []
     for name, category, config in captures():
         if only is not None and name not in only:

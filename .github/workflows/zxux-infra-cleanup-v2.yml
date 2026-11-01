@@ -1,4 +1,4 @@
-name: ZX-UX infrastructure cleanup v2 single clean-room build
+name: ZX-UX infrastructure cleanup v2 repaired source single build
 
 on:
   push:

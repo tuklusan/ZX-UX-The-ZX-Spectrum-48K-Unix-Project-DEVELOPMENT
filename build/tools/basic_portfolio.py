@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
-import concurrent.futures
 from html import escape
 from pathlib import Path
 import shutil
@@ -142,17 +141,12 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--only', default='')
     p.add_argument('--frames', type=int, default=1500)
-    p.add_argument('--jobs', type=int, default=1)
-    p.add_argument('--jobs', type=int, default=8)
+    p.add_argument('--jobs', type=int, default=12)
     args = p.parse_args(argv)
     if not 1 <= args.jobs <= 16:
         p.error('--jobs must be 1..16')
     wanted = set(args.only.split(',')) if args.only else None
     found, failures = set(), []
-    with concurrent.futures.ProcessPoolExecutor(max_workers=args.jobs) as pool:
-        jobs = []
-        if not 1 <= args.jobs <= 16:
-        p.error('--jobs must be 1..16')
     tasks = []
     for collection, ssx, label in cases():
         if wanted is not None and ssx.stem not in wanted:
