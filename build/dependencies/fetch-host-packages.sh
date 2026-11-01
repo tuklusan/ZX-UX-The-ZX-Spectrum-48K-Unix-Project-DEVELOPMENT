@@ -1,29 +1,35 @@
 #!/usr/bin/env bash
-# Run on an online Debian/Ubuntu host to collect its own APT and Pillow installers.
-# The checked-in .deb files are Debian 13/amd64; do not install them on Ubuntu.
-# For a useful offline bundle, collect on a fresh matching distro/architecture.
+# Collect all resolved Debian 13/amd64 APT dependencies and the Pillow wheel.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 . /etc/os-release
-case "$ID" in
-  debian|ubuntu) ;;
-  *) echo "Requires Debian or Ubuntu: $ID" >&2; exit 1 ;;
-esac
-arch=$(dpkg --print-architecture)
-dst="$PWD/build/dependencies/$ID-$VERSION_ID-$arch"
-mkdir -p "$dst/apt" "$dst/pip/"
-
-sudo apt-get update
-# Install the wheel-download bootstrap on this *collector*, not the offline host.
-sudo apt-get install -y python3 python3-venv
-# Download the named packages and dependencies not already on this machine.
-sudo apt-get -y --download-only \
-  -o Dir::Cache::archives="$dst/apt/" \
-  install software-properties-common build-essential curl python3 python3-venv \
-  xvfb x11-utils libxtst6 libx11-6 fuse-emulator-sdl
+if [[ "$ID" != debian || "${VERSION_ID%%.*}" != 13 || "$(dpkg --print-architecture)" != amd64 ]]; then
+  echo 'Requires Debian 13/amd64' >&2; exit 1
+fi
+if (( EUID == 0 )); then apt=(apt-get); else apt=(sudo apt-get); fi
+base="$PWD/build/dependencies/debian-13-amd64"
+mkdir -p "$base/apt/partial" "$base/pip"
+"${apt[@]}" update
+"${apt[@]}" install -y --no-install-recommends python3-venv ca-certificates
+# Use empty installed-package status: also fetch dependencies already in the base.
+empty_status=$(mktemp)
+trap 'rm -f "$empty_status"' EXIT
+"${apt[@]}" -y --download-only --no-install-recommends \
+  -o "Dir::State::status=$empty_status" \
+  -o "Dir::Cache::archives=$base/apt/" \
+  install bash ca-certificates coreutils git build-essential curl \
+          software-properties-common python3 python3-venv \
+          xvfb x11-utils libxtst6 libx11-6 fuse-emulator-sdl
 venv=$(mktemp -d)
-trap 'rm -rf "$venv"' EXIT
-python3 -m venv "$venv/venv"
-"$venv/venv/bin/python" -m pip download --only-binary=:all: \
-  --dest "$dst/pip/" 'Pillow>=12.1,<13'
-printf 'Saved host-matching APT/Pillow downloads to %s\n' "$dst"
+trap 'rm -f "$empty_status"; rm -rf "$venv"' EXIT
+python3 -m venv "$venv"
+"$venv/bin/python" -m pip download --only-binary=:all: \
+  --dest "$base/pip" 'Pillow>=12.1,<13'
+shopt -s nullglob
+debs=("$base"/apt/*.deb)
+wheels=("$base"/pip/Pillow-*.whl "$base"/pip/pillow-*.whl)
+((${#debs[@]} > 0 && ${#wheels[@]} > 0)) || {
+  echo 'Incomplete Debian or Pillow download' >&2; exit 1
+}
+printf 'Collected %d Debian packages and %d Pillow wheels\n' \
+  "${#debs[@]}" "${#wheels[@]}"

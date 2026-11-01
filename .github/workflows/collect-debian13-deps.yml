@@ -1,0 +1,72 @@
+name: ZX-UX collect Debian 13 build dependencies
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["ZX-UX disposable clean-room rebuild"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: zx-ux-cleanroom
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    # Run after the newer of the two existing clean-room jobs finishes.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.id == 41262575769
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Require both existing runs to be finished
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for id in 41262482294 41262575769; do
+            status=$(curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs/$id" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
+            test "$status" = completed || {
+              echo "Clean-room run $id is still $status; not starting another collector" >&2
+              exit 1
+            }
+          done
+      - name: Download Debian package closure and Pillow
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          existing=(build/dependencies/debian-13-amd64/apt/*.deb)
+          wheels=(build/dependencies/debian-13-amd64/pip/*.whl)
+          if ((${#existing[@]} == 0 || ${#wheels[@]} == 0)); then
+            docker run --rm -v "$PWD:/repo" -w /repo debian:13 \
+              bash build/dependencies/fetch-host-packages.sh
+            sudo chown -R "$(id -u):$(id -g)" build/dependencies/debian-13-amd64
+          fi
+          debs=(build/dependencies/debian-13-amd64/apt/*.deb)
+          wheels=(build/dependencies/debian-13-amd64/pip/*.whl)
+          ((${#debs[@]} > 0 && ${#wheels[@]} > 0))
+          echo "APT packages: ${#debs[@]}; Pillow wheels: ${#wheels[@]}"
+      - name: Commit and push vendor installers
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f build/dependencies/debian-13-amd64/apt/*.deb \
+                     build/dependencies/debian-13-amd64/pip/*.whl
+          if ! git diff --cached --quiet; then
+            git commit -m "[skip ci] Vendor Debian 13 APT closure and Pillow wheel"
+            git push origin HEAD:main
+          fi
