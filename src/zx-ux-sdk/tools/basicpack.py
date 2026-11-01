@@ -69,8 +69,10 @@ def package(source: Path, stage: Path):
             if game.is_symlink():
                 raise ValueError('linked BASIC game not permitted')
             folder = game / 'BASIC'
-            bas = sorted(folder.glob('*.bas'))
-            tzx = sorted(folder.glob('*.tzx'))
+            bas = sorted(p for p in folder.iterdir()
+                         if p.is_file() and p.suffix.lower() == '.bas')
+            tzx = sorted(p for p in folder.iterdir()
+                         if p.is_file() and p.suffix.lower() == '.tzx')
             if not tzx or (collection == '60-programs' and
                            (len(bas) != 1 or len(tzx) != 1 or
                             bas[0].stem != game.name or tzx[0].stem != game.name)):
