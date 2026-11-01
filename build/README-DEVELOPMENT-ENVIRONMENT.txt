@@ -137,14 +137,15 @@ commands instead of the installer (not as well as it).
 Part A - Debian packages: compilers, build tools, Python/venv, Git,
          curl, Xvfb, X11 utilities/libraries, Fuse and its libraries.
 
-    sudo apt-get -y --no-download --allow-downgrades \
+    sudo apt-get -y --allow-downgrades \
       -o Dir::Etc::sourcelist=/dev/null \
       -o Dir::Etc::sourceparts=- \
       install "$PWD"/build/dependencies/debian-13-amd64/apt/*.deb
 
 Do not run dpkg -i separately on random .deb files. APT resolves their
-install order and dependencies. The options above prevent repository
-downloads; a missing dependency is a real gap in the saved package set.
+install order and dependencies. The APT source-list options prevent network
+repository downloads; a missing dependency is a real gap in the saved set.
+Avoid --no-download here: APT needs to process the local .deb paths.
 
 Part B - Pillow for Python image capture (offline, inside the same
          virtual environment path the GitHub build uses).

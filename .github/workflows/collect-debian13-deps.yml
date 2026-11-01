@@ -42,6 +42,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          bash -n build/dependencies/install-debian13-offline.sh
           docker run --rm --network none -v "$PWD:/repo" -w /repo debian:13 \
             bash -euo pipefail -c '
               bash build/dependencies/install-debian13-offline.sh

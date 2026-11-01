@@ -15,7 +15,7 @@ wheels=("$base"/pip/Pillow-*.whl "$base"/pip/pillow-*.whl)
   exit 1
 }
 if (( EUID == 0 )); then apt=(apt-get); install_cmd=(install); else apt=(sudo apt-get); install_cmd=(sudo install); fi
-"${apt[@]}" -y --no-download --allow-downgrades \
+"${apt[@]}" -y --allow-downgrades \
   -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- \
   install "${debs[@]}"
 python3 -m venv /tmp/zxux-py
