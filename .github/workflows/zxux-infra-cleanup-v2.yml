@@ -1,0 +1,82 @@
+name: ZX-UX infrastructure cleanup v2 one-shot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/zxux-infra-cleanup-v2.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zxux-infra-cleanup-v2
+  cancel-in-progress: false
+
+jobs:
+  cleanup-build-publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - name: Clone live main with LFS
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          persist-credentials: true
+      - name: Install ZX-UX dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository -y universe
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl python3 python3-venv xvfb x11-utils libxtst6 libx11-6 fuse-emulator-sdl git-lfs unzip
+          python3 -m venv /tmp/zxux-py
+          /tmp/zxux-py/bin/python -m pip install 'Pillow>=12.1,<13'
+          curl -fL --retry 3 https://github.com/z00m128/sjasmplus/releases/download/v1.24.0/sjasmplus-1.24.0-src.tar.xz -o /tmp/sjasmplus-src.tar.xz
+          tar -xJf /tmp/sjasmplus-src.tar.xz -C /tmp
+          make -C /tmp/sjasmplus-1.24.0 -j2
+          sudo install -m 755 /tmp/sjasmplus-1.24.0/sjasmplus /usr/local/bin/sjasmplus
+          echo /tmp/zxux-py/bin >> "$GITHUB_PATH"
+          test -x /usr/bin/fuse-sdl
+          test -f /usr/share/fuse/fuse.font
+          sjasmplus --version
+      - name: Apply supplied workflow phases 1, 2, 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git status --porcelain)"
+          unzip -q build/tools/zxux-infra-cleanup-v2.zip -d "$RUNNER_TEMP"
+          bash "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh" all
+      - name: Remove dist and rebuild from clean room
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist/
+          bash "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh" 2
+          bash "$RUNNER_TEMP/zxux-infra-cleanup-v2/run.sh" 3
+          python3 -B build/tools/check_portability.py
+          python3 -B build/tools/smoke_test.py
+      - name: Clean, commit and push official main
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f build/tools/zxux-infra-cleanup-v2.zip
+          rm -f .github/workflows/zxux-infra-cleanup-v2.yml
+          find src build tests dist -type d -name __pycache__ -prune -exec rm -rf {} +
+          find src build tests dist -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          git lfs install --local
+          git add -A
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No changes to publish'
+            exit 1
+          fi
+          git -c user.name='ZX-UX release runner' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'Apply infrastructure cleanup v2 and clean-room rebuild'
+          git push origin HEAD:refs/heads/main
+          git rev-parse HEAD
