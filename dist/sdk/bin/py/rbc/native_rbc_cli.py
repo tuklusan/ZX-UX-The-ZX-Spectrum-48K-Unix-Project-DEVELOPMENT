@@ -72,6 +72,23 @@ def _has_input_token(listing: bytes) -> bool:
                 if ch == 58:
                     data = False
                 if ch == 0xee and not data:  # INPUT statement
+                    # The original BASIC `INPUT "literal"` has no target
+                    # variable and HiSoft emits no ROM editor call for it.
+                    # Do not manufacture an unwitnessed source bridge.
+                    j = i + 1
+                    while j < len(line) and line[j] == 32:
+                        j += 1
+                    if j < len(line) and line[j] == 34:
+                        j += 1
+                        while j < len(line) and line[j] != 34:
+                            j += 1
+                        if j < len(line):
+                            j += 1
+                            while j < len(line) and line[j] == 32:
+                                j += 1
+                            if j >= len(line) or line[j] in (13, 58):
+                                i = j
+                                continue
                     return True
             i += 1
         offset += size + 4
@@ -208,11 +225,13 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
     # never feed the assembler, linker, returned output, or source generator.
     _check_equal(native_ssx, legacy)
     baseline_sha = _sha(native_ssx)
-    if rom_work_bytes:
+    repeat_controls = bool(meta.get('repeat_controls', False))
+    if rom_work_bytes or repeat_controls:
         source_text, obj, native_ssx = assemble_link(
             source_candidates[0], font, use_rom_font=fitted,
             restart_slot=restart_slot, stack=stack,
-            rom_work_bytes=rom_work_bytes)
+            rom_work_bytes=rom_work_bytes,
+            repeat_controls=repeat_controls)
     # Apply the original 48K ROM's signed-coordinate rule directly at the
     # witnessed native PRINT AT entry; no inserted call sites or new bridge.
     at_sites = 0
@@ -220,7 +239,8 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         source_text, obj, native_ssx = assemble_link(
             source_candidates[0], font, use_rom_font=fitted,
             restart_slot=restart_slot, stack=stack,
-            rom_work_bytes=rom_work_bytes, signed_print_at=True)
+            rom_work_bytes=rom_work_bytes, signed_print_at=True,
+            repeat_controls=repeat_controls)
         at_sites = int('rbc_wrapper_at_row_abs:' in source_text)
     bridge_used = False
     if has_native_input:
@@ -243,7 +263,7 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         'bss': image['bss'], 'stack': stack, 'total': total,
         'memory_limit': maximum, 'relocations': len(image['relocs']),
         'native_three_base_source_verified': True,
-        'native_and_legacy_ssx_byte_identical': not bridge_used and not rom_work_bytes and not at_sites,
+        'native_and_legacy_ssx_byte_identical': not bridge_used and not rom_work_bytes and not at_sites and not repeat_controls,
         'rom_signed_print_at_corrected': bool(at_sites),
         'original_hisoft_baseline_sha256': baseline_sha,
         'source_proven_string_growth': [p for p in meta.get('optimized_strings', [])
@@ -257,6 +277,7 @@ def compile_native(source: Path, checkpoint: Path, frontend: Path,
         'rom_font_used': fitted,
         'optimizer_used': False,
         'rom_work_bytes': rom_work_bytes,
+        'rom_repeat_controls_restored': repeat_controls,
         'rom_runtime_uses': list(meta.get('rom_runtime_uses', ())),
         'warnings': warnings,
         'loader_execution_tested': False,

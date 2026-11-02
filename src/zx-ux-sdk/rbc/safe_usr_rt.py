@@ -7,7 +7,7 @@ runtime before using the native protected-memory POKE service.
 """
 from __future__ import annotations
 
-from native_sysvars_rt import POKE_RT
+from native_sysvars_rt import POKE_RT, _REPEAT_POKE, _REPEAT_VALUES
 from native_error_exit import error_exit_asm
 
 # The check leaves the original address in HL and does not write to memory.
@@ -42,6 +42,15 @@ def install(compiler):
         self.t = compiler.POSINT
 
     def st_poke(self):
+        literal = _REPEAT_POKE.match(self.buf, self.ch)
+        if literal is not None:
+            address = int(literal['addr'])
+            value = int(literal['value'])
+            if value in _REPEAT_VALUES[address]:
+                self.ch = literal.end()
+                self.get_char()
+                self.emit(f'ld a,{value}; ld (${address:04x}),a')
+                return
         # Calling fn_usr in the *address* expression sets the flag. Numeric
         # USR never reaches here. An unbounded arithmetic offset still has to
         # pass the range check for the process's actual UDG base.

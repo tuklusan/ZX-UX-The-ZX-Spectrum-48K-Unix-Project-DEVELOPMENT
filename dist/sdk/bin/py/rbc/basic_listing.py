@@ -13,6 +13,49 @@ UPSTREAM_REVISION = '0ddb25e4c38ce4ccb5a43e85fb57e683bd274f59'
 LINE = re.compile(r'[ \t]*([0-9]+)(?:(?:[ \t]+(.*))|(:.*))?')
 
 
+def reconstruct_screen_wraps(text: str) -> str:
+    """Join only demonstrable 32-column Spectrum screen listing wraps.
+
+    This produces a transient compiler input; archived BAS/TZX bytes stay
+    untouched. Never infer a lost character or repair a non-screen gap.
+    """
+    physical = text.splitlines()
+    rows = []
+    last_number = -1
+    current = None
+    previous_physical_width = 0
+    changed = False
+    for raw in physical:
+        m = LINE.fullmatch(raw)
+        number = int(m.group(1)) if m and int(m.group(1)) <= 9999 else None
+        # A lone number following a full-width GO TO target is still part
+        # of that target (e.g. `... GO TO 23` followed by `10`).
+        numeric_tail = (number is not None and raw.strip().isdigit() and
+                        previous_physical_width in (31, 32) and
+                        current is not None and
+                        bool(re.search(r'(?i)\b(?:GO\s+TO|GO\s+SUB|THEN)\s*\d*$', current)))
+        if number is not None and number > last_number and not numeric_tail:
+            if current is not None:
+                rows.append(current)
+            current, last_number = raw, number
+        else:
+            open_quote = current is not None and current.count('"') % 2 == 1
+            if current is None or not (previous_physical_width in (31, 32) or open_quote):
+                raise ValueError('cannot reconstruct unproved BASIC line continuation')
+            current += raw
+            changed = True
+        previous_physical_width = len(raw)
+    if current is not None:
+        rows.append(current)
+    if not changed:
+        return text
+    result = '\n'.join(rows) + ('\n' if text.endswith(('\n','\r')) else '')
+    # A reconstruction is acceptable only when the strict Sinclair tokenizer
+    # can verify every resulting numbered line, in original source order.
+    encode_strict_listing(result)
+    return result
+
+
 def split_numbered_line(raw: str) -> tuple[int, str]:
     match = LINE.fullmatch(raw)
     if not match:

@@ -17,6 +17,7 @@ from native_error_exit import UDG_BYTES
 ROM_COLORS = ((0x5C8D, 0x38), (0x5C8E, 0),
               (0x5C8F, 0x38), (0x5C90, 0))
 ROM_CONTROLS = (0x5C6A, 0x5C39)
+ROM_REPEAT_CONTROLS = (0x5C09, 0x5C0A)
 PREFIX = 'rbc_wrapper_'
 
 
@@ -96,7 +97,8 @@ rbc_wrapper_at_col_ready:
 
 def wrapper_source(original_source: str, font: bytes, *,
                    use_rom_font: bool = False, restart_slot: bool = False,
-                   rom_work_bytes: int = 0, signed_print_at: bool = False) -> str:
+                   rom_work_bytes: int = 0, signed_print_at: bool = False,
+                   repeat_controls: bool = False) -> str:
     """Return typed native text/data/BSS for the entire wrapped program.
 
     `original_source` must be a complete, independently three-base-verified
@@ -112,8 +114,9 @@ def wrapper_source(original_source: str, font: bytes, *,
         raise NativeWrapperError('wrapper flags must be boolean')
     if type(rom_work_bytes) is not int or (rom_work_bytes != 0 and not 512 <= rom_work_bytes <= 2048):
         raise NativeWrapperError('private ROM workspace out of range')
-    if type(signed_print_at) is not bool:
-        raise NativeWrapperError('invalid PRINT AT correction option')
+    if type(signed_print_at) is not bool or type(repeat_controls) is not bool:
+        raise NativeWrapperError('invalid runtime wrapper option')
+    controls = ROM_CONTROLS + (ROM_REPEAT_CONTROLS if repeat_controls else ())
     lines = original_source.splitlines()
     if (len(lines) < 5 or lines[:3] !=
             ['    section text', '    global start', 'start:'] or
@@ -167,7 +170,7 @@ def wrapper_source(original_source: str, font: bytes, *,
         pro.extend((f'    ld a,(${address:04x})',
                     f'    ld ({PREFIX}color_{i}),a',
                     f'    ld a,{value}', f'    ld (${address:04x}),a'))
-    for i, address in enumerate(ROM_CONTROLS):
+    for i, address in enumerate(controls):
         pro.extend((f'    ld a,(${address:04x})',
                     f'    ld ({PREFIX}control_{i}),a'))
     pro.extend((f'    call {PREFIX}restart' if restart_slot else
@@ -184,7 +187,7 @@ def wrapper_source(original_source: str, font: bytes, *,
     for i, (address, _) in enumerate(ROM_COLORS):
         pro.extend((f'    ld a,({PREFIX}color_{i})',
                     f'    ld (${address:04x}),a'))
-    for i, address in enumerate(ROM_CONTROLS):
+    for i, address in enumerate(controls):
         pro.extend((f'    ld a,({PREFIX}control_{i})',
                     f'    ld (${address:04x}),a'))
     pro.extend(('    ld hl,0', '    ld a,39', '    call $6003'))
@@ -214,7 +217,7 @@ def wrapper_source(original_source: str, font: bytes, *,
             data.extend((f'{PREFIX}saved_work_{ptr:04x}:','    dw 0'))
     for i in range(len(ROM_COLORS)):
         data.extend((f'{PREFIX}color_{i}:', '    db 0'))
-    for i in range(len(ROM_CONTROLS)):
+    for i in range(len(controls)):
         data.extend((f'{PREFIX}control_{i}:', '    db 0'))
     if not use_rom_font:
         data.extend((f'{PREFIX}font:', '    ds 256'))
@@ -232,14 +235,16 @@ def wrapper_source(original_source: str, font: bytes, *,
 def assemble_link(original_source: str, font: bytes, *,
                   use_rom_font: bool = False, restart_slot: bool = False,
                   stack: int = 384, rom_work_bytes: int = 0,
-                  signed_print_at: bool = False) -> tuple[str, bytes, bytes]:
+                  signed_print_at: bool = False,
+                  repeat_controls: bool = False) -> tuple[str, bytes, bytes]:
     """Emit typed assembly, real ras object, and actual rld-linked SSX."""
     if type(stack) is not int or not 1 <= stack <= 65535:
         raise NativeWrapperError('invalid native stack size')
     source = wrapper_source(original_source, font,
                             use_rom_font=use_rom_font,
                             restart_slot=restart_slot, rom_work_bytes=rom_work_bytes,
-                            signed_print_at=signed_print_at)
+                            signed_print_at=signed_print_at,
+                            repeat_controls=repeat_controls)
     try:
         obj = ras.assemble_text(source, 'rbc-native-whole.s')
         ssx, *_ = rld.link([rld.Obj(obj, 'rbc-native-whole.sso')], [],

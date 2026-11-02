@@ -37,6 +37,7 @@ from udg_nested import allow_nested_glyph_writes
 from udg_chr_bounds import allow_bounded_chr_glyphs
 from rom_keyread import allow_key_state_read
 from rom_keyboard_control import allow_rom_keyboard_controls
+from spectrum_port254 import install as install_port254, allow_port254
 from rom_scroll import allow_rom_screen_scroll
 from safe_usr_rt import install as install_safe_usr
 from safety_usr import enforce_numeric_usr, allow_typed_usr_findings
@@ -165,6 +166,7 @@ def _compile_three(src:Path, frontend:Path, tape:Path, romfile:Path,
     install_native_sysvars(compiler)
     install_native_run(compiler)
     install_safe_usr(compiler)
+    install_port254(compiler)
     if optimize_z80:
         install_codegen_optimizer(compiler)
     install_native_tape_trap(compiler)
@@ -214,6 +216,12 @@ def _compile_three(src:Path, frontend:Path, tape:Path, romfile:Path,
         allow_bounded_chr_glyphs(spectrum_tap.split_lines(program), kw.TOKEN, checks)
         allow_key_state_read(checks)
         allow_rom_keyboard_controls(checks)
+        allow_port254(checks)
+        repeat_controls = any(
+            item.operation == 'POKE' and
+            item.classification == 'rom_keyboard_control' and
+            re.match(r'\s*2356[12]\s*,', item.expression)
+            for item in checks)
         allow_rom_screen_scroll(checks)
         allow_private_sysvars(checks)
         poke_proofs = prove_pokes(spectrum_tap.split_lines(program), kw.TOKEN, checks)
@@ -266,7 +274,7 @@ def _compile_three(src:Path, frontend:Path, tape:Path, romfile:Path,
         return builds, {'program':name,'source_bytes':len(program),
                         'compiler':'pyhsb HiSoft v1.1, 48K','frontend':str(frontend),
                         'tape':tape.name if tape.suffix.lower()=='.tap' else str(tape),
-                        'memory_policy':memory_policy, 'memory_check':memory_report, 'poke_address_proofs':poke_proofs, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps, 'constant_dimensions':constant_dim_proofs, 'constant_data':constant_data_proofs, 'integer_scalars':integer_proofs, 'budgeted_numeric_units':budgeted_units if budget_capacity else 0, 'rom_runtime_uses':tuple(n for n in (compiler.RT.STR_ASSIGN, compiler.RT.STR_VAR_STACK, compiler.RT.STR_VAR_GET, compiler.RT.STR_ARR_ELEM, compiler.RT.STR_DESC_AT, compiler.RT.STR_CHAR, compiler.RT.STR_SLICE, compiler.RT.STR_SLICE_FROM, compiler.RT.STR_SLICE_TO, compiler.RT.STR_SLICE_CORE, compiler.RT.READ_STR, compiler.RT.INPUT_STR, compiler.RT.VAL_STR, compiler.RT.STR_AND_INT, compiler.RT.STR_AND_REAL) if c.m.used(n)), 'upeepz80_codegen':upeep_reports[0] if optimize_z80 else None}
+                        'memory_policy':memory_policy, 'memory_check':memory_report, 'poke_address_proofs':poke_proofs, 'repeat_controls': repeat_controls, 'private_font_alias':font_alias, 'private_font_requested':font_requested, 'optimized_strings':size_proofs, 'restore_remaps':restore_remaps, 'constant_dimensions':constant_dim_proofs, 'constant_data':constant_data_proofs, 'integer_scalars':integer_proofs, 'budgeted_numeric_units':budgeted_units if budget_capacity else 0, 'rom_runtime_uses':tuple(n for n in (compiler.RT.STR_ASSIGN, compiler.RT.STR_VAR_STACK, compiler.RT.STR_VAR_GET, compiler.RT.STR_ARR_ELEM, compiler.RT.STR_DESC_AT, compiler.RT.STR_CHAR, compiler.RT.STR_SLICE, compiler.RT.STR_SLICE_FROM, compiler.RT.STR_SLICE_TO, compiler.RT.STR_SLICE_CORE, compiler.RT.READ_STR, compiler.RT.INPUT_STR, compiler.RT.VAL_STR, compiler.RT.STR_AND_INT, compiler.RT.STR_AND_REAL) if c.m.used(n)), 'upeepz80_codegen':upeep_reports[0] if optimize_z80 else None}
 
 
 def _reloc_sites(builds: list[HiSoftBuild]) -> list[int]:

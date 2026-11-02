@@ -35,6 +35,13 @@ def main(argv=None):
     try:
         with TemporaryDirectory(prefix='rbc-') as tmp:
             inp = source
+            if source.suffix.lower() == '.bas':
+                from .basic_listing import reconstruct_screen_wraps
+                original = source.read_text(encoding='ascii')
+                rebuilt = reconstruct_screen_wraps(original)
+                if rebuilt != original:
+                    inp = Path(tmp) / source.name
+                    inp.write_text(rebuilt, encoding='ascii')
             if source.suffix.lower() == '.tzx':
                 original_bas = source.with_suffix('.bas')
                 if not original_bas.is_file():
@@ -51,7 +58,14 @@ def main(argv=None):
                     __import__('hbcimage').Image.from_tape(HERE / 'hisoft48.tap'), rom,
                     ramtop=65367).fp
                 inp = Path(tmp) / (source.stem + '.bas')
-                dual_source.convert_tzx(source, original_bas, inp,
+                from .basic_listing import reconstruct_screen_wraps
+                original = original_bas.read_text(encoding='ascii')
+                rebuilt = reconstruct_screen_wraps(original)
+                verified_bas = original_bas
+                if rebuilt != original:
+                    verified_bas = Path(tmp) / original_bas.name
+                    verified_bas.write_text(rebuilt, encoding='ascii')
+                dual_source.convert_tzx(source, verified_bas, inp,
                                         engine, hisoft_source, kw, fp)
             asm, obj, ssx, report = compile_native(
                 inp, HERE, HERE / 'frontend', HERE / 'hisoft48.tap',

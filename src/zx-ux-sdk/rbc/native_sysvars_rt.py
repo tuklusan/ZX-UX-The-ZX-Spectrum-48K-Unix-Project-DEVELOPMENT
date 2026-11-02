@@ -6,6 +6,7 @@ The two slots are checked for emptiness at installation. All virtual bytes
 live in compiler-allocated process BSS, not ROM or kernel system RAM.
 """
 from __future__ import annotations
+import re
 
 from spectrum_sysvars import FLAGS2, PIP, FRAMES, SCR_CT, PRIVATE
 from native_error_exit import error_exit_asm
@@ -468,6 +469,17 @@ def _native_poke(asm, base, load, total=0, font_alias=None, entry=0,
     return raw
 
 
+# Exact literal pairs from the original 48K keyboard-repeat program. The
+# HiSoft parser sees a hidden five-byte numeric cache after each decimal.
+# Restrict this direct write to the two proved values for each address; all
+# computed POKEs still go through the existing protected runtime dispatch.
+_REPEAT_POKE = re.compile(
+    rb'(?P<addr>23561|23562)(?:\x0e[^\r]{5})?\s*,\s*'
+    rb'(?P<value>255|35|5)(?:\x0e[^\r]{5})?(?=[ \t\r:])')
+_REPEAT_VALUES = {23561: frozenset((35, 255)),
+                  23562: frozenset((5, 255))}
+
+
 def install(compiler):
     """Install direct runtime PEEK/POKE hooks for the 48K compiler only."""
     from z80asm import asm
@@ -522,6 +534,17 @@ def install(compiler):
         self.t = compiler.POSINT
 
     def st_poke(self):
+        # This fast path does not install a general permission to write
+        # system RAM: only exact literal Sinclair keyboard-repeat controls.
+        literal = _REPEAT_POKE.match(self.buf, self.ch)
+        if literal is not None:
+            address = int(literal['addr'])
+            value = int(literal['value'])
+            if value in _REPEAT_VALUES[address]:
+                self.ch = literal.end()
+                self.get_char()
+                self.emit(f'ld a,{value}; ld (${address:04x}),a')
+                return
         self.expr_int()
         self.emit('push hl')
         self.next_char()

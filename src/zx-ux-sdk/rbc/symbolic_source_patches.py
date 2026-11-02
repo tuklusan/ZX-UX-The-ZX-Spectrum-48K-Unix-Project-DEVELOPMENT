@@ -80,12 +80,26 @@ def from_emissions(events, image: bytes, code_base: int,
                 raise UnresolvedSourcePatch('overlapping source patch bytes')
             low = previous[1][3] + 1
             high = pair[0][3]
-            if not any(
-                    event.kind == 'instruction' and event.position == start - 1 and
-                    len(event.data) == 3 and
-                    re.fullmatch(r'(?:jp|call)\s+(?:(?:nz|z|nc|c|po|pe|p|m)\s*,\s*)?(?:0|\$ffff)',
-                                 event.source.strip().lower())
-                    for event in events[low:high]):
+            window = events[low:high]
+            # HiSoft can rewrite a string literal as a new CALL+inline
+            # length at the same location. In this layout the older length
+            # has been wholly replaced by an independently recorded, typed
+            # two-byte word after the CALL/relocation pair. A partial or
+            # untyped rewrite remains forbidden.
+            original_placeholder = any(
+                event.kind == 'instruction' and event.position == start - 1 and
+                len(event.data) == 3 and
+                re.fullmatch(r'(?:jp|call)\s+(?:(?:nz|z|nc|c|po|pe|p|m)\s*,\s*)?(?:0|\$ffff)',
+                             event.source.strip().lower())
+                for event in window)
+            inline_replacement = any(
+                event.kind == 'word' and event.position == start and
+                len(event.data) == 2 for event in window) and any(
+                event.kind == 'opcode' and event.position == start - 3 and
+                event.data == b'\xcd' for event in window) and any(
+                event.kind == 'relocation' and event.position == start - 2 and
+                len(event.data) == 2 for event in window)
+            if not (original_placeholder or inline_replacement):
                 raise UnresolvedSourcePatch('overlapping source patch bytes')
             discarded.add(earlier)
     groups = []

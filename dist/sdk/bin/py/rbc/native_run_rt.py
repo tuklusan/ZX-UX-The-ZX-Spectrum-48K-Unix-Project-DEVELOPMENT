@@ -54,10 +54,12 @@ def _uses_run(lines):
     return False
 
 def _run_entry(lines, requested):
-    """Sinclair's next-existing-line behavior for a constant RUN target."""
+    """Sinclair's next *source* line, not the HiSoft setup directive."""
     if not isinstance(requested, int) or requested < 0 or requested >= 0x4000:
         return None
-    return next((number for number, _ in lines if number > 0 and number >= requested), None)
+    return next((number for number, body in lines
+                 if number > 0 and number >= requested and
+                 not body.startswith(bytes((_REM, ord(':'))))), None)
 
 
 def install(compiler):
@@ -74,7 +76,7 @@ def install(compiler):
         if _computed_run_present(self.lines):
             self.goto_directive = 1
             self.gosub_all = 1
-        self._zxux_run_first = next((n for n, _ in self.lines if n > 0), 0)
+        self._zxux_run_first = _run_entry(self.lines, 0) or 0
         self._zxux_run_sp = 0
         self._zxux_run_clear_bytes = 1
 

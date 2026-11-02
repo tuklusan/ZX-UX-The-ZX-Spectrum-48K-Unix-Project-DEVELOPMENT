@@ -1,14 +1,15 @@
 """Strictly recognize original 48K keyboard control byte writes.
 
-Only literal values used by the archived games are admitted. These two ROM
-variables are preserved around execution by startup_colors; all other
-protected addresses and computed writes remain blocked.
+Only literal values used by the archived games are admitted. The repeat
+controls are saved/restored only for programs that write them; FLAGS2 and
+PIP retain their existing process-isolated implementation.
 """
 from __future__ import annotations
 import re
 
-_CONTROLS = {23658: {0, 9, 10, 255}, 23609: {110, 111}}
-_ASSIGNMENT = re.compile(r"^\s*(23658|23609)\s*,\s*(-?[0-9]+)\s*$")
+_CONTROLS = {23658: {0, 9, 10, 255}, 23609: {110, 111},
+             23561: {35, 255}, 23562: {5, 255}}
+_ASSIGNMENT = re.compile(r"^\s*(23658|23609|23561|23562)\s*,\s*(-?[0-9]+)\s*$")
 
 
 def allow_rom_keyboard_controls(findings):

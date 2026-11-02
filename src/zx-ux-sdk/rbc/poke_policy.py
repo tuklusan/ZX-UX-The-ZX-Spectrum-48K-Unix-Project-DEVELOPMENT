@@ -17,6 +17,24 @@ def apply_poke_policy(findings, proofs, font_alias=None):
             raise ProtectedPoke(f'Line {finding.line}: POKE token check mismatch')
         proof = matched.pop(0)
         locations = proof.get('addresses', [])
+        if finding.classification == 'rom_keyboard_control':
+            # Source review already proved the literal pair. A second,
+            # independent address proof must agree before the native direct
+            # write is emitted; computed or aliased writes remain forbidden.
+            from rom_keyboard_control import _CONTROLS, _ASSIGNMENT
+            match = _ASSIGNMENT.fullmatch(finding.expression)
+            if not (match and int(match[1]) in (23561, 23562) and
+                    int(match[2]) in _CONTROLS[int(match[1])] and
+                    len(locations) == 1 and
+                    locations[0]['space'] == 'absolute' and
+                    locations[0]['offset'] == int(match[1])):
+                if not (match and int(match[1]) in (23609, 23658) and
+                        len(locations) == 1 and
+                        locations[0]['space'] == 'absolute' and
+                        locations[0]['offset'] == int(match[1])):
+                    raise ProtectedPoke(f'Line {finding.line}: unproved keyboard control POKE')
+            finding.severity = 'info'
+            continue
         # The native POKE runtime redirects all five virtual addresses into
         # process BSS. Require exact proof even for computed constant forms.
         from spectrum_sysvars import PRIVATE
