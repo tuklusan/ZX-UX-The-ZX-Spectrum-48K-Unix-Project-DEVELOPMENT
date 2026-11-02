@@ -110,9 +110,9 @@ def layout(units):
             # manifests.  This is separate from the generated aliases: the
             # linker-side validator needs the ordered storage sequence even
             # when the target uses a raw/mirrored representation.
-            abi = uses.setdefault(unit.name, {}).setdefault('__COMMON_ABI__', {})
+            block_signatures = uses.setdefault(unit.name, {}).setdefault('__COMMON_LAYOUT__', {})
             for block, members in per_block.items():
-                abi[block] = [
+                block_signatures[block] = [
                     {'name': name, 'type': signature[0], 'count': signature[1],
                      'is_array': signature[2]}
                     for name, signature in zip(per_block_names[block], members)

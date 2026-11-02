@@ -12,7 +12,7 @@ import re
 import struct
 from .translator import FortranError, convert, parse
 
-ABI_MANIFEST_NAME = 'rfortranc-abi.json'
+LINK_MAP_NAME = 'rfortranc-link-map.json'
 
 
 def sdk_path(explicit=None):
@@ -45,12 +45,12 @@ def _json_dims(dims):
     return list(dims)
 
 
-def _abi_unit(unit):
+def _unit_signature(unit):
     return {
         'name': unit.name,
         'kind': unit.kind,
         'type': unit.type,
-        'common': getattr(unit, 'common_abi', {}),
+        'common': getattr(unit, 'common_layout', {}),
         'args': [
             {'name': name, 'type': unit.vars[name][0],
              'dims': _json_dims(unit.vars[name][1]),
@@ -60,7 +60,7 @@ def _abi_unit(unit):
     }
 
 
-def _abi_calls(units):
+def _record_calls(units):
     """Record source-level calls so retained objects carry checked contracts."""
     known = {unit.name: unit for unit in units}
     calls = []
@@ -72,25 +72,25 @@ def _abi_calls(units):
                 if target is not None:
                     calls.append({'caller': caller.name, 'target': target.name,
                                   'kind': 'subroutine',
-                                  'signature': _abi_unit(target)})
+                                  'signature': _unit_signature(target)})
             for name, target in known.items():
                 if target.kind == 'function' and re.search(r'\b' + re.escape(name) + r'\s*\(',
                                                             statement.text):
                     calls.append({'caller': caller.name, 'target': name,
                                   'kind': 'function',
-                                  'signature': _abi_unit(target)})
+                                  'signature': _unit_signature(target)})
     return calls
 
 
-def _write_abi_manifest(path, units, objects, sources):
+def _write_link_map(path, units, objects, sources):
     """Save compiler-owned calling-layout data for later --link-only checks."""
-    manifest = {
+    link_map = {
         'schema': 1,
-        'format': 'rfortranc-f77s-abi',
+        'format': 'rfortranc-f77s-link-map',
         'compiler_sha256': _sha256(Path(__file__).with_name('translator.py')),
         'sources': [{'name': source.name, 'sha256': _sha256(source)} for source in sources],
-        'units': [_abi_unit(unit) for unit in units],
-        'calls': _abi_calls(units),
+        'units': [_unit_signature(unit) for unit in units],
+        'calls': _record_calls(units),
         'objects': [
             {'name': obj.name, 'unit': unit.name, 'sha256': _sha256(obj)}
             for obj, unit in zip(objects, units)
@@ -98,31 +98,31 @@ def _write_abi_manifest(path, units, objects, sources):
     }
     destination = Path(path)
     temporary = destination.with_name(destination.name + '.tmp')
-    temporary.write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+    temporary.write_text(json.dumps(link_map, indent=2, sort_keys=True) + '\n', encoding='utf-8')
     temporary.replace(destination)
 
 
-def _validate_abi_manifest(path, objects):
+def _validate_link_map(path, objects):
     """Validate retained SSO hashes and source-level FORTRAN call contracts."""
-    manifest_path = Path(path).resolve()
+    link_map_path = Path(path).resolve()
     try:
-        manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+        link_map = json.loads(link_map_path.read_text(encoding='utf-8'))
     except (OSError, ValueError) as exc:
-        raise ValueError('cannot read compiler interface manifest: ' + str(manifest_path)) from exc
-    if manifest.get('schema') != 1 or manifest.get('format') != 'rfortranc-f77s-abi':
-        raise ValueError('unsupported compiler interface manifest: ' + str(manifest_path))
-    entries = manifest.get('objects')
-    units = manifest.get('units')
-    calls = manifest.get('calls', [])
+        raise ValueError('cannot read compiler interface link map: ' + str(link_map_path)) from exc
+    if link_map.get('schema') != 1 or link_map.get('format') != 'rfortranc-f77s-link-map':
+        raise ValueError('unsupported compiler interface link map: ' + str(link_map_path))
+    entries = link_map.get('objects')
+    units = link_map.get('units')
+    calls = link_map.get('calls', [])
     if not isinstance(entries, list) or not isinstance(units, list) or not isinstance(calls, list):
-        raise ValueError('malformed compiler interface manifest: ' + str(manifest_path))
+        raise ValueError('malformed compiler interface link map: ' + str(link_map_path))
     by_name = {Path(entry.get('name', '')).name: entry for entry in entries
                if isinstance(entry, dict)}
     if len(by_name) != len(entries):
-        raise ValueError('compiler interface manifest has duplicate or invalid object names')
+        raise ValueError('compiler interface link map has duplicate or invalid object names')
     actual = {Path(obj).name: Path(obj).resolve() for obj in objects}
     if set(by_name) != set(actual):
-        raise ValueError('compiler interface manifest object set does not match link inputs')
+        raise ValueError('compiler interface link map object set does not match link inputs')
     for name, obj in actual.items():
         entry = by_name[name]
         if entry.get('sha256') != _sha256(obj):
@@ -132,13 +132,13 @@ def _validate_abi_manifest(path, objects):
     unit_by_name = {entry.get('name'): entry for entry in units
                     if isinstance(entry, dict) and entry.get('name')}
     if len(unit_by_name) != len(units):
-        raise ValueError('compiler interface manifest has duplicate or invalid unit signatures')
+        raise ValueError('compiler interface link map has duplicate or invalid unit signatures')
     object_units = {entry['unit'] for entry in by_name.values()}
     if not object_units <= set(unit_by_name):
         raise ValueError('compiler interface object refers to an unknown program unit')
     for call in calls:
         if not isinstance(call, dict) or call.get('target') not in unit_by_name:
-            raise ValueError('compiler interface manifest has an unresolved call target')
+            raise ValueError('compiler interface link map has an unresolved call target')
         target = unit_by_name[call['target']]
         if call.get('signature') != target:
             raise ValueError('compiler interface call signature does not match target unit: ' + call['target'])
@@ -177,13 +177,13 @@ def _validate_abi_manifest(path, objects):
     for block, views in common_blocks.items():
         if block == '0':
             continue
-        # The manifest records all views, including legal alternate layouts;
+        # The link map records all views, including legal alternate layouts;
         # reject only duplicate unit declarations, which cannot be a valid
         # cross-source layout.
         owners = [unit_name for unit_name, _view in views]
         if len(owners) != len(set(owners)):
             raise ValueError('compiler interface COMMON block is duplicated within a unit: ' + block)
-    return manifest
+    return link_map
 
 
 def _rcc_controls(args):
@@ -210,17 +210,17 @@ def _rcc_controls(args):
 def link_existing_objects(sdk, packaged, objects, target, args, rtap, tape_name):
     """Link retained native Z80 SSO objects without FORTRAN source parsing.
 
-    Compiler-produced object directories carry a sidecar link manifest. When
+    Compiler-produced object directories carry a sidecar link map. When
     present, validate its object hashes and source-level signatures before the
-    linker; raw SSO inputs without a manifest remain linker/symbol-only.
+    linker; raw SSO inputs without a link map remain linker/symbol-only.
     """
-    manifest = Path(args.abi_manifest).resolve() if args.abi_manifest else None
-    if manifest is None:
-        candidate = Path(objects[0]).resolve().parent / ABI_MANIFEST_NAME if objects else None
+    link_map = Path(args.link_map).resolve() if args.link_map else None
+    if link_map is None:
+        candidate = Path(objects[0]).resolve().parent / LINK_MAP_NAME if objects else None
         if candidate is not None and candidate.is_file():
-            manifest = candidate
-    if manifest is not None:
-        _validate_abi_manifest(manifest, objects)
+            link_map = candidate
+    if link_map is not None:
+        _validate_link_map(link_map, objects)
     linker = sdk / ('rld' if packaged else 'bin/rld')
     library = sdk / ('py/lib/libc48.ssa' if packaged else 'lib/libc48.ssa')
     if not linker.is_file() or not library.is_file():
@@ -266,7 +266,7 @@ def main(argv=None):
     p.add_argument('--separate', action='store_true', help='compile each F77S program unit to SSO and link them')
     p.add_argument('--link-only', action='store_true', help='link retained Z80 SSO objects without FORTRAN source')
     p.add_argument('--object-dir', help='preserve per-unit SSO objects (requires --separate)')
-    p.add_argument('--abi-manifest', help='F77S compiler interface manifest for retained SSO validation')
+    p.add_argument('--link-map', help='F77S compiler interface link map for retained SSO validation')
     p.add_argument('-o', '--output', help='output file (default SOURCE.ssx)')
     p.add_argument('--sdk', help='ZX-UX source SDK root or packaged SDK bin')
     p.add_argument('--std', choices=('zxux', 'f77s'), default='zxux',
@@ -313,8 +313,8 @@ def main(argv=None):
             raise ValueError('multiple sources require --separate')
         if args.object_dir and not args.separate:
             raise ValueError('--object-dir requires --separate')
-        if args.abi_manifest and not (args.separate or args.link_only):
-            raise ValueError('--abi-manifest requires --separate or --link-only')
+        if args.link_map and not (args.separate or args.link_only):
+            raise ValueError('--link-map requires --separate or --link-only')
         if args.separate and (args.std != 'f77s' or args.emit_c or args.save_c or args.S or args.c or
                               args.fit or args.bytecode or args.no_fit or args.heap is not None or
                               args.udgs is not None):
@@ -370,9 +370,9 @@ def main(argv=None):
                         return rc.returncode
                     objects.append(obj)
                 if preserved:
-                    manifest_path = (Path(args.abi_manifest).resolve()
-                                     if args.abi_manifest else preserved / ABI_MANIFEST_NAME)
-                    _write_abi_manifest(manifest_path, units, objects, sources)
+                    link_map_path = (Path(args.link_map).resolve()
+                                     if args.link_map else preserved / LINK_MAP_NAME)
+                    _write_link_map(link_map_path, units, objects, sources)
                 name = args.tape_name if args.tape_name is not None else sources[0].stem[:10]
                 return link_existing_objects(sdk, packaged, objects, target, args, rtap, name)
             generated = tmp / (sources[0].stem + '.c')

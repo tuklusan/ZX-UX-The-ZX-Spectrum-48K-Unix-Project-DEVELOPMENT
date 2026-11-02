@@ -2413,7 +2413,7 @@ def convert(units, emit_units=None):
     for unit in units:
         common_view = common_uses.get(unit.name, {})
         unit.common_sync = common_view.get('__COMMON_SYNC__', {'in': [], 'out': []})
-        unit.common_abi = common_view.get('__COMMON_ABI__', {})
+        unit.common_layout = common_view.get('__COMMON_LAYOUT__', {})
         unit.common_function_wrappers = {}
     if emit_units is not None:
         # Every independently translated unit sees the same COMMON layout.
