@@ -61,6 +61,38 @@ class NativeFrameTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             capture_quality.bitmap_ink(b'')
 
+
+    def test_console_output_is_not_rejected_for_old_login_banner(self):
+        shell = ('ZX-UX UNIX v1\nlogin: root\nWelcome to ZX-UX UNIX v1.\n'
+                 '#\n1.init 2.sh\n')
+        loading = (shell + '# /dev/cassette/FTH08\n'
+                   'Loading: /dev/cassette/FTH08\n')
+        self.assertEqual(capture_quality.program_output_lines(loading, shell), set())
+        forth = loading + 'w1=hello\nw2=world\n'
+        self.assertEqual(capture_quality.program_output_lines(forth, shell),
+                         {'w1=hello', 'w2=world'})
+        valley = loading.replace('ZX-UX UNIX v1', 'DEATH VALLEY', 1)
+        self.assertIn('DEATH VALLEY',
+                      capture_quality.program_output_lines(valley, shell))
+
+    def test_documented_gameplay_protocols_for_both_emulators(self):
+        from capture_replay import (steps, fuse_steps, rvm_actions,
+                                    replay_requires_change)
+        programs = (
+            ('39-compspacegames-SpaceGames-11', ('L', '10'), ('H', 'q', .08)),
+            ('50-monsters--Monsters', ('H', 'n', .14), ('H', 'f', .14)),
+        )
+        for name, *controls in programs:
+            with self.subTest(program=name):
+                recipe = steps('www.thespectrumshow.net', name)
+                self.assertTrue(replay_requires_change('www.thespectrumshow.net', name))
+                for action in controls:
+                    self.assertIn(action, recipe)
+                self.assertTrue(fuse_steps(recipe))
+                self.assertTrue(rvm_actions(recipe))
+        self.assertFalse(replay_requires_change('Granada-Publishing',
+                                                '03-bobsleigh'))
+
     def test_compiler_override_applies_after_defaults(self):
         key = 'rfc:example'
         with patch.dict(compiler_portfolio.CAPTURE, {key: {'sample_step': .09,
@@ -102,6 +134,37 @@ class PortfolioScreenshotTests(unittest.TestCase):
 
 
 class ReleaseGalleryTests(unittest.TestCase):
+
+    def test_c48_directory_identifies_original_source(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            assets = root / 'assets'
+            screenshots = root / 'screenshots'
+            src = assets / 'c48-src/demos/hello.c'
+            ssx = assets / 'c48-bin/ssx/hello.ssx'
+            tape = assets / 'c48-bin/tzx/hello.tzx'
+            for file in (src, ssx, tape):
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_bytes(file.name.encode())
+            for engine in ('rvm', 'fuse'):
+                png = screenshots / 'c48' / engine / 'demos/hello.png'
+                png.parent.mkdir(parents=True, exist_ok=True)
+                Image.new('RGB', (320, 240)).save(png)
+            with (patch.object(asset_gallery, 'ASSETS', assets),
+                  patch.object(asset_gallery, 'SHOTS', screenshots),
+                  patch.dict(asset_gallery.SRC, {'c48-bin': ('c48-src', '.c')}, clear=True),
+                  patch.dict(asset_gallery.LAYOUT, {'c48': 'c48-bin'}, clear=True),
+                  patch.dict(asset_gallery.DOUBLE, {}, clear=True)):
+                asset_gallery.finalize()
+            for engine in ('rvm', 'fuse'):
+                html = (screenshots / 'c48-bin' / engine / 'index.html').read_text()
+                figure = html.split('<figure>', 1)[1].split('</figure>', 1)[0]
+                self.assertIn('demos/hello.png', html)
+                self.assertLess(figure.index('<img'), figure.index('<figcaption>'))
+                self.assertIn('hello.c', figure)
+                self.assertIn('SSX</a>', figure)
+                self.assertIn('TZX</a>', figure)
+
     def test_multiple_originals_and_links_beneath_images(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

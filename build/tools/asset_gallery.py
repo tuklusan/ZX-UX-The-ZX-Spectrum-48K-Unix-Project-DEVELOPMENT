@@ -84,7 +84,7 @@ def finalize():
             executable_sources[key] = (ssx, cassette, originals)
             bins.add(key)
             if category == 'c48-bin':
-                short = src.relative_to(ASSETS / 'c48-src').parent.as_posix() + '/' + ssx.stem + '.png'
+                short = originals[0].relative_to(ASSETS / 'c48-src').parent.as_posix() + '/' + ssx.stem + '.png'
             elif isinstance(key, tuple):
                 short = key[0] + '/' + ssx.stem + '.png'
             else:

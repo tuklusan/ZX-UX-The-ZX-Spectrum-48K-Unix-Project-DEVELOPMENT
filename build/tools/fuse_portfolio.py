@@ -305,6 +305,8 @@ def _run_case_once(names, destination, args, config=None):
             visual_warnings = []
             reached_checkpoint = False
             stop_region = config.get('stop_when_ink')
+            replay_baseline = (screenshot(display) if config.get('require_replay_change')
+                               else None)
             if config.get('input_steps'):
                 # Record genuine intermediate frames during timed controls.
                 # Many games are already over when the last key is released.
@@ -365,6 +367,11 @@ def _run_case_once(names, destination, args, config=None):
             stop_replay.set()
             if replay_thread:
                 replay_thread.join(timeout=2)
+            if replay_baseline is not None and not any(
+                    distinct_pixels(frame, replay_baseline) >= 12
+                    for frame in replay_frames):
+                raise RuntimeError('recorded input produced no changed native screen: '
+                                   + names[0])
             if stop_region and not reached_checkpoint:
                 raise RuntimeError('native input checkpoint not reached')
             # Real emulator timing; choose developed frames without filling the

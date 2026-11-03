@@ -96,6 +96,8 @@ def write_gallery(compiler, engine):
 
 def capture_rvm(compiler, name, label, source, frames):
     import rvm
+    import zxscreen
+    from capture_quality import program_output_lines
 
     with tempfile.TemporaryDirectory(prefix='zxux-' + compiler + '-') as tmp:
         alias = Path(tmp) / (label + '.ssx')
@@ -107,25 +109,25 @@ def capture_rvm(compiler, name, label, source, frames):
         options.headless = True
         runner = rvm.Runner(options)
         runner.start()
+        shell_screen = bytes(runner.session.m.screen())
+        shell_text = zxscreen.screen_text(shell_screen)
         chosen, best, live_frames = None, (-1, -1, -1), 0
         for frame in range(frames + 3000):
             runner.frame()
             if runner.fg and runner.fg.started is not None:
                 live_frames += 1
-                picture = runner.session.program_screen(runner.fg)
-                if picture is None and compiler == 'rfc':
-                    picture = runner.picture()
+                owned = runner.session.program_screen(runner.fg)
+                picture = owned or (runner.session.m.screen(), runner.session.m.border)
                 if picture and len(picture[0]) == 6912 and live_frames >= (1 if compiler == 'rfc' else 3):
-                    import zxscreen
                     image = bytes(picture[0])
                     rows = zxscreen.screen_text(image)
-                    if 'ZX-UX login' in rows or 'login:' in rows.lower():
+                    output = program_output_lines(rows, shell_text)
+                    # The tty keeps its old login banner and loading line.
+                    # A new program row or a changed owned display is required.
+                    if not output and not (owned is not None and image != shell_screen):
                         continue
-                    visible = [line for line in rows.splitlines() if line.strip(' #')]
                     ink = sum(bool(b) for b in image[:6144])
-                    # Prefer all result rows before program exit. A single
-                    # loading line must not outrank completed numeric output.
-                    score = (int('DONE ' in rows), len(visible), ink)
+                    score = (int('DONE ' in rows), len(output), ink)
                     if ink > 0 and score > best:
                         chosen, best = (image, picture[1]), score
             if runner.check(limit=frames):

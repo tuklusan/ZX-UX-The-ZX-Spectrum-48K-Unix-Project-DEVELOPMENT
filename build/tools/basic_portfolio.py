@@ -18,7 +18,7 @@ from basicpack import tape_name
 sys.path.insert(0, str(DIST / 'sdk/bin/py'))  # basicpack imports the source SDK
 import rvm
 import zxscreen
-from capture_quality import bitmap_ink
+from capture_quality import bitmap_ink, program_output_lines
 from capture_replay import steps, rvm_actions
 
 
@@ -63,8 +63,7 @@ def write_gallery(out: Path, engine: str):
 
 
 def run_one(collection: str, ssx: Path, label: str, frames: int):
-    # RVM takes its /dev/cassette/ name from the supplied filename.
-    # Use precisely the short, checked rtap name, never the long game title.
+    # The short cassette alias is required by the unmodified ZX-UX loader.
     recorded = steps(collection, ssx.stem)
     with tempfile.TemporaryDirectory(prefix='zxux-basic-rvm-') as temporary:
         alias = Path(temporary) / (label + '.ssx')
@@ -77,58 +76,66 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
         opt.headless = True
         runner = rvm.Runner(opt)
         runner.start()
+        shell_screen = bytes(runner.session.m.screen())
+        shell_text = zxscreen.screen_text(shell_screen)
         scripted = False
-        queued = 0
+        first_key_remaining = None
+        first_output = None
         post_key = None
-        first_picture = None
-        recent_post = None
-        post_persist = 0
+        post_samples = 0
         selected = None
         best = -1
-        # A documented original-BASIC replay is only a candidate for native RBC.
-        # Queue its keys after ZX-UX has actually started the compiled process.
         for frame in range(frames + 3000):
             runner.frame()
             job = runner.fg
             if job.started is not None and not scripted:
                 if recorded:
                     actions = rvm_actions(recorded)
-                    queued = len(actions)
+                    first_key = next((i for i, action in enumerate(actions)
+                                      if action[0] in ('keys', 'press')), None)
                     runner.session.kb.add(actions)
+                    if first_key is not None:
+                        first_key_remaining = (len(runner.session.kb.queue)
+                                               - first_key - 1)
                 scripted = True
-            if job.started is not None:
-                picture = runner.session.program_screen(job)
-                if picture and (selected is None or frame % 10 == 0):
-                    pixels, border = picture
-                    if first_picture is None:
-                        first_picture = bytes(pixels)
-                    # A live process screen can still retain boot/login ink.
-                    # Never use it as proof of program output.
-                    text = zxscreen.screen_text(pixels).lower()
-                    if 'zx-ux login' not in text and 'login:' not in text:
-                        score = bitmap_ink(pixels)
+            if job.started is not None and (selected is None or frame % 10 == 0):
+                # Console programs print to the shared tty. They need not
+                # own a private screen; the old code captured None for them.
+                owned = runner.session.program_screen(job)
+                pixels, border = (owned if owned is not None else
+                                  (runner.session.m.screen(), runner.session.m.border))
+                if len(pixels) == 6912:
+                    current = bytes(pixels)
+                    output = program_output_lines(zxscreen.screen_text(current),
+                                                  shell_text)
+                    if output or (owned is not None and current != shell_screen):
+                        score = bitmap_ink(current)
                         if score >= 64:
-                            if recorded and queued and len(runner.session.kb.queue) < queued - 2:
-                                current = bytes(pixels)
-                                if current != first_picture:
-                                    # A moving game need not have identical
-                                    # frames; two developed samples suffice.
-                                    post_persist += 1
-                                    if post_persist >= 2 and post_key is None:
-                                        post_key = (current, border)
-                                    recent_post = current
+                            if first_output is None:
+                                first_output = current
+                            if (first_key_remaining is not None
+                                    and len(runner.session.kb.queue) <= first_key_remaining
+                                    and current != first_output):
+                                post_samples += 1
+                                if post_samples >= 2 and post_key is None:
+                                    post_key = (current, border)
                             if score > best:
-                                selected, best = (bytes(pixels), border), score
+                                selected, best = (current, border), score
             reason = runner.check(limit=frames)
             if reason:
                 runner.why = reason
                 break
-        if runner.fg.started is None or selected is None:
-            raise RuntimeError('no independently observed native process screen: ' + ssx.name)
-        if post_key is not None:
+        job = runner.fg
+        if job.started is None or selected is None:
+            raise RuntimeError(
+                'no independently observed native program output: ' + ssx.name
+                + f' started={job.started} loading={job.loading}'
+                + f' ended={job.ended} status={job.status} why={runner.why}')
+        if recorded:
+            if post_key is None:
+                raise RuntimeError('no changed native screen after recorded input: '
+                                   + ssx.stem)
             selected = post_key
-        elif recorded:
-            raise RuntimeError('no persistent post-input program screen: ' + ssx.stem)
         image, border = selected
         if len(image) != 6912:
             raise RuntimeError('invalid Spectrum screen')
@@ -136,7 +143,7 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
         out.parent.mkdir(parents=True, exist_ok=True)
         rvm.write_png(image, str(out), border)
         if recorded and runner.session.kb.queue:
-            print('RBC RVM WARNING:', ssx.stem, 'recorded key sequence unfinished',
+            print('RBC RVM WARNING:', ssx.stem, 'recorded keys unfinished',
                   file=sys.stderr, flush=True)
         print('RBC RVM', ssx.stem, runner.why, 'ink', best, flush=True)
 

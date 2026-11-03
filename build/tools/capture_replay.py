@@ -43,6 +43,29 @@ def parse_script(script: str, origin: str):
     return tuple(result)
 
 
+def _recorded():
+    data = json.loads(RECORDED.read_text(encoding='utf-8')) if RECORDED.is_file() else {}
+    if not isinstance(data, dict):
+        raise ValueError('invalid project-owned replay data')
+    for name, entry in data.items():
+        if not isinstance(name, str):
+            raise ValueError('invalid recorded replay identifier')
+        if isinstance(entry, str):
+            continue
+        if (not isinstance(entry, dict)
+                or set(entry) != {'script', 'require_change'}
+                or not isinstance(entry['script'], str)
+                or not isinstance(entry['require_change'], bool)):
+            raise ValueError('invalid project-owned replay metadata: ' + name)
+    return data
+
+
+def replay_requires_change(collection: str, game: str) -> bool:
+    """Require a changed post-key screen only when recorded by this recipe."""
+    entry = _recorded().get(collection + '/' + game)
+    return isinstance(entry, dict) and entry['require_change']
+
+
 def steps(collection: str, game: str):
     """Use only recorded actions; ROM BASIC results are not native proof."""
     directory = COLLECTIONS / collection / game / 'BASIC'
@@ -53,15 +76,14 @@ def steps(collection: str, game: str):
         return ()
     guide = guides[0]
     match = SCRIPT.search(guide.read_text(encoding='utf-8'))
-    recorded = json.loads(RECORDED.read_text(encoding='utf-8')) if RECORDED.is_file() else {}
+    recorded = _recorded()
     name = collection + '/' + game
-    if not isinstance(recorded, dict) or any(not isinstance(k, str) or not isinstance(v, str)
-                                              for k, v in recorded.items()):
-        raise ValueError('invalid project-owned replay data')
     if name in recorded and match:
         raise ValueError('conflicting recorded replay data: ' + name)
     if name in recorded:
-        return parse_script(recorded[name], str(RECORDED))
+        recipe = recorded[name]
+        return parse_script(recipe['script'] if isinstance(recipe, dict) else recipe,
+                            str(RECORDED))
     return parse_script(match.group(1), str(guide)) if match else ()
 
 

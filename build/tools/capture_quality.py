@@ -71,3 +71,26 @@ class StableFrames:
         if self.best_live is None:
             raise RuntimeError('no distinct native program screen observed')
         return self.best_live
+
+
+def program_output_lines(current: str, shell: str) -> set[str]:
+    """New console rows, excluding ZX-UX command, loader and taskbar rows.
+
+    The login banner persists after an ordinary tty program prints. Its
+    presence cannot reject native program output; a new row can be anywhere.
+    """
+    def lines(text: str) -> set[str]:
+        found = set()
+        for row in text.splitlines():
+            value = row.strip()
+            low = value.lower()
+            if (not value or value in ('#', '@')
+                    or low.startswith(('loading: /dev/cassette/',
+                                       '# /dev/cassette/',
+                                       '@ /dev/cassette/'))
+                    or ('1.init' in low and '2.sh' in low)):
+                continue
+            found.add(value)
+        return found
+
+    return lines(current) - lines(shell)
