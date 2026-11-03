@@ -367,11 +367,23 @@ def _run_case_once(names, destination, args, config=None):
             stop_replay.set()
             if replay_thread:
                 replay_thread.join(timeout=2)
-            if replay_baseline is not None and not any(
-                    distinct_pixels(frame, replay_baseline) >= 12
-                    for frame in replay_frames):
-                raise RuntimeError('recorded input produced no changed native screen: '
-                                   + names[0])
+            if replay_baseline is not None:
+                deltas = [distinct_pixels(frame, replay_baseline)
+                          for frame in replay_frames]
+                last_screen = screenshot(display)
+                last_change = distinct_pixels(last_screen, replay_baseline)
+                trace('replay samples=%d max_change=%d last_change=%d' %
+                      (len(deltas), max(deltas, default=0), last_change))
+                if not any(delta >= 12 for delta in deltas):
+                    if log_root:
+                        replay_baseline.save(folder / (case + '.before-input.png'))
+                        last_screen.save(folder / (case + '.after-input.png'))
+                        if replay_frames:
+                            replay_frames[0].save(folder / (case + '.first-input.png'))
+                    raise RuntimeError('recorded input produced no changed native screen: '
+                                       + names[0]
+                                       + ' samples=%d max_change=%d last_change=%d' %
+                                       (len(deltas), max(deltas, default=0), last_change))
             if stop_region and not reached_checkpoint:
                 raise RuntimeError('native input checkpoint not reached')
             # Real emulator timing; choose developed frames without filling the

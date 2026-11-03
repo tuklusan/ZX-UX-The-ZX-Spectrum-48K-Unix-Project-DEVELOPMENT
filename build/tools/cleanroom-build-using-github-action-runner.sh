@@ -39,6 +39,8 @@ test -f /usr/share/fuse/fuse.font
 # Run the same targeted checks locally and through Actions.
 if [[ "${1:-}" == "--targeted" ]]; then
   mkdir -p cleanroom-logs/targeted
+  export ZXUX_FUSE_LOG_DIR="$PWD/cleanroom-logs/targeted/fuse-processes"
+  mkdir -p "$ZXUX_FUSE_LOG_DIR"
   if ! python3 -B build/build.py /usr/local/bin/sjasmplus >cleanroom-logs/targeted/build.log 2>&1; then
     tail -n 40 cleanroom-logs/targeted/build.log
     exit 1
@@ -89,12 +91,13 @@ for source, name, dimensions in images:
         continue
     try:
         with Image.open(source) as picture:
+            picture.verify()
+        with Image.open(source) as picture:
             if picture.size != dimensions or picture.getbbox() is None:
                 raise ValueError('blank or incorrectly sized screenshot')
-            picture.verify()
         shutil.copy2(source, out / name)
         print('VERIFIED', source)
-    except (OSError, ValueError) as error:
+    except (OSError, ValueError, RuntimeError) as error:
         print('INVALID', source, error)
         errors += 1
 if errors:

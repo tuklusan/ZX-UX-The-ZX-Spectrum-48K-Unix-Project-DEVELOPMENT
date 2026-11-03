@@ -134,7 +134,14 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
         if recorded:
             if post_key is None:
                 raise RuntimeError('no changed native screen after recorded input: '
-                                   + ssx.stem)
+                                   + ssx.stem
+                                   + f' started={job.started} ended={job.ended}'
+                                   + f' status={job.status} why={runner.why}'
+                                   + f' queued={len(runner.session.kb.queue)}'
+                                   + f' first_key_remaining={first_key_remaining}'
+                                   + f' post_samples={post_samples}'
+                                   + ' screen=' + repr(zxscreen.screen_text(
+                                       runner.session.m.screen())))
             selected = post_key
         image, border = selected
         if len(image) != 6912:
