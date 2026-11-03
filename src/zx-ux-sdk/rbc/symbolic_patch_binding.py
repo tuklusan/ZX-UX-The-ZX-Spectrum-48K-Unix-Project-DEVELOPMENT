@@ -193,6 +193,41 @@ def _bind_one(events, image: bytes, words):
     return tuple(bound)
 
 
+
+def _bind_original_next_branches(events, image):
+    """Type HiSoft's documented integer NEXT branch from its source writes.
+
+    The original emitter writes ``ld a,h; xor $80; defb $F2`` followed
+    immediately by a relocated loop-body word. F2 is the Z80 JP P,nn
+    opcode. No output-byte scanning or inferred source is permitted.
+    """
+    from symbolic_capture import Emission
+    result = []
+    for i, event in enumerate(events):
+        if (event.kind == 'instruction' and
+                event.source.strip().lower() == 'ld a,h; xor $80; defb $f2' and
+                event.source_site and event.source_site.startswith('st_next:')):
+            following = events[i + 1] if i + 1 < len(events) else None
+            if (event.data != b'\x7c\xee\x80\xf2' or following is None or
+                    following.kind != 'relocation' or
+                    following.source_site is None or
+                    not following.source_site.startswith('st_next:') or
+                    following.position != event.position + 4 or
+                    len(following.data) != 2 or
+                    type(following.symbol_offset) is not int or
+                    not 0 <= following.symbol_offset < len(image) or
+                    image[event.position:following.position + 2] !=
+                    event.data + following.data):
+                raise PatchBindingError('original NEXT branch source is incomplete')
+            result.append(replace(event, source='ld a,h; xor $80',
+                                  data=event.data[:3]))
+            result.append(Emission(event.position + 3, 'opcode', 'jp p,nn',
+                                   b'\xf2', source_site=event.source_site))
+        else:
+            result.append(event)
+    return tuple(result)
+
+
 def bind_three_source_passes(groups, images, bases, text_ends):
     """Bind only cross-pass verified source patches; preserve all other events."""
     if (len(groups) != 3 or len(images) != 3 or len(bases) != 3 or
@@ -206,7 +241,8 @@ def bind_three_source_passes(groups, images, bases, text_ends):
     first_removed = final_sources[0][1]
     if any(dead != first_removed for _, dead in final_sources[1:]):
         raise PatchBindingError('source rewrite ownership differs across compiler bases')
-    bound = tuple(_bind_one(live, image, patch_words)
+    bound = tuple(_bind_original_next_branches(
+                      _bind_one(live, image, patch_words), image)
                   for (live, _), image, patch_words in
                   zip(final_sources, images, words))
     report['superseded_source_emissions'] = len(first_removed)

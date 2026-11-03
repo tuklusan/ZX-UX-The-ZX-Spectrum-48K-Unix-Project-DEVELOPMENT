@@ -7,6 +7,8 @@ on:
     paths:
       - .github/workflows/rebuild-rbc-collections.yml
       - build/tools/rebuild-rbc-collections.sh
+      - src/zx-ux-sdk/rbc/symbolic_patch_binding.py
+      - tests/test_rbc_next_branch.py
 
 permissions:
   contents: read
@@ -25,3 +27,12 @@ jobs:
           lfs: true
       - name: Run project-owned rebuild
         run: bash build/tools/rebuild-rbc-collections.sh --build
+      - name: Retain rebuilt distribution and native sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: rbc-rebuilt-outputs
+          path: |
+            dist/
+            src/assets/basic-src/original-sinclair-basic-collections/numerical-analysis/*/bin/
+          if-no-files-found: error
+          retention-days: 7
