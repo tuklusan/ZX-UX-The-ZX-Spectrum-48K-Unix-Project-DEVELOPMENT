@@ -120,6 +120,78 @@ class BasicDistribution(unittest.TestCase):
             self.assertFalse(list((stage / 'assets/rbc-bin/Granada-Publishing/ssx').glob('*.ssx')))
             self.assertFalse(list((stage / 'assets/rbc-bin/www.thespectrumshow.net/tzx').glob('*.tzx')))
 
+    def test_granada_and_other_accepted_packages(self):
+        archive = ROOT / 'src/assets/basic-src/original-sinclair-basic-collections'
+        dist = ROOT / 'dist'
+        counts = {}
+        for collection in ('Granada-Publishing', 'numerical-analysis', 'www.thespectrumshow.net'):
+            original = archive / collection
+            accepted = sorted(p for p in original.iterdir()
+                              if (p / 'bin' / (p.name + '.ssx')).is_file())
+            counts[collection] = len(accepted)
+            self.assertEqual({p.stem for p in (dist / 'assets/rbc-bin' / collection / 'ssx').glob('*.ssx')},
+                             {p.name for p in accepted})
+            self.assertEqual({p.stem for p in (dist / 'assets/rbc-bin' / collection / 'tzx').glob('*.tzx')},
+                             {p.name for p in accepted})
+            for game in accepted:
+                with self.subTest(game=game.name):
+                    source = game / 'BASIC'
+                    binary = game / 'bin' / (game.name + '.ssx')
+                    data = binary.read_bytes()
+                    self.assertEqual(data, (dist / 'assets/rbc-bin' / collection / 'ssx' / binary.name).read_bytes())
+                    self.assertLessEqual(max(len(data), rtap.need(data)), 14000)
+                    tape = dist / 'assets/rbc-bin' / collection / 'tzx' / (game.name + '.tzx')
+                    _, blocks = rtap.tzx_blocks(tape.read_bytes())
+                    self.assertEqual([part[1] for part in blocks],
+                                     list(rtap.records(data, basicpack.tape_name(game.name))))
+                    originals = [p for p in source.iterdir() if p.suffix.lower() in ('.bas', '.tzx')]
+                    for original_file in originals:
+                        released = dist / 'assets/basic-src' / collection / game.name / original_file.name
+                        self.assertEqual(original_file.read_bytes(), released.read_bytes())
+                    selected = game / 'bin' / (game.name + '.source')
+                    names = [selected.read_text().strip()] if selected.exists() else [p.name for p in originals
+                                                                                       if p.suffix.lower() == '.bas']
+                    self.assertEqual(len(names), 1)
+                    self.assertEqual({p.name for p in (dist / 'assets/rbc-src' / collection / game.name).glob('*.bas')},
+                                     set(names))
+        self.assertGreaterEqual(counts['Granada-Publishing'], 6)
+        self.assertGreaterEqual(counts['numerical-analysis'], 12)
+        self.assertGreaterEqual(counts['www.thespectrumshow.net'], 28)
+
+    def test_native_captures_in_both_engines(self):
+        from PIL import Image
+        dist = ROOT / 'dist'
+        images = dist / 'screenshots/rbc-bin'
+        for collection in ('60-programs', 'Granada-Publishing', 'numerical-analysis',
+                           'www.thespectrumshow.net'):
+            binaries = {p.stem for p in (dist / 'assets/rbc-bin' / collection / 'ssx').glob('*.ssx')}
+            for engine in ('rvm', 'fuse'):
+                folder = images / engine / collection
+                self.assertEqual({p.stem for p in folder.glob('*.png')}, binaries)
+                for name in binaries:
+                    with Image.open(folder / (name + '.png')) as png:
+                        png.verify()
+                self.assertTrue((images / engine / 'index.html').is_file())
+
+    def test_selected_source_with_multiple_originals(self):
+        original = ROOT / 'src/assets/basic-src/original-sinclair-basic-collections/60-programs/53-russian-roulette'
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder)
+            game = path / 'src/assets/basic-src/original-sinclair-basic-collections/demo/01-sample'
+            (game / 'BASIC').mkdir(parents=True)
+            (game / 'bin').mkdir()
+            for name in ('First.bas', 'Second.bas'):
+                (game / 'BASIC' / name).write_text('10 PRINT "OK"\n')
+            (game / 'BASIC/First.tzx').write_bytes(b'original tape')
+            (game / 'bin/01-sample.ssx').write_bytes((original / 'bin/53-russian-roulette.ssx').read_bytes())
+            (game / 'bin/01-sample.source').write_text('Second.bas\n')
+            release = path / 'out'
+            basicpack.package(path / 'src', release)
+            self.assertEqual({p.name for p in (release / 'assets/rbc-src/demo/01-sample').iterdir()},
+                             {'Second.bas'})
+            self.assertEqual({p.name for p in (release / 'assets/basic-src/demo/01-sample').iterdir()},
+                             {'First.bas', 'Second.bas', 'First.tzx'})
+
     def test_both_clis_offline(self):
         packaged = ROOT / 'dist/sdk/bin'
         self.assertTrue((packaged / 'rbc').is_file())

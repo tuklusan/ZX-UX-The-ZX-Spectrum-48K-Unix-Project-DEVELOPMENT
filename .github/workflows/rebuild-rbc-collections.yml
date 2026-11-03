@@ -1,13 +1,14 @@
-name: ZX-UX RBC additional collections release
+name: ZX-UX RBC collections rebuild
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - .github/workflows/rebuild-rbc-collections.yml
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: zx-ux-rbc-collections-release
@@ -21,50 +22,5 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: true
-          persist-credentials: true
-      - name: Compile extra BASIC collections and record RBC refusals
-        run: python3 -B build/tools/compile-rbc-collections.py
-      - name: Verify BASIC distribution tests
-        run: |
-          python3 -B build/tools/check_portability.py
-          python3 -B build/tools/smoke_test.py
-          python3 -B -m unittest discover -s tests -p test_rbc_distribution.py
-      - name: Rebuild and capture the complete distribution
-        run: bash build/tools/cleanroom-build-using-github-action-runner.sh
-      - name: Publish source results and rebuilt dist
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main
-          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-          git add -A -- dist \
-            src/assets/basic-src/original-sinclair-basic-collections/Granada-Publishing \
-            src/assets/basic-src/original-sinclair-basic-collections/numerical-analysis \
-            src/assets/basic-src/original-sinclair-basic-collections/www.thespectrumshow.net
-          python3 - <<'PY'
-          import subprocess
-          paths = subprocess.check_output(['git','diff','--cached','--name-only','-z']).decode().split('\0')
-          bases = ('src/assets/basic-src/original-sinclair-basic-collections/Granada-Publishing/',
-                   'src/assets/basic-src/original-sinclair-basic-collections/numerical-analysis/',
-                   'src/assets/basic-src/original-sinclair-basic-collections/www.thespectrumshow.net/')
-          for path in filter(None, paths):
-              if path.startswith('dist/'):
-                  continue
-              if any(path.startswith(base) and '/bin/' in path for base in bases):
-                  continue
-              raise SystemExit('Unexpected staged file: ' + path)
-          if not paths or paths == ['']:
-              raise SystemExit('No rebuilt release files to publish')
-          PY
-          git -c user.name='ZX-UX release runner' \
-              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-              commit -m 'Publish compiled RBC collection results and rebuilt distributions'
-          git push origin HEAD:refs/heads/main
-      - name: Upload rebuild logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zx-ux-rbc-collections-failure
-          path: cleanroom-logs/
-          retention-days: 7
-          if-no-files-found: ignore
+      - name: Run project-owned rebuild
+        run: bash build/tools/rebuild-rbc-collections.sh --build

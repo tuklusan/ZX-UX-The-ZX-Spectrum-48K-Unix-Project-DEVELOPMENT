@@ -1,0 +1,20 @@
+{
+  "Granada-Publishing/01-across-the-ravine": "W:2|H:space:0.3|W:0.6|H:space:0.3",
+  "Granada-Publishing/03-bobsleigh": "W:2.2|H:1:0.08|H:Return:0.08|W:3.5|H:5:0.3|H:8:0.3",
+  "Granada-Publishing/04-fruit-machine": "W:6.5|H:Y:0.15|W:3|H:Y:0.15",
+  "Granada-Publishing/05-commando-jump": "W:7|H:space:0.15|W:1.7|H:space:0.15",
+  "Granada-Publishing/08-mighty-missile": "W:5|H:5:0.55|H:8:0.55",
+  "Granada-Publishing/09-noughts-and-crosses": "W:3|L:11|W:15|L:22",
+  "Granada-Publishing/10-mastermind": "W:3|H:space:0.18|W:2|L:20|W:2|L:3333|W:2|L:4444",
+  "Granada-Publishing/12-morse-code": "W:3|K:space|W:2|K:1|W:0.8|L:100|W:0.8|L:HI",
+  "Granada-Publishing/13-nine-hole-golf": "W:3|L:1|W:5|L:8",
+  "Granada-Publishing/14-rainbow-squash": "W:18|H:Return:0.1|W:0.4|H:5:0.6|H:8:0.6",
+  "Granada-Publishing/15-save-the-whale": "W:4|L:3|W:3|H:5:0.3|H:8:0.3",
+  "Granada-Publishing/16-sheepdog-trials": "W:12|H:8:0.15|W:2|H:6:0.15",
+  "Granada-Publishing/17-spectrum-dice": "W:4|K:Return|W:2|K:space|W:4|K:space|W:4|K:space",
+  "Granada-Publishing/18-spectrum-ledger": "W:12|L:1|W:1|L:10|W:4",
+  "Granada-Publishing/19-spectrum-shoot": "W:8|H:8:0.3|W:0.3|H:f:0.3",
+  "Granada-Publishing/21-word-mix": "W:3|K:space|W:8|L:QUIT|W:0.7|L:DOG",
+  "Granada-Publishing/22-guideline": "W:4|L:2|W:4|H:6:0.6|H:7:0.6",
+  "Granada-Publishing/23-spectrum-scrabble": "W:3|L:2|W:1|L:cat|W:1|L:dog|W:4|L:n|W:6|L:y|W:4|H:8:0.18|H:8:0.18|H:6:0.18|H:5:0.18"
+}

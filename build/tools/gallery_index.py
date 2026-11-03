@@ -35,6 +35,19 @@ def write_index(engines=('rvm', 'fuse')):
     lines += ['</ul><p>Real ZX-UX program captures; a screenshot alone does not prove every feature works.</p>', '</html>']
     SCREENSHOTS.mkdir(parents=True, exist_ok=True)
     (SCREENSHOTS / 'index.html').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    if complete:
+        # Keep the older C48 source-link entry points alongside final galleries.
+        source = ROOT / 'dist/assets/c48-src'
+        for engine in engines:
+            output = SCREENSHOTS / engine / 'index.html'
+            output.parent.mkdir(parents=True, exist_ok=True)
+            refs = ['<!doctype html><html lang="en"><meta charset="utf-8">',
+                    '<title>ZX-UX C48 sources — ' + engine.upper() + '</title>']
+            for file in sorted(source.rglob('*.c')):
+                if (ROOT / 'dist/assets/c48-bin/ssx' / (file.stem + '.ssx')).is_file():
+                    rel = file.relative_to(source).as_posix()
+                    refs.append('<p><a href="../../assets/c48-src/' + rel + '">' + rel + '</a></p>')
+            (output).write_text('\n'.join(refs) + '\n', encoding='utf-8')
 
 
 if __name__ == '__main__':

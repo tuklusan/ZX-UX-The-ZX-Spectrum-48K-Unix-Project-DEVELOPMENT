@@ -2,42 +2,67 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import re
 
 COLLECTIONS = (Path(__file__).resolve().parents[2] / 'src/assets/basic-src'
                / 'original-sinclair-basic-collections')
 SCRIPT = re.compile(r'^Recorded ordered script:\s*(.+?)\s*$', re.M)
 _ALLOWED = re.compile(r'^[\x20-\x7e]{1,60}$')
+RECORDED = Path(__file__).with_name('rbc_replays.json')
+
+
+def parse_script(script: str, origin: str):
+    """Read explicitly recorded actions; refuse malformed controls."""
+    result = []
+    for token in script.split('|'):
+        parts = token.split(':')
+        kind = parts[0]
+        if kind in ('K', 'S', 'L') and len(parts) == 2 and _ALLOWED.fullmatch(parts[1]):
+            result.append((kind, parts[1]))
+        elif kind == 'H' and len(parts) == 3 and _ALLOWED.fullmatch(parts[1]):
+            try:
+                seconds = float(parts[2])
+            except ValueError:
+                raise ValueError('invalid recorded hold in ' + origin) from None
+            if not 0 < seconds <= 4:
+                raise ValueError('invalid recorded hold in ' + origin)
+            result.append((kind, parts[1], seconds))
+        elif kind == 'W' and len(parts) == 2:
+            try:
+                seconds = float(parts[1])
+            except ValueError:
+                raise ValueError('invalid recorded wait in ' + origin) from None
+            if not 0 < seconds <= 30:
+                raise ValueError('invalid recorded wait in ' + origin)
+            result.append((kind, seconds))
+        elif kind == 'C' and len(parts) == 2 and _ALLOWED.fullmatch(parts[1]):
+            result.append((kind, parts[1]))
+        else:
+            raise ValueError('unrecognized recorded BASIC step in ' + origin + ': ' + token)
+    return tuple(result)
 
 
 def steps(collection: str, game: str):
-    """Return documented ('K'|'H'|'L'|'S'|'C', ...) actions, or empty if absent.
-
-    The original replay targets ROM BASIC. These are candidate controls for the
-    separately compiled native program, not a claim of equivalent gameplay.
-    """
+    """Use only recorded actions; ROM BASIC results are not native proof."""
     directory = COLLECTIONS / collection / game / 'BASIC'
     if not directory.is_dir():
         return ()
     guides = [p for p in directory.iterdir() if p.name.lower() == 'keys-and-timing.txt']
     if len(guides) != 1:
         return ()
-    match = SCRIPT.search(guides[0].read_text(encoding='utf-8'))
-    if not match:
-        return ()
-    result = []
-    for token in match.group(1).split('|'):
-        parts = token.split(':')
-        kind = parts[0]
-        if kind in ('K', 'S', 'L') and len(parts) == 2 and _ALLOWED.fullmatch(parts[1]):
-            result.append((kind, parts[1]))
-        elif kind == 'H' and len(parts) == 3 and _ALLOWED.fullmatch(parts[1]) and 0 < float(parts[2]) <= 4:
-            result.append((kind, parts[1], float(parts[2])))
-        elif kind == 'C' and len(parts) == 2 and _ALLOWED.fullmatch(parts[1]):
-            result.append((kind, parts[1]))
-        else:
-            raise ValueError('unrecognized recorded BASIC step in ' + str(guides[0]) + ': ' + token)
-    return tuple(result)
+    guide = guides[0]
+    match = SCRIPT.search(guide.read_text(encoding='utf-8'))
+    recorded = json.loads(RECORDED.read_text(encoding='utf-8')) if RECORDED.is_file() else {}
+    name = collection + '/' + game
+    if not isinstance(recorded, dict) or any(not isinstance(k, str) or not isinstance(v, str)
+                                              for k, v in recorded.items()):
+        raise ValueError('invalid project-owned replay data')
+    if name in recorded and match:
+        raise ValueError('conflicting recorded replay data: ' + name)
+    if name in recorded:
+        return parse_script(recorded[name], str(RECORDED))
+    return parse_script(match.group(1), str(guide)) if match else ()
 
 
 def key(name: str):
@@ -51,6 +76,9 @@ def rvm_actions(recorded):
     actions = [('wait', 45)]
     for item in recorded:
         kind = item[0]
+        if kind == 'W':
+            actions.append(('wait', max(1, round(item[1] * 50))))
+            continue
         if kind == 'C':
             actions.append(('wait', 30))
             continue
@@ -75,7 +103,9 @@ def fuse_steps(recorded):
     result = []
     for item in recorded:
         kind = item[0]
-        if kind == 'C':
+        if kind == 'W':
+            result.append((item[1], ''))
+        elif kind == 'C':
             result.append((0.5, ''))
         elif kind == 'L':
             result.append((0.65, item[1] + '\n'))

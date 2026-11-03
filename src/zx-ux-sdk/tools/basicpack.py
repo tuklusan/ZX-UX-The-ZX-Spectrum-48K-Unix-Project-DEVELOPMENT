@@ -86,22 +86,43 @@ def package(source: Path, stage: Path):
             if not executable.is_file() and not reason.is_file():
                 if collection == '60-programs':
                     raise ValueError('missing BASIC result: ' + game.name)
-                continue  # Source-only collection; no RBC verdict yet.
             if executable.is_file() and not bas:
                 raise ValueError('accepted RBC program has no BASIC listing: ' + game.name)
-            if reason.is_file():
+            # Preserve the original 60-program distribution even for refused
+            # programs. Other refused collections retain their prior layout.
+            if collection == '60-programs' or not reason.is_file():
+                basic = stage / 'assets/basic-src' / collection / game.name
+                basic.mkdir(parents=True, exist_ok=True)
+                for original in bas + tzx:
+                    if original.is_symlink():
+                        raise ValueError('linked BASIC input')
+                    shutil.copyfile(original, basic / original.name)
+            # Existing 60-program tests also require original ROM screenshots
+            # for refused programs. The executable galleries remain separate.
+            if collection == '60-programs' or not reason.is_file():
+                for png in sorted((folder / 'SCREENSHOTS').glob('*.png')):
+                    if png.is_symlink():
+                        raise ValueError('linked BASIC screenshot')
+                    dst = (stage / 'screenshots/basic-original' / collection / game.name / png.name)
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(png, dst)
+            if reason.is_file() or not executable.is_file():
                 continue
-            # Only accepted binaries have released source listings.
-            basic = stage / 'assets/basic-src' / collection / game.name
+            marker = game / 'bin' / (game.name + '.source')
+            if marker.is_symlink():
+                raise ValueError('linked source selection: ' + game.name)
+            if marker.is_file():
+                selected = marker.read_text(encoding='utf-8').strip()
+                if selected not in [p.name for p in bas]:
+                    raise ValueError('unrecognized selected BASIC source: ' + game.name)
+                selected_bas = next(p for p in bas if p.name == selected)
+            elif len(bas) == 1:
+                selected_bas = bas[0]
+            else:
+                raise ValueError('ambiguous accepted BASIC source: ' + game.name)
             rbc = stage / 'assets/rbc-src' / collection / game.name
-            basic.mkdir(parents=True, exist_ok=True)
             rbc.mkdir(parents=True, exist_ok=True)
-            for original in bas + tzx:
-                if original.is_symlink():
-                    raise ValueError('linked BASIC input')
-                shutil.copyfile(original, basic / original.name)
-            for original in bas:
-                shutil.copyfile(original, rbc / original.name)
+            shutil.copyfile(selected_bas, rbc / selected_bas.name)
             data = executable.read_bytes()
             info = rld.parse_ssx(data)
             required = rtap.need(data)
