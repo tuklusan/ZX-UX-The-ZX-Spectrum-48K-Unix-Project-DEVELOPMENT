@@ -18,6 +18,8 @@ COLLECTIONS = {'Granada-Publishing': 24, 'numerical-analysis': 20,
 sys.path.insert(0, str(ROOT / 'src/zx-ux-sdk'))
 import rld
 import rtap
+sys.path.insert(0, str(ROOT / 'src/zx-ux-sdk/tools'))
+import basicpack
 
 
 def checked_ssx(data: bytes) -> bool:
@@ -33,6 +35,15 @@ def matching_tapes(source: Path, tapes: list[Path]) -> list[Path]:
     stem = source.stem.casefold()
     return [p for p in tapes if p.stem.casefold() == stem or
             p.stem.casefold().startswith(stem + '-')]
+
+
+def reserve_cassette_label(used: dict[str, set[str]], collection: str, game: Path) -> bool:
+    """Keep an accepted cassette name; refuse later names that truncate alike."""
+    label = basicpack.tape_name(game.name)
+    if label in used[collection]:
+        return False
+    used[collection].add(label)
+    return True
 
 
 def compile_one(item):
@@ -116,6 +127,11 @@ def main():
         if len(found) != count:
             raise RuntimeError(f'{collection}: expected {count} programs, found {len(found)}')
         games.extend((collection, p) for p in found)
+    labels = {name: set() for name in COLLECTIONS}
+    for collection, game in games:
+        if (game / 'bin' / (game.name + '.ssx')).is_file():
+            if not reserve_cassette_label(labels, collection, game):
+                raise RuntimeError('duplicate accepted BASIC cassette name: ' + game.name)
     accepted = {name: 0 for name in COLLECTIONS}
     refused = {name: 0 for name in COLLECTIONS}
     new = {name: 0 for name in COLLECTIONS}
@@ -125,6 +141,9 @@ def main():
             if details == ('preserved',):
                 accepted[collection] += 1
                 continue
+            if ssx is not None and not reserve_cassette_label(labels, collection, game):
+                details = (*details, ('*', 'CassetteNameCollision'))
+                ssx = None
             if ssx is None:
                 refused[collection] += 1
                 if not (directory / 'README.md').is_file():

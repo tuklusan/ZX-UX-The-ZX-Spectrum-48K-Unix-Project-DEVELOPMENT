@@ -8,6 +8,8 @@ on:
       - .github/workflows/rebuild-rbc-collections.yml
       - build/tools/rebuild-rbc-collections.sh
       - src/zx-ux-sdk/rbc/symbolic_patch_binding.py
+      - build/tools/compile-rbc-collections.py
+      - tests/test_rbc_cassette_collision.py
       - tests/test_rbc_next_branch.py
 
 permissions:
