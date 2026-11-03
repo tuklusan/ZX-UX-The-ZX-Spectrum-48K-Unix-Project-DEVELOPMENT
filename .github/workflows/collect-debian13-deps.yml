@@ -1,10 +1,7 @@
 name: ZX-UX one-time Debian 13 offline dependency verification
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/collect-debian13-deps.yml
+  workflow_dispatch:
 
 permissions:
   contents: write

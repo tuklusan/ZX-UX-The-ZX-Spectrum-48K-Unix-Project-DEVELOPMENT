@@ -2,28 +2,6 @@ name: ZX-UX RBC collections rebuild
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [main]
-    paths:
-      - .github/workflows/rebuild-rbc-collections.yml
-      - build/tools/asset_gallery.py
-      - build/tools/gallery_index.py
-      - build/tools/capture_quality.py
-      - build/tools/portfolio.py
-      - build/tools/fuse_portfolio.py
-      - build/tools/basic_portfolio.py
-      - build/tools/basic_fuse_portfolio.py
-      - build/tools/compiler_portfolio.py
-      - tests/test_capture_quality.py
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/rebuild-rbc-collections.yml
-      - build/tools/rebuild-rbc-collections.sh
-      - src/zx-ux-sdk/rbc/symbolic_patch_binding.py
-      - build/tools/compile-rbc-collections.py
-      - tests/test_rbc_cassette_collision.py
-      - tests/test_rbc_next_branch.py
 
 permissions:
   contents: read
