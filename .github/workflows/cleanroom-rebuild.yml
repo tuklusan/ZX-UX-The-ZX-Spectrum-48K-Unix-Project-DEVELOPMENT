@@ -29,20 +29,3 @@ jobs:
           name: zx-ux-cleanroom-audit
           path: cleanroom-logs/
           retention-days: 1
-
-      - name: ZIP complete runner mirror after rebuild
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd "$(dirname "$GITHUB_WORKSPACE")"
-          zip -q -r -y "$RUNNER_TEMP/zx-ux-cleanroom-runner-mirror.zip" "$(basename "$GITHUB_WORKSPACE")"
-      - name: Upload full runner mirror ZIP
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zx-ux-cleanroom-runner-mirror
-          path: ${{ runner.temp }}/zx-ux-cleanroom-runner-mirror.zip
-          compression-level: 0
-          retention-days: 7
-          if-no-files-found: error
