@@ -36,6 +36,82 @@ command -v fuse-sdl
 test -f /usr/share/fuse/fuse.font
 /tmp/zxux-py/bin/python -c 'from PIL import Image, ImageGrab, ImageChops; assert hasattr(Image.new("L",(1,1)), "get_flattened_data"); print("Pillow ready")'
 
+# Run the same targeted checks locally and through Actions.
+if [[ "${1:-}" == "--targeted" ]]; then
+  mkdir -p cleanroom-logs/targeted
+  if ! python3 -B build/build.py /usr/local/bin/sjasmplus >cleanroom-logs/targeted/build.log 2>&1; then
+    tail -n 40 cleanroom-logs/targeted/build.log
+    exit 1
+  fi
+  games=(39-compspacegames-SpaceGames-11 50-monsters--Monsters)
+  for game in "${games[@]}"; do
+    rm -f "dist/screenshots/rbc/rvm/www.thespectrumshow.net/$game.png" \
+          "dist/screenshots/rbc/fuse/www.thespectrumshow.net/$game.png"
+  done
+  rm -f dist/screenshots/rfc/rvm/demo.png
+  failures=0
+  capture() {
+    local name="$1" rc=0
+    shift
+    timeout --signal=TERM --kill-after=30s 60m "$@" \
+      >"cleanroom-logs/targeted/$name.log" 2>&1 || rc=$?
+    printf '%s %s (exit %s)\n' "$([[ "$rc" == 0 ]] && echo PASS || echo FAIL)" "$name" "$rc"
+    tail -n 15 "cleanroom-logs/targeted/$name.log"
+    if [[ "$rc" != 0 ]]; then failures=$((failures + 1)); fi
+  }
+  for game in "${games[@]}"; do
+    capture "rvm-$game" python3 -B build/tools/basic_portfolio.py \
+      --only "$game" --jobs 1
+    capture "fuse-$game" python3 -B build/tools/basic_fuse_portfolio.py \
+      --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --only "$game" --jobs 1
+  done
+  capture rvm-forth-demo python3 -B -c 'import sys; sys.path.insert(0, "build/tools"); from compiler_portfolio import cases, capture_rvm; demo = [c for c in cases({"rfc"}) if c[1] == "demo"]; assert len(demo) == 1, "Forth demo unavailable"; capture_rvm(*demo[0], 1500)'
+  python3 -B - <<'PY' || failures=$((failures + 1))
+from pathlib import Path
+from PIL import Image
+import shutil
+
+out = Path('cleanroom-logs/targeted')
+images = []
+for game in ('39-compspacegames-SpaceGames-11', '50-monsters--Monsters'):
+    for engine in ('rvm', 'fuse'):
+        images.append((Path('dist/screenshots/rbc') / engine
+                       / 'www.thespectrumshow.net' / (game + '.png'),
+                       engine + '-' + game + '.png',
+                       (576, 448) if engine == 'rvm' else (320, 240)))
+images.append((Path('dist/screenshots/rfc/rvm/demo.png'),
+               'forth-rvm-demo.png', (576, 448)))
+errors = 0
+for source, name, dimensions in images:
+    if not source.is_file():
+        print('MISSING', source)
+        errors += 1
+        continue
+    try:
+        with Image.open(source) as picture:
+            if picture.size != dimensions or picture.getbbox() is None:
+                raise ValueError('blank or incorrectly sized screenshot')
+            picture.verify()
+        shutil.copy2(source, out / name)
+        print('VERIFIED', source)
+    except (OSError, ValueError) as error:
+        print('INVALID', source, error)
+        errors += 1
+if errors:
+    raise SystemExit(errors)
+PY
+  if [[ "$failures" != 0 ]]; then
+    printf 'Targeted verification: %s failures\n' "$failures" >&2
+    exit 1
+  fi
+  echo 'Targeted verification: 5 captures and screenshots passed'
+  exit 0
+fi
+if [[ "$#" != 0 ]]; then
+  echo 'Use --targeted or no arguments' >&2
+  exit 2
+fi
+
 set -uo pipefail
 mkdir -p cleanroom-logs
 git ls-tree -r HEAD dist > cleanroom-logs/baseline.tree
