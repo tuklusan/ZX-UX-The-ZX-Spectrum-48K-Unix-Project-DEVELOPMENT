@@ -73,11 +73,20 @@ if [[ "${1:-}" == "--targeted" ]]; then
     fi
     if [[ "$rc" != 0 ]]; then failures=$((failures + 1)); fi
   }
+  # Fuse's Phantom Typist is a ROM tape loader, not a gameplay typist.
+  # Test its Keystroke mode without changing normal Fuse captures.
+  fuse_phantom="$(mktemp /tmp/zxux-fuse-phantom.XXXXXX)"
+  trap 'rm -f "$fuse_phantom"' EXIT
+  cat >"$fuse_phantom" <<'FUSE_PHANTOM'
+#!/usr/bin/env bash
+exec /usr/bin/fuse-sdl --phantom-typist-mode Keystroke "$@"
+FUSE_PHANTOM
+  chmod 700 "$fuse_phantom"
   for game in "${games[@]}"; do
     capture "rvm-$game" python3 -B build/tools/basic_portfolio.py \
       --only "$game" --jobs 1
     capture "fuse-$game" python3 -B build/tools/basic_fuse_portfolio.py \
-      --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --only "$game" --jobs 1
+      --fuse "$fuse_phantom" --assets /usr/share/fuse --only "$game" --jobs 1
   done
   capture rvm-forth-demo python3 -B -c 'import sys; sys.path.insert(0, "build/tools"); from compiler_portfolio import cases, capture_rvm; demo = [c for c in cases({"rfc"}) if c[1] == "demo"]; assert len(demo) == 1, "Forth demo unavailable"; capture_rvm(*demo[0], 1500)'
   python3 -B - <<'PY' || failures=$((failures + 1))
