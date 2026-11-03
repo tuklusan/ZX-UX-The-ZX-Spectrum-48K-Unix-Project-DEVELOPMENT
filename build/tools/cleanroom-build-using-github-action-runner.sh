@@ -59,6 +59,18 @@ if [[ "${1:-}" == "--targeted" ]]; then
       >"cleanroom-logs/targeted/$name.log" 2>&1 || rc=$?
     printf '%s %s (exit %s)\n' "$([[ "$rc" == 0 ]] && echo PASS || echo FAIL)" "$name" "$rc"
     tail -n 15 "cleanroom-logs/targeted/$name.log"
+    if [[ "$rc" != 0 && "$name" == fuse-* ]]; then
+      # Expose real failed-capture PNGs for visual review in the job log.
+      # They remain unchanged; base64 is only a lossless transport.
+      for png in "$ZXUX_FUSE_LOG_DIR"/*.before-input.png \
+                 "$ZXUX_FUSE_LOG_DIR"/*.after-input.png \
+                 "$ZXUX_FUSE_LOG_DIR"/*.first-input.png; do
+        [[ -f "$png" ]] || continue
+        printf 'ZXUX_CAPTURE_PNG:%s:' "$(basename "$png")"
+        base64 -w0 -- "$png"
+        printf '\n'
+      done
+    fi
     if [[ "$rc" != 0 ]]; then failures=$((failures + 1)); fi
   }
   for game in "${games[@]}"; do
