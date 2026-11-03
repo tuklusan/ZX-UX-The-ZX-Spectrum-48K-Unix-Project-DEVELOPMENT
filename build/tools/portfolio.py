@@ -19,6 +19,7 @@ sys.path[:0] = [str(DIST / 'sdk/bin/py'), str(Path(__file__).resolve().parent)]
 import rvm
 import zxscreen
 import zxux
+from capture_quality import bitmap_ink
 from gallery import write_gallery
 
 SOURCES = DIST / 'assets/c48-src'
@@ -115,8 +116,25 @@ def run_one(name, category, config, max_frames):
     intro_started = False
     live_capture = None
     live_score = -1
+    stable_capture = None
+    stable_ink = 0
+    previous_screen = None
+    still_samples = 0
     for frame_index in range(budget + 3000):
         runner.frame()
+        if (runner.fg and runner.fg.started is not None
+                and runner.fg.ended is None and frame_index % 10 == 0):
+            picture, border = runner.picture()
+            if len(picture) == 6912:
+                if picture == previous_screen:
+                    still_samples += 1
+                else:
+                    still_samples = 1
+                previous_screen = picture
+                if still_samples >= 3:
+                    ink = bitmap_ink(picture)
+                    if ink >= 64 and ink > stable_ink:
+                        stable_capture, stable_ink = (picture, border), ink
         if name == 'invaders' and runner.fg.started is not None and frame_index % 5 == 0:
             candidate, candidate_border = runner.picture()
             score = invaders_live_score(candidate)
@@ -170,8 +188,12 @@ def run_one(name, category, config, max_frames):
     if live_capture is not None and (
             name == '3dpaint' or (name == 'invaders' and live_score > 0)):
         img, border = live_capture
+    elif config.get('require_exit') and stable_capture is not None:
+        img, border = stable_capture
     else:
         img, border = runner.picture()
+    if config.get('require_exit') and stable_capture is None:
+        visual_warnings.append('no persistent completed drawing observed')
     if len(img) != 6912:
         raise RuntimeError(name + ': invalid ZX Spectrum screen')
     expected = config.get('zxux_text', config.get('expect_text'))

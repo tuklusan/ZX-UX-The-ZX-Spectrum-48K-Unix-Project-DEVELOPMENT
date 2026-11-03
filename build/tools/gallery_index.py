@@ -16,6 +16,16 @@ def write_index(engines=('rvm', 'fuse')):
     if complete:
         from asset_gallery import finalize
         finalize()
+        # Remove only obsolete pages created by this script in earlier builds.
+        for engine in engines:
+            old = SCREENSHOTS / engine
+            if old.is_dir():
+                files = list(old.iterdir())
+                if (len(files) != 1 or files[0].name != 'index.html'
+                        or 'ZX-UX C48 sources' not in files[0].read_text(encoding='utf-8')):
+                    raise RuntimeError('Unrecognized standalone screenshot directory: ' + str(old))
+                files[0].unlink()
+                old.rmdir()
     lines = ['<!doctype html><html lang="en"><meta charset="utf-8">',
              '<title>ZX-UX compiler screenshots</title>',
              '<style>body{font:18px system-ui,sans-serif;max-width:820px;margin:2em auto;padding:0 1em;background:#121212;color:#eee}a{color:#9cf}li{margin:.7em 0}</style>',
@@ -35,19 +45,7 @@ def write_index(engines=('rvm', 'fuse')):
     lines += ['</ul><p>Real ZX-UX program captures; a screenshot alone does not prove every feature works.</p>', '</html>']
     SCREENSHOTS.mkdir(parents=True, exist_ok=True)
     (SCREENSHOTS / 'index.html').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-    if complete:
-        # Keep the older C48 source-link entry points alongside final galleries.
-        source = ROOT / 'dist/assets/c48-src'
-        for engine in engines:
-            output = SCREENSHOTS / engine / 'index.html'
-            output.parent.mkdir(parents=True, exist_ok=True)
-            refs = ['<!doctype html><html lang="en"><meta charset="utf-8">',
-                    '<title>ZX-UX C48 sources — ' + engine.upper() + '</title>']
-            for file in sorted(source.rglob('*.c')):
-                if (ROOT / 'dist/assets/c48-bin/ssx' / (file.stem + '.ssx')).is_file():
-                    rel = file.relative_to(source).as_posix()
-                    refs.append('<p><a href="../../assets/c48-src/' + rel + '">' + rel + '</a></p>')
-            (output).write_text('\n'.join(refs) + '\n', encoding='utf-8')
+
 
 
 if __name__ == '__main__':

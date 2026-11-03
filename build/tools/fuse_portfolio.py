@@ -27,6 +27,7 @@ from fuse_boot import (SCREEN_WIDTH, SCREEN_HEIGHT, SPECTRUM_X, SPECTRUM_Y,
                        zxux_login_match, send_rom_load)
 from gallery import write_gallery
 from portfolio import captures, BIN, DIST, PAIRS, SOURCES
+from capture_quality import StableFrames, distinct_pixels
 import rtap
 
 OUT = DIST / 'screenshots/c48/fuse'
@@ -171,6 +172,10 @@ def _run_case_once(names, destination, args, config=None):
         early = []
         stop_early = threading.Event()
         early_thread = None
+        replay_frames = []
+        replay_thread = None
+        stop_replay = threading.Event()
+        replay_started = threading.Event()
         reference = config.get('reference')
         expected = None
         if reference:
@@ -212,7 +217,7 @@ def _run_case_once(names, destination, args, config=None):
             if xvfb.poll() is not None:
                 raise RuntimeError('Xvfb could not start')
             command = [str(args.fuse), '--machine', '48', '--rom-48', str(args.rom),
-                       '--no-sound', '--speed', str(config.get('fuse_speed', args.speed)),
+                       '--no-sound', '--no-statusbar', '--speed', str(config.get('fuse_speed', args.speed)),
                        '--tape', str(tape), '--auto-load']
             fuse = subprocess.Popen(command, env=env, cwd=args.assets,
                                     stdout=fuse_output, stderr=subprocess.STDOUT)
@@ -241,11 +246,15 @@ def _run_case_once(names, destination, args, config=None):
                                          login.crop((10, 50, 310, 125))).getbbox():
                 raise RuntimeError('ZX-UX shell was not reached after login')
             trace('ZX-UX shell reached')
+            shell_baseline = screenshot(display)
             for name in names:
                 values = [] if len(names) > 1 or name == 'hanoi' else config.get('args', [])
                 command = '/dev/cassette/' + name + ''.join(' ' + str(v) for v in values)
                 kb.type(command + (' &' if len(names) > 1 else ''),
                         pause=config.get('type_key_pause', .20))
+                # Record the typed command before Return. A screen differing
+                # only from the pre-typing shell is not program output.
+                command_baseline = screenshot(display)
                 # Short console programs can print and exit during the Return
                 # key's normal hold. Sample real Fuse frames while it is down.
                 if config.get('early_capture') and len(names) == 1:
@@ -269,6 +278,23 @@ def _run_case_once(names, destination, args, config=None):
                     early_thread.start()
                 kb.key('\n', pause=config.get('enter_pause', .8))
                 time.sleep(config.get('post_command_wait', 2.0))
+            if config.get('await_program_output'):
+                deadline = time.monotonic() + float(config.get('start_timeout', 10.0))
+                seen = 0
+                while time.monotonic() < deadline:
+                    if fuse.poll() is not None:
+                        raise RuntimeError('Fuse stopped before native program output')
+                    current = screenshot(display)
+                    if (distinct_pixels(current, command_baseline) >= 12
+                            and distinct_pixels(current, login) >= 12):
+                        seen += 1
+                        if seen >= 2:
+                            break
+                    else:
+                        seen = 0
+                    time.sleep(.1)
+                else:
+                    raise RuntimeError('native program start not observed before replay')
             if len(names) == 1 and names[0] == 'invaders':
                 kb.key('m', pause=.5)  # leave the intro for real gameplay
             if len(names) == 1 and names[0] == '3dpaint':
@@ -279,11 +305,25 @@ def _run_case_once(names, destination, args, config=None):
             visual_warnings = []
             reached_checkpoint = False
             stop_region = config.get('stop_when_ink')
+            if config.get('input_steps'):
+                # Record genuine intermediate frames during timed controls.
+                # Many games are already over when the last key is released.
+                def sample_replay():
+                    while not stop_replay.is_set() and len(replay_frames) < 240:
+                        if replay_started.is_set():
+                            try:
+                                replay_frames.append(screenshot(display))
+                            except OSError:
+                                break
+                        time.sleep(.10)
+                replay_thread = threading.Thread(target=sample_replay, daemon=True)
+                replay_thread.start()
             for step in config.get('input_steps', ()):
                 if len(step) == 2:
                     delay, keys = step
                     time.sleep(float(delay))
                     for ch in keys:
+                        replay_started.set()
                         kb.key(ch, pause=float(config.get('input_key_pause', .20)))
                 elif len(step) == 3:
                     delay, key, duration = step
@@ -292,6 +332,7 @@ def _run_case_once(names, destination, args, config=None):
                     time.sleep(float(delay))
                     # Shift is part of an uppercase held key too: a held
                     # Spectrum letter differs from tapping lowercase.
+                    replay_started.set()
                     shifted = key.isupper()
                     if shifted:
                         kb.event('Shift_L', True)
@@ -321,8 +362,11 @@ def _run_case_once(names, destination, args, config=None):
                         reached_checkpoint = True
                         print('Fuse input checkpoint reached:', names[0], count, flush=True)
                         break
+            stop_replay.set()
+            if replay_thread:
+                replay_thread.join(timeout=2)
             if stop_region and not reached_checkpoint:
-                visual_warnings.append('native input checkpoint not reached')
+                raise RuntimeError('native input checkpoint not reached')
             # Real emulator timing; choose developed frames without filling the
             # gallery with the same boot/login screen.
             duration = args.multitask_wait if len(names) > 1 else float(config.get('fuse_wait', args.wait))
@@ -331,8 +375,17 @@ def _run_case_once(names, destination, args, config=None):
             if capture_delay > 0:
                 time.sleep(capture_delay)
             loops = max(1, int(duration / sample_step + 0.999))
+            selector = StableFrames(login, shell_baseline,
+                                    stable_samples=max(3, round(.5 / sample_step)))
             best = None
             best_score = -1
+            for replay_image in replay_frames:
+                if expected is not None:
+                    replay_score = match_program(replay_image)
+                else:
+                    content = replay_image.crop((32, 24, 288, 216)).convert('L')
+                    replay_score = sum(v > 48 for v in content.resize((80, 60)).get_flattened_data())
+                selector.observe(replay_image, replay_score)
             for _ in range(loops):
                 time.sleep(sample_step)
                 candidate = screenshot(display)
@@ -368,6 +421,7 @@ def _run_case_once(names, destination, args, config=None):
                     if loading > 5 or not 5 <= output_ink <= 500:
                         continue
                     score = output_ink
+                selector.observe(candidate, score)
                 if config.get('capture_last') or score > best_score:
                     best, best_score = candidate, score
                 if config.get('first_fractal'):
@@ -382,11 +436,18 @@ def _run_case_once(names, destination, args, config=None):
                 stop_early.set()
                 early_thread.join(timeout=2)
                 if early:
-                    early_score, early_best = max(early, key=lambda pair: pair[0])
-                    if expected is None or early_score > best_score:
-                        best, best_score = early_best, early_score
-            if best is None:
-                raise RuntimeError('screen unchanged from ZX-UX login')
+                    for early_score, early_image in early:
+                        if distinct_pixels(early_image, shell_baseline) >= 12:
+                            selector.observe(early_image, early_score)
+            # A stable developed frame beats a transient loading or exit view.
+            # Short text output is allowed only if it differs from the shell.
+            best = selector.result(require_stable=bool(config.get('require_stable')))
+            if (selector.best_stable is not None and not config.get('capture_last')
+                    and selector.live_score > 0
+                    and selector.stable_score < selector.live_score * .85):
+                # Later result rows may be brief, so keep the fuller output.
+                best = selector.best_live
+            best_score = selector.stable_score if best is selector.best_stable else selector.live_score
             if expected is not None and match_program(best) < 0.65:
                 raise RuntimeError('no Fuse frame matching native RVM program output: ' + names[0])
             if config.get('first_fractal') and not any(
@@ -407,6 +468,9 @@ def _run_case_once(names, destination, args, config=None):
             trace('ERROR ' + type(error).__name__ + ': ' + str(error))
             raise
         finally:
+            stop_replay.set()
+            if replay_thread and replay_thread.is_alive():
+                replay_thread.join(timeout=2)
             stop_early.set()
             if early_thread and early_thread.is_alive():
                 early_thread.join(timeout=2)

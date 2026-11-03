@@ -107,7 +107,7 @@ def capture_rvm(compiler, name, label, source, frames):
         options.headless = True
         runner = rvm.Runner(options)
         runner.start()
-        chosen, best, live_frames = None, -1, 0
+        chosen, best, live_frames = None, (-1, -1, -1), 0
         for frame in range(frames + 3000):
             runner.frame()
             if runner.fg and runner.fg.started is not None:
@@ -116,9 +116,18 @@ def capture_rvm(compiler, name, label, source, frames):
                 if picture is None and compiler == 'rfc':
                     picture = runner.picture()
                 if picture and len(picture[0]) == 6912 and live_frames >= (1 if compiler == 'rfc' else 3):
-                    score = sum(bool(b) for b in picture[0][:6144])
-                    if score > 0:
-                        chosen, best = (bytes(picture[0]), picture[1]), score
+                    import zxscreen
+                    image = bytes(picture[0])
+                    rows = zxscreen.screen_text(image)
+                    if 'ZX-UX login' in rows or 'login:' in rows.lower():
+                        continue
+                    visible = [line for line in rows.splitlines() if line.strip(' #')]
+                    ink = sum(bool(b) for b in image[:6144])
+                    # Prefer all result rows before program exit. A single
+                    # loading line must not outrank completed numeric output.
+                    score = (int('DONE ' in rows), len(visible), ink)
+                    if ink > 0 and score > best:
+                        chosen, best = (image, picture[1]), score
             if runner.check(limit=frames):
                 break
         if runner.fg is None or runner.fg.started is None or chosen is None:
@@ -126,39 +135,38 @@ def capture_rvm(compiler, name, label, source, frames):
         output = DIST / 'screenshots' / compiler / 'rvm' / (name + '.png')
         output.parent.mkdir(parents=True, exist_ok=True)
         rvm.write_png(chosen[0], str(output), chosen[1])
-        print(compiler, 'RVM', name, 'ink', best, flush=True)
+        print(compiler, 'RVM', name, 'result rows/ink', best, flush=True)
 
 
-def capture_fuse(compiler, name, label, source, args, number):
-    from fuse_portfolio import run_case
-
-    local = argparse.Namespace(**vars(args))
-    local.display = args.display + number + 1
-    dest = DIST / 'screenshots' / compiler / 'fuse' / (name + '.png')
+def fuse_config(compiler, name, label, source, wait):
+    """Apply project-owned run settings after compiler timing defaults."""
     config = {
         'programs': {label: source},
         'capture_delay': 0.0,
-        'fuse_wait': args.wait,
+        'fuse_wait': wait,
         'sample_step': .02,
     }
-    config.update(CAPTURE.get(compiler + ':' + name, {}))
     if compiler in ('rfc', 'rpc'):
-        # Stable timing from actual Pascal and Forth Fuse / RVM comparisons.
-        # Sample every ~two 50 Hz video frames, including brief output.
         config.update(type_key_pause=.12, capture_delay=0.0,
                       fuse_wait=12.0, sample_step=.04,
                       post_command_wait=0.0, enter_pause=.1,
                       early_capture=True)
+        config['reference'] = DIST / 'screenshots' / compiler / 'rvm' / (name + '.png')
     if compiler == 'rfortranc':
-        # Select actual FORTRAN output, not the loader or an empty exit screen.
         config.update(fuse_speed=200, capture_delay=0.0,
                       console_output=True, early_capture=False,
                       fuse_wait=9.0, sample_step=.15,
                       enter_pause=.12, post_command_wait=0.0)
-    if compiler in ('rfc', 'rpc'):
-        config['reference'] = DIST / 'screenshots' / compiler / 'rvm' / (name + '.png')
-        config.setdefault('early_capture', True)
-    run_case((label,), dest, local, config)
+    config.update(CAPTURE.get(compiler + ':' + name, {}))
+    return config
+
+
+def capture_fuse(compiler, name, label, source, args, number):
+    from fuse_portfolio import run_case
+    local = argparse.Namespace(**vars(args))
+    local.display = args.display + number + 1
+    dest = DIST / 'screenshots' / compiler / 'fuse' / (name + '.png')
+    run_case((label,), dest, local, fuse_config(compiler, name, label, source, args.wait))
 
 
 def main(argv=None):

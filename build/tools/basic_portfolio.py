@@ -17,6 +17,8 @@ sys.path[:0] = [str(DIST / 'sdk/bin/py'), str(ROOT / 'src/zx-ux-sdk/tools')]
 from basicpack import tape_name
 sys.path.insert(0, str(DIST / 'sdk/bin/py'))  # basicpack imports the source SDK
 import rvm
+import zxscreen
+from capture_quality import bitmap_ink
 from capture_replay import steps, rvm_actions
 
 
@@ -79,6 +81,8 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
         queued = 0
         post_key = None
         first_picture = None
+        recent_post = None
+        post_persist = 0
         selected = None
         best = -1
         # A documented original-BASIC replay is only a candidate for native RBC.
@@ -98,15 +102,23 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
                     pixels, border = picture
                     if first_picture is None:
                         first_picture = bytes(pixels)
-                    # A frame after the first recorded action takes priority
-                    # over an attractive but idle title screen.
-                    if recorded and queued and len(runner.session.kb.queue) < queued - 2:
-                        if bytes(pixels) != first_picture and sum(bool(v) for v in pixels[:6144]) >= 8:
-                            post_key = (bytes(pixels), border)
-                    # Select an actual process-owned display, not the loader or shell.
-                    score = sum(bool(v) for v in pixels[:6144])
-                    if score > best:
-                        selected, best = (bytes(pixels), border), score
+                    # A live process screen can still retain boot/login ink.
+                    # Never use it as proof of program output.
+                    text = zxscreen.screen_text(pixels).lower()
+                    if 'zx-ux login' not in text and 'login:' not in text:
+                        score = bitmap_ink(pixels)
+                        if score >= 64:
+                            if recorded and queued and len(runner.session.kb.queue) < queued - 2:
+                                current = bytes(pixels)
+                                if current != first_picture:
+                                    # A moving game need not have identical
+                                    # frames; two developed samples suffice.
+                                    post_persist += 1
+                                    if post_persist >= 2 and post_key is None:
+                                        post_key = (current, border)
+                                    recent_post = current
+                            if score > best:
+                                selected, best = (bytes(pixels), border), score
             reason = runner.check(limit=frames)
             if reason:
                 runner.why = reason
@@ -116,9 +128,7 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
         if post_key is not None:
             selected = post_key
         elif recorded:
-            print('RBC RVM WARNING:', ssx.stem,
-                  'no changed post-key screen was observed; using a live program screen',
-                  file=sys.stderr, flush=True)
+            raise RuntimeError('no persistent post-input program screen: ' + ssx.stem)
         image, border = selected
         if len(image) != 6912:
             raise RuntimeError('invalid Spectrum screen')
@@ -127,12 +137,6 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
         rvm.write_png(image, str(out), border)
         if recorded and runner.session.kb.queue:
             print('RBC RVM WARNING:', ssx.stem, 'recorded key sequence unfinished',
-                  file=sys.stderr, flush=True)
-        if best < 8:
-            print('RBC RVM WARNING:', ssx.stem,
-                  'Screenshot captured successfully, but automatic visual '
-                  'validation did not show expected results; '
-                  'manual verification required: low screen ink coverage',
                   file=sys.stderr, flush=True)
         print('RBC RVM', ssx.stem, runner.why, 'ink', best, flush=True)
 

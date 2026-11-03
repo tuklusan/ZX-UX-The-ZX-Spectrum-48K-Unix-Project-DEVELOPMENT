@@ -24,7 +24,8 @@ def capture(i, collection, ssx, label, opts):
     run_case((label,), out, local,
              {'programs': {label: ssx}, 'post_command_wait': 0.6,
               'input_steps': fuse_steps(recorded),
-              'fuse_wait': opts.wait, 'sample_step': .2})
+              'await_program_output': bool(recorded), 'start_timeout': 12.0,
+              'fuse_wait': opts.wait, 'sample_step': .10})
 
 
 def main(argv=None):

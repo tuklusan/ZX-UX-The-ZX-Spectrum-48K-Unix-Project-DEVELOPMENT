@@ -28,14 +28,21 @@ def source_lookup(category: str):
     folder, extension = SRC[category]
     source = ASSETS / folder
     found = {}
+    if category == 'rbc-bin':
+        # The selected compilation listing lives in rbc-src. The gallery
+        # links every unmodified original listing and cassette in basic-src.
+        for game in sorted((ASSETS / 'basic-src').glob('*/*')):
+            if not game.is_dir():
+                continue
+            originals = sorted(p for p in game.iterdir()
+                               if p.is_file() and p.suffix.lower() in ('.bas', '.tzx'))
+            if originals:
+                found[(game.parent.name, game.name)] = originals
+        return found
     for p in source.rglob('*' + extension):
-        if category == 'rbc-bin':
-            key = (p.relative_to(source).parts[0], p.parent.name)
-        else:
-            key = p.stem
-        if key in found:
-            raise RuntimeError(f'Duplicate source identifier: {category} {key}')
-        found[key] = p
+        if p.stem in found:
+            raise RuntimeError(f'Duplicate source identifier: {category} {p.stem}')
+        found[p.stem] = [p]
     return found
 
 
@@ -71,10 +78,10 @@ def finalize():
                 raise RuntimeError('Missing TZX companion: ' + str(ssx))
             if key in executable_sources:
                 raise RuntimeError('Duplicate executable: ' + str(key))
-            src = source_map.get(key)
-            if not src or not src.is_file():
+            originals = source_map.get(key)
+            if not originals or not all(src.is_file() for src in originals):
                 raise RuntimeError('Missing source for executable: ' + str(key))
-            executable_sources[key] = (ssx, cassette, src)
+            executable_sources[key] = (ssx, cassette, originals)
             bins.add(key)
             if category == 'c48-bin':
                 short = src.relative_to(ASSETS / 'c48-src').parent.as_posix() + '/' + ssx.stem + '.png'
@@ -87,7 +94,7 @@ def finalize():
                 if not pic.is_file():
                     raise RuntimeError(f'Missing {engine} screenshot for {category}: {short}')
                 expected[engine].add(pic)
-                images[engine][pic] = [(key, ssx, cassette, src)]
+                images[engine][pic] = [(key, ssx, cassette, originals)]
 
         if category == 'c48-bin':
             for name, members in DOUBLE.items():
@@ -95,8 +102,8 @@ def finalize():
                 for member in members:
                     if member not in executable_sources:
                         raise RuntimeError('Multitask source missing: ' + member)
-                    ssx, cassette, src = executable_sources[member]
-                    group.append((member, ssx, cassette, src))
+                    ssx, cassette, originals = executable_sources[member]
+                    group.append((member, ssx, cassette, originals))
                 for engine in expected:
                     pic = shots / engine / 'multitask' / (name + '.png')
                     if not pic.is_file():
@@ -119,11 +126,12 @@ def finalize():
             for pic in sorted(expected[engine]):
                 img_url = rel(pic, gallery)
                 links = []
-                for key, ssx, tzx, src in images[engine][pic]:
-                    # RVM screenshots link to the TZX; Fuse links to the SSX.
-                    other = tzx if engine == 'rvm' else ssx
-                    links.extend((f'<a href="{escape(rel(other, gallery), quote=True)}">{escape(other.suffix[1:].upper())}</a>',
-                                  f'<a href="{escape(rel(src, gallery), quote=True)}">source</a>'))
+                for key, ssx, tzx, originals in images[engine][pic]:
+                    # Both release forms and every original belong below the image.
+                    for other in (ssx, tzx):
+                        links.append(f'<a href="{escape(rel(other, gallery), quote=True)}">{escape(other.suffix[1:].upper())}</a>')
+                    for src in originals:
+                        links.append(f'<a href="{escape(rel(src, gallery), quote=True)}">{escape(src.name)}</a>')
                 parts.append(f'<figure><a href="{escape(img_url, quote=True)}">'
                              f'<img src="{escape(img_url, quote=True)}" alt="{escape(pic.stem, quote=True)}" loading="lazy"></a>'
                              f'<figcaption>{escape(pic.stem)} — {" · ".join(links)}</figcaption></figure>')
