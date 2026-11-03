@@ -10,7 +10,7 @@ python3 -B build/tools/check_portability.py
 python3 -B build/tools/smoke_test.py
 python3 -B build/tools/compile-rbc-collections.py
 bash build/tools/cleanroom-build-using-github-action-runner.sh
-python3 -B -m unittest discover -s tests
+/tmp/zxux-py/bin/python -B -m unittest discover -s tests
 
 if [[ "$mode" == --publish ]]; then
   git fetch origin main
