@@ -1,0 +1,29 @@
+name: ZX-UX verified clean-room publication
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-cleanroom-dist.yml
+
+concurrency:
+  group: zx-ux-verified-cleanroom-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+      - name: Publish verified clean-room output
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B build/tools/publish-cleanroom-dist.py --publish
