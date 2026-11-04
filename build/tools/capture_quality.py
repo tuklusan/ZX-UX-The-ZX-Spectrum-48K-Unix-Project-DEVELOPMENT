@@ -46,6 +46,12 @@ class StableFrames:
             self.previous = None
             self.persisted = 0
             return False
+        # Solid paper can score highly even when there is no game picture.
+        native = frame.convert('RGB').crop((32, 24, 288, 216))
+        if native.resize((128, 96)).getcolors(maxcolors=1) is not None:
+            self.previous = None
+            self.persisted = 0
+            return False
         if score <= 0:
             self.previous = None
             self.persisted = 0

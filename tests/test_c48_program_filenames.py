@@ -40,10 +40,10 @@ class C48SourceNames(unittest.TestCase):
         self.assertEqual(runs['maze1982']['src'], 'maze1982')
         self.assertEqual(runs['maze1996']['src'], 'maze1996')
         for emulator in ('rvm', 'fuse'):
-            gallery = (ROOT / 'dist/screenshots' / emulator / 'index.html').read_text()
-            self.assertIn('../../assets/c48-src/examples/maze1982.c', gallery)
-            self.assertIn('../../assets/c48-src/games/maze1996.c', gallery)
-            self.assertIn('../../assets/c48-src/games/maze.c', gallery)
+            gallery = (ROOT / 'dist/screenshots/c48-bin' / emulator / 'index.html').read_text()
+            self.assertIn('../../../assets/c48-src/examples/maze1982.c', gallery)
+            self.assertIn('../../../assets/c48-src/games/maze1996.c', gallery)
+            self.assertIn('../../../assets/c48-src/games/maze.c', gallery)
 
     def test_builder_rejects_duplicate_names(self):
         with tempfile.TemporaryDirectory() as root:

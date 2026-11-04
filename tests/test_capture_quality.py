@@ -48,6 +48,14 @@ class NativeFrameTests(unittest.TestCase):
         self.assertEqual(selector.result(require_stable=True).tobytes(), complete.tobytes())
         self.assertGreater(selector.live_score, selector.stable_score)
 
+    def test_uniform_native_paper_is_not_program_output(self):
+        boot = self.picture((60, 80, 120, 125))
+        selector = capture_quality.StableFrames(boot)
+        paper = Image.new('RGB', (320, 240), (0, 194, 197))
+        self.assertFalse(selector.observe(paper, 10000))
+        with self.assertRaisesRegex(RuntimeError, 'no distinct'):
+            selector.result()
+
     def test_missing_static_completion_fails(self):
         selector = capture_quality.StableFrames(self.picture(), stable_samples=3)
         selector.observe(self.picture((60, 80, 90, 120)), 50)

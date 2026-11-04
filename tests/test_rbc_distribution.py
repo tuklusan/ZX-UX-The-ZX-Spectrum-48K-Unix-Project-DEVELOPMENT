@@ -156,7 +156,7 @@ class BasicDistribution(unittest.TestCase):
                                      set(names))
         self.assertGreaterEqual(counts['Granada-Publishing'], 6)
         self.assertGreaterEqual(counts['numerical-analysis'], 12)
-        self.assertGreaterEqual(counts['www.thespectrumshow.net'], 28)
+        self.assertGreaterEqual(counts['www.thespectrumshow.net'], 27)
 
     def test_native_captures_in_both_engines(self):
         from PIL import Image

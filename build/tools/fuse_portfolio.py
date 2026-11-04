@@ -514,6 +514,7 @@ def run_case(names, destination, args, config=None):
         'Fuse stopped before ZX-UX login',
         'fresh ZX-UX TZX did not reach login',
         'ZX-UX shell was not reached after login',
+        'no distinct native program screen observed',
     )
     for attempt in range(2):
         try:

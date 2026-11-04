@@ -193,6 +193,12 @@ actual = {p.as_posix() for p in Path('dist').rglob('*') if p.is_file()} if Path(
 missing = sorted(set(baseline)-actual)
 withheld_path = root / 'capture-omissions.txt'
 withheld = set(withheld_path.read_text().splitlines()) if withheld_path.is_file() else set()
+# Final gallery pages replace these old standalone indexes.
+obsolete = {'dist/screenshots/rvm/index.html', 'dist/screenshots/fuse/index.html'}
+categories = ('c48-bin', 'rbc-bin', 'forth-bin', 'pascal-bin', 'fortran-bin')
+if all((Path('dist/screenshots') / category / engine / 'index.html').is_file()
+       for category in categories for engine in ('rvm', 'fuse')):
+    withheld.update(obsolete & set(baseline))
 unexpected_missing = sorted(set(missing) - withheld)
 unexpected_withheld = sorted(withheld - set(missing))
 added = sorted(actual-set(baseline))
