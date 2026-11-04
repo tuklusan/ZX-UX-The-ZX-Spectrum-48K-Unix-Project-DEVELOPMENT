@@ -39,3 +39,14 @@ jobs:
           name: zx-ux-cleanroom-audit
           path: cleanroom-logs/
           retention-days: 1
+      - name: Upload verified rebuilt distribution
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zx-ux-cleanroom-dist
+          path: |
+            dist/
+            src/assets/basic-src/original-sinclair-basic-collections/Granada-Publishing/*/bin/
+            src/assets/basic-src/original-sinclair-basic-collections/www.thespectrumshow.net/*/bin/
+          if-no-files-found: error
+          retention-days: 1

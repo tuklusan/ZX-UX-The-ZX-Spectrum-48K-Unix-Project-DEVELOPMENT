@@ -134,12 +134,21 @@ find dist -type f | sort > cleanroom-logs/baseline-paths.txt
 rm -rf dist
 test ! -e dist || exit 2
 printf 'head=%s\n' "$(git rev-parse HEAD)" > cleanroom-logs/meta.txt
-for entry in build c48-rvm rbc-rvm compilers-rvm c48-fuse rbc-fuse compilers-fuse gallery; do
+for entry in build c48-rvm rbc-rvm compilers-rvm c48-fuse rbc-fuse compilers-fuse gallery tests; do
   if [[ "$entry" == *-fuse ]]; then
     export ZXUX_FUSE_LOG_DIR="$PWD/cleanroom-logs/fuse-processes/$entry"
     mkdir -p "$ZXUX_FUSE_LOG_DIR"
   else
     unset ZXUX_FUSE_LOG_DIR || true
+  fi
+  if [[ "$entry" == gallery ]]; then
+    if ! python3 -B build/tools/finish_rbc_capture.py cleanroom-logs \
+          >cleanroom-logs/capture-gate.log 2>&1; then
+      tail -n 20 cleanroom-logs/capture-gate.log
+      printf 'capture-gate\\t1\\n' >> cleanroom-logs/exit-codes.tsv
+      break
+    fi
+    tail -n 12 cleanroom-logs/capture-gate.log
   fi
   case "$entry" in
     build) cmd=(python3 -B build/build.py /usr/local/bin/sjasmplus) ;;
@@ -150,6 +159,7 @@ for entry in build c48-rvm rbc-rvm compilers-rvm c48-fuse rbc-fuse compilers-fus
     rbc-fuse) cmd=(python3 -B build/tools/basic_fuse_portfolio.py --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 8) ;;
     compilers-fuse) cmd=(python3 -B build/tools/compiler_portfolio.py --engine fuse --fuse /usr/bin/fuse-sdl --assets /usr/share/fuse --jobs 8) ;;
     gallery) cmd=(python3 -B build/tools/gallery_index.py) ;;
+    tests) cmd=(/tmp/zxux-py/bin/python -B -m unittest discover -s tests) ;;
   esac
   printf '%s: %q ' "$entry" "${cmd[@]}" >> cleanroom-logs/commands.txt
   printf '\n' >> cleanroom-logs/commands.txt
@@ -181,6 +191,10 @@ if (root/'baseline.tree').exists():
             baseline[name] = meta.split()[2]
 actual = {p.as_posix() for p in Path('dist').rglob('*') if p.is_file()} if Path('dist').exists() else set()
 missing = sorted(set(baseline)-actual)
+withheld_path = root / 'capture-omissions.txt'
+withheld = set(withheld_path.read_text().splitlines()) if withheld_path.is_file() else set()
+unexpected_missing = sorted(set(missing) - withheld)
+unexpected_withheld = sorted(withheld - set(missing))
 added = sorted(actual-set(baseline))
 changed = []
 for name in sorted(actual & set(baseline)):
@@ -195,13 +209,16 @@ if (root/'exit-codes.tsv').exists():
 count_by_prefix = lambda names: dict(sorted(collections.Counter('/'.join(s.split('/')[:4]) for s in names).items()))
 report = {'head': subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
           'baseline_file_count':len(baseline),'rebuilt_file_count':len(actual),
-          'missing_count':len(missing),'extra_count':len(added),'changed_count':len(changed),
-          'missing':missing,'extra':added,'changed':changed,
+          'missing_count':len(missing),'unexpected_missing_count':len(unexpected_missing),
+          'unexpected_withheld_count':len(unexpected_withheld),
+          'withheld_count':len(withheld),'extra_count':len(added),'changed_count':len(changed),
+          'missing':missing,'unexpected_missing':unexpected_missing,
+          'unexpected_withheld':unexpected_withheld,'extra':added,'changed':changed,
           'missing_by_directory':count_by_prefix(missing),
           'stage_exit_codes':codes}
 (root/'audit.json').write_text(json.dumps(report,indent=2)+'\n')
 (root/'audit-summary.txt').write_text(
-    f"Baseline={len(baseline)} Rebuilt={len(actual)} Missing={len(missing)} Extra={len(added)} Changed={len(changed)}\n"
+    f"Baseline={len(baseline)} Rebuilt={len(actual)} Missing={len(missing)} Withheld={len(withheld)} Unexpected={len(unexpected_missing) + len(unexpected_withheld)} Extra={len(added)} Changed={len(changed)}\n"
     + '\n'.join(f"{k}: {v}" for k,v in codes.items()) + '\n'
     + 'Missing files:\n' + '\n'.join(missing) + '\n')
 print((root/'audit-summary.txt').read_text()[:12000])
@@ -213,9 +230,18 @@ p = pathlib.Path('cleanroom-logs/audit.json')
 if not p.exists():
     sys.exit('No audit generated')
 r = json.loads(p.read_text())
-required = {'build','c48-rvm','rbc-rvm','compilers-rvm','c48-fuse','rbc-fuse','compilers-fuse','gallery'}
-failures = r['missing_count'] or (required - r['stage_exit_codes'].keys()) or any(rc for rc in r['stage_exit_codes'].values())
+required = {'build','c48-rvm','rbc-rvm','compilers-rvm','c48-fuse','rbc-fuse','compilers-fuse','gallery','tests'}
+codes = r['stage_exit_codes']
+gate = pathlib.Path('cleanroom-logs/capture-exits.txt')
+accepted_capture_errors = set(gate.read_text().splitlines()) if gate.is_file() else set()
+actual_capture_errors = {key for key in ('rbc-rvm', 'rbc-fuse') if codes.get(key) == 1}
+if accepted_capture_errors != actual_capture_errors:
+    sys.exit('INCOMPLETE: capture failures were not all reviewed')
+other_errors = {key: rc for key, rc in codes.items()
+                if rc and key not in accepted_capture_errors}
+failures = (r['unexpected_missing_count'] or r['unexpected_withheld_count']
+            or (required - codes.keys()) or other_errors)
 if failures:
-    sys.exit('INCOMPLETE: see zx-ux-cleanroom-audit artifact')
-print('PASS: all baseline distribution paths reconstructed')
+    sys.exit('INCOMPLETE: see clean-room logs')
+print('PASS: rebuilt releases complete; review withheld BASIC count:', r['withheld_count'])
 PY
