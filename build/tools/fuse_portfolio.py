@@ -36,6 +36,16 @@ OUT = DIST / 'screenshots/c48/fuse'
 # their greyed exit screens or with the wrong timing. The rest of the
 # release gallery stays on the established behaviour.
 FUSE_CAPTURE = {
+    '3dpaint': {'gameplay_start_wait': 6.0, 'capture_delay': 3.0,
+                'fuse_wait': 20.0, 'sample_step': .25, 'prefer_color': True},
+    'julia': {'fuse_wait': 420, 'fuse_speed': 300, 'sample_step': .25,
+              'prefer_color': True},
+    'mobius': {'fuse_wait': 75.0, 'fuse_speed': 300,
+               'sample_step': .25, 'prefer_color': True},
+    'torus': {'fuse_wait': 90.0, 'fuse_speed': 300,
+              'sample_step': .25, 'prefer_color': True},
+    'kaleido': {'fuse_wait': 45.0, 'fuse_speed': 300,
+                'sample_step': .25, 'prefer_color': True},
     'dizzy4k': {'args': ['24'], 'post_command_wait': .2, 'capture_delay': 4.5,
                 'fuse_wait': .7, 'sample_step': .10, 'prefer_color': True,
                 'fuse_speed': 300},
@@ -298,7 +308,7 @@ def _run_case_once(names, destination, args, config=None):
             if len(names) == 1 and names[0] == 'invaders':
                 kb.key('m', pause=.5)  # leave the intro for real gameplay
             if len(names) == 1 and names[0] == '3dpaint':
-                time.sleep(2)
+                time.sleep(float(config.get('gameplay_start_wait', 2)))
                 kb.type('q')
             # Reusable replay controls. Two values type text; three values
             # hold one actual Spectrum key across multiple emulator scans.
@@ -398,6 +408,7 @@ def _run_case_once(names, destination, args, config=None):
                                     stable_samples=max(3, round(.5 / sample_step)))
             best = None
             best_score = -1
+            first_fractal_frame = None
             for replay_image in replay_frames:
                 if expected is not None:
                     replay_score = match_program(replay_image)
@@ -448,7 +459,7 @@ def _run_case_once(names, destination, args, config=None):
                     # becomes active when the first 48-row scan is complete.
                     top = candidate.crop((32, 32, 288, 36)).convert('RGB')
                     if sum(max(v)>65 for v in top.get_flattened_data()) >= 12:
-                        best = candidate
+                        first_fractal_frame = candidate
                         print('Fuse', names[0], 'first fractal completed', flush=True)
                         break
             if early_thread:
@@ -467,6 +478,8 @@ def _run_case_once(names, destination, args, config=None):
                 # Later result rows may be brief, so keep the fuller output.
                 best = selector.best_live
             best_score = selector.stable_score if best is selector.best_stable else selector.live_score
+            if first_fractal_frame is not None:
+                best = first_fractal_frame
             if expected is not None and match_program(best) < 0.65:
                 raise RuntimeError('no Fuse frame matching native RVM program output: ' + names[0])
             if config.get('first_fractal') and not any(

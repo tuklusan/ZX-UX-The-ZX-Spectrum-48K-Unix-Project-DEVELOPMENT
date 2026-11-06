@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/cleanroom-rebuild.yml
       - build/tools/cleanroom-build-using-github-action-runner.sh
+      - build/tools/fuse_portfolio.py
 
 permissions:
   contents: read
