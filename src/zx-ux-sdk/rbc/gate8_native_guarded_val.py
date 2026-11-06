@@ -14,7 +14,7 @@ class GuardedValSourceError(ValueError):
     """The reviewed VAL source differs from the original runtime."""
 
 
-def guarded_val_assembly() -> str:
+def guarded_val_assembly(calculator_token=0x1D) -> str:
     """Source-owned VAL scan and process-private error exit."""
     lines = [
         'section text', 'global start', 'start:',
@@ -30,6 +30,7 @@ def guarded_val_assembly() -> str:
         'rbc_val_not_quote:',
         'ld a,d', 'or a', 'jr nz,rbc_val_next',
         'ld a,(hl)', 'cp $ea', 'jr z,rbc_val_allowed',
+        'cp $be', 'jr z,rbc_val_blocked',
         'cp $c0', 'jr z,rbc_val_blocked',
         'cp $b0', 'jr z,rbc_val_blocked',
         'cp $ae', 'jr z,rbc_val_blocked',
@@ -47,7 +48,7 @@ def guarded_val_assembly() -> str:
         'rbc_val_next:', 'inc hl', 'dec bc', 'jr rbc_val_scan',
         'rbc_val_allowed:',
         'pop hl', 'pop de', 'pop bc', 'pop af',
-        'ld b,$1d', 'jp $35de',
+        f'ld b,${calculator_token:02x}', 'jp $35de',
         'rbc_val_blocked:',
         'pop hl', 'pop de', 'pop bc', 'pop af',
     ]

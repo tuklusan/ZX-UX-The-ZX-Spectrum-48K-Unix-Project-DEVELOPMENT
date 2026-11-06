@@ -1392,23 +1392,38 @@ class Compiler:
         fe = self.fn_entry()
         hl = fe['addr']
         ptypes = fe['ptypes']
+        signature = fe['param_types']
+        defined = fe['defined']
+        actual = 0
         c = self.next_char()
         while c != ord(')'):
             self.expr()
-            ptypes = ((ptypes << 2) | (ptypes >> 6)) & 0xFF
-            pt = ptypes & 3
+            if defined:
+                if actual >= len(signature):
+                    self.not_supported('FN parameter count does not match DEF FN')
+                expected = signature[actual]
+                if (self.t == STRING) != (expected == STRING):
+                    self.not_supported('FN parameter type does not match DEF FN')
+                pt = REAL if expected == STRING else expected
+            else:
+                # The original size pass permits forward function references.
+                ptypes = ((ptypes << 2) | (ptypes >> 6)) & 0xFF
+                pt = ptypes & 3
             self.convert_type(pt)
-            if pt == 0:
+            if pt == REAL:
                 self.ld_de(hl)
                 self.call_rt(RT.REAL_STORE)
                 hl += 5
             else:
                 self.st_hl(hl)
                 hl += 2
+            actual += 1
             c = self.get_char()
             if c != ord(','):
                 break
             c = self.next_char()
+        if c != ord(')') or (defined and actual != len(signature)):
+            self.not_supported('FN parameter count does not match DEF FN')
         self.next_char()
         self.emit_op_reloc('call nn', hl)
         self.t = fe['type']
@@ -1423,6 +1438,8 @@ class Compiler:
         self.emit('jp 0')
         fe = self.fn_entry()
         fe['addr'] = self.pc
+        fe['ptypes'] = 0
+        fe['param_types'] = []
         count = 0
         c = self.next_char()
         while c != ord(')'):
@@ -1437,6 +1454,8 @@ class Compiler:
             else:
                 p['num'] = self.pc
                 a = p['type']
+            # Preserve all argument types; HiSoft's byte held only four.
+            fe['param_types'].append(a)
             # two bits of the parameter's type into the FN's type byte (DBE5)
             b0, b1 = a & 1, (a >> 1) & 1
             fe['ptypes'] = ((((fe['ptypes'] << 1) | b0) << 1) | b1) & 0xFF
@@ -1453,6 +1472,7 @@ class Compiler:
         if count < 4:                                 # DC4F
             fe['ptypes'] = (fe['ptypes'] << (8 - 2 * count)) & 0xFF
         self.next_char()
+        fe['defined'] = True
         self.target = fe['type']
         self.expr_to_target()
         self.emit('ret')
@@ -2494,8 +2514,8 @@ class Compiler:
         self.line_from = 0xFFFF            # 4515
         self.code_base = 0                 # 4517
         self.fors = [dict(type=0xFF, flags=0, lim=0, body=0) for _ in range(26)]
-        self.strfns = [dict(type=STRING, ptypes=0, addr=0) for _ in range(26)]
-        self.numfns = [dict(type=REAL, ptypes=0, addr=0) for _ in range(26)]
+        self.strfns = [dict(type=STRING, ptypes=0, param_types=[], defined=False, addr=0) for _ in range(26)]
+        self.numfns = [dict(type=REAL, ptypes=0, param_types=[], defined=False, addr=0) for _ in range(26)]
         self.fnparams = [dict(type=0, num=0xFFFF, str=0xFFFF) for _ in range(26)]
         self.strvars = [dict(flags=0, addr=0, last=0, first=0) for _ in range(26)]
         self.arrays = [dict(type=0, addr=0, last=0, first=0) for _ in range(26)]
