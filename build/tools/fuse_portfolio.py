@@ -54,8 +54,11 @@ FUSE_CAPTURE = {
                    'prefer_color': True},
     'julia': {'fuse_wait': 420, 'fuse_speed': 300, 'sample_step': .25,
               'prefer_color': True},
-    'mobius': {'fuse_wait': 75.0, 'fuse_speed': 300,
-               'sample_step': .25, 'prefer_color': True},
+    'mobius': {'fuse_wait': 30.0, 'fuse_speed': 100,
+               'post_command_wait': 0.0, 'enter_pause': .08,
+               'capture_delay': 0.0, 'sample_step': .06, 'prefer_color': True},
+    'morph3d': {'args': [], 'fuse_wait': 90.0, 'fuse_speed': 300,
+                'sample_step': .15, 'prefer_color': True},
     'torus': {'fuse_wait': 90.0, 'fuse_speed': 300,
               'sample_step': .25, 'prefer_color': True},
     'kaleido': {'fuse_wait': 45.0, 'fuse_speed': 300,
@@ -64,7 +67,8 @@ FUSE_CAPTURE = {
                 'fuse_wait': 12.0, 'sample_step': .10, 'prefer_color': True,
                 'fuse_speed': 300},
     'firework': {'args': [], 'post_command_wait': .2, 'capture_delay': .2,
-                 'fuse_wait': 6.0, 'sample_step': .10, 'prefer_color': True},
+                 'fuse_wait': 35.0, 'fuse_speed': 300,
+                 'sample_step': .15, 'prefer_color': True},
     'plasma': {'args': [], 'post_command_wait': .2, 'capture_delay': .2,
                'fuse_wait': 4.0, 'sample_step': .10, 'prefer_color': True},
     'sprites': {'args': [], 'post_command_wait': .2, 'capture_delay': .2,
@@ -80,6 +84,37 @@ FUSE_CAPTURE = {
                'fuse_wait': 4.0, 'sample_step': .05, 'prefer_color': True,
                'fuse_speed': 100, 'enter_pause': .20},
 }
+
+
+def console_output_match(reference, frame):
+    """Compare native printed rows despite whole-row console displacement.
+
+    Ignore the boot banner, tape-loading rows and shell taskbar.  Only
+    independently captured RVM output rows can earn a match.  Search real
+    Fuse pixels at whole Spectrum character-row offsets, without editing them.
+    """
+    if reference.size != (256, 192) or frame.size != (320, 240):
+        raise ValueError('incorrect native console screenshot dimensions')
+    # The console command and cassette status finish above row 96.  Native
+    # program output below that point must match, not just the loader text.
+    top, bottom = 96, 168
+    threshold = [0] * 81 + [255] * 175
+    expected = reference.convert('L').crop((0, top, 256, bottom)).point(threshold)
+    expected_count = expected.histogram()[255]
+    if expected_count < 8:
+        return 0.0
+    pixels = frame.convert('L')
+    best = 0.0
+    for offset in range(-24, 25, 8):
+        # Compare only whole 8-pixel ZX-UX console rows, never slide letters.
+        actual = pixels.crop((32, 24 + top + offset,
+                              288, 24 + bottom + offset)).point(threshold)
+        present = actual.histogram()[255]
+        if present < 8:
+            continue
+        hits = ImageChops.multiply(expected, actual).histogram()[255]
+        best = max(best, 2.0 * hits / (expected_count + present))
+    return best
 
 
 class Keyboard:
@@ -228,6 +263,8 @@ def _run_case_once(names, destination, args, config=None):
         def match_program(image):
             if expected is None:
                 return 0.0
+            if config.get('console_reference'):
+                return console_output_match(expected, image)
             inside = image.convert('L').crop((32 + left, 24 + top, 32 + right, 24 + bottom))
             current = [value > 80 for value in inside.get_flattened_data()]
             hits = sum(a and b for a, b in zip(expected_ink, current))
@@ -474,6 +511,10 @@ def _run_case_once(names, destination, args, config=None):
                         continue
                     score = output_ink
                 selector.observe(candidate, score)
+                # Independently matching stable output needs no extra wait.
+                if (expected is not None and config.get('stop_on_reference_match')
+                        and selector.stable_score >= .95):
+                    break
                 if config.get('capture_last') or score > best_score:
                     best, best_score = candidate, score
                 if config.get('first_fractal'):

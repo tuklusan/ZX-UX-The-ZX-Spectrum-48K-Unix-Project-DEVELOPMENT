@@ -29,7 +29,10 @@ PAIRS = (('hanoi', 'queens8'), ('mobius', 'torus'))
 # Captures run graphics to completion rather than using the test suite's
 # short two-frame animation argument. Other programs retain test inputs.
 CAPTURE = {
-    'galaxy': {'args': [], 'frames': 3200, 'fuse_wait': 45, 'fuse_speed': 300},
+    'galaxy': {'args': [], 'frames': 10000, 'fuse_wait': 45, 'fuse_speed': 300,
+               'prefer_developed_frame': True, 'min_live_frames': 6000},
+    'firework': {'args': [], 'frames': 11000, 'prefer_developed_frame': True,
+                 'min_live_frames': 2000},
     # Render exactly one full scene and capture its real exit screen.
     # A running multi-scene demo can be caught halfway through clearing/redrawing.
     'goblet': {'args': ['1'], 'frames': 4400, 'require_exit': True},
@@ -120,8 +123,13 @@ def run_one(name, category, config, max_frames):
     stable_ink = 0
     previous_screen = None
     still_samples = 0
+    live_frames = 0
+    developed_capture = None
+    developed_ink = 0
     for frame_index in range(budget + 3000):
         runner.frame()
+        if runner.fg and runner.fg.started is not None and runner.fg.ended is None:
+            live_frames += 1
         if (runner.fg and runner.fg.started is not None
                 and runner.fg.ended is None and frame_index % 10 == 0):
             picture, border = runner.picture()
@@ -131,6 +139,11 @@ def run_one(name, category, config, max_frames):
                 else:
                     still_samples = 1
                 previous_screen = picture
+                # Moving scenes can be complete without holding an unchanged frame.
+                if config.get('prefer_developed_frame') and live_frames >= config.get('min_live_frames', 0):
+                    developed = bitmap_ink(picture)
+                    if developed > developed_ink:
+                        developed_capture, developed_ink = (picture, border), developed
                 if still_samples >= 3:
                     ink = bitmap_ink(picture)
                     if ink >= 64 and ink > stable_ink:
@@ -188,10 +201,14 @@ def run_one(name, category, config, max_frames):
     if live_capture is not None and (
             name == '3dpaint' or (name == 'invaders' and live_score > 0)):
         img, border = live_capture
+    elif config.get('prefer_developed_frame') and developed_capture is not None:
+        img, border = developed_capture
     elif config.get('require_exit') and stable_capture is not None:
         img, border = stable_capture
     else:
         img, border = runner.picture()
+    if config.get('prefer_developed_frame') and developed_capture is None:
+        raise RuntimeError(name + ': no developed native frame observed')
     if config.get('require_exit') and stable_capture is None:
         visual_warnings.append('no persistent completed drawing observed')
     if len(img) != 6912:

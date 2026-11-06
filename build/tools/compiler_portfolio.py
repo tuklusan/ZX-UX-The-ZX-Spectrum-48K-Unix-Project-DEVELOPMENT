@@ -154,6 +154,12 @@ def fuse_config(compiler, name, label, source, wait):
                       post_command_wait=0.0, enter_pause=.1,
                       early_capture=True)
         config['reference'] = DIST / 'screenshots' / compiler / 'rvm' / (name + '.png')
+    if compiler == 'rfc':
+        # Compare live console rows against the separately captured RVM output.
+        # Allow full tape loading and short-lived output on a slow emulator.
+        config.update(type_key_pause=.25, enter_pause=.25,
+                      fuse_wait=90.0, sample_step=.10,
+                      console_reference=True, stop_on_reference_match=True)
     if compiler == 'rfortranc':
         config.update(fuse_speed=200, capture_delay=0.0,
                       console_output=True, early_capture=False,
