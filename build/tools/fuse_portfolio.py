@@ -36,8 +36,22 @@ OUT = DIST / 'screenshots/c48/fuse'
 # their greyed exit screens or with the wrong timing. The rest of the
 # release gallery stays on the established behaviour.
 FUSE_CAPTURE = {
-    '3dpaint': {'gameplay_start_wait': 6.0, 'capture_delay': 3.0,
-                'fuse_wait': 20.0, 'sample_step': .25, 'prefer_color': True},
+    '3dpaint': {'gameplay_start_wait': 8.0, 'post_command_wait': .2,
+                'capture_delay': 0.0, 'fuse_wait': 12.0,
+                'sample_step': .10, 'prefer_color': True,
+                'reject_bright_paper': True},
+    'invaders': {'post_command_wait': 8.0, 'fuse_wait': 20.0,
+                 'capture_delay': 0.0, 'sample_step': .10,
+                 'prefer_color': True},
+    'goblet': {'post_command_wait': .2, 'fuse_speed': 300,
+               'capture_delay': 0.0, 'fuse_wait': 25.0,
+               'sample_step': .15, 'prefer_color': True},
+    'orrery': {'post_command_wait': .2, 'capture_delay': 0.0,
+               'fuse_wait': 24.0, 'sample_step': .15,
+               'prefer_color': True},
+    'spriteanim': {'post_command_wait': .2, 'capture_delay': 0.0,
+                   'fuse_wait': 15.0, 'sample_step': .10,
+                   'prefer_color': True},
     'julia': {'fuse_wait': 420, 'fuse_speed': 300, 'sample_step': .25,
               'prefer_color': True},
     'mobius': {'fuse_wait': 75.0, 'fuse_speed': 300,
@@ -46,8 +60,8 @@ FUSE_CAPTURE = {
               'sample_step': .25, 'prefer_color': True},
     'kaleido': {'fuse_wait': 45.0, 'fuse_speed': 300,
                 'sample_step': .25, 'prefer_color': True},
-    'dizzy4k': {'args': ['24'], 'post_command_wait': .2, 'capture_delay': 4.5,
-                'fuse_wait': .7, 'sample_step': .10, 'prefer_color': True,
+    'dizzy4k': {'args': ['24'], 'post_command_wait': .2, 'capture_delay': 0.0,
+                'fuse_wait': 12.0, 'sample_step': .10, 'prefer_color': True,
                 'fuse_speed': 300},
     'firework': {'args': [], 'post_command_wait': .2, 'capture_delay': .2,
                  'fuse_wait': 6.0, 'sample_step': .10, 'prefer_color': True},
@@ -419,6 +433,14 @@ def _run_case_once(names, destination, args, config=None):
             for _ in range(loops):
                 time.sleep(sample_step)
                 candidate = screenshot(display)
+                if config.get('reject_bright_paper'):
+                    # Reject saturated full-screen death or transition paper,
+                    # while retaining dark backgrounds and actual drawings.
+                    small = candidate.crop((32, 24, 288, 216)).convert('RGB').resize((32, 24))
+                    colors = small.getcolors(maxcolors=768) or ()
+                    if any(count > 576 and max(rgb) - min(rgb) > 70 and max(rgb) > 145
+                           for count, rgb in colors):
+                        continue
                 changed = ImageChops.difference(candidate.convert('RGB'), login.convert('RGB'))
                 bbox = changed.getbbox()
                 if not bbox:

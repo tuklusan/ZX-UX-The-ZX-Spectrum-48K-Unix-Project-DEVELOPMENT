@@ -37,7 +37,7 @@ CAPTURE = {
     'mandel': {'args': [], 'frames': 30000, 'fuse_wait': 270, 'fuse_speed': 300, 'first_fractal': True},
     'mobius': {'args': ['1'], 'frames': 4400, 'require_exit': True},
     'torus': {'args': [], 'frames': 5500, 'fuse_wait': 55, 'fuse_speed': 300},
-    'kaleido': {'args': [], 'frames': 3600, 'fuse_wait': 20},
+    'kaleido': {'args': [], 'frames': 12000, 'fuse_wait': 20},
     'ball': {'args': [], 'frames': 1100, 'fuse_wait': 12},
     # Capture live gameplay while shields are still visible; waiting until the
     # game has nearly finished can legitimately produce a monochrome screen.
