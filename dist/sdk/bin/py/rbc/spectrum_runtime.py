@@ -8,7 +8,7 @@ from __future__ import annotations
 from native_error_exit import error_exit_bytes
 
 
-def guarded_val_bytes():
+def guarded_val_bytes(calculator_token=0x1D):
     """Inspect the evaluated string bytes before calling the 48K ROM VAL.
 
     The floating-point calculator stack's last value is the 5-byte string
@@ -46,6 +46,8 @@ def guarded_val_bytes():
     jr(0x20, 'next')                # a quoted occurrence is text
     emit(0x7E, 0xFE, 0xEA)          # REM token: nonexecuted suffix
     jr(0x28, 'allowed')
+    emit(0xFE, 0xBE)                # dynamic PEEK would bypass address checks
+    jr(0x28, 'blocked')
     emit(0xFE, 0xC0)                # executable USR keyword token
     jr(0x28, 'blocked')
     emit(0xFE, 0xB0)                # nested VAL may evaluate an inner USR
@@ -75,7 +77,7 @@ def guarded_val_bytes():
     jr(0x18, 'scan')
     mark('allowed')
     emit(0xE1, 0xD1, 0xC1, 0xF1)    # restore all registers
-    emit(0x06, 0x1D, 0xC3, 0xDE, 0x35)  # invoke ROM VAL X$
+    emit(0x06, calculator_token, 0xC3, 0xDE, 0x35)  # invoke ROM VAL or VAL$
     mark('blocked')
     emit(0xE1, 0xD1, 0xC1, 0xF1)
     # The wrapper restores CHARS, UDG and shell controls on every exit.
@@ -99,18 +101,20 @@ def resolve_literal_line(lines, requested):
 def install(compiler):
     """Modify only HiSoft's native emission paths; no source-level rewrites."""
     from rtnames import RT
-    val_bytes = guarded_val_bytes()
+    val_bytes = guarded_val_bytes(0x1D)
+    vals_bytes = guarded_val_bytes(0x18)
     machine = compiler.rtlib.Machine
     if not getattr(machine, '_zxux_guarded_val', False):
         class GuardedMachine(machine):
             _zxux_guarded_val = True
 
             def run_emitter(self, n, pc, counting, code_base):
-                if n != RT.VAL:
+                if n not in (RT.VAL, RT.VAL_STR):
                     return super().run_emitter(n, pc, counting, code_base)
+                payload = val_bytes if n == RT.VAL else vals_bytes
                 if not counting and not self.de_flags & 1:
-                    self.far[pc:pc + len(val_bytes)] = val_bytes
-                return pc + len(val_bytes)
+                    self.far[pc:pc + len(payload)] = payload
+                return pc + len(payload)
 
         compiler.rtlib.Machine = GuardedMachine
 
@@ -119,6 +123,7 @@ def install(compiler):
         return
     reset = cls.reset
     val = cls.fn_val
+    function = cls.function
     for_begin = cls.st_for
     for_end = cls.st_next
     run_pass = cls.run_pass
@@ -142,6 +147,16 @@ def install(compiler):
             self.not_supported('VAL operand must be a string expression')
         self.call_rt(RT.VAL)
         self.t = compiler.REAL
+
+    def spectrum_function(self, token):
+        if token == compiler.T_VALS:
+            self.operand()
+            if self.t != compiler.STRING:
+                self.not_supported('VAL$ operand must be a string expression')
+            self.call_rt(RT.VAL_STR)
+            self._string_type()
+            return
+        return function(self, token)
 
     def spectrum_for(self):
         key = compiler.letter(self.get_char())
@@ -176,6 +191,7 @@ def install(compiler):
 
     cls.reset = spectrum_reset
     cls.fn_val = spectrum_val
+    cls.function = spectrum_function
     cls.st_for = spectrum_for
     cls.st_next = spectrum_next
     cls.emit_goto = spectrum_emit_goto

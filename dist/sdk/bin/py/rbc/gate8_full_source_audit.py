@@ -171,7 +171,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
         [build.base for build in observed],
         [m.spans for m in source_maps],
         {PEEK_RT: 'native-peek', POKE_RT: 'native-poke',
-         RT.PAUSE: 'native-pause', RT.VAL: 'guarded-val'},
+         RT.PAUSE: 'native-pause', RT.VAL: 'guarded-val', RT.VAL_STR: 'guarded-vals'},
         replacement_settings=runtime_layouts)
     try:
         native_runtime_region = verify_three_native_runtime_regions(
@@ -181,7 +181,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             [m.spans for m in source_maps],
             {PEEK_RT: 'native-peek', POKE_RT: 'native-poke',
              RT.PAUSE: 'native-pause',
-             RT.VAL: 'guarded-val'},
+             RT.VAL: 'guarded-val', RT.VAL_STR: 'guarded-vals'},
             runtime_layouts)
     except RuntimeCombinedError as exc:
         native_runtime_region = {
@@ -208,7 +208,7 @@ def run(source: Path, checkpoint: Path, frontend: Path,
             vendor.data, rom.read_bytes(),
             {PEEK_RT: 'native-peek', POKE_RT: 'native-poke',
              RT.PAUSE: 'native-pause',
-             RT.VAL: 'guarded-val'}, runtime_layouts, native_runtime_region,
+             RT.VAL: 'guarded-val', RT.VAL_STR: 'guarded-vals'}, runtime_layouts, native_runtime_region,
             optimizer=optimizer, source_sink=source_sink,
             max_bytes=max_bytes)
     except (WholeBaselineError, ValueError, TypeError) as exc:

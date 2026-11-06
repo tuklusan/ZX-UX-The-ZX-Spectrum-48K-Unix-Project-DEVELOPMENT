@@ -14,9 +14,9 @@ class LineTableError(ValueError):
     """Original BASIC line table has an unverified data/address boundary."""
 
 
-_LINE_SITE = 'emit_line_table:2449'
-_ADDRESS_SITE = 'emit_line_table:2454'
-_END_SITE = 'emit_line_table:2455'
+_LINE_SITE = 'emit_line_table:2469'
+_ADDRESS_SITE = 'emit_line_table:2474'
+_END_SITE = 'emit_line_table:2475'
 _INT = re.compile(r'\((\d+),\)\Z')
 
 

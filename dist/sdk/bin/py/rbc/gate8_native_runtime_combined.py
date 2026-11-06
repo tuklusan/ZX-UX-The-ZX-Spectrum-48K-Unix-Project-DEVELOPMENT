@@ -155,13 +155,16 @@ def _replacement_listing(n, start, base, settings, expected):
         label = 'rbc_pause_entry'
         # The sole entry label is renamed; distinct internal labels are stable.
         source = source.replace('start:', label+':')
-    elif n == RT.VAL:
-        raw = guarded_val_bytes()
-        source = guarded_val_assembly()
+    elif n in (RT.VAL, RT.VAL_STR):
+        token = 0x1D if n == RT.VAL else 0x18
+        raw = guarded_val_bytes(token)
+        source = guarded_val_assembly(token)
         if raw != expected:
             raise RuntimeCombinedError('guarded VAL source does not match original program')
         sites = ()
-        label = 'rbc_val_entry'
+        label = 'rbc_val_entry' if n == RT.VAL else 'rbc_vals_entry'
+        if n == RT.VAL_STR:
+            source = source.replace('rbc_val_', 'rbc_vals_')
         source = source.replace('start:', label+':')
     elif n == PEEK_RT:
         if (not isinstance(settings, dict) or
@@ -267,7 +270,7 @@ def native_runtime_region(code: bytes, rom: bytes, image: bytes, base: int,
     start, end = selected[0][1], selected[-1][2]
     replacements_expected = {PEEK_RT: 'native-peek', POKE_RT: 'native-poke',
                              RT.PAUSE: 'native-pause',
-                             RT.VAL: 'guarded-val'}
+                             RT.VAL: 'guarded-val', RT.VAL_STR: 'guarded-vals'}
     actual = {n for n, _, _ in selected if n in replacements_expected}
     if any(replacements.get(n) != replacements_expected[n]
            for n in actual):
