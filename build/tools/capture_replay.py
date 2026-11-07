@@ -87,6 +87,33 @@ def steps(collection: str, game: str):
     return parse_script(match.group(1), str(guide)) if match else ()
 
 
+
+def recorded_first_input_wait(collection: str, game: str, recorded) -> int | None:
+    """Native scan delay from the original, measured FUSE input-event record.
+
+    Only apply a recorded delay when the next event agrees with the first
+    gameplay key in the ordered recipe. Never run the archive's shell scripts.
+    """
+    directory = COLLECTIONS / collection / game / 'BASIC'
+    guides = list(directory.glob('[Kk][Ee][Yy][Ss]-[Aa][Nn][Dd]-[Tt][Ii][Mm][Ii][Nn][Gg].[Tt][Xx][Tt]')) if directory.is_dir() else []
+    if len(guides) != 1 or not any(item[0] == 'C' for item in recorded):
+        return None
+    source = guides[0].read_text(encoding='utf-8')
+    if 'EXACT INPUT EVENTS' not in source or 'SELECTED SCREENSHOTS' not in source:
+        return None
+    block = source.split('EXACT INPUT EVENTS', 1)[1].split('SELECTED SCREENSHOTS', 1)[0]
+    events = re.findall(r'^\s*(\d+\.\d+)\s+s\s+(\S+)\s*$', block, re.M)
+    returns = [index for index, (_, key_name) in enumerate(events) if key_name == 'Return']
+    first = next((item for item in recorded if item[0] in ('K', 'H', 'L', 'S')), None)
+    if first is None or len(returns) < 2 or returns[1] + 1 >= len(events):
+        return None
+    expected = first[1][0] if first[0] in ('L', 'S') else first[1]
+    seconds, actual = events[returns[1] + 1]
+    if actual.casefold() != expected.casefold():
+        return None
+    delay = float(seconds) - float(events[returns[1]][0])
+    return round(delay * 50) if 0 < delay <= 30 else None
+
 def key(name: str):
     """Convert the archive's X11 key name into a Spectrum keystroke."""
     return {'space': ' ', 'Return': '\n', 'Enter': '\n'}.get(name, name)

@@ -10,7 +10,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from basic_portfolio import cases, write_gallery
-from capture_replay import steps, fuse_steps, replay_requires_change
+from capture_replay import (steps, fuse_steps, replay_requires_change,
+                            recorded_first_input_wait)
 from fuse_portfolio import run_case
 
 OUT = ROOT / 'dist/screenshots/rbc/fuse'
@@ -21,9 +22,14 @@ def capture(i, collection, ssx, label, opts):
     local.display = opts.display + i + 1
     out = OUT / collection / (ssx.stem + '.png')
     recorded = steps(collection, ssx.stem)
+    first_wait = recorded_first_input_wait(collection, ssx.stem, recorded)
+    inputs = fuse_steps(recorded)
+    if first_wait is not None:
+        inputs.insert(0, (first_wait / 50, ''))
     run_case((label,), out, local,
              {'programs': {label: ssx}, 'post_command_wait': 0.6,
-              'input_steps': fuse_steps(recorded),
+              'input_steps': inputs,
+              'prefer_replay_motion': first_wait is not None,
               'await_program_output': bool(recorded), 'start_timeout': 12.0,
               'require_replay_change': replay_requires_change(collection, ssx.stem),
               'fuse_wait': opts.wait, 'sample_step': .10})

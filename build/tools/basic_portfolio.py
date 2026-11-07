@@ -19,7 +19,7 @@ sys.path.insert(0, str(DIST / 'sdk/bin/py'))  # basicpack imports the source SDK
 import rvm
 import zxscreen
 from capture_quality import bitmap_ink, program_output_lines
-from capture_replay import steps, rvm_actions
+from capture_replay import steps, rvm_actions, recorded_first_input_wait
 
 
 def cases():
@@ -65,6 +65,13 @@ def write_gallery(out: Path, engine: str):
 def run_one(collection: str, ssx: Path, label: str, frames: int):
     # The short cassette alias is required by the unmodified ZX-UX loader.
     recorded = steps(collection, ssx.stem)
+    start_delay = recorded_first_input_wait(collection, ssx.stem, recorded)
+    wait_for_ready = start_delay is not None
+    checkpoints = ()
+    if wait_for_ready:
+        actions = rvm_actions(recorded)
+        checkpoints = tuple(len(actions) - len(rvm_actions(recorded[:index + 1]))
+                            for index, item in enumerate(recorded) if item[0] == 'C')
     with tempfile.TemporaryDirectory(prefix='zxux-basic-rvm-') as temporary:
         alias = Path(temporary) / (label + '.ssx')
         shutil.copyfile(ssx, alias)
@@ -85,19 +92,35 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
         post_samples = 0
         selected = None
         best = -1
+        previous_display = None
+        unchanged = 0
+        candidates = []
+        pending_checkpoints = list(checkpoints)
         for frame in range(frames + 3000):
             runner.frame()
             job = runner.fg
             if job.started is not None and not scripted:
-                if recorded:
-                    actions = rvm_actions(recorded)
-                    first_key = next((i for i, action in enumerate(actions)
-                                      if action[0] in ('keys', 'press')), None)
-                    runner.session.kb.add(actions)
-                    if first_key is not None:
-                        first_key_remaining = (len(runner.session.kb.queue)
-                                               - first_key - 1)
-                scripted = True
+                ready = True
+                if wait_for_ready:
+                    owned = runner.session.program_screen(job)
+                    if owned is None:
+                        ready = False
+                    else:
+                        display = bytes(owned[0])
+                        unchanged = unchanged + 1 if display == previous_display else 0
+                        previous_display = display
+                        ready = (frame - job.started >= start_delay
+                                 and unchanged >= 24 and bitmap_ink(display) >= 500)
+                if ready:
+                    if recorded:
+                        actions = rvm_actions(recorded)
+                        first_key = next((i for i, action in enumerate(actions)
+                                          if action[0] in ('keys', 'press')), None)
+                        runner.session.kb.add(actions)
+                        if first_key is not None:
+                            first_key_remaining = (len(runner.session.kb.queue)
+                                                   - first_key - 1)
+                    scripted = True
             if job.started is not None and (selected is None or frame % 10 == 0):
                 # Console programs print to the shared tty. They need not
                 # own a private screen; the old code captured None for them.
@@ -121,7 +144,17 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
                                     post_key = (current, border)
                             if score > best:
                                 selected, best = (current, border), score
-            reason = runner.check(limit=frames)
+                            if wait_for_ready and scripted:
+                                while (pending_checkpoints and len(runner.session.kb.queue)
+                                       <= pending_checkpoints[0]):
+                                    pending_checkpoints.pop(0)
+                                    candidates.append([current, border, frame + 25, 0])
+                                for candidate in candidates:
+                                    if frame <= candidate[2]:
+                                        motion = sum((a ^ b).bit_count() for a, b in
+                                                     zip(candidate[0][:6144], current[:6144]))
+                                        candidate[3] = max(candidate[3], motion)
+            reason = runner.check(limit=frames, interactive=wait_for_ready and not scripted)
             if reason:
                 runner.why = reason
                 break
@@ -143,6 +176,12 @@ def run_one(collection: str, ssx: Path, label: str, frames: int):
                                    + ' screen=' + repr(zxscreen.screen_text(
                                        runner.session.m.screen())))
             selected = post_key
+            if wait_for_ready and candidates:
+                # Prefer changing native displays to settled title, crash or
+                # end-of-game screens.
+                active = max(candidates, key=lambda candidate: candidate[3])
+                if active[3] > 0:
+                    selected = (active[0], active[1])
         image, border = selected
         if len(image) != 6912:
             raise RuntimeError('invalid Spectrum screen')

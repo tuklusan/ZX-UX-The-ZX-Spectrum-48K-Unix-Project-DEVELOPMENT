@@ -27,7 +27,7 @@ from fuse_boot import (SCREEN_WIDTH, SCREEN_HEIGHT, SPECTRUM_X, SPECTRUM_Y,
                        zxux_login_match, send_rom_load)
 from gallery import write_gallery
 from portfolio import captures, BIN, DIST, PAIRS, SOURCES
-from capture_quality import StableFrames, distinct_pixels
+from capture_quality import StableFrames, distinct_pixels, moving_replay_frame
 import rtap
 
 OUT = DIST / 'screenshots/c48/fuse'
@@ -470,6 +470,9 @@ def _run_case_once(names, destination, args, config=None):
             for _ in range(loops):
                 time.sleep(sample_step)
                 candidate = screenshot(display)
+                if config.get('prefer_replay_motion') and len(replay_frames) < 480:
+                    # Gameplay may finish drawing after the recorded final key.
+                    replay_frames.append(candidate.copy())
                 if config.get('reject_bright_paper'):
                     # Reject saturated full-screen death or transition paper,
                     # while retaining dark backgrounds and actual drawings.
@@ -541,6 +544,11 @@ def _run_case_once(names, destination, args, config=None):
                 # Later result rows may be brief, so keep the fuller output.
                 best = selector.best_live
             best_score = selector.stable_score if best is selector.best_stable else selector.live_score
+            if config.get('prefer_replay_motion'):
+                active_frame = moving_replay_frame(replay_frames, login, shell_baseline)
+                if active_frame is None:
+                    raise RuntimeError('no moving native gameplay after recorded replay')
+                best = active_frame
             if first_fractal_frame is not None:
                 best = first_fractal_frame
             if expected is not None and match_program(best) < 0.65:

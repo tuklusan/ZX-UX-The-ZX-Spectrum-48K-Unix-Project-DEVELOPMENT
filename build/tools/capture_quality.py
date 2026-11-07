@@ -100,3 +100,43 @@ def program_output_lines(current: str, shell: str) -> set[str]:
         return found
 
     return lines(current) - lines(shell)
+
+
+def moving_replay_frame(frames, boot, shell, *, minimum_change=18):
+    """Choose a real moving native frame rather than a settled menu.
+
+    Three adjacent changes and two visible ink colours are required. The
+    returned image is never altered; an unobserved moving scene is refused.
+    """
+    from PIL import ImageChops
+    if len(frames) < 5:
+        return None
+    areas = [image.convert('RGB').crop((32, 24, 288, 192)) for image in frames]
+    changes = [sum(max(pixel) > 60 for pixel in
+                   ImageChops.difference(left, right).get_flattened_data())
+               for left, right in zip(areas, areas[1:])]
+    run = 0
+    selected = None
+    richest_ink = -1
+    for index in range(1, len(frames) - 1):
+        if min(changes[index - 1], changes[index]) < minimum_change:
+            run = 0
+            continue
+        if any(distinct_pixels(frames[index], baseline) < 12
+               for baseline in (boot, shell)):
+            run = 0
+            continue
+        colours = areas[index].getcolors(maxcolors=256 * 192) or ()
+        visible = sum(count >= 5 for count, rgb in colours if max(rgb) > 65)
+        if visible < 2:
+            run = 0
+            continue
+        run += 1
+        if run >= 3:
+            # Among verified moving frames, keep the most developed scene.
+            # Later sparse or partially cleared displays must not erase it.
+            ink = sum(max(pixel) > 65 for pixel in
+                      areas[index].get_flattened_data())
+            if ink >= richest_ink:
+                selected, richest_ink = frames[index], ink
+    return selected
