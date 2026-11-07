@@ -140,3 +140,23 @@ def moving_replay_frame(frames, boot, shell, *, minimum_change=18):
             if ink >= richest_ink:
                 selected, richest_ink = frames[index], ink
     return selected
+
+
+def recorded_result_frame(frames, before, boot, shell, *, stable_samples=3):
+    """Choose a settled post-key image without assuming random games move.
+
+    A real, persistent changed screen is required. Input alone, a blank
+    frame, an unchanged prompt, and an unobserved result never pass.
+    """
+    if len(frames) < stable_samples:
+        return None
+    selection = StableFrames(boot, shell, stable_samples=stable_samples)
+    for frame in frames:
+        if distinct_pixels(frame, before) < 12:
+            selection.previous = None
+            selection.persisted = 0
+            continue
+        native = frame.convert('L').crop((32, 24, 288, 216))
+        ink = sum(v > 48 for v in native.resize((80, 60)).get_flattened_data())
+        selection.observe(frame, ink)
+    return selection.best_stable

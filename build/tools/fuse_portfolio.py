@@ -27,7 +27,8 @@ from fuse_boot import (SCREEN_WIDTH, SCREEN_HEIGHT, SPECTRUM_X, SPECTRUM_Y,
                        zxux_login_match, send_rom_load)
 from gallery import write_gallery
 from portfolio import captures, BIN, DIST, PAIRS, SOURCES
-from capture_quality import StableFrames, distinct_pixels, moving_replay_frame
+from capture_quality import (StableFrames, distinct_pixels, moving_replay_frame,
+                             recorded_result_frame)
 import rtap
 
 OUT = DIST / 'screenshots/c48/fuse'
@@ -284,8 +285,25 @@ def _run_case_once(names, destination, args, config=None):
                                     stdout=fuse_output, stderr=subprocess.STDOUT)
             trace('Fuse process launched')
             time.sleep(8.0)
-            if fuse.poll() is not None:
-                raise RuntimeError('Fuse stopped during ZX-UX boot')
+            # A busy runner can start the process before its SDL window exists.
+            # Wait for the actual window, never send keys to another process.
+            window_deadline = time.monotonic() + min(45, args.boot_wait)
+            while True:
+                if fuse.poll() is not None:
+                    raise RuntimeError('Fuse stopped during ZX-UX boot')
+                try:
+                    windows = subprocess.run(
+                        ['xwininfo', '-root', '-tree'], env=env,
+                        capture_output=True, text=True, timeout=5)
+                except subprocess.TimeoutExpired:
+                    windows = None
+                if (windows is not None and windows.returncode == 0 and
+                        re.search(r'^\s*0x[0-9a-f]+\s+"Fuse[^"\n]*"',
+                                  windows.stdout, re.M)):
+                    break
+                if time.monotonic() >= window_deadline:
+                    raise RuntimeError('FUSE window is missing')
+                time.sleep(.25)
             send_rom_load(display)
             deadline = time.monotonic() + args.boot_wait
             login = None
@@ -366,8 +384,8 @@ def _run_case_once(names, destination, args, config=None):
             visual_warnings = []
             reached_checkpoint = False
             stop_region = config.get('stop_when_ink')
-            replay_baseline = (screenshot(display) if config.get('require_replay_change')
-                               else None)
+            replay_baseline = (screenshot(display) if (config.get('require_replay_change')
+                               or config.get('prefer_replay_motion')) else None)
             if config.get('input_steps'):
                 # Record genuine intermediate frames during timed controls.
                 # Many games are already over when the last key is released.
@@ -546,8 +564,13 @@ def _run_case_once(names, destination, args, config=None):
             best_score = selector.stable_score if best is selector.best_stable else selector.live_score
             if config.get('prefer_replay_motion'):
                 active_frame = moving_replay_frame(replay_frames, login, shell_baseline)
+                if active_frame is None and replay_baseline is not None:
+                    # Random outcomes and text results may settle without
+                    # continuous motion. Require real changed, stable pixels.
+                    active_frame = recorded_result_frame(
+                        replay_frames, replay_baseline, login, shell_baseline)
                 if active_frame is None:
-                    raise RuntimeError('no moving native gameplay after recorded replay')
+                    raise RuntimeError('no changed native result after recorded replay')
                 best = active_frame
             if first_fractal_frame is not None:
                 best = first_fractal_frame

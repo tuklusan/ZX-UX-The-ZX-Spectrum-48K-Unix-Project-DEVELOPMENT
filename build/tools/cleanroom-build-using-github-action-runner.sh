@@ -145,7 +145,7 @@ for entry in build c48-rvm rbc-rvm compilers-rvm c48-fuse rbc-fuse compilers-fus
     if ! python3 -B build/tools/finish_rbc_capture.py cleanroom-logs \
           >cleanroom-logs/capture-gate.log 2>&1; then
       tail -n 20 cleanroom-logs/capture-gate.log
-      printf 'capture-gate\\t1\\n' >> cleanroom-logs/exit-codes.tsv
+      printf '%s\t%d\n' capture-gate 1 >> cleanroom-logs/exit-codes.tsv
       break
     fi
     tail -n 12 cleanroom-logs/capture-gate.log
